@@ -1,0 +1,153 @@
+package proxmox
+
+// inspired by https://github.com/Telmate/vagrant-proxmox/blob/master/lib/vagrant-proxmox/proxmox/connection.rb
+
+import (
+	"crypto/tls"
+	"errors"
+	"fmt"
+	"net/http"
+	"regexp"
+	"time"
+)
+
+const TaskTimeout = 60
+const TaskStatusCheckInterval = 2
+
+type Client struct {
+	session *Session
+}
+
+// map[type:qemu node:proxmox1-xx id:qemu/132 diskread:5.57424738e+08 disk:0 netin:5.9297450593e+10 mem:3.3235968e+09 uptime:1.4567097e+07 vmid:132 template:0 maxcpu:2 netout:6.053310416e+09 maxdisk:3.4359738368e+10 maxmem:8.592031744e+09 diskwrite:1.49663619584e+12 status:running cpu:0.00386980694947209 name:appt-app1-dev.xxx.xx]
+type VmRef struct {
+	vmId   int
+	node   string
+	vmType string
+}
+
+func NewVmRef(vmId int) (vmr *VmRef) {
+	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
+	return
+}
+
+func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config) (client *Client, err error) {
+	var sess *Session
+	sess, err = NewSession(apiUrl, hclient, tls)
+	if err == nil {
+		client = &Client{session: sess}
+	}
+	return client, err
+}
+
+func (c *Client) Login(username string, password string) (err error) {
+	return c.session.Login(username, password)
+}
+
+func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
+	_, err = c.session.GetJSON("/nodes", nil, nil, &list)
+	return
+}
+
+func (c *Client) GetVmList() (list map[string]interface{}, err error) {
+	_, err = c.session.GetJSON("/cluster/resources?type=vm", nil, nil, &list)
+	return
+}
+
+func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
+	if vmr.node == "" {
+		_, err = c.GetVmInfo(vmr)
+	}
+	return
+}
+
+func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error) {
+	resp, err := c.GetVmList()
+	vms := resp["data"].([]interface{})
+	for vmii := range vms {
+		vm := vms[vmii].(map[string]interface{})
+		if int(vm["vmid"].(float64)) == vmr.vmId {
+			vmInfo = vm
+			vmr.node = vmInfo["node"].(string)
+			vmr.vmType = vmInfo["type"].(string)
+			return
+		}
+	}
+	return nil, nil
+}
+
+func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	var data map[string]interface{}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/status/current", vmr.node, vmr.vmType, vmr.vmId)
+	_, err = c.session.GetJSON(url, nil, nil, &data)
+	vmState = data["data"].(map[string]interface{})
+	return
+}
+
+func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/monitor", vmr.node, vmr.vmType, vmr.vmId)
+	_, err = c.session.PostJSON(url, nil, nil, map[string]string{"command": command}, &monitorRes)
+	return
+}
+
+func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExitStatus string, err error) {
+	waited := 1
+	taskUpid := taskResponse["data"].(string)
+	for waited < TaskTimeout {
+		exitStatus, statErr := c.GetTaskExitstatus(taskUpid)
+		if statErr != nil {
+			return "", statErr
+		}
+		if exitStatus != nil {
+			waitExitStatus = exitStatus.(string)
+			return
+		}
+		time.Sleep(TaskStatusCheckInterval * time.Second)
+		waited = waited + TaskStatusCheckInterval
+	}
+	return "", errors.New("Wait timeout for:" + taskUpid)
+}
+
+var rxTaskNode = regexp.MustCompile("UPID:(.*?):")
+
+func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err error) {
+	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
+	url := fmt.Sprintf("/nodes/%s/tasks/%s/status", node, taskUpid)
+	var data map[string]interface{}
+	_, err = c.session.GetJSON(url, nil, nil, &data)
+	if err == nil {
+		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
+	}
+	return
+}
+
+func (c *Client) StartVm(vmr *VmRef) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/status/start", vmr.node, vmr.vmType, vmr.vmId)
+	var taskResponse map[string]interface{}
+	_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	return
+}
+
+func (c *Client) StopVm(vmr *VmRef) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/status/stop", vmr.node, vmr.vmType, vmr.vmId)
+	var taskResponse map[string]interface{}
+	_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	return
+}
