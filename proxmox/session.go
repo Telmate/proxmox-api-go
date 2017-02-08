@@ -49,26 +49,33 @@ func NewSession(apiUrl string, hclient *http.Client, tls *tls.Config) (session *
 	return session, nil
 }
 
-func (s *Session) Login(username string, password string) (err error) {
-	v := url.Values{}
-	v.Set("username", username)
-	v.Set("password", password)
-	reqh := http.Header{}
-	reqh.Add("Content-Type", "application/x-www-form-urlencoded")
-	reqbody := bytes.NewBufferString(v.Encode()).Bytes()
-	olddebug := *Debug
-	*Debug = false // don't share passwords in debug log
-	resp, err := s.Request("POST", "/access/ticket", nil, &reqh, &reqbody)
-	*Debug = olddebug
+func ParamsToBody(params map[string]string) (body []byte) {
+	vals := url.Values{}
+	for k, v := range params {
+		vals.Set(k, v)
+	}
+	body = bytes.NewBufferString(vals.Encode()).Bytes()
+	return
+}
+
+func ResponseJSON(resp *http.Response) (jbody map[string]interface{}) {
 	rbody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return errors.New("error reading response body")
+		log.Fatal("error reading response body")
 	}
-	var jbody map[string]interface{}
 	if err = json.Unmarshal(rbody, &jbody); err != nil {
-		return
+		return nil
 	}
+	return
+}
 
+func (s *Session) Login(username string, password string) (err error) {
+	reqbody := ParamsToBody(map[string]string{"username": username, "password": password})
+	olddebug := *Debug
+	*Debug = false // don't share passwords in debug log
+	resp, err := s.Post("/access/ticket", nil, nil, &reqbody)
+	*Debug = olddebug
+	jbody := ResponseJSON(resp)
 	dat := jbody["data"].(map[string]interface{})
 	s.AuthTicket = dat["ticket"].(string)
 	s.CsrfToken = dat["CSRFPreventionToken"].(string)
@@ -230,6 +237,10 @@ func (s *Session) Post(
 	headers *http.Header,
 	body *[]byte,
 ) (resp *http.Response, err error) {
+	if headers == nil {
+		headers = &http.Header{}
+		headers.Add("Content-Type", "application/x-www-form-urlencoded")
+	}
 	return s.Request("POST", url, params, headers, body)
 }
 

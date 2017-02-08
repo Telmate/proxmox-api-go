@@ -128,26 +128,47 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	return
 }
 
-func (c *Client) StartVm(vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) StatusChangeVm(vmr *VmRef, setStatus string) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf("/nodes/%s/%s/%d/status/start", vmr.node, vmr.vmType, vmr.vmId)
+	url := fmt.Sprintf("/nodes/%s/%s/%d/status/%s", vmr.node, vmr.vmType, vmr.vmId, setStatus)
 	var taskResponse map[string]interface{}
 	_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
 	exitStatus, err = c.WaitForCompletion(taskResponse)
 	return
 }
 
+func (c *Client) StartVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, "start")
+}
+
 func (c *Client) StopVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, "stop")
+}
+
+func (c *Client) ShutdownVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, "shutdown")
+}
+
+func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf("/nodes/%s/%s/%d/status/stop", vmr.node, vmr.vmType, vmr.vmId)
+	url := fmt.Sprintf("/nodes/%s/%s/%d", vmr.node, vmr.vmType, vmr.vmId)
 	var taskResponse map[string]interface{}
-	_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
+	_, err = c.session.RequestJSON("DELETE", url, nil, nil, nil, &taskResponse)
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	return
+}
+
+func (c *Client) CreateQemuVm(node string, vmParams map[string]string) (exitStatus string, err error) {
+	reqbody := ParamsToBody(vmParams)
+	url := fmt.Sprintf("/nodes/%s/qemu", node)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	taskResponse := ResponseJSON(resp)
 	exitStatus, err = c.WaitForCompletion(taskResponse)
 	return
 }
