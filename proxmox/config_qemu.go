@@ -1,39 +1,56 @@
 package proxmox
 
+import (
+	"encoding/json"
+	"io"
+	"log"
+	"strconv"
+)
+
 type ConfigQemu struct {
-	name         string
-	description  string
-	memory       string
-	diskSize     string
-	storage      string
-	qemuOs       string
-	qemuCores    int
-	qemuSockets  int
-	qemuIso      string
-	qemuNicModel string
-	qemuBrige    string
-	qemuVlanTag  int
+	Name         string  `json:"name"`
+	Description  string  `json:"desc"`
+	Memory       int     `json:"memory"`
+	DiskSize     float64 `json:"diskGB"`
+	Storage      string  `json:"storage"`
+	QemuOs       string  `json:"os"`
+	QemuCores    int     `json:"cores"`
+	QemuSockets  int     `json:"sockets"`
+	QemuIso      string  `json:"iso"`
+	QemuNicModel string  `json:"nic"`
+	QemuBrige    string  `json:"bridge"`
+	QemuVlanTag  int     `json:"vlan"`
 }
 
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
-	network := config.qemuNicModel + ",bridge=" + config.qemuBrige
-	if config.qemuVlanTag > 0 {
-		network = network + ",tag=" + string(config.qemuVlanTag)
+	network := config.QemuNicModel + ",bridge=" + config.QemuBrige
+	if config.QemuVlanTag > 0 {
+		network = network + ",tag=" + string(config.QemuVlanTag)
 	}
 	params := map[string]string{
-		"vmid":        string(vmr.vmId),
-		"name":        config.name,
-		"ide2":        config.qemuIso + ",media=cdrom",
-		"ostype":      config.qemuOs,
-		"virtio0":     config.storage + ":" + config.diskSize,
-		"sockets":     string(config.qemuSockets),
-		"cores":       string(config.qemuCores),
+		"vmid":        strconv.Itoa(vmr.vmId),
+		"name":        config.Name,
+		"ide2":        config.QemuIso + ",media=cdrom",
+		"ostype":      config.QemuOs,
+		"virtio0":     config.Storage + ":" + strconv.FormatFloat(config.DiskSize, 'f', -1, 64),
+		"sockets":     strconv.Itoa(config.QemuSockets),
+		"cores":       strconv.Itoa(config.QemuCores),
 		"cpu":         "host",
-		"memory":      config.memory,
+		"memory":      strconv.Itoa(config.Memory),
 		"net0":        network,
-		"pool":        "default",
-		"description": config.description}
+		"description": config.Description}
 
 	_, err = client.CreateQemuVm(vmr.node, params)
+	return
+}
+
+func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
+	config = &ConfigQemu{QemuVlanTag: -1}
+	err = json.NewDecoder(io).Decode(config)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	log.Println(config)
 	return
 }

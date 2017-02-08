@@ -25,6 +25,11 @@ type VmRef struct {
 	vmType string
 }
 
+func (vmr *VmRef) SetNode(node string) {
+	vmr.node = node
+	return
+}
+
 func NewVmRef(vmId int) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
 	return

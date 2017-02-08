@@ -30,6 +30,18 @@ func main() {
 	case "stop":
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, _ = c.StopVm(vmr)
+	case "createQemu":
+		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
+		vmr = proxmox.NewVmRef(vmid)
+		vmr.SetNode(flag.Args()[2])
+		err = config.CreateVm(vmr, c)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid")
 	}
