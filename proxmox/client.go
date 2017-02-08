@@ -29,6 +29,9 @@ func (vmr *VmRef) SetNode(node string) {
 	vmr.node = node
 	return
 }
+func (vmr *VmRef) VmId() int {
+	return vmr.vmId
+}
 
 func NewVmRef(vmId int) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
@@ -59,7 +62,7 @@ func (c *Client) GetVmList() (list map[string]interface{}, err error) {
 }
 
 func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
-	if vmr.node == "" {
+	if vmr.node == "" || vmr.vmType == "" {
 		_, err = c.GetVmInfo(vmr)
 	}
 	return
@@ -88,6 +91,9 @@ func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err err
 	var data map[string]interface{}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/status/current", vmr.node, vmr.vmType, vmr.vmId)
 	_, err = c.session.GetJSON(url, nil, nil, &data)
+	if err != nil {
+		return nil, err
+	}
 	vmState = data["data"].(map[string]interface{})
 	return
 }
@@ -97,8 +103,10 @@ func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]i
 	if err != nil {
 		return nil, err
 	}
+	reqbody := ParamsToBody(map[string]string{"command": command})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/monitor", vmr.node, vmr.vmType, vmr.vmId)
-	_, err = c.session.PostJSON(url, nil, nil, map[string]string{"command": command}, &monitorRes)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	monitorRes = ResponseJSON(resp)
 	return
 }
 
@@ -173,7 +181,9 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]string) (exitStat
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu", node)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
-	taskResponse := ResponseJSON(resp)
-	exitStatus, err = c.WaitForCompletion(taskResponse)
+	if err != nil {
+		taskResponse := ResponseJSON(resp)
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
 	return
 }
