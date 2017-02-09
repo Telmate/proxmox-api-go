@@ -29,6 +29,12 @@ func (vmr *VmRef) SetNode(node string) {
 	vmr.node = node
 	return
 }
+
+func (vmr *VmRef) SetVmType(vmType string) {
+	vmr.vmType = vmType
+	return
+}
+
 func (vmr *VmRef) VmId() int {
 	return vmr.vmId
 }
@@ -80,7 +86,7 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 			return
 		}
 	}
-	return nil, nil
+	return nil, errors.New("Vm INFO not found")
 }
 
 func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err error) {
