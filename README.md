@@ -57,5 +57,6 @@ Kickstart auto install
 
 * partition /dev/vda
 * network eth1
+* sshd (with preshared key/password)
 
 Network is temprorarily eth1 during the pre-provision phase.
