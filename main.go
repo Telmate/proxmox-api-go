@@ -27,15 +27,25 @@ func main() {
 	case "start":
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, _ = c.StartVm(vmr)
+
 	case "stop":
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, _ = c.StopVm(vmr)
+
+	case "destroy":
+		vmr = proxmox.NewVmRef(vmid)
+		jbody, err = c.StopVm(vmr)
+		failError(err)
+		jbody, _ = c.DeleteVm(vmr)
+
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
 		failError(config.CreateVm(vmr, c))
+		log.Println("Complete")
+
 	case "installQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		maxid, err := proxmox.MaxVmId(c)
@@ -58,11 +68,31 @@ func main() {
 		failError(err)
 		log.Println("SSH Portforward on:" + sshPort)
 		log.Println("Complete")
+
+	case "cloneQemu":
+		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
+		failError(err)
+		log.Println("Looking for template: " + flag.Args()[1])
+		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		failError(err)
+		if sourceVmr == nil {
+			log.Fatal("Can't find template")
+			return
+		}
+		maxid, err := proxmox.MaxVmId(c)
+		vmr = proxmox.NewVmRef(maxid + 1)
+		vmr.SetNode(flag.Args()[2])
+		log.Print("Creating node: ")
+		log.Println(vmr)
+		failError(config.CloneVm(sourceVmr, vmr, c))
+		log.Println("Complete")
+
 	case "sshforward":
 		vmr = proxmox.NewVmRef(vmid)
 		sshPort, err := proxmox.SshForwardUsernet(vmr, c)
 		failError(err)
 		log.Println("SSH Portforward on:" + sshPort)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid")
 	}

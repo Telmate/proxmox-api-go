@@ -89,6 +89,21 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 	return nil, errors.New("Vm INFO not found")
 }
 
+func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
+	resp, err := c.GetVmList()
+	vms := resp["data"].([]interface{})
+	for vmii := range vms {
+		vm := vms[vmii].(map[string]interface{})
+		if vm["name"].(string) == vmName {
+			vmr = NewVmRef(int(vm["vmid"].(float64)))
+			vmr.node = vm["node"].(string)
+			vmr.vmType = vm["type"].(string)
+			return
+		}
+	}
+	return nil, errors.New("Vm INFO not found")
+}
+
 func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
@@ -101,6 +116,21 @@ func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err err
 		return nil, err
 	}
 	vmState = data["data"].(map[string]interface{})
+	return
+}
+
+func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	var data map[string]interface{}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
+	_, err = c.session.GetJSON(url, nil, nil, &data)
+	if err != nil {
+		return nil, err
+	}
+	vmConfig = data["data"].(map[string]interface{})
 	return
 }
 
@@ -187,7 +217,47 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]string) (exitStat
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu", node)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
-	if err != nil {
+	if err == nil {
+		taskResponse := ResponseJSON(resp)
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]string) (exitStatus string, err error) {
+	reqbody := ParamsToBody(vmParams)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse := ResponseJSON(resp)
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]string) (exitStatus string, err error) {
+	reqbody := ParamsToBody(vmParams)
+	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse := ResponseJSON(resp)
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus string, err error) {
+	// PUT
+	//disk:virtio0
+	//size:+2G
+	if disk == "" {
+		disk = "virtio0"
+	}
+	size := fmt.Sprintf("+%dG", moreSizeGB)
+	reqbody := ParamsToBody(map[string]string{"disk": disk, "size": size})
+	url := fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Put(url, nil, nil, &reqbody)
+	if err == nil {
 		taskResponse := ResponseJSON(resp)
 		exitStatus, err = c.WaitForCompletion(taskResponse)
 	}

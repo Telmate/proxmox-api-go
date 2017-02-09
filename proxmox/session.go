@@ -260,5 +260,9 @@ func (s *Session) Put(
 	headers *http.Header,
 	body *[]byte,
 ) (resp *http.Response, err error) {
+	if headers == nil {
+		headers = &http.Header{}
+		headers.Add("Content-Type", "application/x-www-form-urlencoded")
+	}
 	return s.Request("PUT", url, params, headers, body)
 }

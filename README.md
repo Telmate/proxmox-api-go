@@ -19,7 +19,7 @@ export PM_API_URL="https://xxxx.com:8006/api2/json"
 export PM_USER=user@pam
 export PM_PASS=password
 
-./proxmox-api-go installQemu 123 proxmox-node-name < qemu1.json
+./proxmox-api-go installQemu proxmox-node-name < qemu1.json
 
 ./proxmox-api-go createQemu 123 proxmox-node-name < qemu1.json
 
@@ -27,13 +27,14 @@ export PM_PASS=password
 
 ./proxmox-api-go -debug stop 123
 
+./proxmox-api-go cloneQemu template-name proxmox-node-name < clone1.json
 
 ```
 
 
 ### Format
 
-createQmu JSON Sample:
+createQemu JSON Sample:
 ```
 {
   "name": "golang1.test.com",
@@ -48,6 +49,19 @@ createQmu JSON Sample:
   "nic": "virtio",
   "bridge": "vmbr0",
   "vlan": -1
+}
+```
+
+ 
+cloneQemu JSON Sample:
+```
+{
+  "name": "golang2.test.com",
+	"desc": "Test proxmox-api-go clone",
+  "storage": "local",
+  "memory": 2048,
+  "cores": 2,
+  "sockets": 1
 }
 ```
 

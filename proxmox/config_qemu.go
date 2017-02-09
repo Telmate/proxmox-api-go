@@ -41,9 +41,47 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"cpu":         "host",
 		"memory":      strconv.Itoa(config.Memory),
 		"net0":        network,
-		"description": config.Description}
+		"description": config.Description,
+	}
 
 	_, err = client.CreateQemuVm(vmr.node, params)
+	return
+}
+
+/*
+
+CloneVm
+Example: Request
+
+nodes/proxmox1-xx/qemu/1012/clone
+
+newid:145
+name:tf-clone1
+target:proxmox1-xx
+full:1
+storage:xxx
+
+*/
+func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
+	vmr.SetVmType("qemu")
+	params := map[string]string{
+		"newid":   strconv.Itoa(vmr.vmId),
+		"target":  vmr.node,
+		"name":    config.Name,
+		"storage": config.Storage,
+		"full":    "1",
+	}
+	_, err = client.CloneQemuVm(sourceVmr, params)
+	if err != nil {
+		return
+	}
+	configParams := map[string]string{
+		"sockets":     strconv.Itoa(config.QemuSockets),
+		"cores":       strconv.Itoa(config.QemuCores),
+		"memory":      strconv.Itoa(config.Memory),
+		"description": config.Description,
+	}
+	_, err = client.SetVmConfig(vmr, configParams)
 	return
 }
 
