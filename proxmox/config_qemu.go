@@ -7,6 +7,7 @@ import (
 	"log"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -118,7 +119,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	// cores:2 ostype:l26 ]
 	config = &ConfigQemu{
 		Name:        vmConfig["name"].(string),
-		Description: vmConfig["description"].(string),
+		Description: strings.TrimSpace(vmConfig["description"].(string)),
 		QemuOs:      vmConfig["ostype"].(string),
 		Memory:      int(vmConfig["memory"].(float64)),
 		QemuCores:   int(vmConfig["cores"].(float64)),
