@@ -39,6 +39,10 @@ func (vmr *VmRef) VmId() int {
 	return vmr.vmId
 }
 
+func (vmr *VmRef) Node() string {
+	return vmr.node
+}
+
 func NewVmRef(vmId int) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
 	return
