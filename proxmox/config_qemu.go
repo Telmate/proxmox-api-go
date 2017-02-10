@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -96,6 +97,53 @@ func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
 	return
 }
 
+var rxStorage = regexp.MustCompile("(.*?):.*?,size=(\\d+)G")
+var rxIso = regexp.MustCompile("(.*?),media")
+var rxNetwork = regexp.MustCompile("(.*?)=.*?,bridge=([^,]+)(?:,tag=)?(.*)")
+
+func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
+	vmConfig, err := client.GetVmConfig(vmr)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	// vmConfig Sample: map[ cpu:host
+	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
+	// ide2:local:iso/xxx-xx.iso,media=cdrom memory:2048
+	// smbios1:uuid=8b3bf833-aad8-4545-xxx-xxxxxxx digest:aa6ce5xxxxx1b9ce33e4aaeff564d4 sockets:1
+	// name:terraform-ubuntu1404-template bootdisk:virtio0
+	// virtio0:ProxmoxxxxISCSI:vm-1014-disk-2,size=4G
+	// description:Base image
+	// cores:2 ostype:l26 ]
+	config = &ConfigQemu{
+		Name:        vmConfig["name"].(string),
+		Description: vmConfig["description"].(string),
+		QemuOs:      vmConfig["ostype"].(string),
+		Memory:      int(vmConfig["memory"].(float64)),
+		QemuCores:   int(vmConfig["cores"].(float64)),
+		QemuSockets: int(vmConfig["sockets"].(float64)),
+		QemuVlanTag: -1,
+	}
+
+	storageMatch := rxStorage.FindStringSubmatch(vmConfig["virtio0"].(string))
+	config.Storage = storageMatch[1]
+	config.DiskSize, _ = strconv.ParseFloat(storageMatch[2], 64)
+
+	isoMatch := rxIso.FindStringSubmatch(vmConfig["ide2"].(string))
+	config.QemuIso = isoMatch[1]
+
+	netMatch := rxNetwork.FindStringSubmatch(vmConfig["net0"].(string))
+	config.QemuNicModel = netMatch[1]
+	config.QemuBrige = netMatch[2]
+	if netMatch[3] != "" {
+		config.QemuVlanTag, _ = strconv.Atoi(netMatch[3])
+	}
+
+	return
+}
+
+// Useful waiting for ISO install to complete
 func WaitForShutdown(vmr *VmRef, client *Client) (err error) {
 	for ii := 0; ii < 100; ii++ {
 		vmState, err := client.GetVmState(vmr)
@@ -110,6 +158,7 @@ func WaitForShutdown(vmr *VmRef, client *Client) (err error) {
 	return errors.New("Not shutdown within wait time")
 }
 
+// This is because proxmox create/config API won't let us make usernet devices
 func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
 	vmState, err := client.GetVmState(vmr)
 	if err != nil {

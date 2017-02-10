@@ -38,6 +38,12 @@ func main() {
 		failError(err)
 		jbody, _ = c.DeleteVm(vmr)
 
+	case "getConfig":
+		vmr = proxmox.NewVmRef(vmid)
+		config, err := proxmox.NewConfigQemuFromApi(vmr, c)
+		failError(err)
+		log.Println(config)
+
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
