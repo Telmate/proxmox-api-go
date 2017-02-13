@@ -151,6 +151,9 @@ func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]i
 }
 
 func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExitStatus string, err error) {
+	if taskResponse["data"] == nil {
+		return "", nil
+	}
 	waited := 1
 	taskUpid := taskResponse["data"].(string)
 	for waited < TaskTimeout {
@@ -239,7 +242,7 @@ func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]string) (exitStatus
 	return
 }
 
-func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]string) (exitStatus string, err error) {
+func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]string) (exitStatus interface{}, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -250,7 +253,7 @@ func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]string) (exitStatus
 	return
 }
 
-func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus string, err error) {
+func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
 	// PUT
 	//disk:virtio0
 	//size:+2G
