@@ -54,6 +54,7 @@ func main() {
 
 	case "installQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
+		failError(err)
 		maxid, err := proxmox.MaxVmId(c)
 		failError(err)
 		vmr = proxmox.NewVmRef(maxid + 1)

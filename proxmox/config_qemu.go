@@ -77,6 +77,10 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	if err != nil {
 		return
 	}
+	return config.UpdateConfig(vmr, client)
+}
+
+func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParams := map[string]string{
 		"sockets":     strconv.Itoa(config.QemuSockets),
 		"cores":       strconv.Itoa(config.QemuCores),
@@ -84,7 +88,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		"description": config.Description,
 	}
 	_, err = client.SetVmConfig(vmr, configParams)
-	return
+	return err
 }
 
 func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
