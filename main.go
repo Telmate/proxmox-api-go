@@ -100,6 +100,12 @@ func main() {
 		failError(err)
 		log.Println("SSH Portforward on:" + sshPort)
 
+	case "sshbackward":
+		vmr = proxmox.NewVmRef(vmid)
+		err = proxmox.RemoveSshForwardUsernet(vmr, c)
+		failError(err)
+		log.Println("SSH Portforward off")
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid")
 	}

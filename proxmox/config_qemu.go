@@ -184,6 +184,27 @@ func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
 	return
 }
 
+// device_del net1
+// netdev_del net1
+func RemoveSshForwardUsernet(vmr *VmRef, client *Client) (err error) {
+	vmState, err := client.GetVmState(vmr)
+	if err != nil {
+		return err
+	}
+	if vmState["status"] == "stopped" {
+		return errors.New("VM must be running first")
+	}
+	_, err = client.MonitorCmd(vmr, "device_del net1")
+	if err != nil {
+		return err
+	}
+	_, err = client.MonitorCmd(vmr, "netdev_del net1")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func MaxVmId(client *Client) (max int, err error) {
 	resp, err := client.GetVmList()
 	vms := resp["data"].([]interface{})

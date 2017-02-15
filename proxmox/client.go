@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const TaskTimeout = 60
+const TaskTimeout = 90
 const TaskStatusCheckInterval = 2
 
 type Client struct {
@@ -154,7 +154,7 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 	if taskResponse["data"] == nil {
 		return "", nil
 	}
-	waited := 1
+	waited := 0
 	taskUpid := taskResponse["data"].(string)
 	for waited < TaskTimeout {
 		exitStatus, statErr := c.GetTaskExitstatus(taskUpid)
