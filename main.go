@@ -11,6 +11,7 @@ import (
 
 func main() {
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
+	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
 
 	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, nil)
@@ -18,8 +19,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	vmid, _ := strconv.Atoi(flag.Args()[1])
+	vmid := *fvmid
+	if vmid < 0 {
+		vmid, _ = strconv.Atoi(flag.Args()[1])
+	}
 
 	var jbody interface{}
 	var vmr *proxmox.VmRef
@@ -55,9 +58,13 @@ func main() {
 	case "installQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
-		maxid, err := proxmox.MaxVmId(c)
-		failError(err)
-		vmr = proxmox.NewVmRef(maxid + 1)
+		if vmid > 0 {
+			vmr = proxmox.NewVmRef(vmid)
+		} else {
+			maxid, err := proxmox.MaxVmId(c)
+			failError(err)
+			vmr = proxmox.NewVmRef(maxid + 1)
+		}
 		vmr.SetNode(flag.Args()[1])
 		log.Print("Creating node: ")
 		log.Println(vmr)

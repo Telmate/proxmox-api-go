@@ -30,7 +30,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
 	network := config.QemuNicModel + ",bridge=" + config.QemuBrige
 	if config.QemuVlanTag > 0 {
-		network = network + ",tag=" + string(config.QemuVlanTag)
+		network = network + ",tag=" + strconv.Itoa(config.QemuVlanTag)
 	}
 	params := map[string]string{
 		"vmid":        strconv.Itoa(vmr.vmId),
