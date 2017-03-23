@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"regexp"
 	"time"
@@ -159,7 +160,9 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 	for waited < TaskTimeout {
 		exitStatus, statErr := c.GetTaskExitstatus(taskUpid)
 		if statErr != nil {
-			return "", statErr
+			if statErr != io.ErrUnexpectedEOF { // don't give up on ErrUnexpectedEOF
+				return "", statErr
+			}
 		}
 		if exitStatus != nil {
 			waitExitStatus = exitStatus.(string)
