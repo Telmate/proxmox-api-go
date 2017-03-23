@@ -135,8 +135,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	config.Storage = storageMatch[1]
 	config.DiskSize, _ = strconv.ParseFloat(storageMatch[2], 64)
 
-	isoMatch := rxIso.FindStringSubmatch(vmConfig["ide2"].(string))
-	config.QemuIso = isoMatch[1]
+	if vmConfig["ide2"] != nil {
+		isoMatch := rxIso.FindStringSubmatch(vmConfig["ide2"].(string))
+		config.QemuIso = isoMatch[1]
+	}
 
 	netMatch := rxNetwork.FindStringSubmatch(vmConfig["net0"].(string))
 	config.QemuNicModel = netMatch[1]
