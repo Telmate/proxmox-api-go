@@ -225,3 +225,69 @@ func MaxVmId(client *Client) (max int, err error) {
 	}
 	return
 }
+
+func SendKeysString(vmr *VmRef, client *Client, keys string) (err error) {
+	vmState, err := client.GetVmState(vmr)
+	if err != nil {
+		return err
+	}
+	if vmState["status"] == "stopped" {
+		return errors.New("VM must be running first")
+	}
+	for _, r := range keys {
+		c := string(r)
+		lower := strings.ToLower(c)
+		if c != lower {
+			c = "shift-" + lower
+		} else {
+			switch c {
+			case "!":
+				c = "shift-1"
+			case "@":
+				c = "shift-2"
+			case "#":
+				c = "shift-3"
+			case "$":
+				c = "shift-4"
+			case "%%":
+				c = "shift-5"
+			case "^":
+				c = "shift-6"
+			case "&":
+				c = "shift-7"
+			case "*":
+				c = "shift-8"
+			case "(":
+				c = "shift-9"
+			case ")":
+				c = "shift-0"
+			case "_":
+				c = "shift-minus"
+			case "+":
+				c = "shift-equal"
+			case " ":
+				c = "spc"
+			case "/":
+				c = "slash"
+			case "\\":
+				c = "backslash"
+			case ",":
+				c = "comma"
+			case "-":
+				c = "minus"
+			case "=":
+				c = "equal"
+			case ".":
+				c = "dot"
+			case "?":
+				c = "shift-slash"
+			}
+		}
+		_, err = client.MonitorCmd(vmr, "sendkey "+c)
+		if err != nil {
+			return err
+		}
+		time.Sleep(100)
+	}
+	return nil
+}

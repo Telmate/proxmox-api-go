@@ -113,6 +113,12 @@ func main() {
 		failError(err)
 		log.Println("SSH Portforward off")
 
+	case "sendstring":
+		vmr = proxmox.NewVmRef(vmid)
+		err = proxmox.SendKeysString(vmr, c, flag.Args()[2])
+		failError(err)
+		log.Println("Keys sent")
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid")
 	}
