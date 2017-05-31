@@ -12,18 +12,19 @@ import (
 )
 
 type ConfigQemu struct {
-	Name         string  `json:"name"`
-	Description  string  `json:"desc"`
-	Memory       int     `json:"memory"`
-	DiskSize     float64 `json:"diskGB"`
-	Storage      string  `json:"storage"`
-	QemuOs       string  `json:"os"`
-	QemuCores    int     `json:"cores"`
-	QemuSockets  int     `json:"sockets"`
-	QemuIso      string  `json:"iso"`
-	QemuNicModel string  `json:"nic"`
-	QemuBrige    string  `json:"bridge"`
-	QemuVlanTag  int     `json:"vlan"`
+	Name          string  `json:"name"`
+	Description   string  `json:"desc"`
+	Memory        int     `json:"memory"`
+	DiskSize      float64 `json:"diskGB"`
+	Storage       string  `json:"storage"`
+	QemuOs        string  `json:"os"`
+	QemuCores     int     `json:"cores"`
+	QemuSockets   int     `json:"sockets"`
+	QemuIso       string  `json:"iso"`
+	QemuNicModel  string  `json:"nic"`
+	QemuBrige     string  `json:"bridge"`
+	QemuVlanTag   int     `json:"vlan"`
+	FullClone int     `json:"fullclone"`
 }
 
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
@@ -44,6 +45,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"memory":      strconv.Itoa(config.Memory),
 		"net0":        network,
 		"description": config.Description,
+		"fullclone":   strconv.Itoa(config.FullClone),
 	}
 
 	_, err = client.CreateQemuVm(vmr.node, params)
@@ -71,7 +73,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		"target":  vmr.node,
 		"name":    config.Name,
 		"storage": config.Storage,
-		"full":    "1",
+		"full":    strconv.Itoa(config.FullClone),
 	}
 	_, err = client.CloneQemuVm(sourceVmr, params)
 	if err != nil {
@@ -97,7 +99,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 }
 
 func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
-	config = &ConfigQemu{QemuVlanTag: -1}
+  config = &ConfigQemu{QemuVlanTag: -1}
 	err = json.NewDecoder(io).Decode(config)
 	if err != nil {
 		log.Fatal(err)
@@ -134,6 +136,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuCores:   int(vmConfig["cores"].(float64)),
 		QemuSockets: int(vmConfig["sockets"].(float64)),
 		QemuVlanTag: -1,
+		FullClone: int(vmConfig["fullclone"].(float64)),
 	}
 
 	storageMatch := rxStorage.FindStringSubmatch(vmConfig["virtio0"].(string))
