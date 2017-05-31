@@ -24,7 +24,7 @@ type ConfigQemu struct {
 	QemuNicModel  string  `json:"nic"`
 	QemuBrige     string  `json:"bridge"`
 	QemuVlanTag   int     `json:"vlan"`
-	FullClone int     `json:"fullclone"`
+	FullClone     int     `json:"fullclone"`
 }
 
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
