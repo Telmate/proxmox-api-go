@@ -61,7 +61,8 @@ cloneQemu JSON Sample:
   "storage": "local",
   "memory": 2048,
   "cores": 2,
-  "sockets": 1
+  "sockets": 1,
+  "fullclone": 1
 }
 ```
 

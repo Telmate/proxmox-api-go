@@ -24,6 +24,7 @@ type ConfigQemu struct {
 	QemuNicModel string  `json:"nic"`
 	QemuBrige    string  `json:"bridge"`
 	QemuVlanTag  int     `json:"vlan"`
+	FullClone    *int    `json:"fullclone"`
 }
 
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
@@ -32,6 +33,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if config.QemuVlanTag > 0 {
 		network = network + ",tag=" + strconv.Itoa(config.QemuVlanTag)
 	}
+
 	params := map[string]string{
 		"vmid":        strconv.Itoa(vmr.vmId),
 		"name":        config.Name,
@@ -66,12 +68,16 @@ storage:xxx
 */
 func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
+	fullclone := "1"
+	if config.FullClone != nil {
+		fullclone = strconv.Itoa(*config.FullClone)
+	}
 	params := map[string]string{
 		"newid":   strconv.Itoa(vmr.vmId),
 		"target":  vmr.node,
 		"name":    config.Name,
 		"storage": config.Storage,
-		"full":    "1",
+		"full":    fullclone,
 	}
 	_, err = client.CloneQemuVm(sourceVmr, params)
 	if err != nil {
@@ -125,7 +131,12 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	// name:terraform-ubuntu1404-template bootdisk:virtio0
 	// virtio0:ProxmoxxxxISCSI:vm-1014-disk-2,size=4G
 	// description:Base image
-	// cores:2 ostype:l26 ]
+	// cores:2 ostype:l26
+
+	fullclone := 1
+	if vmConfig["fullclone"] != nil {
+		fullclone = int(vmConfig["fullclone"].(float64))
+	}
 	config = &ConfigQemu{
 		Name:        vmConfig["name"].(string),
 		Description: strings.TrimSpace(vmConfig["description"].(string)),
@@ -134,6 +145,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuCores:   int(vmConfig["cores"].(float64)),
 		QemuSockets: int(vmConfig["sockets"].(float64)),
 		QemuVlanTag: -1,
+		FullClone:   &fullclone,
 	}
 
 	storageMatch := rxStorage.FindStringSubmatch(vmConfig["virtio0"].(string))
