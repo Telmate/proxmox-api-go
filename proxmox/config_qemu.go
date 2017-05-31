@@ -132,7 +132,11 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	// virtio0:ProxmoxxxxISCSI:vm-1014-disk-2,size=4G
 	// description:Base image
 	// cores:2 ostype:l26
-	fullclone := int(vmConfig["fullclone"].(float64))
+
+	fullclone := 1
+	if vmConfig["fullclone"] != nil {
+		fullclone = int(vmConfig["fullclone"].(float64))
+	}
 	config = &ConfigQemu{
 		Name:        vmConfig["name"].(string),
 		Description: strings.TrimSpace(vmConfig["description"].(string)),
