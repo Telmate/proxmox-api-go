@@ -75,7 +75,16 @@ func (s *Session) Login(username string, password string) (err error) {
 	*Debug = false // don't share passwords in debug log
 	resp, err := s.Post("/access/ticket", nil, nil, &reqbody)
 	*Debug = olddebug
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		return errors.New("Login error reading response")
+	}
 	jbody := ResponseJSON(resp)
+	if jbody == nil || jbody["data"] == nil {
+		return errors.New("Invalid login response")
+	}
 	dat := jbody["data"].(map[string]interface{})
 	s.AuthTicket = dat["ticket"].(string)
 	s.CsrfToken = dat["CSRFPreventionToken"].(string)
