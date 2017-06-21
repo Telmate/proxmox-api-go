@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -61,7 +62,7 @@ func ParamsToBody(params map[string]string) (body []byte) {
 func ResponseJSON(resp *http.Response) (jbody map[string]interface{}) {
 	rbody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal("error reading response body")
+		log.Fatal(fmt.Sprintf("error reading response body: %s", err))
 	}
 	if err = json.Unmarshal(rbody, &jbody); err != nil {
 		return nil
@@ -81,9 +82,10 @@ func (s *Session) Login(username string, password string) (err error) {
 	if resp == nil {
 		return errors.New("Login error reading response")
 	}
+	dr, _ := httputil.DumpResponse(resp, true)
 	jbody := ResponseJSON(resp)
 	if jbody == nil || jbody["data"] == nil {
-		return errors.New("Invalid login response")
+		return fmt.Errorf("Invalid login response:\n-----\n%s\n-----", dr)
 	}
 	dat := jbody["data"].(map[string]interface{})
 	s.AuthTicket = dat["ticket"].(string)
