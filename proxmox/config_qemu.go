@@ -148,6 +148,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		FullClone:   &fullclone,
 	}
 
+	if vmConfig["virtio0"] == nil {
+		return nil, errors.New("virtio0 (required) not found in current config")
+	}
+
 	storageMatch := rxStorage.FindStringSubmatch(vmConfig["virtio0"].(string))
 	config.Storage = storageMatch[1]
 	config.DiskSize, _ = strconv.ParseFloat(storageMatch[2], 64)
@@ -155,6 +159,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if vmConfig["ide2"] != nil {
 		isoMatch := rxIso.FindStringSubmatch(vmConfig["ide2"].(string))
 		config.QemuIso = isoMatch[1]
+	}
+
+	if vmConfig["net0"] == nil {
+		return nil, errors.New("net0 (required) not found in current config")
 	}
 
 	netMatch := rxNetwork.FindStringSubmatch(vmConfig["net0"].(string))
