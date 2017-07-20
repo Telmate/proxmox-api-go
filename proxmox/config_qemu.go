@@ -137,9 +137,13 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if vmConfig["fullclone"] != nil {
 		fullclone = int(vmConfig["fullclone"].(float64))
 	}
+	description := ""
+	if vmConfig["description"] != nil {
+		description = vmConfig["description"].(string)
+	}
 	config = &ConfigQemu{
 		Name:        vmConfig["name"].(string),
-		Description: strings.TrimSpace(vmConfig["description"].(string)),
+		Description: strings.TrimSpace(description),
 		QemuOs:      vmConfig["ostype"].(string),
 		Memory:      int(vmConfig["memory"].(float64)),
 		QemuCores:   int(vmConfig["cores"].(float64)),
