@@ -123,6 +123,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		log.Fatal(err)
 		return nil, err
 	}
+	// this can happen:
+	// {"data":{"lock":"clone","digest":"eb54fb9d9f120ba0c3bdf694f73b10002c375c38","description":" qmclone temporary file\n"}})
 
 	// vmConfig Sample: map[ cpu:host
 	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0

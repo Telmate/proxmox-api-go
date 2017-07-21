@@ -67,13 +67,28 @@ func (c *Client) Login(username string, password string) (err error) {
 	return c.session.Login(username, password)
 }
 
+func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int) error {
+	var statErr error
+	for ii := 0; ii < tries; ii++ {
+		_, statErr = c.session.GetJSON(url, nil, nil, data)
+		if statErr == nil {
+			return nil
+		}
+		// if statErr != io.ErrUnexpectedEOF { // don't give up on ErrUnexpectedEOF
+		//   return statErr
+		// }
+		time.Sleep(5 * time.Second)
+	}
+	return statErr
+}
+
 func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
-	_, err = c.session.GetJSON("/nodes", nil, nil, &list)
+	err = c.GetJsonRetryable("/nodes", &list, 3)
 	return
 }
 
 func (c *Client) GetVmList() (list map[string]interface{}, err error) {
-	_, err = c.session.GetJSON("/cluster/resources?type=vm", nil, nil, &list)
+	err = c.GetJsonRetryable("/cluster/resources?type=vm", &list, 3)
 	return
 }
 
@@ -104,7 +119,7 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
-		if vm["name"].(string) == vmName {
+		if vm["name"] != nil && vm["name"].(string) == vmName {
 			vmr = NewVmRef(int(vm["vmid"].(float64)))
 			vmr.node = vm["node"].(string)
 			vmr.vmType = vm["type"].(string)
@@ -121,7 +136,7 @@ func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err err
 	}
 	var data map[string]interface{}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/status/current", vmr.node, vmr.vmType, vmr.vmId)
-	_, err = c.session.GetJSON(url, nil, nil, &data)
+	err = c.GetJsonRetryable(url, &data, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +151,7 @@ func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err e
 	}
 	var data map[string]interface{}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
-	_, err = c.session.GetJSON(url, nil, nil, &data)
+	err = c.GetJsonRetryable(url, &data, 3)
 	if err != nil {
 		return nil, err
 	}
