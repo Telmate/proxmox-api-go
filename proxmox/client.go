@@ -212,10 +212,18 @@ func (c *Client) StatusChangeVm(vmr *VmRef, setStatus string) (exitStatus string
 	if err != nil {
 		return "", err
 	}
+
 	url := fmt.Sprintf("/nodes/%s/%s/%d/status/%s", vmr.node, vmr.vmType, vmr.vmId, setStatus)
 	var taskResponse map[string]interface{}
-	_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
-	exitStatus, err = c.WaitForCompletion(taskResponse)
+	for i := 0; i < 3; i++ {
+		_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if exitStatus == "" {
+			time.Sleep(TaskStatusCheckInterval * time.Second)
+		} else {
+			return
+		}
+	}
 	return
 }
 

@@ -118,13 +118,25 @@ var rxIso = regexp.MustCompile("(.*?),media")
 var rxNetwork = regexp.MustCompile("(.*?)=.*?,bridge=([^,]+)(?:,tag=)?(.*)")
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
-	vmConfig, err := client.GetVmConfig(vmr)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
+	var vmConfig map[string]interface{}
+	for ii := 0; ii < 3; ii++ {
+		vmConfig, err = client.GetVmConfig(vmr)
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+		// this can happen:
+		// {"data":{"lock":"clone","digest":"eb54fb9d9f120ba0c3bdf694f73b10002c375c38","description":" qmclone temporary file\n"}})
+		if vmConfig["lock"] == nil {
+			break
+		} else {
+			time.Sleep(8 * time.Second)
+		}
 	}
-	// this can happen:
-	// {"data":{"lock":"clone","digest":"eb54fb9d9f120ba0c3bdf694f73b10002c375c38","description":" qmclone temporary file\n"}})
+
+	if vmConfig["lock"] != nil {
+		return nil, errors.New("vm locked, could not obtain config")
+	}
 
 	// vmConfig Sample: map[ cpu:host
 	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
