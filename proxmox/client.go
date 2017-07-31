@@ -140,6 +140,9 @@ func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err err
 	if err != nil {
 		return nil, err
 	}
+	if data["data"] == nil {
+		return nil, errors.New("Vm STATE not readable")
+	}
 	vmState = data["data"].(map[string]interface{})
 	return
 }
@@ -154,6 +157,9 @@ func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err e
 	err = c.GetJsonRetryable(url, &data, 3)
 	if err != nil {
 		return nil, err
+	}
+	if data["data"] == nil {
+		return nil, errors.New("Vm CONFIG not readable")
 	}
 	vmConfig = data["data"].(map[string]interface{})
 	return
