@@ -111,7 +111,7 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 			return
 		}
 	}
-	return nil, errors.New("Vm INFO not found")
+	return nil, errors.New(fmt.Sprintf("Vm '%d' not found", vmr.vmId))
 }
 
 func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
