@@ -24,12 +24,16 @@ type ConfigQemu struct {
 	QemuNicModel string  `json:"nic"`
 	QemuBrige    string  `json:"bridge"`
 	QemuVlanTag  int     `json:"vlan"`
+	QemuMacAddr  string  `json:"mac"`
 	FullClone    *int    `json:"fullclone"`
 }
 
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
 	network := config.QemuNicModel + ",bridge=" + config.QemuBrige
+	if config.QemuMacAddr != "" {
+		network = network + ",macaddr=" + config.QemuMacAddr
+	}
 	if config.QemuVlanTag > 0 {
 		network = network + ",tag=" + strconv.Itoa(config.QemuVlanTag)
 	}
@@ -88,6 +92,9 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 
 func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	network := config.QemuNicModel + ",bridge=" + config.QemuBrige
+	if config.QemuMacAddr != "" {
+		network = network + ",macaddr=" + config.QemuMacAddr
+	}
 	if config.QemuVlanTag > 0 {
 		network = network + ",tag=" + strconv.Itoa(config.QemuVlanTag)
 	}
@@ -115,7 +122,7 @@ func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
 
 var rxStorage = regexp.MustCompile("(.*?):.*?,size=(\\d+)G")
 var rxIso = regexp.MustCompile("(.*?),media")
-var rxNetwork = regexp.MustCompile("(.*?)=.*?,bridge=([^,]+)(?:,tag=)?(.*)")
+var rxNetwork = regexp.MustCompile("(.*?)=(.*?),bridge=([^,]+)(?:,tag=)?(.*)")
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
 	var vmConfig map[string]interface{}
@@ -147,23 +154,38 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	// description:Base image
 	// cores:2 ostype:l26
 
-	fullclone := 1
-	if vmConfig["fullclone"] != nil {
-		fullclone = int(vmConfig["fullclone"].(float64))
+	name := ""
+	if _, is_set := vmConfig["name"]; is_set {
+		name = vmConfig["name"].(string)
 	}
 	description := ""
-	if vmConfig["description"] != nil {
+	if _, is_set := vmConfig["description"]; is_set {
 		description = vmConfig["description"].(string)
 	}
+	ostype := ""
+	if _, is_set := vmConfig["ostype"]; is_set {
+		ostype = vmConfig["ostype"].(string)
+	}
+	memory := 0.0
+	if _, is_set := vmConfig["memory"]; is_set {
+		memory = vmConfig["memory"].(float64)
+	}
+	cores := 0.0
+	if _, is_set := vmConfig["cores"]; is_set {
+		cores = vmConfig["cores"].(float64)
+	}
+	sockets := 0.0
+	if _, is_set := vmConfig["sockets"]; is_set {
+		sockets = vmConfig["sockets"].(float64)
+	}
 	config = &ConfigQemu{
-		Name:        vmConfig["name"].(string),
+		Name:        name,
 		Description: strings.TrimSpace(description),
-		QemuOs:      vmConfig["ostype"].(string),
-		Memory:      int(vmConfig["memory"].(float64)),
-		QemuCores:   int(vmConfig["cores"].(float64)),
-		QemuSockets: int(vmConfig["sockets"].(float64)),
+		QemuOs:      ostype,
+		Memory:      int(memory),
+		QemuCores:   int(cores),
+		QemuSockets: int(sockets),
 		QemuVlanTag: -1,
-		FullClone:   &fullclone,
 	}
 
 	if vmConfig["virtio0"] == nil {
@@ -185,9 +207,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 
 	netMatch := rxNetwork.FindStringSubmatch(vmConfig["net0"].(string))
 	config.QemuNicModel = netMatch[1]
-	config.QemuBrige = netMatch[2]
-	if netMatch[3] != "" {
-		config.QemuVlanTag, _ = strconv.Atoi(netMatch[3])
+	config.QemuMacAddr = netMatch[2]
+	config.QemuBrige = netMatch[3]
+	if netMatch[4] != "" {
+		config.QemuVlanTag, _ = strconv.Atoi(netMatch[4])
 	}
 
 	return
