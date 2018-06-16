@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"github.com/Telmate/proxmox-api-go/proxmox"
@@ -14,7 +15,11 @@ func main() {
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
 
-	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, nil)
+	config := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, config)
 	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
 	if err != nil {
 		log.Fatal(err)
