@@ -12,9 +12,13 @@ import (
 	"time"
 )
 
+// TaskTimeout - default async task call timeout in seconds
 const TaskTimeout = 90
+
+// TaskStatusCheckInterval - time between async checks in seconds
 const TaskStatusCheckInterval = 2
 
+// Client - URL, user and password to specifc Proxmox node
 type Client struct {
 	session  *Session
 	ApiUrl   string
@@ -22,6 +26,7 @@ type Client struct {
 	Password string
 }
 
+// VmRef - virtual machine ref parts
 // map[type:qemu node:proxmox1-xx id:qemu/132 diskread:5.57424738e+08 disk:0 netin:5.9297450593e+10 mem:3.3235968e+09 uptime:1.4567097e+07 vmid:132 template:0 maxcpu:2 netout:6.053310416e+09 maxdisk:3.4359738368e+10 maxmem:8.592031744e+09 diskwrite:1.49663619584e+12 status:running cpu:0.00386980694947209 name:appt-app1-dev.xxx.xx]
 type VmRef struct {
 	vmId   int
@@ -304,6 +309,16 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 	if err == nil {
 		taskResponse := ResponseJSON(resp)
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// GetNextID - Get next free VMID
+func (c *Client) GetNextID() (nextID string, err error) {
+	var data map[string]interface{}
+	_, err = c.session.GetJSON("/cluster/nextid", nil, nil, &data)
+	if err == nil {
+		nextID = data["data"].(string)
 	}
 	return
 }

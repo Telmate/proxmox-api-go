@@ -1,26 +1,33 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
-	"github.com/Telmate/proxmox-api-go/proxmox"
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
 func main() {
+	var insecure *bool
+	insecure = flag.Bool("insecure", false, "TLS insecure mode")
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
-
-	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, nil)
+	tlsconf := &tls.Config{InsecureSkipVerify: true}
+	if !*insecure {
+		tlsconf = nil
+	}
+	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf)
 	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	vmid := *fvmid
-	if vmid < 0 {
+	if vmid < 0 && flag.Args()[0] != "idstatus" {
 		vmid, _ = strconv.Atoi(flag.Args()[1])
 	}
 
@@ -83,6 +90,16 @@ func main() {
 		log.Println("SSH Portforward on:" + sshPort)
 		log.Println("Complete")
 
+	case "idstatus":
+		maxid, err := proxmox.MaxVmId(c)
+		failError(err)
+		nextid, err := c.GetNextID()
+		failError(err)
+		log.Println("---")
+		log.Printf("MaxID: %d\n", maxid)
+		log.Printf("NextID: %s\n", nextid)
+		log.Println("---")
+
 	case "cloneQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
@@ -122,8 +139,9 @@ func main() {
 	default:
 		fmt.Printf("unknown action, try start|stop vmid")
 	}
-
-	log.Println(jbody)
+	if jbody != nil {
+		log.Println(jbody)
+	}
 	//log.Println(vmr)
 }
 

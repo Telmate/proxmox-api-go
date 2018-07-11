@@ -1,7 +1,7 @@
 # Proxmox API Go
 
 
-Proxmox API in golang. Work in progress.
+Proxmox API in golang. For /api2/json. Work in progress.
 
 
 ## Build
