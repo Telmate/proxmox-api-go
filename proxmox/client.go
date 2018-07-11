@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strconv"
 	"time"
 )
 
@@ -314,11 +315,24 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 }
 
 // GetNextID - Get next free VMID
-func (c *Client) GetNextID() (nextID string, err error) {
+func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 	var data map[string]interface{}
-	_, err = c.session.GetJSON("/cluster/nextid", nil, nil, &data)
+	var url string
+	if currentID > 0 {
+		url = fmt.Sprintf("/cluster/nextid?vmid=%d", currentID)
+	} else {
+		url = "/cluster/nextid"
+	}
+	_, err = c.session.GetJSON(url, nil, nil, &data)
 	if err == nil {
-		nextID = data["data"].(string)
+		if data["errors"] != nil {
+			if currentID != 0 {
+				return c.GetNextID(0)
+			} else {
+				return -1, errors.New("error using /cluster/nextid")
+			}
+		}
+		nextID, err = strconv.Atoi(data["data"].(string))
 	}
 	return
 }

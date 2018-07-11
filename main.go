@@ -27,8 +27,15 @@ func main() {
 		log.Fatal(err)
 	}
 	vmid := *fvmid
-	if vmid < 0 && flag.Args()[0] != "idstatus" {
-		vmid, _ = strconv.Atoi(flag.Args()[1])
+	if vmid < 0 {
+		if len(flag.Args()) > 1 {
+			vmid, err = strconv.Atoi(flag.Args()[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else if flag.Args()[0] == "idstatus" {
+			vmid = 0
+		}
 	}
 
 	var jbody interface{}
@@ -68,9 +75,9 @@ func main() {
 		if vmid > 0 {
 			vmr = proxmox.NewVmRef(vmid)
 		} else {
-			maxid, err := proxmox.MaxVmId(c)
+			nextid, err := c.GetNextID(0)
 			failError(err)
-			vmr = proxmox.NewVmRef(maxid + 1)
+			vmr = proxmox.NewVmRef(nextid)
 		}
 		vmr.SetNode(flag.Args()[1])
 		log.Print("Creating node: ")
@@ -93,11 +100,11 @@ func main() {
 	case "idstatus":
 		maxid, err := proxmox.MaxVmId(c)
 		failError(err)
-		nextid, err := c.GetNextID()
+		nextid, err := c.GetNextID(vmid)
 		failError(err)
 		log.Println("---")
 		log.Printf("MaxID: %d\n", maxid)
-		log.Printf("NextID: %s\n", nextid)
+		log.Printf("NextID: %d\n", nextid)
 		log.Println("---")
 
 	case "cloneQemu":
@@ -110,8 +117,8 @@ func main() {
 			log.Fatal("Can't find template")
 			return
 		}
-		maxid, err := proxmox.MaxVmId(c)
-		vmr = proxmox.NewVmRef(maxid + 1)
+		nextid, err := c.GetNextID(0)
+		vmr = proxmox.NewVmRef(nextid)
 		vmr.SetNode(flag.Args()[2])
 		log.Print("Creating node: ")
 		log.Println(vmr)
