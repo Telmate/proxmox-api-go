@@ -285,6 +285,18 @@ func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]string) (exitStatus
 	return
 }
 
+func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/%s/rollback", vmr.node, vmr.vmType, vmr.vmId, snapshot)
+	var taskResponse map[string]interface{}
+	_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	return
+}
+
 func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]string) (exitStatus interface{}, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)

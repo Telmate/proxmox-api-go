@@ -125,6 +125,11 @@ func main() {
 		failError(config.CloneVm(sourceVmr, vmr, c))
 		log.Println("Complete")
 
+	case "rollbackQemu":
+		vmr = proxmox.NewVmRef(vmid)
+		jbody, err = c.RollbackQemuVm(vmr, flag.Args()[2])
+		failError(err)
+
 	case "sshforward":
 		vmr = proxmox.NewVmRef(vmid)
 		sshPort, err := proxmox.SshForwardUsernet(vmr, c)
@@ -147,7 +152,7 @@ func main() {
 		fmt.Printf("unknown action, try start|stop vmid")
 	}
 	if jbody != nil {
-		log.Println(jbody)
+	log.Println(jbody)
 	}
 	//log.Println(vmr)
 }
