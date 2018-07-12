@@ -11,12 +11,14 @@ import (
 	"time"
 )
 
+// ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
 	Name         string  `json:"name"`
 	Description  string  `json:"desc"`
 	Memory       int     `json:"memory"`
 	DiskSize     float64 `json:"diskGB"`
 	Storage      string  `json:"storage"`
+	StorageType  string  `json:"storageType"` // virtio|scsi (cloud-init defaults to scsi)
 	QemuOs       string  `json:"os"`
 	QemuCores    int     `json:"cores"`
 	QemuSockets  int     `json:"sockets"`
@@ -26,9 +28,25 @@ type ConfigQemu struct {
 	QemuVlanTag  int     `json:"vlan"`
 	QemuMacAddr  string  `json:"mac"`
 	FullClone    *int    `json:"fullclone"`
+
+	// cloud-init options
+	CIuser     string `json:"ciuser"`
+	CIpassword string `json:"cipassword"`
+
+	Searchdomain string `json:"searchdomain"`
+	Nameserver   string `json:"nameserver"`
+	Sshkeys      string `json:"sshkeys"`
+
+	// arrays are hard, support 2 interfaces for now
+	Ipconfig0 string `json:"ipconfig0"`
+	Ipconfig1 string `json:"ipconfig1"`
 }
 
+// CreateVm - Tell Proxmox API to make the VM
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
+	if config.HasCloudInit() {
+		return errors.New("Cloud-init parameters only supported on clones or updates")
+	}
 	vmr.SetVmType("qemu")
 	network := config.QemuNicModel + ",bridge=" + config.QemuBrige
 	if config.QemuMacAddr != "" {
@@ -37,23 +55,38 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if config.QemuVlanTag > 0 {
 		network = network + ",tag=" + strconv.Itoa(config.QemuVlanTag)
 	}
+	storageType := "virtio"
+	if config.StorageType != "" {
+		storageType = config.StorageType
+	}
 
 	params := map[string]string{
-		"vmid":        strconv.Itoa(vmr.vmId),
-		"name":        config.Name,
-		"ide2":        config.QemuIso + ",media=cdrom",
-		"ostype":      config.QemuOs,
-		"virtio0":     config.Storage + ":" + strconv.FormatFloat(config.DiskSize, 'f', -1, 64),
-		"sockets":     strconv.Itoa(config.QemuSockets),
-		"cores":       strconv.Itoa(config.QemuCores),
-		"cpu":         "host",
-		"memory":      strconv.Itoa(config.Memory),
-		"net0":        network,
-		"description": config.Description,
+		"vmid":              strconv.Itoa(vmr.vmId),
+		"name":              config.Name,
+		"ide2":              config.QemuIso + ",media=cdrom",
+		"ostype":            config.QemuOs,
+		(storageType + "0"): config.Storage + ":" + strconv.FormatFloat(config.DiskSize, 'f', -1, 64),
+		"sockets":           strconv.Itoa(config.QemuSockets),
+		"cores":             strconv.Itoa(config.QemuCores),
+		"cpu":               "host",
+		"memory":            strconv.Itoa(config.Memory),
+		"net0":              network,
+		"description":       config.Description,
 	}
 
 	_, err = client.CreateQemuVm(vmr.node, params)
 	return
+}
+
+// HasCloudInit - are there cloud-init options?
+func (config ConfigQemu) HasCloudInit() bool {
+	return config.CIuser != "" ||
+		config.CIpassword != "" ||
+		config.Searchdomain != "" ||
+		config.Nameserver != "" ||
+		config.Sshkeys != "" ||
+		config.Ipconfig0 != "" ||
+		config.Ipconfig1 != ""
 }
 
 /*
@@ -105,6 +138,28 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"net0":        network,
 		"description": config.Description,
 	}
+	// cloud-init options
+	if config.CIuser != "" {
+		configParams["ciuser"] = config.CIuser
+	}
+	if config.CIpassword != "" {
+		configParams["cipassword"] = config.CIpassword
+	}
+	if config.Searchdomain != "" {
+		configParams["searchdomain"] = config.Searchdomain
+	}
+	if config.Nameserver != "" {
+		configParams["nameserver"] = config.Nameserver
+	}
+	if config.Sshkeys != "" {
+		configParams["sshkeys"] = config.Sshkeys
+	}
+	if config.Ipconfig0 != "" {
+		configParams["ipconfig0"] = config.Ipconfig0
+	}
+	if config.Ipconfig1 != "" {
+		configParams["ipconfig1"] = config.Ipconfig1
+	}
 	_, err = client.SetVmConfig(vmr, configParams)
 	return err
 }
@@ -120,7 +175,7 @@ func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
 	return
 }
 
-var rxStorage = regexp.MustCompile("(.*?):.*?,size=(\\d+)G")
+var rxStorage = regexp.MustCompile("(.*?):.*?,size=(\\d+)(M|G)")
 var rxIso = regexp.MustCompile("(.*?),media")
 var rxNetwork = regexp.MustCompile("(.*?)=(.*?),bridge=([^,]+)(?:,tag=)?(.*)")
 
@@ -155,27 +210,27 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	// cores:2 ostype:l26
 
 	name := ""
-	if _, is_set := vmConfig["name"]; is_set {
+	if _, isSet := vmConfig["name"]; isSet {
 		name = vmConfig["name"].(string)
 	}
 	description := ""
-	if _, is_set := vmConfig["description"]; is_set {
+	if _, isSet := vmConfig["description"]; isSet {
 		description = vmConfig["description"].(string)
 	}
 	ostype := ""
-	if _, is_set := vmConfig["ostype"]; is_set {
+	if _, isSet := vmConfig["ostype"]; isSet {
 		ostype = vmConfig["ostype"].(string)
 	}
 	memory := 0.0
-	if _, is_set := vmConfig["memory"]; is_set {
+	if _, isSet := vmConfig["memory"]; isSet {
 		memory = vmConfig["memory"].(float64)
 	}
-	cores := 0.0
-	if _, is_set := vmConfig["cores"]; is_set {
+	cores := 1.0
+	if _, isSet := vmConfig["cores"]; isSet {
 		cores = vmConfig["cores"].(float64)
 	}
-	sockets := 0.0
-	if _, is_set := vmConfig["sockets"]; is_set {
+	sockets := 1.0
+	if _, isSet := vmConfig["sockets"]; isSet {
 		sockets = vmConfig["sockets"].(float64)
 	}
 	config = &ConfigQemu{
@@ -188,13 +243,23 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuVlanTag: -1,
 	}
 
-	if vmConfig["virtio0"] == nil {
-		return nil, errors.New("virtio0 (required) not found in current config")
+	storageType := ""
+	if _, isSet := vmConfig["virtio0"]; isSet {
+		storageType = "virtio"
+	} else if _, isSet := vmConfig["scsi0"]; isSet {
+		storageType = "scsi"
 	}
+	if storageType == "" {
+		return nil, errors.New("virtio0|scsi0 (required) not found in current config")
+	}
+	config.StorageType = storageType
 
-	storageMatch := rxStorage.FindStringSubmatch(vmConfig["virtio0"].(string))
+	storageMatch := rxStorage.FindStringSubmatch(vmConfig[storageType+"0"].(string))
 	config.Storage = storageMatch[1]
 	config.DiskSize, _ = strconv.ParseFloat(storageMatch[2], 64)
+	if storageMatch[3] == "M" {
+		config.DiskSize = config.DiskSize / 1024
+	}
 
 	if vmConfig["ide2"] != nil {
 		isoMatch := rxIso.FindStringSubmatch(vmConfig["ide2"].(string))
@@ -212,7 +277,24 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if netMatch[4] != "" {
 		config.QemuVlanTag, _ = strconv.Atoi(netMatch[4])
 	}
-
+	if _, isSet := vmConfig["ciuser"]; isSet {
+		config.CIuser = vmConfig["ciuser"].(string)
+	}
+	if _, isSet := vmConfig["cipassword"]; isSet {
+		config.CIpassword = vmConfig["cipassword"].(string)
+	}
+	if _, isSet := vmConfig["searchdomain"]; isSet {
+		config.Searchdomain = vmConfig["searchdomain"].(string)
+	}
+	if _, isSet := vmConfig["sshkeys"]; isSet {
+		config.Sshkeys = vmConfig["sshkeys"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig0"]; isSet {
+		config.Ipconfig0 = vmConfig["ipconfig0"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig1"]; isSet {
+		config.Ipconfig1 = vmConfig["ipconfig1"].(string)
+	}
 	return
 }
 

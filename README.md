@@ -66,6 +66,21 @@ cloneQemu JSON Sample:
 }
 ```
 
+cloneQemu cloud-init JSON Sample:
+```
+{
+  "name": "cloudinit.test.com",
+	"desc": "Test proxmox-api-go clone",
+  "storage": "local",
+  "memory": 2048,
+  "cores": 2,
+  "sockets": 1,
+  "ipconfig0": "gw=10.0.2.2,ip=10.0.2.17/24",
+  "nameserver": "8.8.8.8"
+}
+```
+
+
 ### ISO requirements
 
 Kickstart auto install
