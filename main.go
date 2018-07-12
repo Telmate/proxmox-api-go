@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -31,7 +32,7 @@ func main() {
 		if len(flag.Args()) > 1 {
 			vmid, err = strconv.Atoi(flag.Args()[1])
 			if err != nil {
-				log.Fatal(err)
+				vmid = 0
 			}
 		} else if flag.Args()[0] == "idstatus" {
 			vmid = 0
@@ -46,6 +47,7 @@ func main() {
 		jbody, _ = c.StartVm(vmr)
 
 	case "stop":
+
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, _ = c.StopVm(vmr)
 
@@ -59,7 +61,8 @@ func main() {
 		vmr = proxmox.NewVmRef(vmid)
 		config, err := proxmox.NewConfigQemuFromApi(vmr, c)
 		failError(err)
-		log.Println(config)
+		cj, err := json.MarshalIndent(config, "", "  ")
+		log.Println(string(cj))
 
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
@@ -152,7 +155,7 @@ func main() {
 		fmt.Printf("unknown action, try start|stop vmid")
 	}
 	if jbody != nil {
-	log.Println(jbody)
+		log.Println(jbody)
 	}
 	//log.Println(vmr)
 }
