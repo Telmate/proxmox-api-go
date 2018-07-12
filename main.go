@@ -31,7 +31,7 @@ func main() {
 		if len(flag.Args()) > 1 {
 			vmid, err = strconv.Atoi(flag.Args()[1])
 			if err != nil {
-				log.Fatal(err)
+				vmid = 0
 			}
 		} else if flag.Args()[0] == "idstatus" {
 			vmid = 0
@@ -152,7 +152,7 @@ func main() {
 		fmt.Printf("unknown action, try start|stop vmid")
 	}
 	if jbody != nil {
-	log.Println(jbody)
+		log.Println(jbody)
 	}
 	//log.Println(vmr)
 }
