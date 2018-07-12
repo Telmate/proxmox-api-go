@@ -3,6 +3,7 @@
 
 Proxmox API in golang. For /api2/json. Work in progress.
 
+Starting with Proxmox 5.2 you can use clout-init options.
 
 ## Build
 
@@ -57,7 +58,7 @@ cloneQemu JSON Sample:
 ```
 {
   "name": "golang2.test.com",
-	"desc": "Test proxmox-api-go clone",
+  "desc": "Test proxmox-api-go clone",
   "storage": "local",
   "memory": 2048,
   "cores": 2,
@@ -70,18 +71,32 @@ cloneQemu cloud-init JSON Sample:
 ```
 {
   "name": "cloudinit.test.com",
-	"desc": "Test proxmox-api-go clone",
+  "desc": "Test proxmox-api-go clone",
   "storage": "local",
   "memory": 2048,
   "cores": 2,
   "sockets": 1,
   "ipconfig0": "gw=10.0.2.2,ip=10.0.2.17/24",
+  "sshkey" : "...",
   "nameserver": "8.8.8.8"
 }
 ```
 
 
-### ISO requirements
+### Cloud-init options
+
+Cloud-init VMs must be cloned from a cloud-init ready template. 
+See: https://pve.proxmox.com/wiki/Cloud-Init_Support
+
+* ciuser - User name to change ssh keys and password for instead of the image’s configured default user.
+* cipassword - Password to assign the user. 
+* searchdomain - Sets DNS search domains for a container.
+* nameserver - Sets DNS server IP address for a container.
+* sshkeys - public ssh keys, one per line
+* ipconfig0 - [gw=<GatewayIPv4>] [,gw6=<GatewayIPv6>] [,ip=<IPv4Format/CIDR>] [,ip6=<IPv6Format/CIDR>]
+* ipconfig1 - optional, same as ipconfig0 format
+
+### ISO requirements (non cloud-init)
 
 Kickstart auto install
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -152,7 +153,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["nameserver"] = config.Nameserver
 	}
 	if config.Sshkeys != "" {
-		configParams["sshkeys"] = config.Sshkeys
+		sshkeyEnc := url.PathEscape(config.Sshkeys + "\n")
+		sshkeyEnc = strings.Replace(sshkeyEnc, "+", "%2B", -1)
+		sshkeyEnc = strings.Replace(sshkeyEnc, "@", "%40", -1)
+		configParams["sshkeys"] = sshkeyEnc
 	}
 	if config.Ipconfig0 != "" {
 		configParams["ipconfig0"] = config.Ipconfig0
@@ -287,7 +291,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		config.Searchdomain = vmConfig["searchdomain"].(string)
 	}
 	if _, isSet := vmConfig["sshkeys"]; isSet {
-		config.Sshkeys = vmConfig["sshkeys"].(string)
+		config.Sshkeys, _ = url.PathUnescape(vmConfig["sshkeys"].(string))
 	}
 	if _, isSet := vmConfig["ipconfig0"]; isSet {
 		config.Ipconfig0 = vmConfig["ipconfig0"].(string)
