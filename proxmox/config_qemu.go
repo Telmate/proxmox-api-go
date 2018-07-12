@@ -125,19 +125,24 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 }
 
 func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
-	network := config.QemuNicModel + ",bridge=" + config.QemuBrige
-	if config.QemuMacAddr != "" {
-		network = network + ",macaddr=" + config.QemuMacAddr
-	}
-	if config.QemuVlanTag > 0 {
-		network = network + ",tag=" + strconv.Itoa(config.QemuVlanTag)
+	network := ""
+	if config.QemuNicModel != "" {
+		network = config.QemuNicModel + ",bridge=" + config.QemuBrige
+		if config.QemuMacAddr != "" {
+			network = network + ",macaddr=" + config.QemuMacAddr
+		}
+		if config.QemuVlanTag > 0 {
+			network = network + ",tag=" + strconv.Itoa(config.QemuVlanTag)
+		}
 	}
 	configParams := map[string]string{
 		"sockets":     strconv.Itoa(config.QemuSockets),
 		"cores":       strconv.Itoa(config.QemuCores),
 		"memory":      strconv.Itoa(config.Memory),
-		"net0":        network,
 		"description": config.Description,
+	}
+	if network != "" {
+		configParams["net0"] = network
 	}
 	// cloud-init options
 	if config.CIuser != "" {

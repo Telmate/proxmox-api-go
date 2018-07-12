@@ -4,6 +4,7 @@ package proxmox
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -183,7 +184,12 @@ func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]i
 	return
 }
 
+// WaitForCompletion - poll the API for task completion
 func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExitStatus string, err error) {
+	if taskResponse["errors"] != nil {
+		errJSON, _ := json.MarshalIndent(taskResponse["errors"], "", "  ")
+		return string(errJSON), errors.New("Error reponse")
+	}
 	if taskResponse["data"] == nil {
 		return "", nil
 	}
@@ -297,6 +303,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 	return
 }
 
+// SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]string) (exitStatus interface{}, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
