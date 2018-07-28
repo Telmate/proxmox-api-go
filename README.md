@@ -41,15 +41,31 @@ createQemu JSON Sample:
   "name": "golang1.test.com",
   "desc": "Test proxmox-api-go",
   "memory": 2048,
-  "diskGB": 10,
-  "storage": "local",
   "os": "l26",
   "cores": 2,
   "sockets": 1,
   "iso": "local:iso/ubuntu-14.04.5-server-amd64.iso",
-  "nic": "virtio",
-  "bridge": "vmbr0",
-  "vlan": -1
+  "disk": {
+    0: {
+      "type": "virtio",
+      "storage": "local",
+      "storage_type": "dir",
+      "size": "30G",
+      "backup": true
+  },
+  "network": {
+    0: {
+      "model": "virtio",
+      "bridge": "nat"
+    },
+    1: {
+      "model": "virtio",
+      "bridge": "vmbr0",
+      "firwall": true,
+      "backup": true,
+      "tag": -1
+    },
+  }
 }
 ```
 
@@ -72,7 +88,6 @@ cloneQemu cloud-init JSON Sample:
 {
   "name": "cloudinit.test.com",
   "desc": "Test proxmox-api-go clone",
-  "storage": "local",
   "memory": 2048,
   "cores": 2,
   "sockets": 1,

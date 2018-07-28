@@ -177,7 +177,7 @@ func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]i
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(map[string]string{"command": command})
+	reqbody := ParamsToBody(map[string]interface{}{"command": command})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/monitor", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	monitorRes = ResponseJSON(resp)
@@ -269,7 +269,7 @@ func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 	return
 }
 
-func (c *Client) CreateQemuVm(node string, vmParams map[string]string) (exitStatus string, err error) {
+func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu", node)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -280,7 +280,7 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]string) (exitStat
 	return
 }
 
-func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]string) (exitStatus string, err error) {
+func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -304,7 +304,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 }
 
 // SetVmConfig - send config options
-func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]string) (exitStatus interface{}, err error) {
+func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]interface{}) (exitStatus interface{}, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -323,7 +323,7 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 		disk = "virtio0"
 	}
 	size := fmt.Sprintf("+%dG", moreSizeGB)
-	reqbody := ParamsToBody(map[string]string{"disk": disk, "size": size})
+	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "size": size})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(url, nil, nil, &reqbody)
 	if err == nil {
