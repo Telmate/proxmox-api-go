@@ -80,7 +80,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create disks config.
-	config.CreateQemuDisksParams(vmr.vmId, "create", params)
+	config.CreateQemuDisksParams(vmr.vmId, params)
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, params)
@@ -144,7 +144,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create disks config.
-	config.CreateQemuDisksParams(vmr.vmId, "update", configParams)
+	config.CreateQemuDisksParams(vmr.vmId, configParams)
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, configParams)
@@ -568,7 +568,6 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 // Create parameters for each disk.
 func (c ConfigQemu) CreateQemuDisksParams(
 	vmID int,
-	action string,
 	params map[string]interface{},
 ) error {
 
@@ -586,43 +585,31 @@ func (c ConfigQemu) CreateQemuDisksParams(
 	// For new style with multi disk device.
 	for diskID, diskConfMap := range c.QemuDisks {
 
-		diskConfParam := QemuDeviceParam{}
+		diskConfParam := QemuDeviceParam{
+			"media=disk",
+		}
 
 		// Device name.
 		deviceType := diskConfMap["type"].(string)
 		qemuDiskName := deviceType + strconv.Itoa(diskID)
 
 		// Set disk storage.
-		if action == "create" {
+		// Disk size.
+		diskSizeGB := fmt.Sprintf("size=%v", diskConfMap["size"])
+		diskConfParam = append(diskConfParam, diskSizeGB)
 
-			// Disk size.
-			diskSizeGB := diskConfMap["size"].(string)
-			diskSize := strings.Trim(diskSizeGB, "G")
-			diskStorage := fmt.Sprintf("%v:%v", diskConfMap["storage"], diskSize)
-			diskConfParam = append(diskConfParam, diskStorage)
-
-		} else if action == "update" {
-
-			// Disk size.
-			diskSizeGB := fmt.Sprintf("size=%v", diskConfMap["size"])
-			diskConfParam = append(diskConfParam, diskSizeGB)
-
-			// Disk name.
-			// FIXME: Here disk naming assumes that disk IDs start from `0`, which's not necessary.
-			// A better way to do that is creating the disk separately with known name
-			// instead make Proxmox API creates the name automatically.
-			var diskFile string
-			// Currently ZFS local, LVM, and Directory are considered.
-			// Other formats are not verified, but could be added if they're needed.
-			rxStorageTypes := `(zfspool|lvm)`
-			storageType := diskConfMap["storage_type"].(string)
-			if matched, _ := regexp.MatchString(rxStorageTypes, storageType); matched {
-				diskFile = fmt.Sprintf("file=%v:vm-%v-disk-%v", diskConfMap["storage"], vmID, diskID+1)
-			} else {
-				diskFile = fmt.Sprintf("file=%v:%v/vm-%v-disk-%v.%v", diskConfMap["storage"], vmID, vmID, diskID+1, diskConfMap["format"])
-			}
-			diskConfParam = append(diskConfParam, diskFile)
+		// Disk name.
+		var diskFile string
+		// Currently ZFS local, LVM, and Directory are considered.
+		// Other formats are not verified, but could be added if they're needed.
+		rxStorageTypes := `(zfspool|lvm)`
+		storageType := diskConfMap["storage_type"].(string)
+		if matched, _ := regexp.MatchString(rxStorageTypes, storageType); matched {
+			diskFile = fmt.Sprintf("file=%v:vm-%v-disk-%v", diskConfMap["storage"], vmID, diskID+1)
+		} else {
+			diskFile = fmt.Sprintf("file=%v:%v/vm-%v-disk-%v.%v", diskConfMap["storage"], vmID, vmID, diskID+1, diskConfMap["format"])
 		}
+		diskConfParam = append(diskConfParam, diskFile)
 
 		// Set cache if not none (default).
 		if diskConfMap["cache"].(string) != "none" {
