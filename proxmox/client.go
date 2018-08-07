@@ -406,7 +406,7 @@ func (c *Client) createVMDisks(
 	for deviceName, deviceConf := range vmParams {
 		rxStorageModels := `(ide|sata|scsi|virtio)\d+`
 		if matched, _ := regexp.MatchString(rxStorageModels, deviceName); matched {
-			deviceConfMap := ParseKVString(deviceConf.(string), ",", "=")
+			deviceConfMap := ParseConf(deviceConf.(string), ",", "=")
 			// This if condition to differentiate between `disk` and `cdrom`.
 			if media, containsFile := deviceConfMap["media"]; containsFile && media == "disk" {
 				fullDiskName := deviceConfMap["file"].(string)

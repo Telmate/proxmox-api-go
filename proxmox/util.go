@@ -22,28 +22,41 @@ func Itob(i int) bool {
 	return false
 }
 
-func ParseKVString(
-	kvString string,
-	itemsSeparator string,
-	kvSeparator string,
-) map[string]interface{} {
-	var kvMap = map[string]interface{}{}
-	var interValue interface{}
-	kvStringMap := strings.Split(kvString, itemsSeparator)
-	for _, item := range kvStringMap {
-		if strings.Contains(item, kvSeparator) {
-			itemKV := strings.Split(item, kvSeparator)
-			key, value := itemKV[0], itemKV[1]
-			if f, err := strconv.ParseFloat(value, 64); err == nil {
-				interValue = f
-			} else if i, err := strconv.ParseInt(value, 10, 64); err == nil {
-				interValue = i
-			} else {
-				interValue = value
-			}
-			kvMap[key] = interValue
-		}
+// ParseSubConf - Parse standard sub-conf strings `key=value`.
+func ParseSubConf(
+	element string,
+	separator string,
+) (key string, value interface{}) {
+	if strings.Contains(element, separator) {
+		conf := strings.Split(element, separator)
+		key, value := conf[0], conf[1]
+		var interValue interface{}
 
+		// Make sure to add value in right type,
+		// because all subconfig are returned as strings from Proxmox API.
+		if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+			interValue = int(iValue)
+		} else if bValue, err := strconv.ParseBool(value); err == nil {
+			interValue = bValue
+		} else {
+			interValue = value
+		}
+		return key, interValue
 	}
-	return kvMap
+	return
+}
+
+// ParseConf - Parse standard device conf string `key1=val1,key2=val2`.
+func ParseConf(
+	kvString string,
+	confSeparator string,
+	subConfSeparator string,
+) QemuDevice {
+	var confMap = QemuDevice{}
+	confList := strings.Split(kvString, confSeparator)
+	for _, item := range confList {
+		key, value := ParseSubConf(item, subConfSeparator)
+		confMap[key] = value
+	}
+	return confMap
 }

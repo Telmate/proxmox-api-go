@@ -310,13 +310,13 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		id := rxDeviceID.FindStringSubmatch(diskName)
 		diskID, _ := strconv.Atoi(id[0])
 		diskType := rxDiskType.FindStringSubmatch(diskName)[0]
-		diskStorageAndFile := strings.Split(diskConfList[0], ":")
+		storageName, fileName := ParseSubConf(diskConfList[0], ":")
 
 		//
 		diskConfMap := QemuDevice{
 			"type":    diskType,
-			"storage": diskStorageAndFile[0],
-			"file":    diskStorageAndFile[1],
+			"storage": storageName,
+			"file":    fileName,
 		}
 
 		// Add rest of device config.
@@ -345,12 +345,12 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		//
 		id := rxDeviceID.FindStringSubmatch(nicName)
 		nicID, _ := strconv.Atoi(id[0])
-		modelAndMacaddr := strings.Split(nicConfList[0], "=")
+		model, macaddr := ParseSubConf(nicConfList[0], "=")
 
 		// Add model and MAC address.
 		nicConfMap := QemuDevice{
-			"model":   modelAndMacaddr[0],
-			"macaddr": modelAndMacaddr[1],
+			"model":   model,
+			"macaddr": macaddr,
 		}
 
 		// Add rest of device config.
@@ -656,22 +656,12 @@ func (p QemuDeviceParam) createDeviceParam(
 	return p
 }
 
-// Parse standard sub-conf strings where `key=value` and update conf map.
+// readDeviceConfig - get standard sub-conf strings where `key=value` and update conf map.
 func (confMap QemuDevice) readDeviceConfig(confList []string) error {
 	// Add device config.
-	for _, confs := range confList {
-		conf := strings.Split(confs, "=")
-		key := conf[0]
-		value := conf[1]
-		// Make sure to add value in right type because
-		// all subconfig are returned as strings from Proxmox API.
-		if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
-			confMap[key] = int(iValue)
-		} else if bValue, err := strconv.ParseBool(value); err == nil {
-			confMap[key] = bValue
-		} else {
-			confMap[key] = value
-		}
+	for _, conf := range confList {
+		key, value := ParseSubConf(conf, "=")
+		confMap[key] = value
 	}
 	return nil
 }
