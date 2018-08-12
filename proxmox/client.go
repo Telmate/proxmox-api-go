@@ -257,6 +257,18 @@ func (c *Client) ShutdownVm(vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(vmr, "shutdown")
 }
 
+func (c *Client) ResetVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, "reset")
+}
+
+func (c *Client) SuspendVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, "suspend")
+}
+
+func (c *Client) ResumeVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, "resume")
+}
+
 func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
