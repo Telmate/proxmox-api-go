@@ -1,11 +1,11 @@
-package sizeUnit
+package sizeunit
 
 import (
 	"fmt"
 	"strconv"
 )
 
-type SizeUnit uint64
+type SizeUnit int64
 
 const (
 	KB SizeUnit = 1 << (10 * (iota + 1))
@@ -34,11 +34,5 @@ func FormatToLongString(size int, sizeUnit SizeUnit) string {
 }
 
 func ConvertTo(size int, oldSizeUnit SizeUnit, newSizeUnit SizeUnit) (newSize int, newUnit SizeUnit) {
-	if oldSizeUnit < newSizeUnit {
-		return size / int(newSizeUnit), newSizeUnit
-	} else if newSizeUnit > oldSizeUnit {
-		return size * int(newSizeUnit), newSizeUnit
-	} else {
-		return size, newSizeUnit
-	}
+	return size * int(oldSizeUnit) / int(newSizeUnit), newSizeUnit
 }
