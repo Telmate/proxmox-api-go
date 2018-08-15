@@ -346,11 +346,11 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 	return
 }
 
-func (c *Client) CreateQemuDisk(vmr *VmRef, vmId int, diskName string, diskSize int, unit sizeUnit.SizeUnit,
+func (c *Client) CreateQemuDisk(vmr *VmRef, vmId int, diskName string, diskSize int, unit sizeunit.SizeUnit,
 	format string) error {
 	reqBody := ParamsToBody(map[string]string{
 		"filename": diskName,
-		"size":     sizeUnit.FormatToShortString(diskSize, unit),
+		"size":     sizeunit.FormatToShortString(diskSize, unit),
 		"format":   format,
 		"vmid":     strconv.Itoa(vmId),
 	})
