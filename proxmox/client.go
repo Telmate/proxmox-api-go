@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Telmate/proxmox-api-go/sizeunit"
 	"io"
 	"net/http"
 	"regexp"
@@ -343,6 +344,19 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 		exitStatus, err = c.WaitForCompletion(taskResponse)
 	}
 	return
+}
+
+func (c *Client) CreateQemuDisk(vmr *VmRef, vmId int, diskName string, diskSize int, unit sizeUnit.SizeUnit,
+	format string) error {
+	reqBody := ParamsToBody(map[string]string{
+		"filename": diskName,
+		"size":     sizeUnit.FormatToShortString(diskSize, unit),
+		"format":   format,
+		"vmid":     strconv.Itoa(vmId),
+	})
+	url := fmt.Sprintf("/nodes/%s/storage/local/content", vmr.node)
+	_, err := c.session.Post(url, nil, nil, &reqBody)
+	return err
 }
 
 // GetNextID - Get next free VMID
