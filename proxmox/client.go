@@ -346,13 +346,12 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 	return
 }
 
-func (c *Client) CreateQemuDisk(vmr *VmRef, vmId int, diskName string, diskSize int, unit sizeunit.SizeUnit,
-	format string) error {
+func (c *Client) CreateQemuDisk(vmr *VmRef, diskName string, diskSize int, unit sizeunit.SizeUnit, format string) error {
 	reqBody := ParamsToBody(map[string]string{
 		"filename": diskName,
 		"size":     sizeunit.FormatToShortString(diskSize, unit),
 		"format":   format,
-		"vmid":     strconv.Itoa(vmId),
+		"vmid":     strconv.Itoa(vmr.vmId),
 	})
 	url := fmt.Sprintf("/nodes/%s/storage/local/content", vmr.node)
 	_, err := c.session.Post(url, nil, nil, &reqBody)
