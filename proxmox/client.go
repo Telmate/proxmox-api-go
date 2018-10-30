@@ -362,7 +362,7 @@ func (c *Client) CreateQemuDisk(vmr *VmRef, diskName string, diskSize int, unit 
 func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 	var data map[string]interface{}
 	var url string
-	if currentID > 0 {
+	if currentID >= 100 {
 		url = fmt.Sprintf("/cluster/nextid?vmid=%d", currentID)
 	} else {
 		url = "/cluster/nextid"
@@ -370,8 +370,8 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 	_, err = c.session.GetJSON(url, nil, nil, &data)
 	if err == nil {
 		if data["errors"] != nil {
-			if currentID != 0 {
-				return c.GetNextID(0)
+			if currentID >= 100 {
+				return c.GetNextID(currentID + 1)
 			} else {
 				return -1, errors.New("error using /cluster/nextid")
 			}
