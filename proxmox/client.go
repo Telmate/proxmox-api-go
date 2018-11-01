@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Telmate/proxmox-api-go/sizeunit"
 	"io"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -178,7 +178,7 @@ func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]i
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(map[string]string{"command": command})
+	reqbody := ParamsToBody(map[string]interface{}{"command": command})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/monitor", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	monitorRes = ResponseJSON(resp)
@@ -282,18 +282,34 @@ func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 	return
 }
 
-func (c *Client) CreateQemuVm(node string, vmParams map[string]string) (exitStatus string, err error) {
-	reqbody := ParamsToBody(vmParams)
-	url := fmt.Sprintf("/nodes/%s/qemu", node)
-	resp, err := c.session.Post(url, nil, nil, &reqbody)
-	if err == nil {
-		taskResponse := ResponseJSON(resp)
-		exitStatus, err = c.WaitForCompletion(taskResponse)
+func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exitStatus string, err error) {
+
+	// Create VM disks first to ensure disks names.
+	createdDisks, createdDisksErr := c.createVMDisks(node, vmParams)
+	if createdDisksErr != nil {
+		return "", createdDisksErr
+
+		// Then create the VM itself.
+	} else if err == nil {
+		reqbody := ParamsToBody(vmParams)
+		url := fmt.Sprintf("/nodes/%s/qemu", node)
+		resp, err := c.session.Post(url, nil, nil, &reqbody)
+		if err == nil {
+			taskResponse := ResponseJSON(resp)
+			exitStatus, err = c.WaitForCompletion(taskResponse)
+			// Delete VM disks if the VM didn't create.
+			if exitStatus != "OK" {
+				deleteDisksErr := c.DeleteVMDisks(node, createdDisks)
+				if deleteDisksErr != nil {
+					return "", deleteDisksErr
+				}
+			}
+		}
 	}
 	return
 }
 
-func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]string) (exitStatus string, err error) {
+func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -317,7 +333,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 }
 
 // SetVmConfig - send config options
-func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]string) (exitStatus interface{}, err error) {
+func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]interface{}) (exitStatus interface{}, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -336,7 +352,7 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 		disk = "virtio0"
 	}
 	size := fmt.Sprintf("+%dG", moreSizeGB)
-	reqbody := ParamsToBody(map[string]string{"disk": disk, "size": size})
+	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "size": size})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(url, nil, nil, &reqbody)
 	if err == nil {
@@ -344,18 +360,6 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 		exitStatus, err = c.WaitForCompletion(taskResponse)
 	}
 	return
-}
-
-func (c *Client) CreateQemuDisk(vmr *VmRef, diskName string, diskSize int, unit sizeunit.SizeUnit, format string) error {
-	reqBody := ParamsToBody(map[string]string{
-		"filename": diskName,
-		"size":     sizeunit.FormatToShortString(diskSize, unit),
-		"format":   format,
-		"vmid":     strconv.Itoa(vmr.vmId),
-	})
-	url := fmt.Sprintf("/nodes/%s/storage/local/content", vmr.node)
-	_, err := c.session.Post(url, nil, nil, &reqBody)
-	return err
 }
 
 // GetNextID - Get next free VMID
@@ -379,4 +383,90 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 		nextID, err = strconv.Atoi(data["data"].(string))
 	}
 	return
+}
+
+// CreateVMDisk - Create single disk for VM on host node.
+func (c *Client) CreateVMDisk(
+	nodeName string,
+	storageName string,
+	fullDiskName string,
+	diskParams map[string]interface{},
+) error {
+
+	reqbody := ParamsToBody(diskParams)
+	url := fmt.Sprintf("/nodes/%s/storage/%s/content", nodeName, storageName)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse := ResponseJSON(resp)
+		if diskName, containsData := taskResponse["data"]; !containsData || diskName != fullDiskName {
+			return errors.New(fmt.Sprintf("Cannot create VM disk %s", fullDiskName))
+		}
+	} else {
+		return err
+	}
+
+	return nil
+}
+
+// createVMDisks - Make disks parameters and create all VM disks on host node.
+func (c *Client) createVMDisks(
+	node string,
+	vmParams map[string]interface{},
+) (disks []string, err error) {
+	var createdDisks []string
+	vmID := vmParams["vmid"].(int)
+	for deviceName, deviceConf := range vmParams {
+		rxStorageModels := `(ide|sata|scsi|virtio)\d+`
+		if matched, _ := regexp.MatchString(rxStorageModels, deviceName); matched {
+			deviceConfMap := ParseConf(deviceConf.(string), ",", "=")
+			// This if condition to differentiate between `disk` and `cdrom`.
+			if media, containsFile := deviceConfMap["media"]; containsFile && media == "disk" {
+				fullDiskName := deviceConfMap["file"].(string)
+				storageName, volumeName := getStorageAndVolumeName(fullDiskName, ":")
+				diskParams := map[string]interface{}{
+					"vmid":     vmID,
+					"filename": volumeName,
+					"size":     deviceConfMap["size"],
+				}
+				err := c.CreateVMDisk(node, storageName, fullDiskName, diskParams)
+				if err != nil {
+					return createdDisks, err
+				} else {
+					createdDisks = append(createdDisks, fullDiskName)
+				}
+			}
+		}
+	}
+
+	return createdDisks, nil
+}
+
+// DeleteVMDisks - Delete VM disks from host node.
+// By default the VM disks are deteled when the VM is deleted,
+// so mainly this is used to delete the disks in case VM creation didn't complete.
+func (c *Client) DeleteVMDisks(
+	node string,
+	disks []string,
+) error {
+	for _, fullDiskName := range disks {
+		storageName, volumeName := getStorageAndVolumeName(fullDiskName, ":")
+		url := fmt.Sprintf("/nodes/%s/storage/%s/content/%s", node, storageName, volumeName)
+		_, err := c.session.Post(url, nil, nil, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// getStorageAndVolumeName - Extract disk storage and disk volume, since disk name is saved
+// in Proxmox with its storage.
+func getStorageAndVolumeName(
+	fullDiskName string,
+	separator string,
+) (storageName string, diskName string) {
+	storageAndVolumeName := strings.Split(fullDiskName, separator)
+	storageName, volumeName := storageAndVolumeName[0], storageAndVolumeName[1]
+	return storageName, volumeName
 }
