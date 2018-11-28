@@ -120,11 +120,15 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	if config.FullClone != nil {
 		fullclone = strconv.Itoa(*config.FullClone)
 	}
+	storage := config.Storage
+	if disk0Storage, ok := config.QemuDisks[0]["storage"].(string); ok && len(disk0Storage) > 0 {
+		storage = disk0Storage
+	}
 	params := map[string]interface{}{
 		"newid":   vmr.vmId,
 		"target":  vmr.node,
 		"name":    config.Name,
-		"storage": config.Storage,
+		"storage": storage,
 		"full":    fullclone,
 	}
 	_, err = client.CloneQemuVm(sourceVmr, params)
