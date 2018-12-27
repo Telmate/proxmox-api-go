@@ -609,9 +609,9 @@ func (c ConfigQemu) CreateQemuDisksParams(
 		rxStorageTypes := `(zfspool|lvm)`
 		storageType := diskConfMap["storage_type"].(string)
 		if matched, _ := regexp.MatchString(rxStorageTypes, storageType); matched {
-			diskFile = fmt.Sprintf("file=%v:vm-%v-disk-%v", diskConfMap["storage"], vmID, diskID+1)
+			diskFile = fmt.Sprintf("file=%v:vm-%v-disk-%v", diskConfMap["storage"], vmID, diskID)
 		} else {
-			diskFile = fmt.Sprintf("file=%v:%v/vm-%v-disk-%v.%v", diskConfMap["storage"], vmID, vmID, diskID+1, diskConfMap["format"])
+			diskFile = fmt.Sprintf("file=%v:%v/vm-%v-disk-%v.%v", diskConfMap["storage"], vmID, vmID, diskID, diskConfMap["format"])
 		}
 		diskConfParam = append(diskConfParam, diskFile)
 
