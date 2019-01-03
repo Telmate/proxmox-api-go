@@ -16,10 +16,12 @@ import (
 )
 
 // TaskTimeout - default async task call timeout in seconds
-const TaskTimeout = 90
+const TaskTimeout = 300
 
 // TaskStatusCheckInterval - time between async checks in seconds
 const TaskStatusCheckInterval = 2
+
+const exitStatusSuccess = "OK"
 
 // Client - URL, user and password to specifc Proxmox node
 type Client struct {
@@ -222,6 +224,9 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	_, err = c.session.GetJSON(url, nil, nil, &data)
 	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
+	}
+	if exitStatus != nil && exitStatus != exitStatusSuccess {
+		err = errors.New(exitStatus.(string))
 	}
 	return
 }
