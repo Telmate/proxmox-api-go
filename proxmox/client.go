@@ -16,7 +16,7 @@ import (
 )
 
 // TaskTimeout - default async task call timeout in seconds
-const TaskTimeout = 90
+const TaskTimeout = 300
 
 // TaskStatusCheckInterval - time between async checks in seconds
 const TaskStatusCheckInterval = 2
