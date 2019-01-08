@@ -80,7 +80,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create disks config.
-	config.CreateQemuDisksParams(vmr.vmId, params)
+	config.CreateQemuDisksParams(vmr.vmId, params, false)
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, params)
@@ -148,7 +148,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create disks config.
-	config.CreateQemuDisksParams(vmr.vmId, configParams)
+	config.CreateQemuDisksParams(vmr.vmId, configParams, true)
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, configParams)
@@ -197,7 +197,7 @@ func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
 var (
 	rxIso      = regexp.MustCompile(`(.*?),media`)
 	rxDeviceID = regexp.MustCompile(`\d+`)
-	rxDiskName = regexp.MustCompile(`virtio\d+`)
+	rxDiskName = regexp.MustCompile(`(virtio|scsi)\d+`)
 	rxDiskType = regexp.MustCompile(`\D+`)
 	rxNicName  = regexp.MustCompile(`net\d+`)
 )
@@ -512,7 +512,7 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 	// For backward compatibility.
 	if len(c.QemuNetworks) == 0 && len(c.QemuNicModel) > 0 {
 		deprecatedStyleMap := QemuDevice{
-			"type":    c.QemuNicModel,
+			"model":   c.QemuNicModel,
 			"bridge":  c.QemuBrige,
 			"macaddr": c.QemuMacAddr,
 		}
@@ -573,14 +573,26 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 func (c ConfigQemu) CreateQemuDisksParams(
 	vmID int,
 	params map[string]interface{},
+	cloned bool,
 ) error {
 
 	// For backward compatibility.
 	if len(c.QemuDisks) == 0 && len(c.Storage) > 0 {
+
+		dType := c.StorageType
+		if dType == "" {
+			if c.HasCloudInit() {
+				dType = "scsi"
+			} else {
+				dType = "virtio"
+			}
+		}
 		deprecatedStyleMap := QemuDevice{
-			"type":    c.StorageType,
-			"storage": c.Storage,
-			"size":    c.DiskSize,
+			"type":         dType,
+			"storage":      c.Storage,
+			"size":         c.DiskSize,
+			"storage_type": "lvm",  // default old style
+			"cache":        "none", // default old value
 		}
 
 		c.QemuDisks[0] = deprecatedStyleMap
@@ -589,6 +601,10 @@ func (c ConfigQemu) CreateQemuDisksParams(
 	// For new style with multi disk device.
 	for diskID, diskConfMap := range c.QemuDisks {
 
+		// skip the first disk for clones (may not always be right, but a template probably has at least 1 disk)
+		if diskID == 0 && cloned {
+			continue
+		}
 		diskConfParam := QemuDeviceParam{
 			"media=disk",
 		}
@@ -668,4 +684,9 @@ func (confMap QemuDevice) readDeviceConfig(confList []string) error {
 		confMap[key] = value
 	}
 	return nil
+}
+
+func (c ConfigQemu) String() string {
+	jsConf, _ := json.Marshal(c)
+	return string(jsConf)
 }
