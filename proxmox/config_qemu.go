@@ -538,15 +538,17 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 			macaddr := make(net.HardwareAddr, 6)
 			rand.Seed(time.Now().UnixNano())
 			rand.Read(macaddr)
+			macaddr[0] = (macaddr[0] | 2) & 0xfe // fix from github issue #18
 			macAddrUppr := strings.ToUpper(fmt.Sprintf("%v", macaddr))
-			macAddr := fmt.Sprintf("macaddr=%v", macAddrUppr)
+			// use model=mac format for older proxmox compatability
+			macAddr := fmt.Sprintf("%v=%v", nicConfMap["model"], macAddrUppr)
 
 			// Add Mac to source map so it will be returned. (useful for some use case like Terraform)
 			nicConfMap["macaddr"] = macAddrUppr
 			// and also add it to the parameters which will be sent to Proxmox API.
 			nicConfParam = append(nicConfParam, macAddr)
 		} else {
-			macAddr := fmt.Sprintf("macaddr=%v", nicConfMap["macaddr"].(string))
+			macAddr := fmt.Sprintf("%v=%v", nicConfMap["model"], nicConfMap["macaddr"].(string))
 			nicConfParam = append(nicConfParam, macAddr)
 		}
 
@@ -557,7 +559,7 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 		}
 
 		// Keys that are not used as real/direct conf.
-		ignoredKeys := []string{"id", "bridge", "macaddr"}
+		ignoredKeys := []string{"id", "bridge", "macaddr", "model"}
 
 		// Rest of config.
 		nicConfParam = nicConfParam.createDeviceParam(nicConfMap, ignoredKeys)
