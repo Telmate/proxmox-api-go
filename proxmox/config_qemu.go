@@ -140,6 +140,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 
 func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParams := map[string]interface{}{
+		"name":        config.Name,
 		"description": config.Description,
 		"onboot":      config.Onboot,
 		"sockets":     config.QemuSockets,
