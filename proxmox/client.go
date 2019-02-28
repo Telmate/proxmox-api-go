@@ -473,5 +473,13 @@ func getStorageAndVolumeName(
 ) (storageName string, diskName string) {
 	storageAndVolumeName := strings.Split(fullDiskName, separator)
 	storageName, volumeName := storageAndVolumeName[0], storageAndVolumeName[1]
+
+	// when disk type is dir, volumeName is `file=local:100/vm-100-disk-0.raw`
+	re := regexp.MustCompile(`\d+/(?P<filename>\S+.\S+)`)
+	match := re.FindStringSubmatch(volumeName)
+	if len(match) == 2 {
+		volumeName = match[1]
+	}
+
 	return storageName, volumeName
 }
