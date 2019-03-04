@@ -175,6 +175,24 @@ func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err e
 	return
 }
 
+func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	var data map[string]interface{}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/spiceproxy", vmr.node, vmr.vmType, vmr.vmId)
+	_, err = c.session.PostJSON(url, nil, nil, nil, &data)
+	if err != nil {
+		return nil, err
+	}
+	if data["data"] == nil {
+		return nil, errors.New("Vm SpiceProxy not readable")
+	}
+	vmSpiceProxy = data["data"].(map[string]interface{})
+	return
+}
+
 func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
