@@ -71,11 +71,6 @@ func ParamsToBody(params map[string]interface{}) (body []byte) {
 	return
 }
 
-func ResponseJSON(resp *http.Response) (jbody map[string]interface{}, err error) {
-	err = decodeResponse(resp, &jbody)
-	return jbody, err
-}
-
 func decodeResponse(resp *http.Response, v interface{}) error {
 	if resp.Body == nil {
 		return nil
@@ -86,6 +81,27 @@ func decodeResponse(resp *http.Response, v interface{}) error {
 	}
 	if err = json.Unmarshal(rbody, &v); err != nil {
 		return err
+	}
+	return nil
+}
+
+func ResponseJSON(resp *http.Response) (jbody map[string]interface{}, err error) {
+	err = decodeResponse(resp, &jbody)
+	return jbody, err
+}
+
+func TypedResponse(resp *http.Response, v interface{}) error {
+	var intermediate struct {
+		Data struct {
+			Result json.RawMessage `json:"result"`
+		} `json:"data"`
+	}
+	err := decodeResponse(resp, &intermediate)
+	if err != nil {
+		return fmt.Errorf("error reading response envelope: %v", err)
+	}
+	if err = json.Unmarshal(intermediate.Data.Result, v); err != nil {
+		return fmt.Errorf("error unmarshalling result %v", err)
 	}
 	return nil
 }
