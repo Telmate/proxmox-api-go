@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -201,7 +202,7 @@ func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]i
 	reqbody := ParamsToBody(map[string]interface{}{"command": command})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/monitor", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
-	monitorRes = ResponseJSON(resp)
+	monitorRes, err = ResponseJSON(resp)
 	return
 }
 
@@ -306,29 +307,39 @@ func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 }
 
 func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exitStatus string, err error) {
-
 	// Create VM disks first to ensure disks names.
 	createdDisks, createdDisksErr := c.createVMDisks(node, vmParams)
 	if createdDisksErr != nil {
 		return "", createdDisksErr
+	}
 
-		// Then create the VM itself.
-	} else if err == nil {
-		reqbody := ParamsToBody(vmParams)
-		url := fmt.Sprintf("/nodes/%s/qemu", node)
-		resp, err := c.session.Post(url, nil, nil, &reqbody)
-		if err == nil {
-			taskResponse := ResponseJSON(resp)
-			exitStatus, err = c.WaitForCompletion(taskResponse)
-			// Delete VM disks if the VM didn't create.
-			if exitStatus != "OK" {
-				deleteDisksErr := c.DeleteVMDisks(node, createdDisks)
-				if deleteDisksErr != nil {
-					return "", deleteDisksErr
-				}
-			}
+	// Then create the VM itself.
+	reqbody := ParamsToBody(vmParams)
+	url := fmt.Sprintf("/nodes/%s/qemu", node)
+	var resp *http.Response
+	resp, err = c.session.Post(url, nil, nil, &reqbody)
+	defer resp.Body.Close()
+	if err != nil {
+		// This might not work if we never got a body. We'll ignore errors in trying to read,
+		// but extract the body if possible to give any error information back in the exitStatus
+		b, _ := ioutil.ReadAll(resp.Body)
+		exitStatus = string(b)
+		return exitStatus, err
+	}
+
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return "", err
+	}
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	// Delete VM disks if the VM didn't create.
+	if exitStatus != "OK" {
+		deleteDisksErr := c.DeleteVMDisks(node, createdDisks)
+		if deleteDisksErr != nil {
+			return "", deleteDisksErr
 		}
 	}
+
 	return
 }
 
@@ -337,7 +348,10 @@ func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitS
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse := ResponseJSON(resp)
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return "", err
+		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
 	}
 	return
@@ -361,7 +375,10 @@ func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]interface{}) (exitS
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse := ResponseJSON(resp)
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
 	}
 	return
@@ -379,7 +396,10 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 	url := fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse := ResponseJSON(resp)
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
 	}
 	return
@@ -420,7 +440,10 @@ func (c *Client) CreateVMDisk(
 	url := fmt.Sprintf("/nodes/%s/storage/%s/content", nodeName, storageName)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse := ResponseJSON(resp)
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return err
+		}
 		if diskName, containsData := taskResponse["data"]; !containsData || diskName != fullDiskName {
 			return errors.New(fmt.Sprintf("Cannot create VM disk %s", fullDiskName))
 		}

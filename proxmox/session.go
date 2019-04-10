@@ -71,15 +71,23 @@ func ParamsToBody(params map[string]interface{}) (body []byte) {
 	return
 }
 
-func ResponseJSON(resp *http.Response) (jbody map[string]interface{}) {
-	rbody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("error reading response body: %s", err))
-	}
-	if err = json.Unmarshal(rbody, &jbody); err != nil {
+func ResponseJSON(resp *http.Response) (jbody map[string]interface{}, err error) {
+	err = decodeResponse(resp, &jbody)
+	return jbody, err
+}
+
+func decodeResponse(resp *http.Response, v interface{}) error {
+	if resp.Body == nil {
 		return nil
 	}
-	return
+	rbody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %s", err)
+	}
+	if err = json.Unmarshal(rbody, &v); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Session) Login(username string, password string) (err error) {
@@ -95,7 +103,10 @@ func (s *Session) Login(username string, password string) (err error) {
 		return errors.New("Login error reading response")
 	}
 	dr, _ := httputil.DumpResponse(resp, true)
-	jbody := ResponseJSON(resp)
+	jbody, err := ResponseJSON(resp)
+	if err != nil {
+		return err
+	}
 	if jbody == nil || jbody["data"] == nil {
 		return fmt.Errorf("Invalid login response:\n-----\n%s\n-----", dr)
 	}
@@ -143,7 +154,7 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, errors.New(resp.Status)
+		return resp, errors.New(resp.Status)
 	}
 
 	return resp, nil
@@ -176,12 +187,7 @@ func (s *Session) Request(
 
 	req.Header.Set("Accept", "application/json")
 
-	resp, err = s.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	return s.Do(req)
 }
 
 // Perform a simple get to an endpoint and unmarshall returned JSON
@@ -208,7 +214,7 @@ func (s *Session) RequestJSON(
 
 	resp, err = s.Request(method, url, params, headers, &bodyjson)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
 	// err = util.CheckHTTPResponseStatusCode(resp)
@@ -218,10 +224,10 @@ func (s *Session) RequestJSON(
 
 	rbody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.New("error reading response body")
+		return resp, errors.New("error reading response body")
 	}
 	if err = json.Unmarshal(rbody, &responseContainer); err != nil {
-		return nil, err
+		return resp, err
 	}
 
 	return resp, nil
