@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -192,6 +193,63 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 	}
 	vmSpiceProxy = data["data"].(map[string]interface{})
 	return
+}
+
+type AgentNetworkInterface struct {
+	MACAddress  string
+	IPAddresses []net.IP
+	Name        string
+	Statistics  map[string]int64
+}
+
+func (a *AgentNetworkInterface) UnmarshalJSON(b []byte) error {
+	var intermediate struct {
+		HardwareAddress string `json:"hardware-address"`
+		IPAddresses     []struct {
+			IPAddress     string `json:"ip-address"`
+			IPAddressType string `json:"ip-address-type"`
+			Prefix        int    `json:"prefix"`
+		} `json:"ip-addresses"`
+		Name       string           `json:"name"`
+		Statistics map[string]int64 `json:"statistics"`
+	}
+	err := json.Unmarshal(b, &intermediate)
+	if err != nil {
+		return err
+	}
+
+	a.IPAddresses = make([]net.IP, len(intermediate.IPAddresses))
+	for idx, ip := range intermediate.IPAddresses {
+		a.IPAddresses[idx] = net.ParseIP(ip.IPAddress)
+		if a.IPAddresses[idx] == nil {
+			return fmt.Errorf("Could not parse %s as IP", ip.IPAddress)
+		}
+	}
+	a.MACAddress = intermediate.HardwareAddress
+	a.Name = intermediate.Name
+	a.Statistics = intermediate.Statistics
+	return nil
+}
+
+func (c *Client) GetVmAgentNetworkInterfaces(vmr *VmRef) ([]AgentNetworkInterface, error) {
+	var ifs []AgentNetworkInterface
+	err := c.doAgentGet(vmr, "network-get-interfaces", &ifs)
+	return ifs, err
+}
+
+func (c *Client) doAgentGet(vmr *VmRef, command string, output interface{}) error {
+	err := c.CheckVmRef(vmr)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("/nodes/%s/%s/%d/agent/%s", vmr.node, vmr.vmType, vmr.vmId, command)
+	resp, err := c.session.Get(url, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return TypedResponse(resp, output)
 }
 
 func (c *Client) CreateTemplate(vmr *VmRef) error {
