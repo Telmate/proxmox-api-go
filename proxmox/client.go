@@ -194,6 +194,21 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 	return
 }
 
+func (c *Client) CreateTemplate(vmr *VmRef) error {
+	err := c.CheckVmRef(vmr)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("/nodes/%s/%s/%d/template", vmr.node, vmr.vmType, vmr.vmId)
+	_, err = c.session.Post(url, nil, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
