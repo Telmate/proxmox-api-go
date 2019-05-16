@@ -26,7 +26,7 @@ type ConfigQemu struct {
 	Name         string      `json:"name"`
 	Description  string      `json:"desc"`
 	Onboot       bool        `json:"onboot"`
-	Agent        string      `json:"agent"`
+	Agent        int         `json:"agent"`
 	Memory       int         `json:"memory"`
 	QemuOs       string      `json:"os"`
 	QemuCores    int         `json:"cores"`
@@ -251,9 +251,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
 	}
-	agent := "1"
+
+	agent := 1.0
 	if _, isSet := vmConfig["agent"]; isSet {
-		agent = vmConfig["agent"].(string)
+		agent = vmConfig["agent"].(float64)
 	}
 	ostype := "other"
 	if _, isSet := vmConfig["ostype"]; isSet {
@@ -275,7 +276,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Name:         name,
 		Description:  strings.TrimSpace(description),
 		Onboot:       onboot,
-		Agent:        agent,
+		Agent:        int(agent),
 		QemuOs:       ostype,
 		Memory:       int(memory),
 		QemuCores:    int(cores),
