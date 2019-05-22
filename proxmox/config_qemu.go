@@ -252,9 +252,15 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
 	}
 
-	agent := 0.0
+	agent := 0
 	if _, isSet := vmConfig["agent"]; isSet {
-		agent = vmConfig["agent"].(float64)
+		switch vmConfig["agent"].(type) {
+		case float64:
+			agent = int(vmConfig["agent"].(float64))
+		case string:
+			agent, _ = strconv.Atoi(vmConfig["agent"].(string))
+		}
+
 	}
 	ostype := "other"
 	if _, isSet := vmConfig["ostype"]; isSet {
@@ -276,7 +282,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Name:         name,
 		Description:  strings.TrimSpace(description),
 		Onboot:       onboot,
-		Agent:        int(agent),
+		Agent:        agent,
 		QemuOs:       ostype,
 		Memory:       int(memory),
 		QemuCores:    int(cores),
