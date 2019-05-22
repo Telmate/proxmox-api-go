@@ -252,7 +252,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
 	}
 
-	agent := 1.0
+	agent := 0.0
 	if _, isSet := vmConfig["agent"]; isSet {
 		agent = vmConfig["agent"].(float64)
 	}
@@ -331,6 +331,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 
 		//
 		diskConfMap := QemuDevice{
+			"id":      diskID,
 			"type":    diskType,
 			"storage": storageName,
 			"file":    fileName,
@@ -346,11 +347,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 
 	// Add networks.
-	nicNameRe := regexp.MustCompile(`net\d+`)
 	nicNames := []string{}
 
 	for k, _ := range vmConfig {
-		if nicName := nicNameRe.FindStringSubmatch(k); len(nicName) > 0 {
+		if nicName := rxNicName.FindStringSubmatch(k); len(nicName) > 0 {
 			nicNames = append(nicNames, nicName[0])
 		}
 	}
@@ -359,13 +359,13 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		nicConfStr := vmConfig[nicName]
 		nicConfList := strings.Split(nicConfStr.(string), ",")
 
-		//
 		id := rxDeviceID.FindStringSubmatch(nicName)
 		nicID, _ := strconv.Atoi(id[0])
 		model, macaddr := ParseSubConf(nicConfList[0], "=")
 
 		// Add model and MAC address.
 		nicConfMap := QemuDevice{
+			"id":      nicID,
 			"model":   model,
 			"macaddr": macaddr,
 		}
@@ -525,6 +525,7 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 	// For backward compatibility.
 	if len(c.QemuNetworks) == 0 && len(c.QemuNicModel) > 0 {
 		deprecatedStyleMap := QemuDevice{
+			"id":      0,
 			"model":   c.QemuNicModel,
 			"bridge":  c.QemuBrige,
 			"macaddr": c.QemuMacAddr,
@@ -603,6 +604,7 @@ func (c ConfigQemu) CreateQemuDisksParams(
 			}
 		}
 		deprecatedStyleMap := QemuDevice{
+			"id":           0,
 			"type":         dType,
 			"storage":      c.Storage,
 			"size":         c.DiskSize,
