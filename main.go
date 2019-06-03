@@ -72,6 +72,14 @@ func main() {
 		failError(config.CreateVm(vmr, c))
 		log.Println("Complete")
 
+	case "createLxc":
+		config, err := proxmox.NewConfigLxcFromJson(os.Stdin)
+		failError(err)
+		vmr = proxmox.NewVmRef(vmid)
+		vmr.SetNode(flag.Args()[2])
+		failError(config.CreateLxc(vmr, c))
+		log.Println("Complete")
+
 	case "installQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
