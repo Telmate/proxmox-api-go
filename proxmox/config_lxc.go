@@ -6,23 +6,16 @@ import (
 	"io"
 	"log"
 	"strings"
-//github.com/fatih/structs
-)
-
-type (
-	LxcDevices     []map[string]interface{}
-	LxcDevice      map[string]interface{}
-	LxcDeviceParam []string
 )
 
 // ConfigLxc - Proxmox API LXC options
 type ConfigLxc struct {
-	Ostemplate      string      `json:"ostemplate"`
-	Storage         string      `json:"storage"`
-	Pool            string      `json:"pool"`
-	Password        string      `json:"password"`
-	Hostname        string      `json:"hostname"`
-	Networks        LxcDevices  `json:"networks"`
+	Ostemplate      string       `json:"ostemplate"`
+	Storage         string       `json:"storage"`
+	Pool            string       `json:"pool"`
+	Password        string       `json:"password"`
+	Hostname        string       `json:"hostname"`
+	Networks        QemuDevices  `json:"networks"`
 }
 
 func NewConfigLxcFromJson(io io.Reader) (config *ConfigLxc, err error) {
@@ -36,26 +29,29 @@ func NewConfigLxcFromJson(io io.Reader) (config *ConfigLxc, err error) {
 	return
 }
 
-// CreateLxc - Tell Proxmox API to make the LXC container
+// create LXC container using the Proxmox API
 func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
-	//vmr.SetVmType("lxc")
+	vmr.SetVmType("lxc")
 
         // convert config to map
         params, _ := json.Marshal(&config)
         var paramMap map[string]interface{}
         json.Unmarshal(params, &paramMap)
 
-        // build list network name list
-        delete(paramMap, "networks")
-	for networkId, network := range config.Networks {
-                var networkList []string
-	        for key, value := range network {
-	                param := fmt.Sprintf("%v=%v", key, value)
-                        networkList = append(networkList, param)
-	        }
-                networkName := fmt.Sprintf("net%v", networkId)
-                paramMap[networkName] = strings.Join(networkList, ",")
+        // build list of network parameters
+	for nicID, nicConfMap := range config.Networks {
+		nicConfParam := QemuDeviceParam{}
+		nicConfParam = nicConfParam.createDeviceParam(nicConfMap, nil)
+
+		// add nic to lxc parameters
+		nicName := fmt.Sprintf("net%v", nicID)
+		paramMap[nicName] = strings.Join(nicConfParam, ",")
         }
+
+        // now that we concatenated the key value parameter
+        // list for the networks, remove the original network key
+        // since the Proxmox API does not know how to handle this key
+        delete(paramMap, "networks")
 
         // amend vmid
         paramMap["vmid"] = vmr.vmId
