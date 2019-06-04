@@ -422,18 +422,18 @@ func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
 	defer resp.Body.Close()
-//	if err != nil {
-//		// This might not work if we never got a body. We'll ignore errors in trying to read,
-//		// but extract the body if possible to give any error information back in the exitStatus
-//		b, _ := ioutil.ReadAll(resp.Body)
-//		exitStatus = string(b)
-//		return exitStatus, err
-//	}
-//
+	if err != nil {
+		// This might not work if we never got a body. We'll ignore errors in trying to read,
+		// but extract the body if possible to give any error information back in the exitStatus
+		b, _ := ioutil.ReadAll(resp.Body)
+		exitStatus = string(b)
+		return exitStatus, err
+	}
+
 	taskResponse, err := ResponseJSON(resp)
-//	if err != nil {
-//		return "", err
-//	}
+	if err != nil {
+		return "", err
+	}
 	exitStatus, err = c.WaitForCompletion(taskResponse)
 //	// Delete VM disks if the VM didn't create.
 //	if exitStatus != "OK" {
