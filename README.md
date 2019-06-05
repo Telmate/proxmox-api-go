@@ -52,6 +52,7 @@ createQemu JSON Sample:
       "storage_type": "dir",
       "size": "30G",
       "backup": true
+    }
   },
   "network": {
     "0": {
@@ -64,7 +65,7 @@ createQemu JSON Sample:
       "firwall": true,
       "backup": true,
       "tag": -1
-    },
+    }
   }
 }
 ```
