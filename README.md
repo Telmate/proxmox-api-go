@@ -46,7 +46,7 @@ createQemu JSON Sample:
   "sockets": 1,
   "iso": "local:iso/ubuntu-14.04.5-server-amd64.iso",
   "disk": {
-    0: {
+    "0": {
       "type": "virtio",
       "storage": "local",
       "storage_type": "dir",
@@ -54,11 +54,11 @@ createQemu JSON Sample:
       "backup": true
   },
   "network": {
-    0: {
+    "0": {
       "model": "virtio",
       "bridge": "nat"
     },
-    1: {
+    "1": {
       "model": "virtio",
       "bridge": "vmbr0",
       "firwall": true,
