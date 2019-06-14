@@ -451,7 +451,7 @@ func RemoveSshForwardUsernet(vmr *VmRef, client *Client) (err error) {
 func MaxVmId(client *Client) (max int, err error) {
 	resp, err := client.GetVmList()
 	vms := resp["data"].([]interface{})
-	max = 0
+	max = 100
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		vmid := int(vm["vmid"].(float64))
