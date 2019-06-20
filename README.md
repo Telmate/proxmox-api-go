@@ -107,6 +107,7 @@ See: https://pve.proxmox.com/wiki/Cloud-Init_Support
 
 * ciuser - User name to change ssh keys and password for instead of the image’s configured default user.
 * cipassword - Password to assign the user. 
+* cicustom - Specify custom files to replace the automatically generated ones at start.
 * searchdomain - Sets DNS search domains for a container.
 * nameserver - Sets DNS server IP address for a container.
 * sshkeys - public ssh keys, one per line
