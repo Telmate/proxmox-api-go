@@ -50,6 +50,7 @@ type ConfigQemu struct {
 	// cloud-init options
 	CIuser     string `json:"ciuser"`
 	CIpassword string `json:"cipassword"`
+	CIcustom   string `json:"cicustom"`
 
 	Searchdomain string `json:"searchdomain"`
 	Nameserver   string `json:"nameserver"`
@@ -102,7 +103,8 @@ func (config ConfigQemu) HasCloudInit() bool {
 		config.Nameserver != "" ||
 		config.Sshkeys != "" ||
 		config.Ipconfig0 != "" ||
-		config.Ipconfig1 != ""
+		config.Ipconfig1 != "" ||
+		config.CIcustom != ""
 }
 
 /*
@@ -166,6 +168,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 	if config.CIpassword != "" {
 		configParams["cipassword"] = config.CIpassword
+	}
+	if config.CIcustom != "" {
+		configParams["cicustom"] = config.CIcustom
 	}
 	if config.Searchdomain != "" {
 		configParams["searchdomain"] = config.Searchdomain
@@ -302,6 +307,9 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 	if _, isSet := vmConfig["cipassword"]; isSet {
 		config.CIpassword = vmConfig["cipassword"].(string)
+	}
+	if _, isSet := vmConfig["cicustom"]; isSet {
+		config.CIcustom = vmConfig["cicustom"].(string)
 	}
 	if _, isSet := vmConfig["searchdomain"]; isSet {
 		config.Searchdomain = vmConfig["searchdomain"].(string)
