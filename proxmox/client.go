@@ -51,6 +51,10 @@ func (vmr *VmRef) SetVmType(vmType string) {
 	return
 }
 
+func (vmr *VmRef) GetVmType() (string) {
+	return vmr.vmType
+}
+
 func (vmr *VmRef) VmId() int {
 	return vmr.vmId
 }

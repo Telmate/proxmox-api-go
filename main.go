@@ -59,7 +59,16 @@ func main() {
 
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
-		config, err := proxmox.NewConfigQemuFromApi(vmr, c)
+	        c.CheckVmRef(vmr)
+		vmType := vmr.GetVmType()
+                var config interface{}
+                var err error
+		log.Println(fmt.Sprintf("%+v", vmType))
+		if vmType == "qemu" {
+			config, err = proxmox.NewConfigQemuFromApi(vmr, c)
+		} else if vmType == "lxc" {
+			config, err = proxmox.NewConfigLxcFromApi(vmr, c)
+		}
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
 		log.Println(string(cj))

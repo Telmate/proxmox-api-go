@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"strings"
+	"strconv"
 )
 
 // LXC options for the Proxmox API
@@ -76,6 +77,224 @@ func NewConfigLxcFromJson(io io.Reader) (config configLxc, err error) {
 		return config, err
 	}
 	log.Println(config)
+	return
+}
+
+func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err error) {
+	// prepare json map to receive the information from the api
+	var lxcConfig map[string]interface{}
+	lxcConfig, err = client.GetVmConfig(vmr)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	// prepare a new lxc config to store and return\
+        // the information from api
+        newConfig := NewConfigLxc()
+        config = &newConfig
+
+	arch := ""
+	if _, isSet := lxcConfig["arch"]; isSet {
+		arch = lxcConfig["arch"].(string)
+	}
+	cmode := ""
+	if _, isSet := lxcConfig["cmode"]; isSet {
+		cmode = lxcConfig["cmode"].(string)
+	}
+	console := true
+	if _, isSet := lxcConfig["console"]; isSet {
+		console = Itob(int(lxcConfig["console"].(float64)))
+	}
+	cores := 1
+	if _, isSet := lxcConfig["cores"]; isSet {
+		cores = lxcConfig["cores"].(int)
+	}
+	cpulimit := 0
+	if _, isSet := lxcConfig["cpulimit"]; isSet {
+		cpulimit, _ = strconv.Atoi(lxcConfig["cpulimit"].(string))
+	}
+	cpuunits := 1024
+	if _, isSet := lxcConfig["cpuunits"]; isSet {
+		cpuunits = int(lxcConfig["cpuunits"].(float64))
+	}
+	description := ""
+	if _, isSet := lxcConfig["description"]; isSet {
+		description = lxcConfig["description"].(string)
+	}
+
+	// add features, if any
+	if features, isSet := lxcConfig["features"]; isSet {
+		featureList := strings.Split(features.(string), ",")
+
+		// create new device map to store features
+		featureMap := QemuDevice{}
+		// add all features to device map
+		featureMap.readDeviceConfig(featureList)
+		// prepare empty feature map
+		if config.Features == nil {
+			config.Features = QemuDevice{}
+		}
+		// and device config to networks
+		if len(featureMap) > 0 {
+			config.Features = featureMap
+		}
+	}
+
+	hookscript := ""
+	if _, isSet := lxcConfig["hookscript"]; isSet {
+		hookscript = lxcConfig["hookscript"].(string)
+	}
+	hostname := ""
+	if _, isSet := lxcConfig["hostname"]; isSet {
+		hostname = lxcConfig["hostname"].(string)
+	}
+	lock := ""
+	if _, isSet := lxcConfig["lock"]; isSet {
+		lock = lxcConfig["lock"].(string)
+	}
+	memory := 512
+	if _, isSet := lxcConfig["memory"]; isSet {
+		memory = int(lxcConfig["memory"].(float64))
+	}
+
+	// add mountpoints
+	mpNames := []string{}
+
+	for k, _ := range lxcConfig {
+		if mpName:= rxMpName.FindStringSubmatch(k); len(mpName) > 0 {
+			mpNames = append(mpNames, mpName[0])
+		}
+	}
+
+	for _, mpName := range mpNames {
+		mpConfStr := lxcConfig[mpName]
+		mpConfList := strings.Split(mpConfStr.(string), ",")
+
+		id := rxDeviceID.FindStringSubmatch(mpName)
+		mpID, _ := strconv.Atoi(id[0])
+		// add mp id
+		mpConfMap := QemuDevice{
+			"id":      mpID,
+		}
+		// add rest of device config
+		mpConfMap.readDeviceConfig(mpConfList)
+		// prepare empty mountpoint map
+		if config.Mountpoints == nil {
+			config.Mountpoints = QemuDevices{}
+		}
+		// and device config to mountpoints
+		if len(mpConfMap) > 0 {
+			config.Mountpoints[mpID] = mpConfMap
+		}
+	}
+
+	nameserver := ""
+	if _, isSet := lxcConfig["nameserver"]; isSet {
+		nameserver = lxcConfig["nameserver"].(string)
+	}
+
+	// add networks
+	nicNames := []string{}
+
+	for k, _ := range lxcConfig {
+		if nicName := rxNicName.FindStringSubmatch(k); len(nicName) > 0 {
+			nicNames = append(nicNames, nicName[0])
+		}
+	}
+
+	for _, nicName := range nicNames {
+		nicConfStr := lxcConfig[nicName]
+		nicConfList := strings.Split(nicConfStr.(string), ",")
+
+		id := rxDeviceID.FindStringSubmatch(nicName)
+		nicID, _ := strconv.Atoi(id[0])
+		// add nic id
+		nicConfMap := QemuDevice{
+			"id":      nicID,
+		}
+		// add rest of device config
+		nicConfMap.readDeviceConfig(nicConfList)
+		// prepare empty network map
+		if config.Networks == nil {
+			config.Networks = QemuDevices{}
+		}
+		// and device config to networks
+		if len(nicConfMap) > 0 {
+			config.Networks[nicID] = nicConfMap
+		}
+	}
+
+	onboot := false
+	if _, isSet := lxcConfig["onboot"]; isSet {
+		onboot = Itob(int(lxcConfig["onboot"].(float64)))
+	}
+	ostype := ""
+	if _, isSet := lxcConfig["ostype"]; isSet {
+		ostype = lxcConfig["ostype"].(string)
+	}
+	protection := false
+	if _, isSet := lxcConfig["protection"]; isSet {
+		protection = Itob(int(lxcConfig["protection"].(float64)))
+	}
+	rootfs := ""
+	if _, isSet := lxcConfig["rootfs"]; isSet {
+		rootfs = lxcConfig["rootfs"].(string)
+	}
+	searchdomain := ""
+	if _, isSet := lxcConfig["searchdomain"]; isSet {
+		searchdomain = lxcConfig["searchdomain"].(string)
+	}
+	startup := ""
+	if _, isSet := lxcConfig["startup"]; isSet {
+		startup = lxcConfig["startup"].(string)
+	}
+	swap := 512
+	if _, isSet := lxcConfig["swap"]; isSet {
+		swap = int(lxcConfig["swap"].(float64))
+	}
+	template := false
+	if _, isSet := lxcConfig["template"]; isSet {
+		template = Itob(int(lxcConfig["template"].(float64)))
+	}
+	tty := 2
+	if _, isSet := lxcConfig["tty"]; isSet {
+		tty = int(lxcConfig["tty"].(float64))
+	}
+	unprivileged := false
+	if _, isset := lxcConfig["unprivileged"]; isset {
+		unprivileged = Itob(int(lxcConfig["unprivileged"].(float64)))
+	}
+	var unused []string
+	if _, isset := lxcConfig["unused"]; isset {
+		unused = lxcConfig["unused"].([]string)
+	}
+
+	config.Arch = arch
+	config.CMode = cmode
+	config.Console = console
+	config.Cores = cores
+	config.CPULimit = cpulimit
+	config.CPUUnits = cpuunits
+	config.Description = description
+        config.OnBoot = onboot
+	config.Hookscript = hookscript
+        config.Hostname = hostname
+	config.Lock = lock
+	config.Memory = memory
+        config.Nameserver = nameserver
+	config.OnBoot = onboot
+	config.OsType = ostype
+        config.Protection = protection
+	config.RootFs = rootfs
+	config.SearchDomain = searchdomain
+        config.Startup = startup
+	config.Swap = swap
+	config.Template = template
+        config.Tty = tty
+	config.Unprivileged = unprivileged
+        config.Unused = unused
+
 	return
 }
 
