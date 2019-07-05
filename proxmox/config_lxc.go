@@ -108,7 +108,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 	}
 	cores := 1
 	if _, isSet := lxcConfig["cores"]; isSet {
-		cores = lxcConfig["cores"].(int)
+		cores = int(lxcConfig["cores"].(float64))
 	}
 	cpulimit := 0
 	if _, isSet := lxcConfig["cpulimit"]; isSet {
@@ -365,10 +365,69 @@ func (config configLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 }
 
 func (config configLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
-	configParams := map[string]interface{}{
-		"hostname":        config.Hostname,
-	}
+        // convert config to map
+        params, _ := json.Marshal(&config)
+        var paramMap map[string]interface{}
+        json.Unmarshal(params, &paramMap)
 
-	_, err = client.SetLxcConfig(vmr, configParams)
+        // build list of features
+	// add features as parameter list to lxc parameters
+	// this overwrites the orginal formatting with a
+        // comma separated list of "key=value" pairs
+	featuresParam := QemuDeviceParam{}
+	featuresParam = featuresParam.createDeviceParam(config.Features, nil)
+	paramMap["features"] = strings.Join(featuresParam, ",")
+
+        // build list of mountpoints
+	// this does the same as for the feature list
+        // except that there can be multiple of these mountpoint sets
+        // and each mountpoint set comes with a new id
+	for mpID, mpConfMap := range config.Mountpoints {
+		mpConfParam := QemuDeviceParam{}
+		mpConfParam = mpConfParam.createDeviceParam(mpConfMap, nil)
+
+		// add mp to lxc parameters
+		mpName := fmt.Sprintf("mp%v", mpID)
+		paramMap[mpName] = strings.Join(mpConfParam, ",")
+        }
+
+        // build list of network parameters
+	for nicID, nicConfMap := range config.Networks {
+		nicConfParam := QemuDeviceParam{}
+		nicConfParam = nicConfParam.createDeviceParam(nicConfMap, nil)
+
+		// add nic to lxc parameters
+		nicName := fmt.Sprintf("net%v", nicID)
+		paramMap[nicName] = strings.Join(nicConfParam, ",")
+        }
+
+        // build list of unused volumes for sake of completenes,
+        // even if it is not recommended to change these volumes manually
+	for volID, vol := range config.Unused {
+		// add volume to lxc parameters
+		volName := fmt.Sprintf("unused%v", volID)
+		paramMap[volName] = vol
+        }
+
+        // now that we concatenated the key value parameter
+        // list for the networks, mountpoints and unused volumes,
+        // remove the original keys, since the Proxmox API does
+        // not know how to handle this key
+        delete(paramMap, "networks")
+        delete(paramMap, "mountpoints")
+        delete(paramMap, "unused")
+
+	// delete parameters wich are not supported in updated operations
+        delete(paramMap, "pool")
+        delete(paramMap, "storage")
+        delete(paramMap, "password")
+        delete(paramMap, "ostemplate")
+        delete(paramMap, "start")
+	// even though it is listed as a PUT option in the API documentation
+	// we remove it here because "it should not be modified manually";
+	// also, error "500 unable to modify read-only option: 'unprivileged'"
+        delete(paramMap, "unprivileged")
+
+	_, err = client.SetLxcConfig(vmr, paramMap)
 	return err
 }
