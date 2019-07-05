@@ -363,3 +363,12 @@ func (config configLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	}
 	return
 }
+
+func (config configLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
+	configParams := map[string]interface{}{
+		"hostname":        config.Hostname,
+	}
+
+	_, err = client.SetLxcConfig(vmr, configParams)
+	return err
+}
