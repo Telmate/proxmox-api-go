@@ -439,13 +439,6 @@ func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}
 		return "", err
 	}
 	exitStatus, err = c.WaitForCompletion(taskResponse)
-//	// Delete VM disks if the VM didn't create.
-//	if exitStatus != "OK" {
-//		deleteDisksErr := c.DeleteVMDisks(node, createdDisks)
-//		if deleteDisksErr != nil {
-//			return "", deleteDisksErr
-//		}
-//	}
 
 	return
 }

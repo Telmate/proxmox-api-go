@@ -12,42 +12,42 @@ import (
 // LXC options for the Proxmox API
 type configLxc struct {
 	Ostemplate         string         `json:"ostemplate"`
-        Arch               string         `json:"arch"`
-        BWLimit            int            `json:"bwlimit,omitempty"`
-        CMode              string         `json:"cmode"`
-        Console            bool           `json:"console"`
-        Cores              int            `json:"cores,omitempty"`
-        CPULimit           int            `json:"cpulimit"`
-        CPUUnits           int            `json:"cpuunits"`
-        Description        string         `json:"description,omitempty"`
-        Features           QemuDevice     `json:"features,omitempty"`
-        Force              bool           `json:"force,omitempty"`
-        Hookscript         string         `json:"hookscript,omitempty"`
-	Hostname           string         `json:"hostname,omitempty"`
-        IgnoreUnpackErrors bool           `json:"ignore-unpack-errors,omitempty"`
-	Lock               string         `json:"lock,omitempty"`
-        Memory             int            `json:"memory"`
-        Mountpoints        QemuDevices    `json:"mountpoints,omitempty"`
-        Nameserver         string         `json:"nameserver,omitempty"`
-	Networks           QemuDevices    `json:"networks,omitempty"`
-        OnBoot             bool           `json:"onboot"`
-        OsType             string         `json:"ostype,omitempty"`
-	Password           string         `json:"password,omitempty"`
-	Pool               string         `json:"pool,omitempty"`
-        Protection         bool           `json:"protection"`
-        Restore            bool           `json:"restore,omitempty"`
-	RootFs             string         `json:"rootfs,omitempty"`
-	SearchDomain       string         `json:"searchdomain,omitempty"`
-	SSHPublicKeys      string         `json:"ssh-public-keys,omitempty"`
-        Start              bool           `json:"start"`
-	Startup            string         `json:"startup,omitempty"`
-	Storage            string         `json:"storage"`
-        Swap               int            `json:"swap"`
-	Template           bool           `json:"template,omitempty"`
-        Tty                int            `json:"tty"`
-	Unique             bool           `json:"unique,omitempty"`
-	Unprivileged       bool           `json:"unprivileged"`
-	Unused             []string       `json:"unused,omitempty"`
+		Arch               string         `json:"arch"`
+		BWLimit            int            `json:"bwlimit,omitempty"`
+		CMode              string         `json:"cmode"`
+		Console            bool           `json:"console"`
+		Cores              int            `json:"cores,omitempty"`
+		CPULimit           int            `json:"cpulimit"`
+		CPUUnits           int            `json:"cpuunits"`
+		Description        string         `json:"description,omitempty"`
+		Features           QemuDevice     `json:"features,omitempty"`
+		Force              bool           `json:"force,omitempty"`
+		Hookscript         string         `json:"hookscript,omitempty"`
+		Hostname           string         `json:"hostname,omitempty"`
+		IgnoreUnpackErrors bool           `json:"ignore-unpack-errors,omitempty"`
+		Lock               string         `json:"lock,omitempty"`
+		Memory             int            `json:"memory"`
+		Mountpoints        QemuDevices    `json:"mountpoints,omitempty"`
+		Nameserver         string         `json:"nameserver,omitempty"`
+		Networks           QemuDevices    `json:"networks,omitempty"`
+		OnBoot             bool           `json:"onboot"`
+		OsType             string         `json:"ostype,omitempty"`
+		Password           string         `json:"password,omitempty"`
+		Pool               string         `json:"pool,omitempty"`
+		Protection         bool           `json:"protection"`
+		Restore            bool           `json:"restore,omitempty"`
+		RootFs             string         `json:"rootfs,omitempty"`
+		SearchDomain       string         `json:"searchdomain,omitempty"`
+		SSHPublicKeys      string         `json:"ssh-public-keys,omitempty"`
+		Start              bool           `json:"start"`
+		Startup            string         `json:"startup,omitempty"`
+		Storage            string         `json:"storage"`
+		Swap               int            `json:"swap"`
+		Template           bool           `json:"template,omitempty"`
+		Tty                int            `json:"tty"`
+		Unique             bool           `json:"unique,omitempty"`
+		Unprivileged       bool           `json:"unprivileged"`
+		Unused             []string       `json:"unused,omitempty"`
 }
 
 func NewConfigLxc() (configLxc) {
@@ -90,9 +90,9 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 	}
 
 	// prepare a new lxc config to store and return\
-        // the information from api
-        newConfig := NewConfigLxc()
-        config = &newConfig
+	// the information from api
+	newConfig := NewConfigLxc()
+	config = &newConfig
 
 	arch := ""
 	if _, isSet := lxcConfig["arch"]; isSet {
@@ -277,23 +277,23 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 	config.CPULimit = cpulimit
 	config.CPUUnits = cpuunits
 	config.Description = description
-        config.OnBoot = onboot
+	config.OnBoot = onboot
 	config.Hookscript = hookscript
-        config.Hostname = hostname
+	config.Hostname = hostname
 	config.Lock = lock
 	config.Memory = memory
-        config.Nameserver = nameserver
+	config.Nameserver = nameserver
 	config.OnBoot = onboot
 	config.OsType = ostype
-        config.Protection = protection
+	config.Protection = protection
 	config.RootFs = rootfs
 	config.SearchDomain = searchdomain
-        config.Startup = startup
+	config.Startup = startup
 	config.Swap = swap
 	config.Template = template
-        config.Tty = tty
+	config.Tty = tty
 	config.Unprivileged = unprivileged
-        config.Unused = unused
+	config.Unused = unused
 
 	return
 }
@@ -302,23 +302,23 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 func (config configLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("lxc")
 
-        // convert config to map
-        params, _ := json.Marshal(&config)
-        var paramMap map[string]interface{}
-        json.Unmarshal(params, &paramMap)
+	// convert config to map
+	params, _ := json.Marshal(&config)
+	var paramMap map[string]interface{}
+	json.Unmarshal(params, &paramMap)
 
-        // build list of features
+	// build list of features
 	// add features as parameter list to lxc parameters
 	// this overwrites the orginal formatting with a
-        // comma separated list of "key=value" pairs
+	// comma separated list of "key=value" pairs
 	featuresParam := QemuDeviceParam{}
 	featuresParam = featuresParam.createDeviceParam(config.Features, nil)
 	paramMap["features"] = strings.Join(featuresParam, ",")
 
-        // build list of mountpoints
+	// build list of mountpoints
 	// this does the same as for the feature list
-        // except that there can be multiple of these mountpoint sets
-        // and each mountpoint set comes with a new id
+	// except that there can be multiple of these mountpoint sets
+	// and each mountpoint set comes with a new id
 	for mpID, mpConfMap := range config.Mountpoints {
 		mpConfParam := QemuDeviceParam{}
 		mpConfParam = mpConfParam.createDeviceParam(mpConfMap, nil)
@@ -326,9 +326,9 @@ func (config configLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 		// add mp to lxc parameters
 		mpName := fmt.Sprintf("mp%v", mpID)
 		paramMap[mpName] = strings.Join(mpConfParam, ",")
-        }
+	}
 
-        // build list of network parameters
+	// build list of network parameters
 	for nicID, nicConfMap := range config.Networks {
 		nicConfParam := QemuDeviceParam{}
 		nicConfParam = nicConfParam.createDeviceParam(nicConfMap, nil)
@@ -336,26 +336,26 @@ func (config configLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 		// add nic to lxc parameters
 		nicName := fmt.Sprintf("net%v", nicID)
 		paramMap[nicName] = strings.Join(nicConfParam, ",")
-        }
+	}
 
-        // build list of unused volumes for sake of completenes,
-        // even if it is not recommended to change these volumes manually
+	// build list of unused volumes for sake of completenes,
+	// even if it is not recommended to change these volumes manually
 	for volID, vol := range config.Unused {
 		// add volume to lxc parameters
 		volName := fmt.Sprintf("unused%v", volID)
 		paramMap[volName] = vol
-        }
+	}
 
-        // now that we concatenated the key value parameter
-        // list for the networks, mountpoints and unused volumes,
-        // remove the original keys, since the Proxmox API does
-        // not know how to handle this key
-        delete(paramMap, "networks")
-        delete(paramMap, "mountpoints")
-        delete(paramMap, "unused")
+	// now that we concatenated the key value parameter
+	// list for the networks, mountpoints and unused volumes,
+	// remove the original keys, since the Proxmox API does
+	// not know how to handle this key
+	delete(paramMap, "networks")
+	delete(paramMap, "mountpoints")
+	delete(paramMap, "unused")
 
-        // amend vmid
-        paramMap["vmid"] = vmr.vmId
+	// amend vmid
+	paramMap["vmid"] = vmr.vmId
 
 	exitStatus, err := client.CreateLxcContainer(vmr.node, paramMap)
 	if err != nil {
@@ -365,23 +365,23 @@ func (config configLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 }
 
 func (config configLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
-        // convert config to map
-        params, _ := json.Marshal(&config)
-        var paramMap map[string]interface{}
-        json.Unmarshal(params, &paramMap)
+	// convert config to map
+	params, _ := json.Marshal(&config)
+	var paramMap map[string]interface{}
+	json.Unmarshal(params, &paramMap)
 
-        // build list of features
+	// build list of features
 	// add features as parameter list to lxc parameters
 	// this overwrites the orginal formatting with a
-        // comma separated list of "key=value" pairs
+	// comma separated list of "key=value" pairs
 	featuresParam := QemuDeviceParam{}
 	featuresParam = featuresParam.createDeviceParam(config.Features, nil)
 	paramMap["features"] = strings.Join(featuresParam, ",")
 
-        // build list of mountpoints
+	// build list of mountpoints
 	// this does the same as for the feature list
-        // except that there can be multiple of these mountpoint sets
-        // and each mountpoint set comes with a new id
+	// except that there can be multiple of these mountpoint sets
+	// and each mountpoint set comes with a new id
 	for mpID, mpConfMap := range config.Mountpoints {
 		mpConfParam := QemuDeviceParam{}
 		mpConfParam = mpConfParam.createDeviceParam(mpConfMap, nil)
@@ -389,9 +389,9 @@ func (config configLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		// add mp to lxc parameters
 		mpName := fmt.Sprintf("mp%v", mpID)
 		paramMap[mpName] = strings.Join(mpConfParam, ",")
-        }
+	}
 
-        // build list of network parameters
+	// build list of network parameters
 	for nicID, nicConfMap := range config.Networks {
 		nicConfParam := QemuDeviceParam{}
 		nicConfParam = nicConfParam.createDeviceParam(nicConfMap, nil)
@@ -399,34 +399,34 @@ func (config configLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		// add nic to lxc parameters
 		nicName := fmt.Sprintf("net%v", nicID)
 		paramMap[nicName] = strings.Join(nicConfParam, ",")
-        }
+	}
 
-        // build list of unused volumes for sake of completenes,
-        // even if it is not recommended to change these volumes manually
+	// build list of unused volumes for sake of completenes,
+	// even if it is not recommended to change these volumes manually
 	for volID, vol := range config.Unused {
 		// add volume to lxc parameters
 		volName := fmt.Sprintf("unused%v", volID)
 		paramMap[volName] = vol
-        }
+	}
 
-        // now that we concatenated the key value parameter
-        // list for the networks, mountpoints and unused volumes,
-        // remove the original keys, since the Proxmox API does
-        // not know how to handle this key
-        delete(paramMap, "networks")
-        delete(paramMap, "mountpoints")
-        delete(paramMap, "unused")
+	// now that we concatenated the key value parameter
+	// list for the networks, mountpoints and unused volumes,
+	// remove the original keys, since the Proxmox API does
+	// not know how to handle this key
+	delete(paramMap, "networks")
+	delete(paramMap, "mountpoints")
+	delete(paramMap, "unused")
 
 	// delete parameters wich are not supported in updated operations
-        delete(paramMap, "pool")
-        delete(paramMap, "storage")
-        delete(paramMap, "password")
-        delete(paramMap, "ostemplate")
-        delete(paramMap, "start")
+	delete(paramMap, "pool")
+	delete(paramMap, "storage")
+	delete(paramMap, "password")
+	delete(paramMap, "ostemplate")
+	delete(paramMap, "start")
 	// even though it is listed as a PUT option in the API documentation
 	// we remove it here because "it should not be modified manually";
 	// also, error "500 unable to modify read-only option: 'unprivileged'"
-        delete(paramMap, "unprivileged")
+	delete(paramMap, "unprivileged")
 
 	_, err = client.SetLxcConfig(vmr, paramMap)
 	return err

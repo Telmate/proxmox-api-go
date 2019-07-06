@@ -59,11 +59,10 @@ func main() {
 
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
-	        c.CheckVmRef(vmr)
+		c.CheckVmRef(vmr)
 		vmType := vmr.GetVmType()
-                var config interface{}
-                var err error
-		log.Println(fmt.Sprintf("%+v", vmType))
+		var config interface{}
+		var err error
 		if vmType == "qemu" {
 			config, err = proxmox.NewConfigQemuFromApi(vmr, c)
 		} else if vmType == "lxc" {
