@@ -81,6 +81,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"memory":      config.Memory,
 		"description": config.Description,
 	}
+	if vmr.pool != "" {
+		params["pool"] = vmr.pool
+	}
 
 	// Create disks config.
 	config.CreateQemuDisksParams(vmr.vmId, params, false)
@@ -138,6 +141,10 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		"storage": storage,
 		"full":    fullclone,
 	}
+	if vmr.pool != "" {
+		params["pool"] = vmr.pool
+	}
+
 	_, err = client.CloneQemuVm(sourceVmr, params)
 	if err != nil {
 		return

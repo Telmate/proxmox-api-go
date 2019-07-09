@@ -38,12 +38,17 @@ type Client struct {
 type VmRef struct {
 	vmId   int
 	node   string
+	pool   string
 	vmType string
 }
 
 func (vmr *VmRef) SetNode(node string) {
 	vmr.node = node
 	return
+}
+
+func (vmr *VmRef) SetPool(pool string) {
+	vmr.pool = pool
 }
 
 func (vmr *VmRef) SetVmType(vmType string) {
