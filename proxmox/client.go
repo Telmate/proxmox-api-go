@@ -64,6 +64,10 @@ func (vmr *VmRef) Node() string {
 	return vmr.node
 }
 
+func (vmr *VmRef) Pool() string {
+	return vmr.pool
+}
+
 func NewVmRef(vmId int) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
 	return
