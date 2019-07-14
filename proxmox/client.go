@@ -291,6 +291,19 @@ func (c *Client) MonitorCmd(vmr *VmRef, command string) (monitorRes map[string]i
 	return
 }
 
+func (c *Client) Sendkey(vmr *VmRef, qmKey string) error {
+	err := c.CheckVmRef(vmr)
+	if err != nil {
+		return err
+	}
+	reqbody := ParamsToBody(map[string]interface{}{"key": qmKey})
+	url := fmt.Sprintf("/nodes/%s/%s/%d/sendkey", vmr.node, vmr.vmType, vmr.vmId)
+	// No return, even for errors: https://bugzilla.proxmox.com/show_bug.cgi?id=2275
+	_, err = c.session.Put(url, nil, nil, &reqbody)
+
+	return err
+}
+
 // WaitForCompletion - poll the API for task completion
 func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExitStatus string, err error) {
 	if taskResponse["errors"] != nil {
