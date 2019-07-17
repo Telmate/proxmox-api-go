@@ -64,6 +64,15 @@ func main() {
 		cj, err := json.MarshalIndent(config, "", "  ")
 		log.Println(string(cj))
 
+	case "getNetworkInterfaces":
+		vmr = proxmox.NewVmRef(vmid)
+		c.CheckVmRef(vmr)
+		networkInterfaces, err := c.GetVmAgentNetworkInterfaces(vmr)
+		failError(err)
+
+		networkInterfaceJson, err := json.Marshal(networkInterfaces)
+		fmt.Println(string(networkInterfaceJson))
+
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
