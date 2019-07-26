@@ -219,6 +219,7 @@ var (
 	rxDiskName = regexp.MustCompile(`(virtio|scsi)\d+`)
 	rxDiskType = regexp.MustCompile(`\D+`)
 	rxNicName  = regexp.MustCompile(`net\d+`)
+	rxMpName   = regexp.MustCompile(`mp\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {

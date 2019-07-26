@@ -59,7 +59,15 @@ func main() {
 
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
-		config, err := proxmox.NewConfigQemuFromApi(vmr, c)
+		c.CheckVmRef(vmr)
+		vmType := vmr.GetVmType()
+		var config interface{}
+		var err error
+		if vmType == "qemu" {
+			config, err = proxmox.NewConfigQemuFromApi(vmr, c)
+		} else if vmType == "lxc" {
+			config, err = proxmox.NewConfigLxcFromApi(vmr, c)
+		}
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
 		log.Println(string(cj))
@@ -79,6 +87,14 @@ func main() {
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
 		failError(config.CreateVm(vmr, c))
+		log.Println("Complete")
+
+	case "createLxc":
+		config, err := proxmox.NewConfigLxcFromJson(os.Stdin)
+		failError(err)
+		vmr = proxmox.NewVmRef(vmid)
+		vmr.SetNode(flag.Args()[2])
+		failError(config.CreateLxc(vmr, c))
 		log.Println("Complete")
 
 	case "installQemu":

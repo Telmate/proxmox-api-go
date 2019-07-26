@@ -56,6 +56,10 @@ func (vmr *VmRef) SetVmType(vmType string) {
 	return
 }
 
+func (vmr *VmRef) GetVmType() (string) {
+	return vmr.vmType
+}
+
 func (vmr *VmRef) VmId() int {
 	return vmr.vmId
 }
@@ -441,6 +445,29 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 	return
 }
 
+func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}) (exitStatus string, err error) {
+	reqbody := ParamsToBody(vmParams)
+	url := fmt.Sprintf("/nodes/%s/lxc", node)
+	var resp *http.Response
+	resp, err = c.session.Post(url, nil, nil, &reqbody)
+	defer resp.Body.Close()
+	if err != nil {
+		// This might not work if we never got a body. We'll ignore errors in trying to read,
+		// but extract the body if possible to give any error information back in the exitStatus
+		b, _ := ioutil.ReadAll(resp.Body)
+		exitStatus = string(b)
+		return exitStatus, err
+	}
+
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return "", err
+	}
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+
+	return
+}
+
 func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
@@ -472,6 +499,21 @@ func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]interface{}) (exitS
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// SetLxcConfig - send config options
+func (c *Client) SetLxcConfig(vmr *VmRef, vmParams map[string]interface{}) (exitStatus interface{}, err error) {
+	reqbody := ParamsToBody(vmParams)
+	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Put(url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
