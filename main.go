@@ -145,8 +145,10 @@ func main() {
 			log.Fatal("Can't find template")
 			return
 		}
-		nextid, err := c.GetNextID(0)
-		vmr = proxmox.NewVmRef(nextid)
+		if vmid == 0 {
+			vmid, err = c.GetNextID(0)
+		}
+		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
 		log.Print("Creating node: ")
 		log.Println(vmr)
