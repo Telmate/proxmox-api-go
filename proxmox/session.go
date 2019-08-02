@@ -131,6 +131,7 @@ func (s *Session) Login(username string, password string, otp string) (err error
 		return fmt.Errorf("Invalid login response:\n-----\n%s\n-----", dr)
 	}
 	dat := jbody["data"].(map[string]interface{})
+	//Check if the 2FA was required
 	if dat["NeedTFA"] == 1.0 {
 		return errors.New("Missing TFA code")
 	}
