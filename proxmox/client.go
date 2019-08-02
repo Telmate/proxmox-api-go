@@ -31,6 +31,7 @@ type Client struct {
 	ApiUrl   string
 	Username string
 	Password string
+	Otp      string
 }
 
 // VmRef - virtual machine ref parts
@@ -89,6 +90,7 @@ func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config) (client *Cl
 func (c *Client) Login(username string, password string, otp string) (err error) {
 	c.Username = username
 	c.Password = password
+	c.Otp      = otp
 	return c.session.Login(username, password, otp)
 }
 
