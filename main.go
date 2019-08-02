@@ -23,8 +23,7 @@ func main() {
 		tlsconf = nil
 	}
 	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf)
-	otp := os.Getenv("PM_OTP")
-	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), otp)
+	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
 	if err != nil {
 		log.Fatal(err)
 	}
