@@ -31,6 +31,7 @@ type Client struct {
 	ApiUrl   string
 	Username string
 	Password string
+	Otp      string
 }
 
 // VmRef - virtual machine ref parts
@@ -86,10 +87,11 @@ func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config) (client *Cl
 	return client, err
 }
 
-func (c *Client) Login(username string, password string) (err error) {
+func (c *Client) Login(username string, password string, otp string) (err error) {
 	c.Username = username
 	c.Password = password
-	return c.session.Login(username, password)
+	c.Otp      = otp
+	return c.session.Login(username, password, otp)
 }
 
 func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int) error {

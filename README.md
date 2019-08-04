@@ -19,6 +19,7 @@ go build -o proxmox-api-go
 export PM_API_URL="https://xxxx.com:8006/api2/json"
 export PM_USER=user@pam
 export PM_PASS=password
+export PM_OTP=otpcode (only if required)
 
 ./proxmox-api-go installQemu proxmox-node-name < qemu1.json
 
