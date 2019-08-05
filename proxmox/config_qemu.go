@@ -300,6 +300,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["sockets"]; isSet {
 		sockets = vmConfig["sockets"].(float64)
 	}
+	//boot by default from hard disk (c), CD-ROM (d), network (n). 
 	boot := "cdn"
 	if _, isSet := vmConfig["boot"]; isSet {
 		boot = vmConfig["boot"].(string)
