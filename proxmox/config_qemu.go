@@ -33,6 +33,8 @@ type ConfigQemu struct {
 	QemuSockets  int         `json:"sockets"`
 	QemuIso      string      `json:"iso"`
 	FullClone    *int        `json:"fullclone"`
+	Boot         string      `json:"boot"`
+	BootDisk     string      `json:"bootdisk,omitempty"`
 	Scsihw       string      `json:"scsihw,omitempty"`
 	QemuDisks    QemuDevices `json:"disk"`
 	QemuNetworks QemuDevices `json:"network"`
@@ -80,6 +82,8 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"cores":       config.QemuCores,
 		"cpu":         "host",
 		"memory":      config.Memory,
+		"boot":        config.Boot,
+		"bootdisk":    config.BootDisk,
 		"scsihw":      config.Scsihw,
 		"description": config.Description,
 	}
@@ -163,6 +167,8 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
 		"memory":      config.Memory,
+		"boot":        config.Boot,
+		"bootdisk":    config.BootDisk,
 		"scsihw":      config.Scsihw,
 	}
 
@@ -294,6 +300,15 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["sockets"]; isSet {
 		sockets = vmConfig["sockets"].(float64)
 	}
+	//boot by default from hard disk (c), CD-ROM (d), network (n). 
+	boot := "cdn"
+	if _, isSet := vmConfig["boot"]; isSet {
+		boot = vmConfig["boot"].(string)
+	}
+	bootdisk := ""
+	if _, isSet := vmConfig["bootdisk"]; isSet {
+		bootdisk = vmConfig["bootdisk"].(string)
+	}
 	scsihw := "lsi"
 	if _, isSet := vmConfig["scsihw"]; isSet {
 		scsihw = vmConfig["scsihw"].(string)
@@ -308,6 +323,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuCores:    int(cores),
 		QemuSockets:  int(sockets),
 		QemuVlanTag:  -1,
+		Boot:         boot,
+		BootDisk:     bootdisk,
 		Scsihw:       scsihw,
 		QemuDisks:    QemuDevices{},
 		QemuNetworks: QemuDevices{},
