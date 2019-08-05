@@ -33,6 +33,7 @@ type ConfigQemu struct {
 	QemuSockets  int         `json:"sockets"`
 	QemuIso      string      `json:"iso"`
 	FullClone    *int        `json:"fullclone"`
+	Scsihw       string      `json:"scsihw,omitempty"`
 	QemuDisks    QemuDevices `json:"disk"`
 	QemuNetworks QemuDevices `json:"network"`
 
@@ -79,6 +80,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"cores":       config.QemuCores,
 		"cpu":         "host",
 		"memory":      config.Memory,
+		"scsihw":      config.Scsihw,
 		"description": config.Description,
 	}
 	if vmr.pool != "" {
@@ -161,6 +163,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
 		"memory":      config.Memory,
+		"scsihw":      config.Scsihw,
 	}
 
 	// Create disks config.
@@ -291,6 +294,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["sockets"]; isSet {
 		sockets = vmConfig["sockets"].(float64)
 	}
+	scsihw := "lsi"
+	if _, isSet := vmConfig["scsihw"]; isSet {
+		ostype = vmConfig["scsihw"].(string)
+	}
 	config = &ConfigQemu{
 		Name:         name,
 		Description:  strings.TrimSpace(description),
@@ -301,6 +308,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuCores:    int(cores),
 		QemuSockets:  int(sockets),
 		QemuVlanTag:  -1,
+		Scsihw:       scsihw,
 		QemuDisks:    QemuDevices{},
 		QemuNetworks: QemuDevices{},
 	}
