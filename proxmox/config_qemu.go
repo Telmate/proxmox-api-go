@@ -296,7 +296,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 	scsihw := "lsi"
 	if _, isSet := vmConfig["scsihw"]; isSet {
-		ostype = vmConfig["scsihw"].(string)
+		scsihw = vmConfig["scsihw"].(string)
 	}
 	config = &ConfigQemu{
 		Name:         name,
