@@ -636,7 +636,9 @@ func (c ConfigQemu) CreateQemuDisksParams(
 			"storage_type": "lvm",  // default old style
 			"cache":        "none", // default old value
 		}
-
+		if c.QemuDisks == nil {
+			c.QemuDisks = make(QemuDevices)
+		}
 		c.QemuDisks[0] = deprecatedStyleMap
 	}
 
