@@ -31,6 +31,7 @@ type ConfigQemu struct {
 	QemuOs       string      `json:"os"`
 	QemuCores    int         `json:"cores"`
 	QemuSockets  int         `json:"sockets"`
+	QemuCpu      string      `json:"cpu"`
 	QemuNuma     bool        `json:"numa"`
 	QemuIso      string      `json:"iso"`
 	FullClone    *int        `json:"fullclone"`
@@ -81,7 +82,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"ostype":      config.QemuOs,
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
-		"cpu":         "host",
+		"cpu":         config.QemuCpu,
 		"numa":        config.QemuNuma,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
@@ -168,6 +169,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"agent":       config.Agent,
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
+		"cpu":         config.QemuCpu,
 		"numa":        config.QemuNuma,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
@@ -303,6 +305,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["sockets"]; isSet {
 		sockets = vmConfig["sockets"].(float64)
 	}
+	cpu := "host"
+	if _, isSet := vmConfig["cpu"]; isSet {
+		cpu = vmConfig["cpu"].(string)
+	}
 	numa := false
 	if _, isSet := vmConfig["numa"]; isSet {
 		numa = Itob(int(vmConfig["numa"].(float64)))
@@ -329,6 +335,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Memory:       int(memory),
 		QemuCores:    int(cores),
 		QemuSockets:  int(sockets),
+		QemuCpu:      cpu,
 		QemuNuma:     numa,
 		QemuVlanTag:  -1,
 		Boot:         boot,
