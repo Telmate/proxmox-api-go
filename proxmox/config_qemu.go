@@ -38,6 +38,7 @@ type ConfigQemu struct {
 	Scsihw       string      `json:"scsihw,omitempty"`
 	QemuDisks    QemuDevices `json:"disk"`
 	QemuNetworks QemuDevices `json:"network"`
+	QemuSerials  QemuDevices `json:"serial,omitempty"`
 
 	// Deprecated single disk.
 	DiskSize    float64 `json:"diskGB"`
@@ -96,6 +97,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, params)
+
+	// Create serial interfaces
+	config.CreateQemuSerialsParams(vmr.vmId, params)
 
 	exitStatus, err := client.CreateQemuVm(vmr.node, params)
 	if err != nil {
@@ -178,6 +182,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, configParams)
 
+	// Create serial interfaces
+	config.CreateQemuSerialsParams(vmr.vmId, configParams)
+
 	// cloud-init options
 	if config.CIuser != "" {
 		configParams["ciuser"] = config.CIuser
@@ -223,12 +230,13 @@ func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
 }
 
 var (
-	rxIso      = regexp.MustCompile(`(.*?),media`)
-	rxDeviceID = regexp.MustCompile(`\d+`)
-	rxDiskName = regexp.MustCompile(`(virtio|scsi)\d+`)
-	rxDiskType = regexp.MustCompile(`\D+`)
-	rxNicName  = regexp.MustCompile(`net\d+`)
-	rxMpName   = regexp.MustCompile(`mp\d+`)
+	rxIso        = regexp.MustCompile(`(.*?),media`)
+	rxDeviceID   = regexp.MustCompile(`\d+`)
+	rxDiskName   = regexp.MustCompile(`(virtio|scsi)\d+`)
+	rxDiskType   = regexp.MustCompile(`\D+`)
+	rxNicName    = regexp.MustCompile(`net\d+`)
+	rxMpName     = regexp.MustCompile(`mp\d+`)
+	rxSerialName = regexp.MustCompile(`serial\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
@@ -328,6 +336,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Scsihw:       scsihw,
 		QemuDisks:    QemuDevices{},
 		QemuNetworks: QemuDevices{},
+		QemuSerials:  QemuDevices{},
 	}
 
 	if vmConfig["ide2"] != nil {
@@ -426,6 +435,30 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		// And device config to networks.
 		if len(nicConfMap) > 0 {
 			config.QemuNetworks[nicID] = nicConfMap
+		}
+	}
+
+	// Add serials
+	serialNames := []string{}
+
+	for k, _ := range vmConfig {
+		if serialName := rxSerialName.FindStringSubmatch(k); len(serialName) > 0 {
+			serialNames = append(serialNames, serialName[0])
+		}
+	}
+
+	for _, serialName := range serialNames {
+		id := rxDeviceID.FindStringSubmatch(serialName)
+		serialID, _ := strconv.Atoi(id[0])
+
+		serialConfMap := QemuDevice{
+			"id":      serialID,
+			"type":    vmConfig[serialName],
+		}
+
+		// And device config to serials map.
+		if len(serialConfMap) > 0 {
+			config.QemuSerials[serialID] = serialConfMap
 		}
 	}
 
@@ -758,4 +791,23 @@ func (confMap QemuDevice) readDeviceConfig(confList []string) error {
 func (c ConfigQemu) String() string {
 	jsConf, _ := json.Marshal(c)
 	return string(jsConf)
+}
+
+// Create parameters for serial interface
+func (c ConfigQemu) CreateQemuSerialsParams(
+	vmID int,
+	params map[string]interface{},
+) error {
+
+	// For new style with multi disk device.
+	for serialID, serialConfMap := range c.QemuSerials {
+		// Device name.
+		deviceType := serialConfMap["type"].(string)
+		qemuSerialName := "serial" + strconv.Itoa(serialID)
+		
+		// Add back to Qemu prams.
+		params[qemuSerialName] = deviceType
+	}
+
+	return nil
 }
