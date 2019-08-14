@@ -31,6 +31,9 @@ type ConfigQemu struct {
 	QemuOs       string      `json:"os"`
 	QemuCores    int         `json:"cores"`
 	QemuSockets  int         `json:"sockets"`
+	QemuCpu      string      `json:"cpu"`
+	QemuNuma     bool        `json:"numa"`
+	Hotplug      string      `json:"hotplug"`
 	QemuIso      string      `json:"iso"`
 	FullClone    *int        `json:"fullclone"`
 	Boot         string      `json:"boot"`
@@ -81,7 +84,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"ostype":      config.QemuOs,
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
-		"cpu":         "host",
+		"cpu":         config.QemuCpu,
+		"numa":        config.QemuNuma,
+		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
 		"bootdisk":    config.BootDisk,
@@ -170,6 +175,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"agent":       config.Agent,
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
+		"cpu":         config.QemuCpu,
+		"numa":        config.QemuNuma,
+		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
 		"bootdisk":    config.BootDisk,
@@ -308,6 +316,19 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["sockets"]; isSet {
 		sockets = vmConfig["sockets"].(float64)
 	}
+	cpu := "host"
+	if _, isSet := vmConfig["cpu"]; isSet {
+		cpu = vmConfig["cpu"].(string)
+	}
+	numa := false
+	if _, isSet := vmConfig["numa"]; isSet {
+		numa = Itob(int(vmConfig["numa"].(float64)))
+	}
+	//Can be network,disk,cpu,memory,usb
+	hotplug := "network,disk,usb"
+	if _, isSet := vmConfig["hotplug"]; isSet {
+		hotplug = vmConfig["hotplug"].(string)
+	}
 	//boot by default from hard disk (c), CD-ROM (d), network (n). 
 	boot := "cdn"
 	if _, isSet := vmConfig["boot"]; isSet {
@@ -330,6 +351,9 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Memory:       int(memory),
 		QemuCores:    int(cores),
 		QemuSockets:  int(sockets),
+		QemuCpu:      cpu,
+		QemuNuma:     numa,
+		Hotplug:      hotplug,
 		QemuVlanTag:  -1,
 		Boot:         boot,
 		BootDisk:     bootdisk,
