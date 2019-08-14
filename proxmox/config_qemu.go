@@ -324,6 +324,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["numa"]; isSet {
 		numa = Itob(int(vmConfig["numa"].(float64)))
 	}
+	//Can be network,disk,cpu,memory,usb
 	hotplug := "network,disk,usb"
 	if _, isSet := vmConfig["hotplug"]; isSet {
 		hotplug = vmConfig["hotplug"].(string)
