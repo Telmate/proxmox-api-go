@@ -89,12 +89,18 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
-		"bootdisk":    config.BootDisk,
-		"scsihw":      config.Scsihw,
 		"description": config.Description,
 	}
 	if vmr.pool != "" {
 		params["pool"] = vmr.pool
+	}
+
+	if config.BootDisk != "" {
+		params["bootdisk"] = config.BootDisk
+	}
+
+	if config.Scsihw != "" {
+		params["scsihw"] = config.Scsihw
 	}
 
 	// Create disks config.
@@ -180,8 +186,14 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
-		"bootdisk":    config.BootDisk,
-		"scsihw":      config.Scsihw,
+	}
+
+	if config.BootDisk != "" {
+		configParams["bootdisk"] = config.BootDisk
+	}
+
+	if config.Scsihw != "" {
+		configParams["scsihw"] = config.Scsihw
 	}
 
 	// Create disks config.
@@ -329,7 +341,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["hotplug"]; isSet {
 		hotplug = vmConfig["hotplug"].(string)
 	}
-	//boot by default from hard disk (c), CD-ROM (d), network (n). 
+	//boot by default from hard disk (c), CD-ROM (d), network (n).
 	boot := "cdn"
 	if _, isSet := vmConfig["boot"]; isSet {
 		boot = vmConfig["boot"].(string)
@@ -476,8 +488,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		serialID, _ := strconv.Atoi(id[0])
 
 		serialConfMap := QemuDevice{
-			"id":      serialID,
-			"type":    vmConfig[serialName],
+			"id":   serialID,
+			"type": vmConfig[serialName],
 		}
 
 		// And device config to serials map.
@@ -828,7 +840,7 @@ func (c ConfigQemu) CreateQemuSerialsParams(
 		// Device name.
 		deviceType := serialConfMap["type"].(string)
 		qemuSerialName := "serial" + strconv.Itoa(serialID)
-		
+
 		// Add back to Qemu prams.
 		params[qemuSerialName] = deviceType
 	}
