@@ -25,6 +25,7 @@ type (
 type ConfigQemu struct {
 	Name         string      `json:"name"`
 	Description  string      `json:"desc"`
+	Pool         string      `json:"pool,omitempty"`
 	Onboot       bool        `json:"onboot"`
 	Agent        int         `json:"agent"`
 	Memory       int         `json:"memory"`
@@ -91,9 +92,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"boot":        config.Boot,
 		"description": config.Description,
 	}
-	if vmr.pool != "" {
-		params["pool"] = vmr.pool
-	}
 
 	if config.BootDisk != "" {
 		params["bootdisk"] = config.BootDisk
@@ -116,6 +114,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		return fmt.Errorf("Error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
+	
+	client.UpdateVMPool(vmr, config.Pool);
+	
 	return
 }
 
@@ -235,6 +236,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["ipconfig1"] = config.Ipconfig1
 	}
 	_, err = client.SetVmConfig(vmr, configParams)
+	
+	client.UpdateVMPool(vmr, config.Pool);
+	
 	return err
 }
 
@@ -297,6 +301,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["description"]; isSet {
 		description = vmConfig["description"].(string)
 	}
+	pool := ""
+	if _, isSet := vmConfig["pool"]; isSet {
+		pool = vmConfig["pool"].(string)
+	}
 	onboot := true
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
@@ -357,6 +365,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	config = &ConfigQemu{
 		Name:         name,
 		Description:  strings.TrimSpace(description),
+		Pool:         pool,
 		Onboot:       onboot,
 		Agent:        agent,
 		QemuOs:       ostype,

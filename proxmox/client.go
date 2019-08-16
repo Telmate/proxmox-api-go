@@ -135,6 +135,10 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 			vmInfo = vm
 			vmr.node = vmInfo["node"].(string)
 			vmr.vmType = vmInfo["type"].(string)
+			vmr.pool = ""
+			if vmInfo["pool"] != nil {
+				vmr.pool = vmInfo["pool"].(string)
+			}
 			return
 		}
 	}
@@ -150,6 +154,7 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 			vmr = NewVmRef(int(vm["vmid"].(float64)))
 			vmr.node = vm["node"].(string)
 			vmr.vmType = vm["type"].(string)
+			vmr.pool = vm["pool"].(string)
 			return
 		}
 	}
@@ -684,4 +689,50 @@ func getStorageAndVolumeName(
 	}
 
 	return storageName, volumeName
+}
+
+func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, err error) {
+	// Same pool
+	if(vmr.pool == pool) {
+		return
+	}
+	
+	// Remove from old pool
+	if(vmr.pool != "") {
+		paramMap := map[string]interface{}{
+			"vms": vmr.vmId,
+			"delete": 1,
+		}
+		reqbody := ParamsToBody(paramMap)
+		url := fmt.Sprintf("/pools/%s", vmr.pool)
+		resp, err := c.session.Put(url, nil, nil, &reqbody)
+		if err == nil {
+			taskResponse, err := ResponseJSON(resp)
+			if err != nil {
+				return nil, err
+			}
+			exitStatus, err = c.WaitForCompletion(taskResponse)
+			
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	// Add to the new pool
+	if(pool != "") {
+		paramMap := map[string]interface{}{
+			"vms": vmr.vmId,
+		}
+		reqbody := ParamsToBody(paramMap)
+		url := fmt.Sprintf("/pools/%s", pool)
+		resp, err := c.session.Put(url, nil, nil, &reqbody)
+		if err == nil {
+			taskResponse, err := ResponseJSON(resp)
+			if err != nil {
+				return nil, err
+			}
+			exitStatus, err = c.WaitForCompletion(taskResponse)
+		}
+	}
+	return
 }
