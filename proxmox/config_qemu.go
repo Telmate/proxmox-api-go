@@ -92,7 +92,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"boot":        config.Boot,
 		"description": config.Description,
 	}
-
+	if vmr.pool != "" {
+		params["pool"] = vmr.pool
+	}
 	if config.BootDisk != "" {
 		params["bootdisk"] = config.BootDisk
 	}
