@@ -170,6 +170,14 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	if err != nil {
 		return
 	}
+	
+	configParams := map[string]interface{}{
+		"vmid": vmr.vmId,
+	}
+	// Create disks
+	config.CreateQemuDisksParams(vmr.vmId, configParams, true)
+	client.createVMDisks(vmr.node, configParams)
+	
 	return config.UpdateConfig(vmr, client)
 }
 
