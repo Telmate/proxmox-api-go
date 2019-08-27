@@ -685,3 +685,22 @@ func getStorageAndVolumeName(
 
 	return storageName, volumeName
 }
+
+func (c *Client) Migrate(vmr *VmRef, target string, online bool) (exitStatus interface{}, err error) {
+	params := map[string]interface{}{"target": target}
+	if online == true {
+		params["online"] = 1
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/migrate", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	vmr.SetNode(target)
+	return
+}

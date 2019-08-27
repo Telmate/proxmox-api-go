@@ -155,6 +155,10 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	if disk0Storage, ok := config.QemuDisks[0]["storage"].(string); ok && len(disk0Storage) > 0 {
 		storage = disk0Storage
 	}
+	
+	//Need to create the VM on the same node
+	vmr.SetNode(sourceVmr.node)
+	
 	params := map[string]interface{}{
 		"newid":   vmr.vmId,
 		"target":  vmr.node,
