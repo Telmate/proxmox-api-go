@@ -239,8 +239,8 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["ipconfig1"] = config.Ipconfig1
 	}
 	if config.Ipconfig2 != "" {
-                configParams["ipconfig2"] = config.Ipconfig2
-        }
+		configParams["ipconfig2"] = config.Ipconfig2
+	}
 	_, err = client.SetVmConfig(vmr, configParams)
 	return err
 }
@@ -412,8 +412,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		config.Ipconfig1 = vmConfig["ipconfig1"].(string)
 	}
 	if _, isSet := vmConfig["ipconfig2"]; isSet {
-                config.Ipconfig2 = vmConfig["ipconfig2"].(string)
-        }
+		config.Ipconfig2 = vmConfig["ipconfig2"].(string)
+	}
 
 	// Add disks.
 	diskNames := []string{}
