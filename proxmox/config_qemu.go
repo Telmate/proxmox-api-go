@@ -66,7 +66,7 @@ type ConfigQemu struct {
 	// arrays are hard, support 3 interfaces for now
 	Ipconfig0 string `json:"ipconfig0"`
 	Ipconfig1 string `json:"ipconfig1"`
-	Ipconfig1 string `json:"ipconfig2"`
+	Ipconfig2 string `json:"ipconfig2"`
 }
 
 // CreateVm - Tell Proxmox API to make the VM
