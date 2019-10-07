@@ -38,6 +38,7 @@ type ConfigQemu struct {
 	QemuVcpus    int         `json:"vcpus"`
 	QemuCpu      string      `json:"cpu"`
 	QemuNuma     bool        `json:"numa"`
+	QemuKVM      bool        `json:"kvm,omitempty"`
 	Hotplug      string      `json:"hotplug"`
 	QemuIso      string      `json:"iso"`
 	FullClone    *int        `json:"fullclone"`
@@ -94,6 +95,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"cores":       config.QemuCores,
 		"cpu":         config.QemuCpu,
 		"numa":        config.QemuNuma,
+		"kvm":         config.QemuKVM,
 		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
@@ -214,6 +216,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"cores":       config.QemuCores,
 		"cpu":         config.QemuCpu,
 		"numa":        config.QemuNuma,
+		"kvm":         config.QemuKVM,
 		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
@@ -435,6 +438,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["numa"]; isSet {
 		numa = Itob(int(vmConfig["numa"].(float64)))
 	}
+	kvm := true
+	if _, isSet := vmConfig["kvm"]; isSet {
+		kvm = Itob(int(vmConfig["kvm"].(float64)))
+	}
 	//Can be network,disk,cpu,memory,usb
 	hotplug := "network,disk,usb"
 	if _, isSet := vmConfig["hotplug"]; isSet {
@@ -470,6 +477,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuSockets:  int(sockets),
 		QemuCpu:      cpu,
 		QemuNuma:     numa,
+		QemuKVM:      kvm,
 		Hotplug:      hotplug,
 		QemuVlanTag:  -1,
 		Boot:         boot,
