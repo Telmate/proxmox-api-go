@@ -25,6 +25,7 @@ type (
 type ConfigQemu struct {
 	Name         string      `json:"name"`
 	Description  string      `json:"desc"`
+	Pool         string      `json:"pool,omitempty"`
 	Onboot       bool        `json:"onboot"`
 	Agent        int         `json:"agent"`
 	Memory       int         `json:"memory"`
@@ -242,6 +243,13 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["ipconfig2"] = config.Ipconfig2
 	}
 	_, err = client.SetVmConfig(vmr, configParams)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	
+	_, err = client.UpdateVMPool(vmr, config.Pool);
+	
 	return err
 }
 
