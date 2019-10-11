@@ -735,6 +735,8 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 				return nil, err
 			}
 			exitStatus, err = c.WaitForCompletion(taskResponse)
+		} else {
+			return nil, err
 		}
 	}
 	return
