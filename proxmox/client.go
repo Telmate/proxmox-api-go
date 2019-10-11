@@ -135,6 +135,10 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 			vmInfo = vm
 			vmr.node = vmInfo["node"].(string)
 			vmr.vmType = vmInfo["type"].(string)
+			vmr.pool = ""
+			if vmInfo["pool"] != nil {
+				vmr.pool = vmInfo["pool"].(string)
+			}
 			return
 		}
 	}
@@ -150,6 +154,10 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 			vmr = NewVmRef(int(vm["vmid"].(float64)))
 			vmr.node = vm["node"].(string)
 			vmr.vmType = vm["type"].(string)
+			vmr.pool = ""
+			if vm["pool"] != nil {
+				vmr.pool = vm["pool"].(string)
+			}
 			return
 		}
 	}
