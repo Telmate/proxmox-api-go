@@ -3,12 +3,14 @@ package proxmox
 // inspired by https://github.com/Telmate/vagrant-proxmox/blob/master/lib/vagrant-proxmox/proxmox/connection.rb
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"regexp"
@@ -673,6 +675,50 @@ func (c *Client) DeleteVMDisks(
 	}
 
 	return nil
+}
+
+func (c *Client) Upload(node string, storage string, contentType string, filename string, file io.Reader) error {
+	body, mimetype, err := createUploadBody(contentType, filename, file)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/nodes/%s/storage/%s/upload", c.session.ApiUrl, node, storage)
+	req, err := c.session.NewRequest(http.MethodPost, url, nil, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", mimetype)
+	req.Header.Add("Accept", "application/json")
+
+	_, err = c.session.Do(req)
+	return err
+}
+
+func createUploadBody(contentType string, filename string, r io.Reader) (io.Reader, string, error) {
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+
+	err := w.WriteField("content", contentType)
+	if err != nil {
+		return nil, "", err
+	}
+
+	fw, err := w.CreateFormFile("filename", filename)
+	if err != nil {
+		return nil, "", err
+	}
+	_, err = io.Copy(fw, r)
+	if err != nil {
+		return nil, "", err
+	}
+
+	err = w.Close()
+	if err != nil {
+		return nil, "", err
+	}
+
+	return &buf, w.FormDataContentType(), nil
 }
 
 // getStorageAndVolumeName - Extract disk storage and disk volume, since disk name is saved
