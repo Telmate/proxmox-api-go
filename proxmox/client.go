@@ -59,7 +59,7 @@ func (vmr *VmRef) SetVmType(vmType string) {
 	return
 }
 
-func (vmr *VmRef) GetVmType() (string) {
+func (vmr *VmRef) GetVmType() string {
 	return vmr.vmType
 }
 
@@ -92,7 +92,7 @@ func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config) (client *Cl
 func (c *Client) Login(username string, password string, otp string) (err error) {
 	c.Username = username
 	c.Password = password
-	c.Otp      = otp
+	c.Otp = otp
 	return c.session.Login(username, password, otp)
 }
 
@@ -742,14 +742,14 @@ func getStorageAndVolumeName(
 
 func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, err error) {
 	// Same pool
-	if(vmr.pool == pool) {
+	if vmr.pool == pool {
 		return
 	}
 
 	// Remove from old pool
-	if(vmr.pool != "") {
+	if vmr.pool != "" {
 		paramMap := map[string]interface{}{
-			"vms": vmr.vmId,
+			"vms":    vmr.vmId,
 			"delete": 1,
 		}
 		reqbody := ParamsToBody(paramMap)
@@ -768,7 +768,7 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 		}
 	}
 	// Add to the new pool
-	if(pool != "") {
+	if pool != "" {
 		paramMap := map[string]interface{}{
 			"vms": vmr.vmId,
 		}

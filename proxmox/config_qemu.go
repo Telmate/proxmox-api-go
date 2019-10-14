@@ -247,9 +247,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		log.Fatal(err)
 		return err
 	}
-	
-	_, err = client.UpdateVMPool(vmr, config.Pool);
-	
+
+	_, err = client.UpdateVMPool(vmr, config.Pool)
+
 	return err
 }
 
