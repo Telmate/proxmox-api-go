@@ -23,6 +23,7 @@ type (
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
+	VmID         int         `json:"vmid"`
 	Name         string      `json:"name"`
 	Description  string      `json:"desc"`
 	Pool         string      `json:"pool,omitempty"`

@@ -84,6 +84,9 @@ func main() {
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
+		if config.VmID != 0 {
+			vmid = config.VmID
+		}
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
 		failError(config.CreateVm(vmr, c))
