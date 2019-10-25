@@ -23,6 +23,7 @@ type (
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
+	VmID         int         `json:"vmid"`
 	Name         string      `json:"name"`
 	Description  string      `json:"desc"`
 	Pool         string      `json:"pool,omitempty"`
@@ -864,4 +865,31 @@ func (c ConfigQemu) CreateQemuSerialsParams(
 	}
 
 	return nil
+}
+
+// NextId - Get next free VMID
+func (c *Client) NextId() (id int, err error) {
+	var data map[string]interface{}
+	_, err = c.session.GetJSON("/cluster/nextid", nil, nil, &data)
+	if err != nil {
+		return -1, err
+	}
+	if data["data"] == nil || data["errors"] != nil {
+		return -1, fmt.Errorf(data["errors"].(string))
+	}
+
+	i, err := strconv.Atoi(data["data"].(string))
+	if err != nil {
+		return -1, err
+	}
+	return i, nil
+}
+
+// VMIdExists - If you pass an VMID that exists it will raise an error otherwise it will return the vmID
+func (c *Client) VMIdExists(vmID int) (id int, err error) {
+	_, err = c.session.Get(fmt.Sprintf("/cluster/nextid?vmid=%d", vmID), nil, nil)
+	if err != nil {
+		return -1, err
+	}
+	return vmID, nil
 }
