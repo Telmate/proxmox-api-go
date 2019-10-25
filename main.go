@@ -178,6 +178,18 @@ func main() {
 		failError(err)
 		log.Println("Keys sent")
 
+	case "nextid":
+		id, err := c.NextId()
+		failError(err)
+		log.Printf("Getting Next Free ID: %d\n", id)
+
+	case "checkid":
+		i, err := strconv.Atoi(flag.Args()[1])
+		failError(err)
+		id, err := c.VMIdExists(i)
+		failError(err)
+		log.Printf("Selected ID is free: %d\n", id)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid")
 	}
