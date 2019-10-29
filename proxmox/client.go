@@ -39,10 +39,11 @@ type Client struct {
 // VmRef - virtual machine ref parts
 // map[type:qemu node:proxmox1-xx id:qemu/132 diskread:5.57424738e+08 disk:0 netin:5.9297450593e+10 mem:3.3235968e+09 uptime:1.4567097e+07 vmid:132 template:0 maxcpu:2 netout:6.053310416e+09 maxdisk:3.4359738368e+10 maxmem:8.592031744e+09 diskwrite:1.49663619584e+12 status:running cpu:0.00386980694947209 name:appt-app1-dev.xxx.xx]
 type VmRef struct {
-	vmId   int
-	node   string
-	pool   string
-	vmType string
+	vmId    int
+	node    string
+	pool    string
+	vmType  string
+	haState string
 }
 
 func (vmr *VmRef) SetNode(node string) {
@@ -73,6 +74,10 @@ func (vmr *VmRef) Node() string {
 
 func (vmr *VmRef) Pool() string {
 	return vmr.pool
+}
+
+func (vmr *VmRef) HaState() string {
+	return vmr.haState
 }
 
 func NewVmRef(vmId int) (vmr *VmRef) {
@@ -141,6 +146,9 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 			if vmInfo["pool"] != nil {
 				vmr.pool = vmInfo["pool"].(string)
 			}
+			if vmInfo["hastate"] != nil {
+				vmr.haState = vmInfo["hastate"].(string)
+			}
 			return
 		}
 	}
@@ -159,6 +167,9 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 			vmr.pool = ""
 			if vm["pool"] != nil {
 				vmr.pool = vm["pool"].(string)
+			}
+			if vm["hastate"] != nil {
+				vmr.haState = vm["hastate"].(string)
 			}
 			return
 		}
@@ -413,6 +424,23 @@ func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 	if err != nil {
 		return "", err
 	}
+	
+	//Remove HA if required
+	if(vmr.haState != "") {
+		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
+		resp, err := c.session.Delete(url, nil, nil)
+		if err == nil {
+			taskResponse, err := ResponseJSON(resp)
+			if err != nil {
+				return "", err
+			}
+			exitStatus, err = c.WaitForCompletion(taskResponse)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+	
 	url := fmt.Sprintf("/nodes/%s/%s/%d", vmr.node, vmr.vmType, vmr.vmId)
 	var taskResponse map[string]interface{}
 	_, err = c.session.RequestJSON("DELETE", url, nil, nil, nil, &taskResponse)
@@ -785,5 +813,63 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 			return nil, err
 		}
 	}
+	return
+}
+
+func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{}, err error) {
+	// Same hastate
+	if(vmr.haState == haState) {
+		return
+	}
+
+	//Remove HA
+	if(haState == "") {
+		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
+		resp, err := c.session.Delete(url, nil, nil)
+		if err == nil {
+			taskResponse, err := ResponseJSON(resp)
+			if err != nil {
+				return nil, err
+			}
+			exitStatus, err = c.WaitForCompletion(taskResponse)
+		}
+		return nil, err
+	}
+
+	//Activate HA
+	if(vmr.haState == "") {
+		paramMap := map[string]interface{}{
+			"sid": vmr.vmId,
+		}
+		reqbody := ParamsToBody(paramMap)
+		resp, err := c.session.Post("/cluster/ha/resources", nil, nil, &reqbody)
+		if err == nil {
+			taskResponse, err := ResponseJSON(resp)
+			if err != nil {
+				return nil, err
+			}
+			exitStatus, err = c.WaitForCompletion(taskResponse)
+
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	//Set wanted state
+	paramMap := map[string]interface{}{
+		"state": haState,
+	}
+	reqbody := ParamsToBody(paramMap)
+	url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
+	resp, err := c.session.Put(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+
 	return
 }
