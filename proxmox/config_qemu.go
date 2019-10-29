@@ -245,7 +245,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 	_, err = client.SetVmConfig(vmr, configParams)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 		return err
 	}
 
