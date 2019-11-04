@@ -44,6 +44,7 @@ type ConfigQemu struct {
 	QemuDisks    QemuDevices `json:"disk"`
 	QemuNetworks QemuDevices `json:"network"`
 	QemuSerials  QemuDevices `json:"serial,omitempty"`
+	HaState      string      `json:"hastate,omitempty"`
 
 	// Deprecated single disk.
 	DiskSize    float64 `json:"diskGB"`
@@ -119,6 +120,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		return fmt.Errorf("Error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
+	
+	client.UpdateVMHA(vmr, config.HaState);
+	
 	return
 }
 
@@ -176,6 +180,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	if err != nil {
 		return
 	}
+	
 	return config.UpdateConfig(vmr, client)
 }
 
@@ -248,9 +253,11 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		log.Fatal(err)
 		return err
 	}
-
+	
+	client.UpdateVMHA(vmr, config.HaState);
+	
 	_, err = client.UpdateVMPool(vmr, config.Pool)
-
+	
 	return err
 }
 
@@ -370,6 +377,11 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["scsihw"]; isSet {
 		scsihw = vmConfig["scsihw"].(string)
 	}
+	hastate := ""
+	if _, isSet := vmConfig["hastate"]; isSet {
+		hastate = vmConfig["hastate"].(string)
+	}
+	
 	config = &ConfigQemu{
 		Name:         name,
 		Description:  strings.TrimSpace(description),
@@ -386,6 +398,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Boot:         boot,
 		BootDisk:     bootdisk,
 		Scsihw:       scsihw,
+		HaState:      hastate,
 		QemuDisks:    QemuDevices{},
 		QemuNetworks: QemuDevices{},
 		QemuSerials:  QemuDevices{},
