@@ -208,7 +208,18 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create disks config.
-	config.CreateQemuDisksParams(vmr.vmId, configParams, true)
+	configParamsDisk := map[string]interface{} {
+		"vmid": vmr.vmId,
+	}
+	config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, true)
+	client.createVMDisks(vmr.node, configParamsDisk)
+	//Copy the disks to the global configParams
+	for key, value := range configParamsDisk {
+		//vmid is only required in createVMDisks
+		if key != "vmid" {
+			configParams[key] = value
+		}
+	}
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, configParams)
