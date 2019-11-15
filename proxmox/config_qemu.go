@@ -120,9 +120,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		return fmt.Errorf("Error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
-	
-	client.UpdateVMHA(vmr, config.HaState);
-	
+
+	client.UpdateVMHA(vmr, config.HaState)
+
 	return
 }
 
@@ -180,7 +180,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	if err != nil {
 		return
 	}
-	
+
 	return config.UpdateConfig(vmr, client)
 }
 
@@ -253,11 +253,11 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		log.Print(err)
 		return err
 	}
-	
-	client.UpdateVMHA(vmr, config.HaState);
-	
+
+	client.UpdateVMHA(vmr, config.HaState)
+
 	_, err = client.UpdateVMPool(vmr, config.Pool)
-	
+
 	return err
 }
 
@@ -381,7 +381,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["hastate"]; isSet {
 		hastate = vmConfig["hastate"].(string)
 	}
-	
+
 	config = &ConfigQemu{
 		Name:         name,
 		Description:  strings.TrimSpace(description),
