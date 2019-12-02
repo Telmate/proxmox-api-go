@@ -30,7 +30,7 @@ func main() {
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {
-			vmid, err = strconv.Atoi(flag.Args()[1])
+			vmid, err = strconv.Atoi(flag.Args()[len(flag.Args())-1])
 			if err != nil {
 				vmid = 0
 			}
@@ -41,6 +41,12 @@ func main() {
 
 	var jbody interface{}
 	var vmr *proxmox.VmRef
+
+	if len(flag.Args()) == 0 {
+		fmt.Printf("Missing action, try start|stop vmid\n")
+		os.Exit(0)
+	}
+
 	switch flag.Args()[0] {
 	case "start":
 		vmr = proxmox.NewVmRef(vmid)
@@ -190,8 +196,24 @@ func main() {
 		failError(err)
 		log.Printf("Selected ID is free: %d\n", id)
 
+	case "migrate":
+		vmr := proxmox.NewVmRef(vmid)
+		c.GetVmInfo(vmr)
+		args := flag.Args()
+		if len(args) <= 1 {
+			fmt.Printf("Missing target node\n")
+			os.Exit(1)
+		}
+		_, err := c.MigrateNode(vmr, args[1], true)
+
+		if err != nil {
+			log.Printf("Error to move %+v\n", err)
+			os.Exit(1)
+		}
+		log.Printf("VM %d is moved on %s\n", vmid, args[1])
+
 	default:
-		fmt.Printf("unknown action, try start|stop vmid")
+		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
 	if jbody != nil {
 		log.Println(jbody)

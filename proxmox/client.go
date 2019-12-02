@@ -424,9 +424,9 @@ func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	//Remove HA if required
-	if(vmr.haState != "") {
+	if vmr.haState != "" {
 		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
 		resp, err := c.session.Delete(url, nil, nil)
 		if err == nil {
@@ -440,7 +440,7 @@ func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 			}
 		}
 	}
-	
+
 	url := fmt.Sprintf("/nodes/%s/%s/%d", vmr.node, vmr.vmType, vmr.vmId)
 	var taskResponse map[string]interface{}
 	_, err = c.session.RequestJSON("DELETE", url, nil, nil, nil, &taskResponse)
@@ -562,6 +562,22 @@ func (c *Client) SetLxcConfig(vmr *VmRef, vmParams map[string]interface{}) (exit
 		exitStatus, err = c.WaitForCompletion(taskResponse)
 	}
 	return
+}
+
+// MigrateNode - Migrate a VM
+func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exitStatus interface{}, err error) {
+	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online})
+	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+		return exitStatus, err
+	}
+	return nil, err
 }
 
 func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
@@ -818,12 +834,12 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 
 func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{}, err error) {
 	// Same hastate
-	if(vmr.haState == haState) {
+	if vmr.haState == haState {
 		return
 	}
 
 	//Remove HA
-	if(haState == "") {
+	if haState == "" {
 		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
 		resp, err := c.session.Delete(url, nil, nil)
 		if err == nil {
@@ -837,7 +853,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{},
 	}
 
 	//Activate HA
-	if(vmr.haState == "") {
+	if vmr.haState == "" {
 		paramMap := map[string]interface{}{
 			"sid": vmr.vmId,
 		}
