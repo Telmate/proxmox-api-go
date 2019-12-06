@@ -88,7 +88,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"ide2":        config.QemuIso + ",media=cdrom",
 		"ostype":      config.QemuOs,
 		"sockets":     config.QemuSockets,
-		"vcpus":       config.QemuVcpus,
 		"cores":       config.QemuCores,
 		"cpu":         config.QemuCpu,
 		"numa":        config.QemuNuma,
@@ -97,6 +96,11 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"boot":        config.Boot,
 		"description": config.Description,
 	}
+	
+	if config.QemuVcpus >= 1 {
+		params["vcpus"] = config.QemuVcpus
+	}
+	
 	if vmr.pool != "" {
 		params["pool"] = vmr.pool
 	}
@@ -193,7 +197,6 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"onboot":      config.Onboot,
 		"agent":       config.Agent,
 		"sockets":     config.QemuSockets,
-		"vcpus":       config.QemuVcpus,
 		"cores":       config.QemuCores,
 		"cpu":         config.QemuCpu,
 		"numa":        config.QemuNuma,
@@ -202,6 +205,15 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"boot":        config.Boot,
 	}
 
+	//Array to list deleted parameters
+	deleteParams := []string{}
+
+	if config.QemuVcpus >= 1 {
+		configParams["vcpus"] = config.QemuVcpus
+	} else {
+		deleteParams = append(deleteParams, "vcpus")
+	}
+	
 	if config.BootDisk != "" {
 		configParams["bootdisk"] = config.BootDisk
 	}
@@ -262,6 +274,11 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	if config.Ipconfig2 != "" {
 		configParams["ipconfig2"] = config.Ipconfig2
 	}
+	
+	if len(deleteParams) > 0 {
+		configParams["delete"] = strings.Join(deleteParams, ", ")
+	}
+	
 	_, err = client.SetVmConfig(vmr, configParams)
 	if err != nil {
 		log.Print(err)
@@ -409,7 +426,6 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Memory:       int(memory),
 		QemuCores:    int(cores),
 		QemuSockets:  int(sockets),
-		QemuVcpus:    int(vcpus),
 		QemuCpu:      cpu,
 		QemuNuma:     numa,
 		Hotplug:      hotplug,
@@ -421,6 +437,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuDisks:    QemuDevices{},
 		QemuNetworks: QemuDevices{},
 		QemuSerials:  QemuDevices{},
+	}
+	
+	if vcpus >= 1 {
+		config.QemuVcpus = int(vcpus);
 	}
 
 	if vmConfig["ide2"] != nil {
