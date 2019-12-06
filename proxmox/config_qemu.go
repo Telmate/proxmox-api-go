@@ -363,7 +363,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 	vcpus := 0.0
 	if _, isSet := vmConfig["vcpus"]; isSet {
-		cores = vmConfig["vcpus"].(float64)
+		vcpus = vmConfig["vcpus"].(float64)
 	}
 	sockets := 1.0
 	if _, isSet := vmConfig["sockets"]; isSet {
