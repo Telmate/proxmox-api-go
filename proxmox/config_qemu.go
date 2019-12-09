@@ -30,6 +30,7 @@ type ConfigQemu struct {
 	Onboot       bool        `json:"onboot"`
 	Agent        int         `json:"agent"`
 	Memory       int         `json:"memory"`
+	Balloon      int         `json:"balloon"`
 	QemuOs       string      `json:"os"`
 	QemuCores    int         `json:"cores"`
 	QemuSockets  int         `json:"sockets"`
@@ -95,6 +96,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"memory":      config.Memory,
 		"boot":        config.Boot,
 		"description": config.Description,
+	}
+	
+	if config.Balloon >= 1 {
+		params["balloon"] = config.Balloon
 	}
 	
 	if config.QemuVcpus >= 1 {
@@ -208,6 +213,12 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	//Array to list deleted parameters
 	deleteParams := []string{}
 
+	if config.Balloon >= 1 {
+		configParams["balloon"] = config.Balloon
+	} else {
+		deleteParams = append(deleteParams, "balloon")
+	}
+	
 	if config.QemuVcpus >= 1 {
 		configParams["vcpus"] = config.QemuVcpus
 	} else {
@@ -374,6 +385,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["memory"]; isSet {
 		memory = vmConfig["memory"].(float64)
 	}
+	balloon := 0.0
+	if _, isSet := vmConfig["balloon"]; isSet {
+		balloon = vmConfig["balloon"].(float64)
+	}
 	cores := 1.0
 	if _, isSet := vmConfig["cores"]; isSet {
 		cores = vmConfig["cores"].(float64)
@@ -439,6 +454,9 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuSerials:  QemuDevices{},
 	}
 	
+	if balloon >= 1 {
+		config.Balloon = int(balloon);
+	}
 	if vcpus >= 1 {
 		config.QemuVcpus = int(vcpus);
 	}
