@@ -27,6 +27,7 @@ type ConfigQemu struct {
 	Name         string      `json:"name"`
 	Description  string      `json:"desc"`
 	Pool         string      `json:"pool,omitempty"`
+	Bios         string      `json:"bios"`
 	Onboot       bool        `json:"onboot"`
 	Agent        int         `json:"agent"`
 	Memory       int         `json:"memory"`
@@ -97,7 +98,11 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"boot":        config.Boot,
 		"description": config.Description,
 	}
-	
+
+	if config.Bios != "" {
+		params["bios"] = config.Bios
+	}
+
 	if config.Balloon >= 1 {
 		params["balloon"] = config.Balloon
 	}
@@ -212,6 +217,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 
 	//Array to list deleted parameters
 	deleteParams := []string{}
+
+	if config.Bios != "" {
+		configParams["bios"] = config.Bios
+	}
 
 	if config.Balloon >= 1 {
 		configParams["balloon"] = config.Balloon
@@ -362,6 +371,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["description"]; isSet {
 		description = vmConfig["description"].(string)
 	}
+	bios := "seabios"
+	if _, isSet := vmConfig["bios"]; isSet {
+		bios = vmConfig["bios"].(string)
+	}
 	onboot := true
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
@@ -435,6 +448,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	config = &ConfigQemu{
 		Name:         name,
 		Description:  strings.TrimSpace(description),
+		Bios:         bios,
 		Onboot:       onboot,
 		Agent:        agent,
 		QemuOs:       ostype,
