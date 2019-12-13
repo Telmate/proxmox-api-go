@@ -815,13 +815,6 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 	return nil
 }
 
-// Create parameters for each Nic device.
-func (c ConfigQemu) CreateQemuVgaParams(vmID int, params map[string]interface{}) error {
-
-	params["vga"] = fmt.Sprintf("type=%v", c.QemuVga["type"])
-	return nil
-}
-
 // Create parameters for each disk.
 func (c ConfigQemu) CreateQemuDisksParams(
 	vmID int,
