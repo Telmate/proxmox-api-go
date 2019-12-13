@@ -44,6 +44,7 @@ type ConfigQemu struct {
 	BootDisk     string      `json:"bootdisk,omitempty"`
 	Scsihw       string      `json:"scsihw,omitempty"`
 	QemuDisks    QemuDevices `json:"disk"`
+	QemuVga      QemuDevice  `json:"vga,omitempty"`
 	QemuNetworks QemuDevices `json:"network"`
 	QemuSerials  QemuDevices `json:"serial,omitempty"`
 	HaState      string      `json:"hastate,omitempty"`
@@ -120,6 +121,11 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 	// Create disks config.
 	config.CreateQemuDisksParams(vmr.vmId, params, false)
+
+	// Create vga config.
+	vgaParam := QemuDeviceParam{}
+	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
+	params["vga"] = strings.Join(vgaParam, ",")
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, params)
@@ -249,6 +255,11 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, configParams)
+
+	// Create vga config.
+	vgaParam := QemuDeviceParam{}
+	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
+	configParams["vga"] = strings.Join(vgaParam, ",")
 
 	// Create serial interfaces
 	config.CreateQemuSerialsParams(vmr.vmId, configParams)
@@ -450,6 +461,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Scsihw:       scsihw,
 		HaState:      hastate,
 		QemuDisks:    QemuDevices{},
+		QemuVga:      QemuDevice{},
 		QemuNetworks: QemuDevices{},
 		QemuSerials:  QemuDevices{},
 	}
@@ -527,6 +539,16 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		// And device config to disks map.
 		if len(diskConfMap) > 0 {
 			config.QemuDisks[diskID] = diskConfMap
+		}
+	}
+
+	//Display
+	if vga, isSet := vmConfig["vga"]; isSet {
+		vgaList := strings.Split(vga.(string), ",")
+		vgaMap := QemuDevice{}
+		vgaMap.readDeviceConfig(vgaList)
+		if len(vgaMap) > 0 {
+			config.QemuVga = vgaMap
 		}
 	}
 
@@ -790,6 +812,13 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 		params[qemuNicName] = strings.Join(nicConfParam, ",")
 	}
 
+	return nil
+}
+
+// Create parameters for each Nic device.
+func (c ConfigQemu) CreateQemuVgaParams(vmID int, params map[string]interface{}) error {
+
+	params["vga"] = fmt.Sprintf("type=%v", c.QemuVga["type"])
 	return nil
 }
 
