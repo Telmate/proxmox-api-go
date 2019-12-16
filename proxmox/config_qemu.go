@@ -272,8 +272,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
 	if len(vgaParam) > 0 {
 		configParams["vga"] = strings.Join(vgaParam, ",")
-	}
-	else {
+	} else {
 		deleteParams = append(deleteParams, "vga")
 	}
 
