@@ -130,7 +130,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
 	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
-	params["vga"] = strings.Join(vgaParam, ",")
+	if len(vgaParam) > 0 {
+		params["vga"] = strings.Join(vgaParam, ",")
+	}
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(vmr.vmId, params)
@@ -268,7 +270,12 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
 	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
-	configParams["vga"] = strings.Join(vgaParam, ",")
+	if len(vgaParam) > 0 {
+		configParams["vga"] = strings.Join(vgaParam, ",")
+	}
+	else {
+		deleteParams = append(deleteParams, "vga")
+	}
 
 	// Create serial interfaces
 	config.CreateQemuSerialsParams(vmr.vmId, configParams)
