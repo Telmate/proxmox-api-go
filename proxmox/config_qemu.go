@@ -254,7 +254,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParamsDisk := map[string]interface{} {
 		"vmid": vmr.vmId,
 	}
-	config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, true)
+	config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, false)
 	client.createVMDisks(vmr.node, configParamsDisk)
 	//Copy the disks to the global configParams
 	for key, value := range configParamsDisk {
