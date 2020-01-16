@@ -735,8 +735,23 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 	req.Header.Add("Content-Type", mimetype)
 	req.Header.Add("Accept", "application/json")
 
-	_, err = c.session.Do(req)
-	return err
+	resp, err := c.session.Do(req)
+	if err != nil {
+		return err
+	}
+
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return err
+	}
+	exitStatus, err := c.WaitForCompletion(taskResponse)
+	if err != nil {
+		return err
+	}
+	if exitStatus != exitStatusSuccess {
+		return fmt.Errorf("Moving file to destination failed: %v", exitStatus)
+	}
+	return nil
 }
 
 func createUploadBody(contentType string, filename string, r io.Reader) (io.Reader, string, error) {
