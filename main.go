@@ -159,6 +159,7 @@ func main() {
 		log.Print("Creating node: ")
 		log.Println(vmr)
 		failError(config.CloneVm(sourceVmr, vmr, c))
+		failError(config.UpdateConfig(vmr, c))
 		log.Println("Complete")
 
 	case "rollbackQemu":
