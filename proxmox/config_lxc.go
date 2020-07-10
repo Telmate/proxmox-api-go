@@ -173,20 +173,19 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 
 		id := rxDeviceID.FindStringSubmatch(mpName)
 		mpID, _ := strconv.Atoi(id[0])
-		// add mp id
+		// add mp id, volume, and mp
+		_, mp := ParseSubConf(mpConfList[1], "=")
 		mpConfMap := QemuDevice{
-			"id": mpID,
+			"id":     mpID,
+			"volume": mpConfList[0],
+			"mp":     mp,
 		}
-		// add rest of device config
-		mpConfMap.readDeviceConfig(mpConfList)
-		// prepare empty mountpoint map
+
 		if config.Mountpoints == nil {
 			config.Mountpoints = QemuDevices{}
 		}
-		// and device config to mountpoints
-		if len(mpConfMap) > 0 {
-			config.Mountpoints[mpID] = mpConfMap
-		}
+
+		config.Mountpoints[mpID] = mpConfMap
 	}
 
 	nameserver := ""
