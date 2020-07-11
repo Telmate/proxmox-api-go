@@ -177,6 +177,11 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 		mpConfMap := QemuDevice{
 			"id": mpID,
 		}
+		// if the first string doesn't contain an = it is implicity 'volume'
+		if !strings.Contains(mpConfList[0], "=") {
+			mpConfMap["volume"] = mpConfList[0]
+			mpConfList = mpConfList[1:]
+		}
 		// add rest of device config
 		mpConfMap.readDeviceConfig(mpConfList)
 		// prepare empty mountpoint map
