@@ -329,7 +329,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 }
 
 func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
-	config = &ConfigQemu{QemuVlanTag: -1}
+	config = &ConfigQemu{QemuVlanTag: -1, QemuKVM: true}
 	err = json.NewDecoder(io).Decode(config)
 	if err != nil {
 		log.Fatal(err)
@@ -454,7 +454,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 	kvm := true
 	if _, isSet := vmConfig["kvm"]; isSet {
-		kvm = vmConfig["kvm"].(bool)
+		kvm = Itob(int(vmConfig["kvm"].(float64)))
 	}
 	scsihw := "lsi"
 	if _, isSet := vmConfig["scsihw"]; isSet {
