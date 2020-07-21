@@ -1,0 +1,16 @@
+language: go
+
+install:
+  # install libvirt and KVM
+  - sudo apt-get update && sudo apt-get install -y bridge-utils dnsmasq-base ebtables libvirt-bin libvirt-dev qemu-kvm qemu-utils
+
+  # install vagrant
+  - sudo wget -nv https://releases.hashicorp.com/vagrant/2.2.9/vagrant_2.2.9_x86_64.deb
+  - sudo dpkg -i vagrant_2.2.9_x86_64.deb
+
+  # install vagrant-libvirt plugin
+  - sudo vagrant plugin install vagrant-libvirt
+
+script:
+  - sudo vagrant up --provider=libvirt
+  - make test
