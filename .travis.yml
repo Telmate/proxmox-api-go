@@ -1,5 +1,18 @@
 language: go
 
+go:
+  - 1.14.x
+
+dist: bionic
+
+cache:
+  directories:
+    - /home/travis/.vagrant.d/boxes
+
+env:
+  global:
+    - GO111MODULE=on
+
 install:
   # install libvirt and KVM
   - sudo apt-get update && sudo apt-get install -y bridge-utils dnsmasq-base ebtables libvirt-bin libvirt-dev qemu-kvm qemu-utils
