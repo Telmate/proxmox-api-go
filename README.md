@@ -122,3 +122,11 @@ Kickstart auto install
 * sshd (with preshared key/password)
 
 Network is temprorarily eth1 during the pre-provision phase.
+
+## Test
+
+You're going to need [vagrant](https://www.vagrantup.com/downloads) and [virtualbox](https://www.virtualbox.org/wiki/Downloads) to run the tests:
+
+```sh
+make test
+```
