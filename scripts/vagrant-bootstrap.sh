@@ -4,11 +4,14 @@ export DEBIAN_FRONTEND=noninteractive
 
 # ensure required utilities are installed
 apt-get update
-apt-get install -y software-properties-common git make gnupg2
+apt-get install -y software-properties-common gnupg2
 
-# make sure the hostname can be resolved via /etc/hosts
+# make sure hostname can be resolved via /etc/hosts
+sed -i "/127.0.1.1/d" /etc/hosts
 PVE_IP=$(hostname -I | awk '{print $1}')
-sed -i "s/127.0.1.1/$PVE_IP/" /etc/hosts
+if [ -z "$(grep $PVE_IP /etc/hosts)" ]; then
+    echo "$PVE_IP $(hostname)" > /etc/hosts
+fi
 
 # add proxmox repository and its key
 apt-add-repository 'deb http://download.proxmox.com/debian/pve buster pve-no-subscription'
