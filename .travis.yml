@@ -1,0 +1,29 @@
+language: go
+
+go:
+  - 1.14.x
+
+dist: bionic
+
+cache:
+  directories:
+    - /home/travis/.vagrant.d/boxes
+
+env:
+  global:
+    - GO111MODULE=on
+
+install:
+  # install build dependencies for vagrant-libvirt
+  - sudo apt-get update && sudo apt-get build-dep vagrant ruby-libvirt && sudo apt-get install -y qemu libvirt-daemon-system libvirt-clients ebtables dnsmasq-base libxslt-dev libxml2-dev libvirt-dev zlib1g-dev ruby-dev
+
+  # install vagrant
+  - sudo wget -nv https://releases.hashicorp.com/vagrant/2.2.9/vagrant_2.2.9_x86_64.deb
+  - sudo dpkg -i vagrant_2.2.9_x86_64.deb
+
+  # install vagrant-libvirt plugin
+  - sudo vagrant plugin install vagrant-libvirt
+
+script:
+  - sudo vagrant up --provider=libvirt
+  - make test
