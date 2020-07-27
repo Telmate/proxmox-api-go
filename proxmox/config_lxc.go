@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -72,12 +71,7 @@ func NewConfigLxc() configLxc {
 func NewConfigLxcFromJson(io io.Reader) (config configLxc, err error) {
 	config = NewConfigLxc()
 	err = json.NewDecoder(io).Decode(config)
-	if err != nil {
-		log.Fatal(err)
-		return config, err
-	}
-	log.Println(config)
-	return
+	return config, err
 }
 
 func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err error) {
@@ -85,7 +79,6 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 	var lxcConfig map[string]interface{}
 	lxcConfig, err = client.GetVmConfig(vmr)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 
@@ -403,7 +396,7 @@ func (config configLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		paramMap[nicName] = strings.Join(nicConfParam, ",")
 	}
 
-	// build list of unused volumes for sake of completenes,
+	// build list of unused volumes for sake of completeness,
 	// even if it is not recommended to change these volumes manually
 	for volID, vol := range config.Unused {
 		// add volume to lxc parameters
