@@ -20,9 +20,6 @@ import (
 	"time"
 )
 
-// TaskTimeout - default async task call timeout in seconds
-const TaskTimeout = 300
-
 // TaskStatusCheckInterval - time between async checks in seconds
 const TaskStatusCheckInterval = 2
 
@@ -30,11 +27,12 @@ const exitStatusSuccess = "OK"
 
 // Client - URL, user and password to specifc Proxmox node
 type Client struct {
-	session  *Session
-	ApiUrl   string
-	Username string
-	Password string
-	Otp      string
+	session     *Session
+	ApiUrl      string
+	Username    string
+	Password    string
+	Otp         string
+	TaskTimeout int
 }
 
 // VmRef - virtual machine ref parts
@@ -86,11 +84,11 @@ func NewVmRef(vmId int) (vmr *VmRef) {
 	return
 }
 
-func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config) (client *Client, err error) {
+func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config, taskTimeout int) (client *Client, err error) {
 	var sess *Session
 	sess, err = NewSession(apiUrl, hclient, tls)
 	if err == nil {
-		client = &Client{session: sess, ApiUrl: apiUrl}
+		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout}
 	}
 	return client, err
 }
@@ -343,7 +341,7 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 	}
 	waited := 0
 	taskUpid := taskResponse["data"].(string)
-	for waited < TaskTimeout {
+	for waited < c.TaskTimeout {
 		exitStatus, statErr := c.GetTaskExitstatus(taskUpid)
 		if statErr != nil {
 			if statErr != io.ErrUnexpectedEOF { // don't give up on ErrUnexpectedEOF

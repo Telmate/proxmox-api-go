@@ -16,13 +16,14 @@ func main() {
 	var insecure *bool
 	insecure = flag.Bool("insecure", false, "TLS insecure mode")
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
+	taskTimeout := flag.Int("timeout", 300, "api task timeout in seconds")
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
 	tlsconf := &tls.Config{InsecureSkipVerify: true}
 	if !*insecure {
 		tlsconf = nil
 	}
-	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf)
+	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *taskTimeout)
 	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
 	if err != nil {
 		log.Fatal(err)
