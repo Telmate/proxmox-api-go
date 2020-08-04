@@ -232,7 +232,7 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 
 type AgentNetworkInterface struct {
 	MACAddress  string
-	IPAddresses []net.IP
+	IPAddresses []net.IPAddr
 	Name        string
 	Statistics  map[string]int64
 }
@@ -253,9 +253,9 @@ func (a *AgentNetworkInterface) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	a.IPAddresses = make([]net.IP, len(intermediate.IPAddresses))
+	a.IPAddresses = make([]net.IPAddr, len(intermediate.IPAddresses))
 	for idx, ip := range intermediate.IPAddresses {
-		a.IPAddresses[idx] = net.ParseIP(ip.IPAddress)
+        a.IPAddresses[idx] = net.ParseIPZone(ip.IPAddress)
 		if a.IPAddresses[idx] == nil {
 			return fmt.Errorf("Could not parse %s as IP", ip.IPAddress)
 		}
