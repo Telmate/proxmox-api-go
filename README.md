@@ -29,6 +29,14 @@ export PM_OTP=otpcode (only if required)
 ./proxmox-api-go cloneQemu template-name proxmox-node-name < clone1.json
 
 ./proxmox-api-go migrate pve1 123
+
+./proxmox-api-go createQemuSnapshot vm-name snapshot_name
+
+./proxmox-api-go deleteQemuSnapshot vm-name snapshot_name
+
+./proxmox-api-go listQemuSnapshot vm-name
+
+./proxmox-api-go rollbackQemu vm-name
 ```
 
 ### Format

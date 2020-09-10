@@ -521,6 +521,61 @@ func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitS
 	return
 }
 
+func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	snapshotParams := map[string]interface{}{
+		"snapname": snapshotName,
+	}
+	reqbody := ParamsToBody(snapshotParams)
+	if err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return "", err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/%s", vmr.node, vmr.vmType, vmr.vmId, snapshotName)
+	resp, err := c.session.Delete(url, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return "", err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface{}, exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Get(url, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, "", err
+		}
+		return taskResponse, "", nil
+	}
+	return
+}
+
 func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
