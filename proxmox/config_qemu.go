@@ -50,7 +50,7 @@ type ConfigQemu struct {
 	QemuNetworks QemuDevices `json:"network"`
 	QemuSerials  QemuDevices `json:"serial,omitempty"`
 	HaState      string      `json:"hastate,omitempty"`
-    Tags         string      `json:"tags"`
+	Tags         string      `json:"tags"`
 
 	// Deprecated single disk.
 	DiskSize    float64 `json:"diskGB"`
@@ -101,7 +101,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"memory":      config.Memory,
 		"boot":        config.Boot,
 		"description": config.Description,
-        "tags":        config.Tags,
+		"tags":        config.Tags,
 	}
 
 	if config.Bios != "" {
@@ -212,7 +212,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParams := map[string]interface{}{
 		"name":        config.Name,
 		"description": config.Description,
-        "tags":        config.Tags,
+		"tags":        config.Tags,
 		"onboot":      config.Onboot,
 		"agent":       config.Agent,
 		"sockets":     config.QemuSockets,
@@ -390,10 +390,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["description"]; isSet {
 		description = vmConfig["description"].(string)
 	}
-    tags := ""
-    if _, isSet := vmConfig["tags"]; isSet {
-        tags = vmConfig["tags"].(string)
-    }
+	tags := ""
+	if _, isSet := vmConfig["tags"]; isSet {
+	    tags = vmConfig["tags"].(string)
+	}
 	bios := "seabios"
 	if _, isSet := vmConfig["bios"]; isSet {
 		bios = vmConfig["bios"].(string)
@@ -475,7 +475,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	config = &ConfigQemu{
 		Name:         name,
 		Description:  strings.TrimSpace(description),
-        Tags:         strings.TrimSpace(tags),
+		Tags:         strings.TrimSpace(tags),
 		Bios:         bios,
 		Onboot:       onboot,
 		Agent:        agent,

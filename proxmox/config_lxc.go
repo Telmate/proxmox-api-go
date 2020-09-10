@@ -46,7 +46,7 @@ type configLxc struct {
 	Tty                int         `json:"tty"`
 	Unique             bool        `json:"unique,omitempty"`
 	Unprivileged       bool        `json:"unprivileged"`
-    Tags               string      `json:"tags"`
+	Tags               string      `json:"tags"`
 	Unused             []string    `json:"unused,omitempty"`
 }
 
@@ -264,10 +264,10 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 	if _, isset := lxcConfig["unprivileged"]; isset {
 		unprivileged = Itob(int(lxcConfig["unprivileged"].(float64)))
 	}
-    tags := ""
-    if _, isSet := lxcConfig["tags"]; isSet {
-        tags = lxcConfig["tags"].(string)
-    }
+	tags := ""
+	if _, isSet := lxcConfig["tags"]; isSet {
+		tags = lxcConfig["tags"].(string)
+	}
 	var unused []string
 	if _, isset := lxcConfig["unused"]; isset {
 		unused = lxcConfig["unused"].([]string)
@@ -297,7 +297,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 	config.Tty = tty
 	config.Unprivileged = unprivileged
 	config.Unused = unused
-    config.Tags = tags
+	config.Tags = tags
 
 	return
 }
