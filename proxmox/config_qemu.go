@@ -903,7 +903,7 @@ func (c ConfigQemu) CreateQemuDisksParams(
 		var diskFile string
 		// Currently ZFS local, LVM, Ceph RBD, CephFS and Directory are considered.
 		// Other formats are not verified, but could be added if they're needed.
-		rxStorageTypes := `(zfspool|lvm|rbd|cephfs)`
+		rxStorageTypes := `(zfspool|lvm|rbd|cephfs|dir)`
 		storageType := diskConfMap["storage_type"].(string)
 		if matched, _ := regexp.MatchString(rxStorageTypes, storageType); matched {
 			diskFile = fmt.Sprintf("file=%v:vm-%v-disk-%v", diskConfMap["storage"], vmID, diskID)
