@@ -102,7 +102,7 @@ cloneQemu cloud-init JSON Sample:
   "cores": 2,
   "sockets": 1,
   "ipconfig0": "gw=10.0.2.2,ip=10.0.2.17/24",
-  "sshkey" : "...",
+  "sshkeys" : "...",
   "nameserver": "8.8.8.8"
 }
 ```
