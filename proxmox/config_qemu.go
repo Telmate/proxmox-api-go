@@ -557,12 +557,16 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		diskType := rxDiskType.FindStringSubmatch(diskName)[0]
 		storageName, fileName := ParseSubConf(diskConfList[0], ":")
 
+		var storageStatus map[string]interface{}
+		storageStatus, err = client.GetStorageStatus(vmr, storageName)
+		storageType := storageStatus["type"]
 		//
 		diskConfMap := QemuDevice{
-			"id":      diskID,
-			"type":    diskType,
-			"storage": storageName,
-			"file":    fileName,
+			"id":           diskID,
+			"type":         diskType,
+			"storage":      storageName,
+			"file":         fileName,
+			"storage_type": storageType,
 		}
 
 		// Add rest of device config.
