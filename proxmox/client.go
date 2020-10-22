@@ -226,6 +226,18 @@ func (c *Client) GetStorageStatus(vmr *VmRef, storageName string) (storageStatus
 	return
 }
 
+func (c *Client) GetStorageContent(vmr *VmRef, storageName string) (data map[string]interface{}, err error) {
+	url := fmt.Sprintf("/nodes/%s/storage/%s/content", vmr.node, storageName)
+	err = c.GetJsonRetryable(url, &data, 3)
+	if err != nil {
+		return nil, err
+	}
+	if data["data"] == nil {
+		return nil, errors.New("Storage Content not readable")
+	}
+	return
+}
+
 func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
