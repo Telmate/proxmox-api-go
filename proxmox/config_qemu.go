@@ -15,6 +15,10 @@ import (
 	"time"
 )
 
+// Currently ZFS local, LVM, Ceph RBD, CephFS, Directory and virtio-scsi-pci are considered.
+// Other formats are not verified, but could be added if they're needed.
+const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
+
 type (
 	QemuDevices     map[int]map[string]interface{}
 	QemuDevice      map[string]interface{}
@@ -129,7 +133,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create disks config.
-	config.CreateQemuDisksParams(vmr.vmId, params, false)
+	err = config.CreateQemuDisksParams(vmr.vmId, params, false)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
@@ -139,17 +146,26 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create networks config.
-	config.CreateQemuNetworksParams(vmr.vmId, params)
+	err = config.CreateQemuNetworksParams(vmr.vmId, params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 
 	// Create serial interfaces
-	config.CreateQemuSerialsParams(vmr.vmId, params)
+	err = config.CreateQemuSerialsParams(vmr.vmId, params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 
 	exitStatus, err := client.CreateQemuVm(vmr.node, params)
 	if err != nil {
 		return fmt.Errorf("Error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
 
-	client.UpdateVMHA(vmr, config.HaState)
+	_, err = client.UpdateVMHA(vmr, config.HaState)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 
 	return
 }
@@ -256,8 +272,16 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParamsDisk := map[string]interface{}{
 		"vmid": vmr.vmId,
 	}
-	config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, false)
-	client.createVMDisks(vmr.node, configParamsDisk)
+	// TODO keep going if error=
+	err = config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, false)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+	// TODO keep going if error=
+	_, err = client.createVMDisks(vmr.node, configParamsDisk)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 	//Copy the disks to the global configParams
 	for key, value := range configParamsDisk {
 		//vmid is only required in createVMDisks
@@ -267,7 +291,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create networks config.
-	config.CreateQemuNetworksParams(vmr.vmId, configParams)
+	err = config.CreateQemuNetworksParams(vmr.vmId, configParams)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
@@ -279,7 +306,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create serial interfaces
-	config.CreateQemuSerialsParams(vmr.vmId, configParams)
+	err = config.CreateQemuSerialsParams(vmr.vmId, configParams)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 
 	// cloud-init options
 	if config.CIuser != "" {
@@ -324,7 +354,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		return err
 	}
 
-	client.UpdateVMHA(vmr, config.HaState)
+	_, err = client.UpdateVMHA(vmr, config.HaState)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 
 	_, err = client.UpdateVMPool(vmr, config.Pool)
 
@@ -541,7 +574,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	// Add disks.
 	diskNames := []string{}
 
-	for k, _ := range vmConfig {
+	for k := range vmConfig {
 		if diskName := rxDiskName.FindStringSubmatch(k); len(diskName) > 0 {
 			diskNames = append(diskNames, diskName[0])
 		}
@@ -591,7 +624,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		}
 
 		// Add rest of device config.
-		diskConfMap.readDeviceConfig(diskConfList[1:])
+		err = diskConfMap.readDeviceConfig(diskConfList[1:])
+		if err != nil {
+			log.Printf("[ERROR] %q", err)
+		}
 
 		// And device config to disks map.
 		if len(diskConfMap) > 0 {
@@ -603,7 +639,12 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if vga, isSet := vmConfig["vga"]; isSet {
 		vgaList := strings.Split(vga.(string), ",")
 		vgaMap := QemuDevice{}
-		vgaMap.readDeviceConfig(vgaList)
+
+		// TODO: keep going if error?
+		err = vgaMap.readDeviceConfig(vgaList)
+		if err != nil {
+			log.Printf("[ERROR] %q", err)
+		}
 		if len(vgaMap) > 0 {
 			config.QemuVga = vgaMap
 		}
@@ -612,7 +653,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	// Add networks.
 	nicNames := []string{}
 
-	for k, _ := range vmConfig {
+	for k := range vmConfig {
 		if nicName := rxNicName.FindStringSubmatch(k); len(nicName) > 0 {
 			nicNames = append(nicNames, nicName[0])
 		}
@@ -634,7 +675,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		}
 
 		// Add rest of device config.
-		nicConfMap.readDeviceConfig(nicConfList[1:])
+		err = nicConfMap.readDeviceConfig(nicConfList[1:])
+		if err != nil {
+			log.Printf("[ERROR] %q", err)
+		}
 
 		// And device config to networks.
 		if len(nicConfMap) > 0 {
@@ -645,7 +689,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	// Add serials
 	serialNames := []string{}
 
-	for k, _ := range vmConfig {
+	for k := range vmConfig {
 		if serialName := rxSerialName.FindStringSubmatch(k); len(serialName) > 0 {
 			serialNames = append(serialNames, serialName[0])
 		}
@@ -926,9 +970,7 @@ func (c ConfigQemu) CreateQemuDisksParams(
 
 		// Disk name.
 		var diskFile string
-		// Currently ZFS local, LVM, Ceph RBD, CephFS and Directory are considered.
-		// Other formats are not verified, but could be added if they're needed.
-		rxStorageTypes := `(zfspool|lvm|rbd|cephfs|dir)`
+
 		storageType := diskConfMap["storage_type"].(string)
 		if matched, _ := regexp.MatchString(rxStorageTypes, storageType); matched {
 			diskFile = fmt.Sprintf("file=%v:vm-%v-disk-%v", diskConfMap["storage"], vmID, diskID)
