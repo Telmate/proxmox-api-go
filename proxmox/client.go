@@ -668,14 +668,25 @@ func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exi
 	return nil, err
 }
 
+// ResizeQemuDisk allows the caller to increase the size of a disk by the indicated number of gigabytes
 func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
+	size := fmt.Sprintf("+%dG", moreSizeGB)
+	return c.ResizeQemuDiskRaw(vmr, disk, size)
+}
+
+
+// ResizeQemuDiskRaw allows the caller to provide the raw resize string to be send to proxmox.
+// See the proxmox API documentation for full information, but the short version is if you prefix
+// your desired size with a '+' character it will ADD size to the disk.  If you just specify the size by
+// itself it will do an absolute resizing to the specified size. Permitted suffixes are K, M, G, T
+// to indicate order of magnitude (kilobyte, megabyte, etc). Decrease of disk size is not permitted.
+func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitStatus interface{}, err error) {
 	// PUT
 	//disk:virtio0
 	//size:+2G
 	if disk == "" {
 		disk = "virtio0"
 	}
-	size := fmt.Sprintf("+%dG", moreSizeGB)
 	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "size": size})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(url, nil, nil, &reqbody)
@@ -688,6 +699,7 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 	}
 	return
 }
+
 
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	if disk == "" {
