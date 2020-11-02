@@ -169,7 +169,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 
 	for _, mpName := range mpNames {
 		mpConfStr := lxcConfig[mpName].(string)
-		mpConfMap := parseLxcDisk(mpConfStr)
+		mpConfMap := ParseLxcDisk(mpConfStr)
 
 		// add mp id
 		id := rxDeviceID.FindStringSubmatch(mpName)
@@ -331,7 +331,7 @@ func (config configLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	return err
 }
 
-func parseLxcDisk(diskStr string) QemuDevice {
+func ParseLxcDisk(diskStr string) QemuDevice {
 	disk := ParsePMConf(diskStr, "volume")
 
 	// add features, if any
@@ -343,6 +343,10 @@ func parseLxcDisk(diskStr string) QemuDevice {
 		}
 		disk["mountoptions"] = moMap
 	}
+
+	storageName, fileName := ParseSubConf(disk["volume"].(string), ":")
+	disk["storage"] = storageName
+	disk["file"] = fileName
 
 	return disk
 }

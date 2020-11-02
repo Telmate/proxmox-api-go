@@ -699,6 +699,20 @@ func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitSt
 	return
 }
 
+func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
+	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
+	url := fmt.Sprintf("/nodes/%s/%s/%d/move_volume", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	if disk == "" {
 		disk = "virtio0"

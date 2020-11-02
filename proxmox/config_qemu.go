@@ -854,7 +854,7 @@ func FormatDiskParam(disk QemuDevice) string {
 	}
 
 	// Keys that are not used as real/direct conf.
-	ignoredKeys := []string{"key", "slot", "type", "storage", "size", "cache", "volume", "container", "vm", "mountoptions"}
+	ignoredKeys := []string{"key", "slot", "type", "storage", "file", "size", "cache", "volume", "container", "vm", "mountoptions"}
 
 	// Rest of config.
 	diskConfParam = diskConfParam.createDeviceParam(disk, ignoredKeys)
