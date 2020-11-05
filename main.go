@@ -213,7 +213,7 @@ func main() {
 		log.Println("Keys sent")
 
 	case "nextid":
-		id, err := c.NextId()
+		id, err := c.GetNextID(0)
 		failError(err)
 		log.Printf("Getting Next Free ID: %d\n", id)
 

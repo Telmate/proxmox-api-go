@@ -674,7 +674,6 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 	return c.ResizeQemuDiskRaw(vmr, disk, size)
 }
 
-
 // ResizeQemuDiskRaw allows the caller to provide the raw resize string to be send to proxmox.
 // See the proxmox API documentation for full information, but the short version is if you prefix
 // your desired size with a '+' character it will ADD size to the disk.  If you just specify the size by
@@ -700,6 +699,19 @@ func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitSt
 	return
 }
 
+func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
+	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
+	url := fmt.Sprintf("/nodes/%s/%s/%d/move_volume", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
 
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	if disk == "" {
@@ -760,7 +772,7 @@ func (c *Client) CreateVMDisk(
 			return err
 		}
 		if diskName, containsData := taskResponse["data"]; !containsData || diskName != fullDiskName {
-			return errors.New(fmt.Sprintf("Cannot create VM disk %s", fullDiskName))
+			return errors.New(fmt.Sprintf("Cannot create VM disk %s - %s", fullDiskName, diskName))
 		}
 	} else {
 		return err
@@ -779,7 +791,7 @@ func (c *Client) createVMDisks(
 	for deviceName, deviceConf := range vmParams {
 		rxStorageModels := `(ide|sata|scsi|virtio)\d+`
 		if matched, _ := regexp.MatchString(rxStorageModels, deviceName); matched {
-			deviceConfMap := ParseConf(deviceConf.(string), ",", "=")
+			deviceConfMap := ParsePMConf(deviceConf.(string), "")
 			// This if condition to differentiate between `disk` and `cdrom`.
 			if media, containsFile := deviceConfMap["media"]; containsFile && media == "disk" {
 				fullDiskName := deviceConfMap["file"].(string)

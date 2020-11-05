@@ -581,53 +581,19 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 
 	for _, diskName := range diskNames {
-		diskConfStr := vmConfig[diskName]
-		diskConfList := strings.Split(diskConfStr.(string), ",")
+		diskConfStr := vmConfig[diskName].(string)
 
-		//
 		id := rxDeviceID.FindStringSubmatch(diskName)
 		diskID, _ := strconv.Atoi(id[0])
 		diskType := rxDiskType.FindStringSubmatch(diskName)[0]
-		filePath := diskConfList[0]
-		storageName, fileName := ParseSubConf(filePath, ":")
 
-		storageContent, err := client.GetStorageContent(vmr, storageName)
-		if err != nil {
-			log.Fatal(err)
-			return nil, err
-		}
-		var storageFormat string
-		contents := storageContent["data"].([]interface{})
-		for content := range contents {
-			storageContentMap := contents[content].(map[string]interface{})
-			if storageContentMap["volid"] == filePath {
-				storageFormat = storageContentMap["format"].(string)
-				break
-			}
-		}
+		diskConfMap := ParsePMConf(diskConfStr, "volume")
+		diskConfMap["slot"] = diskID
+		diskConfMap["type"] = diskType
 
-		var storageStatus map[string]interface{}
-		storageStatus, err = client.GetStorageStatus(vmr, storageName)
-		if err != nil {
-			log.Fatal(err)
-			return nil, err
-		}
-		storageType := storageStatus["type"]
-		//
-		diskConfMap := QemuDevice{
-			"id":           diskID,
-			"type":         diskType,
-			"storage":      storageName,
-			"file":         fileName,
-			"storage_type": storageType,
-			"format":       storageFormat,
-		}
-
-		// Add rest of device config.
-		err = diskConfMap.readDeviceConfig(diskConfList[1:])
-		if err != nil {
-			log.Printf("[ERROR] %q", err)
-		}
+		storageName, fileName := ParseSubConf(diskConfMap["volume"].(string), ":")
+		diskConfMap["storage"] = storageName
+		diskConfMap["file"] = fileName
 
 		// And device config to disks map.
 		if len(diskConfMap) > 0 {
@@ -850,6 +816,52 @@ func SendKeysString(vmr *VmRef, client *Client, keys string) (err error) {
 	return nil
 }
 
+// Given a QemuDevice, return a param string to give to ProxMox
+func formatDeviceParam(device QemuDevice) string {
+	deviceConfParams := QemuDeviceParam{}
+	deviceConfParams = deviceConfParams.createDeviceParam(device, nil)
+	return strings.Join(deviceConfParams, ",")
+}
+
+// Given a QemuDevice (represesting a disk), return a param string to give to ProxMox
+func FormatDiskParam(disk QemuDevice) string {
+	diskConfParam := QemuDeviceParam{}
+
+	if volume, ok := disk["volume"]; ok && volume != "" {
+		diskConfParam = append(diskConfParam, volume.(string))
+		diskConfParam = append(diskConfParam, fmt.Sprintf("size=%v", disk["size"]))
+	} else {
+		volumeInit := fmt.Sprintf("%v:%v", disk["storage"], DiskSizeGB(disk["size"]))
+		diskConfParam = append(diskConfParam, volumeInit)
+	}
+
+	// Set cache if not none (default).
+	if cache, ok := disk["cache"]; ok && cache != "none" {
+		diskCache := fmt.Sprintf("cache=%v", disk["cache"])
+		diskConfParam = append(diskConfParam, diskCache)
+	}
+
+	// Mountoptions
+	if mountoptions, ok := disk["mountoptions"]; ok {
+		options := []string{}
+		for opt, enabled := range mountoptions.(map[string]interface{}) {
+			if enabled.(bool) {
+				options = append(options, opt)
+			}
+		}
+		diskMountOpts := fmt.Sprintf("mountoptions=%v", strings.Join(options, ";"))
+		diskConfParam = append(diskConfParam, diskMountOpts)
+	}
+
+	// Keys that are not used as real/direct conf.
+	ignoredKeys := []string{"key", "slot", "type", "storage", "file", "size", "cache", "volume", "container", "vm", "mountoptions"}
+
+	// Rest of config.
+	diskConfParam = diskConfParam.createDeviceParam(disk, ignoredKeys)
+
+	return strings.Join(diskConfParam, ",")
+}
+
 // Create parameters for each Nic device.
 func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interface{}) error {
 
@@ -950,55 +962,41 @@ func (c ConfigQemu) CreateQemuDisksParams(
 
 	// For new style with multi disk device.
 	for diskID, diskConfMap := range c.QemuDisks {
-
 		// skip the first disk for clones (may not always be right, but a template probably has at least 1 disk)
 		if diskID == 0 && cloned {
 			continue
-		}
-		diskConfParam := QemuDeviceParam{
-			"media=disk",
 		}
 
 		// Device name.
 		deviceType := diskConfMap["type"].(string)
 		qemuDiskName := deviceType + strconv.Itoa(diskID)
 
-		// Set disk storage.
-		// Disk size.
-		diskSizeGB := fmt.Sprintf("size=%v", diskConfMap["size"])
-		diskConfParam = append(diskConfParam, diskSizeGB)
-
-		// Disk name.
-		var diskFile string
-
-		storageType := diskConfMap["storage_type"].(string)
-		if matched, _ := regexp.MatchString(rxStorageTypes, storageType); matched {
-			diskFile = fmt.Sprintf("file=%v:vm-%v-disk-%v", diskConfMap["storage"], vmID, diskID)
-		} else {
-			diskFile = fmt.Sprintf("file=%v:%v/vm-%v-disk-%v.%v", diskConfMap["storage"], vmID, vmID, diskID, diskConfMap["format"])
-		}
-		diskConfParam = append(diskConfParam, diskFile)
-
-		// Set cache if not none (default).
-		if diskConfMap["cache"].(string) != "none" {
-			diskCache := fmt.Sprintf("cache=%v", diskConfMap["cache"])
-			diskConfParam = append(diskConfParam, diskCache)
-		}
-
-		// Keys that are not used as real/direct conf.
-		ignoredKeys := []string{"id", "type", "storage", "storage_type", "size", "cache"}
-
-		// Rest of config.
-		diskConfParam = diskConfParam.createDeviceParam(diskConfMap, ignoredKeys)
-
 		// Add back to Qemu prams.
-		params[qemuDiskName] = strings.Join(diskConfParam, ",")
+		params[qemuDiskName] = FormatDiskParam(diskConfMap)
 	}
 
 	return nil
 }
 
-// Create the parameters for each device that will be sent to Proxmox API.
+// Create parameters for serial interface
+func (c ConfigQemu) CreateQemuSerialsParams(
+	vmID int,
+	params map[string]interface{},
+) error {
+
+	// For new style with multi disk device.
+	for serialID, serialConfMap := range c.QemuSerials {
+		// Device name.
+		deviceType := serialConfMap["type"].(string)
+		qemuSerialName := "serial" + strconv.Itoa(serialID)
+
+		// Add back to Qemu prams.
+		params[qemuSerialName] = deviceType
+	}
+
+	return nil
+}
+
 func (p QemuDeviceParam) createDeviceParam(
 	deviceConfMap QemuDevice,
 	ignoredKeys []string,
@@ -1037,43 +1035,6 @@ func (confMap QemuDevice) readDeviceConfig(confList []string) error {
 func (c ConfigQemu) String() string {
 	jsConf, _ := json.Marshal(c)
 	return string(jsConf)
-}
-
-// Create parameters for serial interface
-func (c ConfigQemu) CreateQemuSerialsParams(
-	vmID int,
-	params map[string]interface{},
-) error {
-
-	// For new style with multi disk device.
-	for serialID, serialConfMap := range c.QemuSerials {
-		// Device name.
-		deviceType := serialConfMap["type"].(string)
-		qemuSerialName := "serial" + strconv.Itoa(serialID)
-
-		// Add back to Qemu prams.
-		params[qemuSerialName] = deviceType
-	}
-
-	return nil
-}
-
-// NextId - Get next free VMID
-func (c *Client) NextId() (id int, err error) {
-	var data map[string]interface{}
-	_, err = c.session.GetJSON("/cluster/nextid", nil, nil, &data)
-	if err != nil {
-		return -1, err
-	}
-	if data["data"] == nil || data["errors"] != nil {
-		return -1, fmt.Errorf(data["errors"].(string))
-	}
-
-	i, err := strconv.Atoi(data["data"].(string))
-	if err != nil {
-		return -1, err
-	}
-	return i, nil
 }
 
 // VMIdExists - If you pass an VMID that exists it will raise an error otherwise it will return the vmID
