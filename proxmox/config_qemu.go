@@ -645,6 +645,11 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		if err != nil {
 			log.Printf("[ERROR] %q", err)
 		}
+		if nicConfMap["firewall"] == 1 {
+			nicConfMap["firewall"] = true
+		} else if nicConfMap["firewall"] == 0 {
+			nicConfMap["firewall"] = false
+		}
 
 		// And device config to networks.
 		if len(nicConfMap) > 0 {
