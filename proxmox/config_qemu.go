@@ -27,34 +27,35 @@ type (
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
-	VmID         int         `json:"vmid"`
-	Name         string      `json:"name"`
-	Description  string      `json:"desc"`
-	Pool         string      `json:"pool,omitempty"`
-	Bios         string      `json:"bios"`
-	Onboot       bool        `json:"onboot"`
-	Agent        int         `json:"agent"`
-	Memory       int         `json:"memory"`
-	Balloon      int         `json:"balloon"`
-	QemuOs       string      `json:"os"`
-	QemuCores    int         `json:"cores"`
-	QemuSockets  int         `json:"sockets"`
-	QemuVcpus    int         `json:"vcpus"`
-	QemuCpu      string      `json:"cpu"`
-	QemuNuma     bool        `json:"numa"`
-	QemuKVM      bool        `json:"kvm"`
-	Hotplug      string      `json:"hotplug"`
-	QemuIso      string      `json:"iso"`
-	FullClone    *int        `json:"fullclone"`
-	Boot         string      `json:"boot"`
-	BootDisk     string      `json:"bootdisk,omitempty"`
-	Scsihw       string      `json:"scsihw,omitempty"`
-	QemuDisks    QemuDevices `json:"disk"`
-	QemuVga      QemuDevice  `json:"vga,omitempty"`
-	QemuNetworks QemuDevices `json:"network"`
-	QemuSerials  QemuDevices `json:"serial,omitempty"`
-	HaState      string      `json:"hastate,omitempty"`
-	Tags         string      `json:"tags"`
+	VmID            int         `json:"vmid"`
+	Name            string      `json:"name"`
+	Description     string      `json:"desc"`
+	Pool            string      `json:"pool,omitempty"`
+	Bios            string      `json:"bios"`
+	Onboot          bool        `json:"onboot"`
+	Agent           int         `json:"agent"`
+	Memory          int         `json:"memory"`
+	Balloon         int         `json:"balloon"`
+	QemuOs          string      `json:"os"`
+	QemuCores       int         `json:"cores"`
+	QemuSockets     int         `json:"sockets"`
+	QemuVcpus       int         `json:"vcpus"`
+	QemuCpu         string      `json:"cpu"`
+	QemuNuma        bool        `json:"numa"`
+	QemuKVM         bool        `json:"kvm"`
+	Hotplug         string      `json:"hotplug"`
+	QemuIso         string      `json:"iso"`
+	FullClone       *int        `json:"fullclone"`
+	Boot            string      `json:"boot"`
+	BootDisk        string      `json:"bootdisk,omitempty"`
+	Scsihw          string      `json:"scsihw,omitempty"`
+	QemuDisks       QemuDevices `json:"disk"`
+	QemuUnusedDisks QemuDevices `json:"unused_disk"`
+	QemuVga         QemuDevice  `json:"vga,omitempty"`
+	QemuNetworks    QemuDevices `json:"network"`
+	QemuSerials     QemuDevices `json:"serial,omitempty"`
+	HaState         string      `json:"hastate,omitempty"`
+	Tags            string      `json:"tags"`
 
 	// Deprecated single disk.
 	DiskSize    float64 `json:"diskGB"`
@@ -376,13 +377,14 @@ func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
 }
 
 var (
-	rxIso        = regexp.MustCompile(`(.*?),media`)
-	rxDeviceID   = regexp.MustCompile(`\d+`)
-	rxDiskName   = regexp.MustCompile(`(virtio|scsi)\d+`)
-	rxDiskType   = regexp.MustCompile(`\D+`)
-	rxNicName    = regexp.MustCompile(`net\d+`)
-	rxMpName     = regexp.MustCompile(`mp\d+`)
-	rxSerialName = regexp.MustCompile(`serial\d+`)
+	rxIso            = regexp.MustCompile(`(.*?),media`)
+	rxDeviceID       = regexp.MustCompile(`\d+`)
+	rxDiskName       = regexp.MustCompile(`(virtio|scsi)\d+`)
+	rxDiskType       = regexp.MustCompile(`\D+`)
+	rxUnusedDiskName = regexp.MustCompile(`^(unused)\d+`)
+	rxNicName        = regexp.MustCompile(`net\d+`)
+	rxMpName         = regexp.MustCompile(`mp\d+`)
+	rxSerialName     = regexp.MustCompile(`serial\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
@@ -506,29 +508,30 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 
 	config = &ConfigQemu{
-		Name:         name,
-		Description:  strings.TrimSpace(description),
-		Tags:         strings.TrimSpace(tags),
-		Bios:         bios,
-		Onboot:       onboot,
-		Agent:        agent,
-		QemuOs:       ostype,
-		Memory:       int(memory),
-		QemuCores:    int(cores),
-		QemuSockets:  int(sockets),
-		QemuCpu:      cpu,
-		QemuNuma:     numa,
-		QemuKVM:      kvm,
-		Hotplug:      hotplug,
-		QemuVlanTag:  -1,
-		Boot:         boot,
-		BootDisk:     bootdisk,
-		Scsihw:       scsihw,
-		HaState:      hastate,
-		QemuDisks:    QemuDevices{},
-		QemuVga:      QemuDevice{},
-		QemuNetworks: QemuDevices{},
-		QemuSerials:  QemuDevices{},
+		Name:            name,
+		Description:     strings.TrimSpace(description),
+		Tags:            strings.TrimSpace(tags),
+		Bios:            bios,
+		Onboot:          onboot,
+		Agent:           agent,
+		QemuOs:          ostype,
+		Memory:          int(memory),
+		QemuCores:       int(cores),
+		QemuSockets:     int(sockets),
+		QemuCpu:         cpu,
+		QemuNuma:        numa,
+		QemuKVM:         kvm,
+		Hotplug:         hotplug,
+		QemuVlanTag:     -1,
+		Boot:            boot,
+		BootDisk:        bootdisk,
+		Scsihw:          scsihw,
+		HaState:         hastate,
+		QemuDisks:       QemuDevices{},
+		QemuUnusedDisks: QemuDevices{},
+		QemuVga:         QemuDevice{},
+		QemuNetworks:    QemuDevices{},
+		QemuSerials:     QemuDevices{},
 	}
 
 	if balloon >= 1 {
@@ -599,6 +602,39 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		if len(diskConfMap) > 0 {
 			config.QemuDisks[diskID] = diskConfMap
 		}
+	}
+
+	// Add unused disks
+	// unused0:local:100/vm-100-disk-1.qcow2
+	unusedDiskNames := []string{}
+	for k := range vmConfig {
+		// look for entries from the config in the format "unusedX:<storagepath>" where X is an integer
+		if unusedDiskName := rxUnusedDiskName.FindStringSubmatch(k); len(unusedDiskName) > 0 {
+			unusedDiskNames = append(unusedDiskNames, unusedDiskName[0])
+		}
+	}
+
+	fmt.Println(fmt.Sprintf("unusedDiskNames: %v", unusedDiskNames))
+	for _, unusedDiskName := range unusedDiskNames {
+		unusedDiskConfStr := vmConfig[unusedDiskName].(string)
+		finalDiskConfMap := QemuDevice{}
+
+		// parse "unused0" to get the id '0' as an int
+		id := rxDeviceID.FindStringSubmatch(unusedDiskName)
+		diskID, err := strconv.Atoi(id[0])
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Unable to parse unused disk id from input string '%v' tried to convert '%v' to integer.", unusedDiskName, diskID))
+		}
+		finalDiskConfMap["slot"] = diskID
+
+		// parse the attributes from the unused disk
+		// extract the storage and file path from the unused disk entry
+		parsedUnusedDiskMap := ParsePMConf(unusedDiskConfStr, "storage+file")
+		storageName, fileName := ParseSubConf(parsedUnusedDiskMap["storage+file"].(string), ":")
+		finalDiskConfMap["storage"] = storageName
+		finalDiskConfMap["file"] = fileName
+
+		config.QemuUnusedDisks[diskID] = finalDiskConfMap
 	}
 
 	//Display
