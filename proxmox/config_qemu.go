@@ -598,6 +598,32 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		diskConfMap["storage"] = storageName
 		diskConfMap["file"] = fileName
 
+		storageContent, err := client.GetStorageContent(vmr, storageName)
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+		var storageFormat string
+		contents := storageContent["data"].([]interface{})
+		for content := range contents {
+			storageContentMap := contents[content].(map[string]interface{})
+			if storageContentMap["volid"] == filePath {
+				storageFormat = storageContentMap["format"].(string)
+				break
+			}
+		}
+
+		var storageStatus map[string]interface{}
+		storageStatus, err = client.GetStorageStatus(vmr, storageName)
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+		storageType := storageStatus["type"]
+
+		diskConfMap["storage_type"] = storageType;
+		diskConfMap["format"] = storageFormat;
+		
 		// And device config to disks map.
 		if len(diskConfMap) > 0 {
 			config.QemuDisks[diskID] = diskConfMap
@@ -895,7 +921,7 @@ func FormatDiskParam(disk QemuDevice) string {
 	}
 
 	// Keys that are not used as real/direct conf.
-	ignoredKeys := []string{"key", "slot", "type", "storage", "file", "size", "cache", "volume", "container", "vm", "mountoptions"}
+	ignoredKeys := []string{"key", "slot", "type", "storage", "file", "size", "cache", "volume", "container", "vm", "mountoptions", "storage_type", "format"}
 
 	// Rest of config.
 	diskConfParam = diskConfParam.createDeviceParam(disk, ignoredKeys)
