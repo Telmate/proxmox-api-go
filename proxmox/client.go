@@ -852,6 +852,29 @@ func (c *Client) VzDump(vmr *VmRef, params map[string]interface{}) (exitStatus i
 	return
 }
 
+// CreateVNCProxy - Creates a TCP VNC proxy connections
+func (c *Client) CreateVNCProxy(vmr *VmRef, params map[string]interface{}) (vncProxyRes map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/vncproxy", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err != nil {
+		return nil, err
+	}
+	vncProxyRes, err = ResponseJSON(resp)
+	if err != nil {
+		return nil, err
+	}
+	if vncProxyRes["data"] == nil {
+		return nil, errors.New("VNC Proxy not readable")
+	}
+	vncProxyRes = vncProxyRes["data"].(map[string]interface{})
+	return
+}
+
 func (c *Client) Upload(node string, storage string, contentType string, filename string, file io.Reader) error {
 	var doStreamingIO bool
 	var fileSize int64
