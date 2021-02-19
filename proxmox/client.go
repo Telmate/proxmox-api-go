@@ -833,6 +833,25 @@ func (c *Client) DeleteVMDisks(
 	return nil
 }
 
+// VzDump - Create backup
+func (c *Client) VzDump(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/vzdump", vmr.node)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
 func (c *Client) Upload(node string, storage string, contentType string, filename string, file io.Reader) error {
 	var doStreamingIO bool
 	var fileSize int64
