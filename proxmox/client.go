@@ -452,7 +452,7 @@ func (c *Client) ResumeVm(vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(vmr, "resume")
 }
 
-func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) DeleteVm(vmr *VmRef, params map[string]interface{}) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return "", err
@@ -474,9 +474,10 @@ func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 		}
 	}
 
+	reqbody := ParamsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/%s/%d", vmr.node, vmr.vmType, vmr.vmId)
 	var taskResponse map[string]interface{}
-	_, err = c.session.RequestJSON("DELETE", url, nil, nil, nil, &taskResponse)
+	_, err = c.session.RequestJSON("DELETE", url, nil, nil, &reqbody, &taskResponse)
 	exitStatus, err = c.WaitForCompletion(taskResponse)
 	return
 }
