@@ -888,6 +888,43 @@ func (c *Client) GetExecStatus(vmr *VmRef, pid string) (status map[string]interf
 	return
 }
 
+// SetQemuFirewallOptions - Set Firewall options.
+func (c *Client) SetQemuFirewallOptions(vmr *VmRef, fwOptions map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(fwOptions)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", vmr.node, vmr.vmId)
+	resp, err := c.session.Put(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// GetQemuFirewallOptions - Get VM firewall options.
+func (c *Client) GetQemuFirewallOptions(vmr *VmRef) (firewallOptions map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", vmr.node, vmr.vmId)
+	resp, err := c.session.Get(url, nil, nil)
+	if err == nil {
+		firewallOptions, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		return firewallOptions, nil
+	}
+	return
+}
+
 func (c *Client) Upload(node string, storage string, contentType string, filename string, file io.Reader) error {
 	var doStreamingIO bool
 	var fileSize int64
