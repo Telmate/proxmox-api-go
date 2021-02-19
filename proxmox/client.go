@@ -875,6 +875,19 @@ func (c *Client) CreateVNCProxy(vmr *VmRef, params map[string]interface{}) (vncP
 	return
 }
 
+// GetExecStatus - Gets the status of the given pid started by the guest-agent
+func (c *Client) GetExecStatus(vmr *VmRef, pid string) (status map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	err = c.GetJsonRetryable(fmt.Sprintf("/nodes/%s/%s/%d/agent/exec-status?pid=%s", vmr.node, vmr.vmType, vmr.vmId, pid), &status, 3)
+	if err == nil {
+		status = status["data"].(map[string]interface{})
+	}
+	return
+}
+
 func (c *Client) Upload(node string, storage string, contentType string, filename string, file io.Reader) error {
 	var doStreamingIO bool
 	var fileSize int64
