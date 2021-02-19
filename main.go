@@ -62,7 +62,7 @@ func main() {
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, err = c.StopVm(vmr)
 		failError(err)
-		jbody, _ = c.DeleteVm(vmr)
+		jbody, _ = c.DeleteVm(vmr, nil)
 
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
