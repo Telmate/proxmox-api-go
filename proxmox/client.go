@@ -452,7 +452,11 @@ func (c *Client) ResumeVm(vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(vmr, "resume")
 }
 
-func (c *Client) DeleteVm(vmr *VmRef, params map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.DeleteVmParams(vmr, nil)
+}
+
+func (c *Client) DeleteVmParams(vmr *VmRef, params map[string]interface{}) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return "", err
