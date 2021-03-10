@@ -28,6 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {
@@ -35,7 +36,7 @@ func main() {
 			if err != nil {
 				vmid = 0
 			}
-		} else if flag.Args()[0] == "idstatus" {
+		} else if len(flag.Args()) > 0 && (flag.Args()[0] == "idstatus") {
 			vmid = 0
 		}
 	}
