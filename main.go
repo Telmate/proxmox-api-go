@@ -31,7 +31,6 @@ func main() {
 
 	vmid := *fvmid
 	if vmid < 0 {
-		fmt.Println("here")
 		if len(flag.Args()) > 1 {
 			vmid, err = strconv.Atoi(flag.Args()[len(flag.Args())-1])
 			if err != nil {
