@@ -28,6 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {
@@ -35,7 +36,7 @@ func main() {
 			if err != nil {
 				vmid = 0
 			}
-		} else if flag.Args()[0] == "idstatus" {
+		} else if len(flag.Args()) == 0 || (flag.Args()[0] == "idstatus") {
 			vmid = 0
 		}
 	}
@@ -51,25 +52,28 @@ func main() {
 	switch flag.Args()[0] {
 	case "start":
 		vmr = proxmox.NewVmRef(vmid)
-		jbody, _ = c.StartVm(vmr)
+		jbody, err = c.StartVm(vmr)
+		failError(err)
 
 	case "stop":
 
 		vmr = proxmox.NewVmRef(vmid)
-		jbody, _ = c.StopVm(vmr)
+		jbody, err = c.StopVm(vmr)
+		failError(err)
 
 	case "destroy":
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, err = c.StopVm(vmr)
 		failError(err)
-		jbody, _ = c.DeleteVm(vmr)
+		jbody, err = c.DeleteVm(vmr)
+		failError(err)
 
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
-		c.CheckVmRef(vmr)
+		err := c.CheckVmRef(vmr)
+		failError(err)
 		vmType := vmr.GetVmType()
 		var config interface{}
-		var err error
 		if vmType == "qemu" {
 			config, err = proxmox.NewConfigQemuFromApi(vmr, c)
 		} else if vmType == "lxc" {
@@ -81,7 +85,8 @@ func main() {
 
 	case "getNetworkInterfaces":
 		vmr = proxmox.NewVmRef(vmid)
-		c.CheckVmRef(vmr)
+		err := c.CheckVmRef(vmr)
+		failError(err)
 		networkInterfaces, err := c.GetVmAgentNetworkInterfaces(vmr)
 		failError(err)
 
