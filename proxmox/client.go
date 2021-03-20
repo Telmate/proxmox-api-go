@@ -93,6 +93,18 @@ func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config, taskTimeout
 	return client, err
 }
 
+// SetAPIToken specifies a pair of user identifier and token UUID to use
+// for authenticating API calls.
+// If this is set, a ticket from calling `Login` will not be used.
+//
+// - `userID` is expected to be in the form `USER@REALM!TOKENID`
+// - `token` is just the UUID you get when initially creating the token
+//
+// See https://pve.proxmox.com/wiki/User_Management#pveum_tokens
+func (c *Client) SetAPIToken(userID, token string) {
+	c.session.SetAPIToken(userID, token)
+}
+
 func (c *Client) Login(username string, password string, otp string) (err error) {
 	c.Username = username
 	c.Password = password
