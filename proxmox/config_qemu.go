@@ -628,6 +628,11 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 
 		diskConfMap["storage_type"] = storageType
 
+		// cloud-init disks not always have the size sent by the API, which results in a crash
+		if diskConfMap["size"] == nil && strings.Contains(fileName.(string), "cloudinit") {
+			diskConfMap["size"] = "4M" // default cloud-init disk size
+		}
+
 		// Convert to gigabytes if disk size was received in terabytes
 		sizeIsInTerabytes, err := regexp.MatchString("[0-9]+T", diskConfMap["size"].(string))
 		if err != nil {
@@ -725,6 +730,11 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 			nicConfMap["firewall"] = true
 		} else if nicConfMap["firewall"] == 0 {
 			nicConfMap["firewall"] = false
+		}
+		if nicConfMap["link_down"] == 1 {
+			nicConfMap["link_down"] = true
+		} else if nicConfMap["link_down"] == 0 {
+			nicConfMap["link_down"] = false
 		}
 
 		// And device config to networks.
