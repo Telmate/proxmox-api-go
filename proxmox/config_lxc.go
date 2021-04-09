@@ -9,7 +9,7 @@ import (
 )
 
 // LXC options for the Proxmox API
-type configLxc struct {
+type ConfigLxc struct {
 	Ostemplate         string      `json:"ostemplate"`
 	Arch               string      `json:"arch"`
 	BWLimit            int         `json:"bwlimit,omitempty"`
@@ -50,8 +50,8 @@ type configLxc struct {
 	Unused             []string    `json:"unused,omitempty"`
 }
 
-func NewConfigLxc() configLxc {
-	return configLxc{
+func NewConfigLxc() ConfigLxc {
+	return ConfigLxc{
 		Arch:         "amd64",
 		CMode:        "tty",
 		Console:      true,
@@ -69,13 +69,13 @@ func NewConfigLxc() configLxc {
 	}
 }
 
-func NewConfigLxcFromJson(io io.Reader) (config configLxc, err error) {
+func NewConfigLxcFromJson(io io.Reader) (config ConfigLxc, err error) {
 	config = NewConfigLxc()
 	err = json.NewDecoder(io).Decode(config)
 	return config, err
 }
 
-func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err error) {
+func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err error) {
 	// prepare json map to receive the information from the api
 	var lxcConfig map[string]interface{}
 	lxcConfig, err = client.GetVmConfig(vmr)
@@ -304,7 +304,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *configLxc, err err
 }
 
 // create LXC container using the Proxmox API
-func (config configLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
+func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("lxc")
 	paramMap := config.mapToAPIParams()
 
@@ -319,7 +319,7 @@ func (config configLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	return
 }
 
-func (config configLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
+func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	paramMap := config.mapToAPIParams()
 
 	// delete parameters wich are not supported in updated operations
@@ -358,7 +358,7 @@ func ParseLxcDisk(diskStr string) QemuDevice {
 	return disk
 }
 
-func (config configLxc) mapToAPIParams() map[string]interface{} {
+func (config ConfigLxc) mapToAPIParams() map[string]interface{} {
 	// convert config to map
 	params, _ := json.Marshal(&config)
 	var paramMap map[string]interface{}
