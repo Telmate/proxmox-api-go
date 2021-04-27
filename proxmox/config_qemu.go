@@ -32,6 +32,7 @@ type ConfigQemu struct {
 	Description     string      `json:"desc"`
 	Pool            string      `json:"pool,omitempty"`
 	Bios            string      `json:"bios"`
+	EFIDisk         string      `json:"efidisk"`
 	Onboot          bool        `json:"onboot"`
 	Agent           int         `json:"agent"`
 	Memory          int         `json:"memory"`
@@ -111,6 +112,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 	if config.Bios != "" {
 		params["bios"] = config.Bios
+	}
+
+	if config.EFIDisk != "" {
+		params["efidisk"] = config.EFIDisk
 	}
 
 	if config.Balloon >= 1 {
@@ -433,6 +438,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["bios"]; isSet {
 		bios = vmConfig["bios"].(string)
 	}
+	efidisk := "efidisk"
+	if _, isSet := vmConfig["efidisk"]; isSet {
+		efidisk = vmConfig["efidisk"].(string)
+	}
 	onboot := true
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
@@ -512,6 +521,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Description:     strings.TrimSpace(description),
 		Tags:            strings.TrimSpace(tags),
 		Bios:            bios,
+		EFIDisk:         efidisk,
 		Onboot:          onboot,
 		Agent:           agent,
 		QemuOs:          ostype,
