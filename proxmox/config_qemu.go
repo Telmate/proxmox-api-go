@@ -115,7 +115,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	if config.EFIDisk != "" {
-		params["efidisk"] = config.EFIDisk
+		params["efidisk0"] = config.EFIDisk
 	}
 
 	if config.Balloon >= 1 {
@@ -439,8 +439,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		bios = vmConfig["bios"].(string)
 	}
 	efidisk := "efidisk"
-	if _, isSet := vmConfig["efidisk"]; isSet {
-		efidisk = vmConfig["efidisk"].(string)
+	if _, isSet := vmConfig["efidisk0"]; isSet {
+		efidisk = vmConfig["efidisk0"].(string)
 	}
 	onboot := true
 	if _, isSet := vmConfig["onboot"]; isSet {
