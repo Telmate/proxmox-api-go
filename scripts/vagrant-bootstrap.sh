@@ -9,8 +9,8 @@ apt-get install -y software-properties-common gnupg2
 # make sure hostname can be resolved via /etc/hosts
 sed -i "/127.0.1.1/d" /etc/hosts
 PVE_IP=$(hostname -I | awk '{print $1}')
-if [ -z "$(grep $PVE_IP /etc/hosts)" ]; then
-    echo "$PVE_IP $(hostname)" > /etc/hosts
+if [ -z "$(grep ${PVE_IP} /etc/hosts)" ]; then
+    echo "${PVE_IP} $(hostname)" > /etc/hosts
 fi
 
 # add proxmox repository and its key
