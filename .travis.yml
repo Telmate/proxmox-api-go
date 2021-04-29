@@ -22,8 +22,8 @@ install:
   - sudo dpkg -i vagrant_2.2.14_x86_64.deb
 
   # install vagrant-libvirt plugin
-  - vagrant plugin install vagrant-libvirt
+  - sudo vagrant plugin install vagrant-libvirt
 
 script:
-  - vagrant up --provider=libvirt
+  - sudo vagrant up --provider=libvirt
   - make test
