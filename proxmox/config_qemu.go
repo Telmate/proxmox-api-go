@@ -114,10 +114,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		params["bios"] = config.Bios
 	}
 
-	if config.EFIDisk != "" {
-		params["efidisk0"] = config.EFIDisk
-	}
-
 	if config.Balloon >= 1 {
 		params["balloon"] = config.Balloon
 	}
@@ -142,6 +138,26 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	err = config.CreateQemuDisksParams(vmr.vmId, params, false)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
+	}
+
+	//Creat additional efi disk
+	if config.EFIDisk != "" {
+		efidiskMap := QemuDevice{
+			"type":         "virtio",
+			"storage":      config.EFIDisk,
+			"size":         "10M",
+			"storage_type": "raw",  // default old style
+			"cache":        "none", // default old value
+		}
+
+		if config.QemuDisks == nil {
+			config.QemuDisks = make(QemuDevices)
+		}
+
+		deviceType := "virtio"
+		qemuDiskName := deviceType + strconv.Itoa(len(config.QemuDisks)+1)
+		params[qemuDiskName] = FormatDiskParam(efidiskMap)
+		params["efidisk0"] = fmt.Sprintf("local-lvm:vm-%d-disk-%d", vmr.vmId, len(config.QemuDisks))
 	}
 
 	// Create vga config.
