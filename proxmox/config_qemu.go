@@ -142,23 +142,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 	//Creat additional efi disk
 	if config.EFIDisk != "" {
-		efidiskMap := QemuDevice{
-			"type":         "virtio",
-			"storage":      config.EFIDisk,
-			"size":         "10M",
-			"storage_type": "raw",  // default old style
-			"cache":        "none", // default old value
+		err = config.CreateQemuEfiDiskParams(vmr.vmId, params)
+		if err != nil {
+			log.Printf("[ERROR] %q", err)
 		}
-
-		if config.QemuDisks == nil {
-			config.QemuDisks = make(QemuDevices)
-		}
-
-		//ToDo check where this can be set!
-		deviceType := "efidisk" //efidisk
-		qemuDiskName := deviceType + strconv.Itoa(len(config.QemuDisks)+1)
-		params[qemuDiskName] = FormatDiskParam(efidiskMap)
-		params["efidisk0"] = fmt.Sprintf("local-lvm:vm-%d-disk-%d", vmr.vmId, len(config.QemuDisks))
 	}
 
 	// Create vga config.
@@ -1043,6 +1030,31 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 		params[qemuNicName] = strings.Join(nicConfParam, ",")
 	}
 
+	return nil
+}
+
+// Create parameters for each disk.
+func (c ConfigQemu) CreateQemuEfiDiskParams(
+	vmID int,
+	params map[string]interface{},
+) error {
+	efidiskMap := QemuDevice{
+		"type":         "virtio",
+		"storage":      c.EFIDisk,
+		"size":         "10M",
+		"storage_type": "raw",  // default old style
+		"cache":        "none", // default old value
+	}
+
+	if c.QemuDisks == nil {
+		c.QemuDisks = make(QemuDevices)
+	}
+
+	//ToDo check where this can be set!
+	deviceType := "efidisk" //efidisk
+	qemuDiskName := deviceType + strconv.Itoa(len(c.QemuDisks)+1)
+	params[qemuDiskName] = FormatDiskParam(efidiskMap)
+	params["efidisk0"] = fmt.Sprintf("local-lvm:vm-%d-disk-%d", vmID, len(c.QemuDisks))
 	return nil
 }
 
