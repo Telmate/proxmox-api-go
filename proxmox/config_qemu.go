@@ -154,7 +154,8 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 			config.QemuDisks = make(QemuDevices)
 		}
 
-		deviceType := "virtio"
+		//ToDo check where this can be set!
+		deviceType := "efidisk" //efidisk
 		qemuDiskName := deviceType + strconv.Itoa(len(config.QemuDisks)+1)
 		params[qemuDiskName] = FormatDiskParam(efidiskMap)
 		params["efidisk0"] = fmt.Sprintf("local-lvm:vm-%d-disk-%d", vmr.vmId, len(config.QemuDisks))
