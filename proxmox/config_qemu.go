@@ -1051,8 +1051,8 @@ func (c ConfigQemu) CreateQemuEfiDiskParams(
 	}
 
 	//ToDo check where this can be set!
-	deviceType := "efidisk" //efidisk
-	qemuDiskName := deviceType + strconv.Itoa(len(c.QemuDisks)+1)
+	deviceType := "efidisk"    //efidisk
+	qemuDiskName := deviceType //+ strconv.Itoa(len(c.QemuDisks)+1)
 	params[qemuDiskName] = FormatDiskParam(efidiskMap)
 	params["efidisk0"] = fmt.Sprintf("local-lvm:vm-%d-disk-%d", vmID, len(c.QemuDisks))
 	return nil
