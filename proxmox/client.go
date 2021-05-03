@@ -505,12 +505,6 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 		return "", createdDisksErr
 	}
 
-	//ToDo: Get the information about efidisk!
-
-	//ToDo: append to efi disk
-
-	//ToDo: be happy!
-
 	// Then create the VM itself.
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu", node)
