@@ -505,19 +505,12 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 		return "", createdDisksErr
 	}
 
-	// ToDo ist this working
-	// Create the efi disk
-	createdEfiDisks, createdEfiDisksErr := c.createVMEFIDisk(node, vmParams)
-	if createdEfiDisks != nil {
-		return "", createdEfiDisksErr
-	}
+	//ToDo: Get the information about efidisk!
 
-	//ToDo is this working?
-	//We unset the EFI disk. The disk is create and should not be part of the cofig
-	vmParams, vmParamsErr := c.unsetVMEFIDisk(vmParams)
-	if vmParamsErr != nil {
-		return "", vmParamsErr
-	}
+	//ToDo: append to efi disk
+
+	//ToDo: be happy!
+
 	// Then create the VM itself.
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu", node)
@@ -842,49 +835,6 @@ func (c *Client) createVMDisks(
 	}
 
 	return createdDisks, nil
-}
-
-//ToDo ist this wokring?
-// createVMEFIDisk - Make disks parameters and create all VM disks on host node.
-func (c *Client) createVMEFIDisk(
-	node string,
-	vmParams map[string]interface{},
-) (disks []string, err error) {
-	var createdDisks []string
-	vmID := vmParams["vmid"].(int)
-	for deviceName, deviceConf := range vmParams {
-		rxStorageModels := `(efidisk)\d+`
-		if matched, _ := regexp.MatchString(rxStorageModels, deviceName); matched {
-			deviceConfMap := ParsePMConf(deviceConf.(string), "")
-			// This if condition to differentiate between `disk` and `cdrom`.
-			if media, containsFile := deviceConfMap["media"]; containsFile && media == "disk" {
-				fullDiskName := deviceConfMap["file"].(string)
-				storageName, volumeName := getStorageAndVolumeName(fullDiskName, ":")
-				diskParams := map[string]interface{}{
-					"vmid":     vmID,
-					"filename": volumeName,
-					"size":     deviceConfMap["size"],
-					"type":     "virtio",
-				}
-				err := c.CreateVMDisk(node, storageName, fullDiskName, diskParams)
-				if err != nil {
-
-					return createdDisks, err
-				} else {
-					createdDisks = append(createdDisks, fullDiskName)
-				}
-			}
-		}
-	}
-	return createdDisks, nil
-}
-
-//unsetVMEFIDisk wil lremove the EFI disk from our config. This will prevent it from beeing shown in Hard Diesk list
-func (c *Client) unsetVMEFIDisk(
-	vmParams map[string]interface{},
-) (updatedParams map[string]interface{}, err error) {
-	delete(vmParams, "efidisk")
-	return vmParams, nil
 }
 
 // DeleteVMDisks - Delete VM disks from host node.
