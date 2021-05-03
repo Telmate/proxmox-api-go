@@ -18,6 +18,7 @@ import (
 // Currently ZFS local, LVM, Ceph RBD, CephFS, Directory and virtio-scsi-pci are considered.
 // Other formats are not verified, but could be added if they're needed.
 const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
+const machineModels = `(pc|q35|pc-i440fx)`
 
 type (
 	QemuDevices     map[int]map[string]interface{}
@@ -33,6 +34,7 @@ type ConfigQemu struct {
 	Pool            string      `json:"pool,omitempty"`
 	Bios            string      `json:"bios"`
 	EFIDisk         string      `json:"efidisk"`
+	Machine         string      `json:"machine"`
 	Onboot          bool        `json:"onboot"`
 	Agent           int         `json:"agent"`
 	Memory          int         `json:"memory"`
@@ -108,6 +110,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"boot":        config.Boot,
 		"description": config.Description,
 		"tags":        config.Tags,
+		"machine":     config.Machine,
 	}
 
 	if config.Bios != "" {
@@ -134,6 +137,14 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		params["scsihw"] = config.Scsihw
 	}
 
+	// if config.Machine != "" {
+	// 	params["machine"] = config.Machine
+	// }
+	err = config.CreateQemuMachineParam(params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
 	// Create disks config.
 	err = config.CreateQemuDisksParams(vmr.vmId, params, false)
 	if err != nil {
@@ -143,9 +154,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	//Creat additional efi disk
 	if config.EFIDisk != "" {
 		params["efidisk0"] = fmt.Sprintf("%s:1", config.EFIDisk)
-		if err != nil {
-			log.Printf("[ERROR] %q", err)
-		}
 	}
 
 	// Create vga config.
@@ -1100,6 +1108,18 @@ func (c ConfigQemu) CreateQemuSerialsParams(
 	}
 
 	return nil
+}
+
+// Create parameters for serial interface
+func (c ConfigQemu) CreateQemuMachineParam(
+	params map[string]interface{},
+) error {
+
+	if matched, _ := regexp.MatchString(machineModels, c.Machine); matched {
+		params["machine"] = c.Machine
+		return nil
+	}
+	return errors.New("unsupported machine type, fall back to default")
 }
 
 func (p QemuDeviceParam) createDeviceParam(
