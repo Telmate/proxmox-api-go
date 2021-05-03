@@ -137,9 +137,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		params["scsihw"] = config.Scsihw
 	}
 
-	// if config.Machine != "" {
-	// 	params["machine"] = config.Machine
-	// }
 	err = config.CreateQemuMachineParam(params)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
@@ -1114,7 +1111,9 @@ func (c ConfigQemu) CreateQemuSerialsParams(
 func (c ConfigQemu) CreateQemuMachineParam(
 	params map[string]interface{},
 ) error {
-
+	if c.Machine == "" {
+		return nil
+	}
 	if matched, _ := regexp.MatchString(machineModels, c.Machine); matched {
 		params["machine"] = c.Machine
 		return nil
