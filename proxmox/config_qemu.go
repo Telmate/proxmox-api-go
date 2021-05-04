@@ -59,6 +59,7 @@ type ConfigQemu struct {
 	QemuSerials     QemuDevices `json:"serial,omitempty"`
 	HaState         string      `json:"hastate,omitempty"`
 	Tags            string      `json:"tags"`
+	Args            string      `json:"args"`
 
 	// Deprecated single disk.
 	DiskSize    float64 `json:"diskGB"`
@@ -111,6 +112,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"description": config.Description,
 		"tags":        config.Tags,
 		"machine":     config.Machine,
+		"args":        config.Args,
 	}
 
 	if config.Bios != "" {
@@ -244,6 +246,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"name":        config.Name,
 		"description": config.Description,
 		"tags":        config.Tags,
+		"args":        config.Args,
 		"onboot":      config.Onboot,
 		"agent":       config.Agent,
 		"sockets":     config.QemuSockets,
@@ -443,6 +446,11 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["tags"]; isSet {
 		tags = vmConfig["tags"].(string)
 	}
+        args := ""
+        if _, isSet := vmConfig["args"]; isSet {
+                tags = vmConfig["args"].(string)
+        }
+
 	bios := "seabios"
 	if _, isSet := vmConfig["bios"]; isSet {
 		bios = vmConfig["bios"].(string)
@@ -529,6 +537,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Name:            name,
 		Description:     strings.TrimSpace(description),
 		Tags:            strings.TrimSpace(tags),
+		Args:            strings.TrimSpace(args),
 		Bios:            bios,
 		EFIDisk:         efidisk,
 		Onboot:          onboot,
