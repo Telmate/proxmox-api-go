@@ -493,7 +493,14 @@ func (c *Client) DeleteVmParams(vmr *VmRef, params map[string]interface{}) (exit
 	reqbody := ParamsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/%s/%d", vmr.node, vmr.vmType, vmr.vmId)
 	var taskResponse map[string]interface{}
-	_, err = c.session.RequestJSON("DELETE", url, nil, nil, &reqbody, &taskResponse)
+	if len(reqbody) != 0 {
+		_, err = c.session.RequestJSON("DELETE", url, nil, nil, &reqbody, &taskResponse)
+	} else {
+		_, err = c.session.RequestJSON("DELETE", url, nil, nil, nil, &taskResponse)
+	}
+	if err != nil {
+		return
+	}
 	exitStatus, err = c.WaitForCompletion(taskResponse)
 	return
 }
