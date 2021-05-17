@@ -434,7 +434,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
         args := ""
         if _, isSet := vmConfig["args"]; isSet {
-                tags = vmConfig["args"].(string)
+                args = vmConfig["args"].(string)
         }
 
 	bios := "seabios"
