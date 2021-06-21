@@ -455,7 +455,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["bios"]; isSet {
 		bios = vmConfig["bios"].(string)
 	}
-	efidisk := "efidisk"
+	efidisk := ""
 	if _, isSet := vmConfig["efidisk0"]; isSet {
 		efidisk = vmConfig["efidisk0"].(string)
 	}
