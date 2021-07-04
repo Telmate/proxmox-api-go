@@ -325,7 +325,7 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 
 	_, err = client.UpdateVMHA(vmr, config.HaState)
 	if err != nil {
-		log.Printf("[ERROR] %q", err)
+		return fmt.Errorf("[ERROR] %q", err)
 	}
 
 	return
@@ -346,13 +346,13 @@ func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	// also, error "500 unable to modify read-only option: 'unprivileged'"
 	delete(paramMap, "unprivileged")
 
-	_, err = client.SetLxcConfig(vmr, paramMap)
-	return err
-
 	_, err = client.UpdateVMHA(vmr, config.HaState)
 	if err != nil {
-		log.Printf("[ERROR] %q", err)
+		return err
 	}
+
+	_, err = client.SetLxcConfig(vmr, paramMap)
+	return err
 }
 
 func ParseLxcDisk(diskStr string) QemuDevice {
