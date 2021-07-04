@@ -21,6 +21,7 @@ type ConfigLxc struct {
 	Description        string      `json:"description,omitempty"`
 	Features           QemuDevice  `json:"features,omitempty"`
 	Force              bool        `json:"force,omitempty"`
+	HaState            string      `json:"hastate,omitempty"`
 	Hookscript         string      `json:"hookscript,omitempty"`
 	Hostname           string      `json:"hostname,omitempty"`
 	IgnoreUnpackErrors bool        `json:"ignore-unpack-errors,omitempty"`
@@ -135,6 +136,10 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 		}
 	}
 
+	hastate := ""
+	if _, isSet := lxcConfig["hastate"]; isSet {
+		hastate = lxcConfig["hastate"].(string)
+	}
 	hookscript := ""
 	if _, isSet := lxcConfig["hookscript"]; isSet {
 		hookscript = lxcConfig["hookscript"].(string)
@@ -282,6 +287,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	config.CPUUnits = cpuunits
 	config.Description = description
 	config.OnBoot = onboot
+	config.HaState = hastate
 	config.Hookscript = hookscript
 	config.Hostname = hostname
 	config.Lock = lock
@@ -316,6 +322,12 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 		params, _ := json.Marshal(&paramMap)
 		return fmt.Errorf("Error creating LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
 	}
+
+	_, err = client.UpdateVMHA(vmr, config.HaState)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
 	return
 }
 
@@ -336,6 +348,11 @@ func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 
 	_, err = client.SetLxcConfig(vmr, paramMap)
 	return err
+
+	_, err = client.UpdateVMHA(vmr, config.HaState)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 }
 
 func ParseLxcDisk(diskStr string) QemuDevice {
