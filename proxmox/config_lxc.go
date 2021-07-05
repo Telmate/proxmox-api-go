@@ -317,9 +317,6 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	// amend vmid
 	paramMap["vmid"] = vmr.vmId
 
-	// hastate is special
-	delete(paramMap, "hastate")
-
 	exitStatus, err := client.CreateLxcContainer(vmr.node, paramMap)
 	if err != nil {
 		params, _ := json.Marshal(&paramMap)
@@ -428,6 +425,9 @@ func (config ConfigLxc) mapToAPIParams() map[string]interface{} {
 	delete(paramMap, "networks")
 	delete(paramMap, "mountpoints")
 	delete(paramMap, "unused")
+
+	// also delete the hastate key which is used elsewhere
+	delete(paramMap, "hastate")
 
 	return paramMap
 }
