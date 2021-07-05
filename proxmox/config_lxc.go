@@ -317,6 +317,9 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	// amend vmid
 	paramMap["vmid"] = vmr.vmId
 
+	// hastate is special
+	delete(paramMap, "hastate")
+
 	exitStatus, err := client.CreateLxcContainer(vmr.node, paramMap)
 	if err != nil {
 		params, _ := json.Marshal(&paramMap)
