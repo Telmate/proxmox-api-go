@@ -151,9 +151,9 @@ func main() {
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
 		log.Println("Looking for template: " + flag.Args()[1])
-		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
 		failError(err)
-		if sourceVmr == nil {
+		if sourceVmrs == nil {
 			log.Fatal("Can't find template")
 			return
 		}
@@ -164,6 +164,14 @@ func main() {
 		vmr.SetNode(flag.Args()[2])
 		log.Print("Creating node: ")
 		log.Println(vmr)
+		// prefer source Vm located on same node
+		sourceVmr := sourceVmrs[0]
+		for _, candVmr := range sourceVmrs {
+			if candVmr.Node() == vmr.Node() {
+				sourceVmr = candVmr
+			}
+		}
+
 		failError(config.CloneVm(sourceVmr, vmr, c))
 		failError(config.UpdateConfig(vmr, c))
 		log.Println("Complete")
