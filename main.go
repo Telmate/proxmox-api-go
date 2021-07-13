@@ -180,17 +180,39 @@ func main() {
 
 	case "listQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
-		jbody, _, err = c.ListQemuSnapshot(sourceVmr)
-		if rec, ok := jbody.(map[string]interface{}); ok {
-			temp := rec["data"].([]interface{})
-			for _, val := range temp {
-				snapshotName := val.(map[string]interface{})
-				if snapshotName["name"] != "current" {
-					fmt.Println(snapshotName["name"])
+		if err == nil {
+			jbody, _, err = c.ListQemuSnapshot(sourceVmr)
+			if rec, ok := jbody.(map[string]interface{}); ok {
+				temp := rec["data"].([]interface{})
+				for _, val := range temp {
+					snapshotName := val.(map[string]interface{})
+					if snapshotName["name"] != "current" {
+						fmt.Println(snapshotName["name"])
+					}
+				}
+			} else {
+				fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
+			}
+		}
+		failError(err)
+
+	case "listQemuSnapshot2":
+		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
+		if err == nil {
+			for _, sourceVmr := range sourceVmrs {
+				jbody, _, err = c.ListQemuSnapshot(sourceVmr)
+				if rec, ok := jbody.(map[string]interface{}); ok {
+					temp := rec["data"].([]interface{})
+					for _, val := range temp {
+						snapshotName := val.(map[string]interface{})
+						if snapshotName["name"] != "current" {
+							fmt.Printf("%d@%s:%s\n", sourceVmr.VmId(), sourceVmr.Node(), snapshotName["name"])
+						}
+					}
+				} else {
+					fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
 				}
 			}
-		} else {
-			fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
 		}
 		failError(err)
 
