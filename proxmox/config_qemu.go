@@ -18,6 +18,7 @@ import (
 // Currently ZFS local, LVM, Ceph RBD, CephFS, Directory and virtio-scsi-pci are considered.
 // Other formats are not verified, but could be added if they're needed.
 const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
+const machineModels = `(pc|q35|pc-i440fx)`
 
 type (
 	QemuDevices     map[int]map[string]interface{}
@@ -32,6 +33,8 @@ type ConfigQemu struct {
 	Description     string      `json:"desc"`
 	Pool            string      `json:"pool,omitempty"`
 	Bios            string      `json:"bios"`
+	EFIDisk         string      `json:"efidisk"`
+	Machine         string      `json:"machine"`
 	Onboot          bool        `json:"onboot"`
 	Agent           int         `json:"agent"`
 	Memory          int         `json:"memory"`
@@ -121,6 +124,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"boot":        config.Boot,
 		"description": config.Description,
 		"tags":        config.Tags,
+		"machine":     config.Machine,
 		"args":        config.Args,
 	}
 
@@ -148,10 +152,20 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		params["scsihw"] = config.Scsihw
 	}
 
+	err = config.CreateQemuMachineParam(params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
 	// Create disks config.
 	err = config.CreateQemuDisksParams(vmr.vmId, params, false)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
+	}
+
+	//Creat additional efi disk
+	if config.EFIDisk != "" {
+		params["efidisk0"] = fmt.Sprintf("%s:1", config.EFIDisk)
 	}
 
 	// Create vga config.
@@ -507,6 +521,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["bios"]; isSet {
 		bios = vmConfig["bios"].(string)
 	}
+	efidisk := ""
+	if _, isSet := vmConfig["efidisk0"]; isSet {
+		efidisk = vmConfig["efidisk0"].(string)
+	}
 	onboot := true
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
@@ -587,6 +605,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Tags:            strings.TrimSpace(tags),
 		Args:            strings.TrimSpace(args),
 		Bios:            bios,
+		EFIDisk:         efidisk,
 		Onboot:          onboot,
 		Agent:           agent,
 		QemuOs:          ostype,
@@ -1200,6 +1219,20 @@ func (c ConfigQemu) CreateQemuSerialsParams(
 	}
 
 	return nil
+}
+
+// Create parameters for serial interface
+func (c ConfigQemu) CreateQemuMachineParam(
+	params map[string]interface{},
+) error {
+	if c.Machine == "" {
+		return nil
+	}
+	if matched, _ := regexp.MatchString(machineModels, c.Machine); matched {
+		params["machine"] = c.Machine
+		return nil
+	}
+	return errors.New("unsupported machine type, fall back to default")
 }
 
 func (p QemuDeviceParam) createDeviceParam(
