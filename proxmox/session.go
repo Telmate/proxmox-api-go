@@ -52,24 +52,7 @@ func NewSession(apiUrl string, hclient *http.Client, tls *tls.Config) (session *
 }
 
 func ParamsToBody(params map[string]interface{}) (body []byte) {
-	vals := url.Values{}
-	for k, intrV := range params {
-		var v string
-		switch intrV.(type) {
-		// Convert true/false bool to 1/0 string where Proxmox API can understand it.
-		case bool:
-			if intrV.(bool) {
-				v = "1"
-			} else {
-				v = "0"
-			}
-		default:
-			v = fmt.Sprintf("%v", intrV)
-		}
-		if v != "" {
-			vals.Set(k, v)
-		}
-	}
+	vals := ParamsToValues(params)
 	body = bytes.NewBufferString(vals.Encode()).Bytes()
 	return
 }
