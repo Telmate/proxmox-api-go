@@ -74,6 +74,28 @@ func ParamsToBody(params map[string]interface{}) (body []byte) {
 	return
 }
 
+func ParamsToValues(params map[string]interface{}) (vals url.Values) {
+	vals = url.Values{}
+	for k, intrV := range params {
+		var v string
+		switch intrV.(type) {
+		// Convert true/false bool to 1/0 string where Proxmox API can understand it.
+		case bool:
+			if intrV.(bool) {
+				v = "1"
+			} else {
+				v = "0"
+			}
+		default:
+			v = fmt.Sprintf("%v", intrV)
+		}
+		if v != "" {
+			vals.Set(k, v)
+		}
+	}
+	return
+}
+
 func decodeResponse(resp *http.Response, v interface{}) error {
 	if resp.Body == nil {
 		return nil
