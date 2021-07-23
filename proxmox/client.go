@@ -167,12 +167,21 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 }
 
 func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
+	vmrs, err := c.GetVmRefsByName(vmName)
+	if err != nil {
+		return nil, err
+	}
+
+	return vmrs[0], nil
+}
+
+func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
 	resp, err := c.GetVmList()
 	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vm["name"] != nil && vm["name"].(string) == vmName {
-			vmr = NewVmRef(int(vm["vmid"].(float64)))
+			vmr := NewVmRef(int(vm["vmid"].(float64)))
 			vmr.node = vm["node"].(string)
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
@@ -182,10 +191,14 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 			if vm["hastate"] != nil {
 				vmr.haState = vm["hastate"].(string)
 			}
-			return
+			vmrs = append(vmrs, vmr)
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Vm '%s' not found", vmName))
+	if len(vmrs) == 0 {
+		return nil, errors.New(fmt.Sprintf("Vm '%s' not found", vmName))
+	} else {
+		return
+	}
 }
 
 func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err error) {

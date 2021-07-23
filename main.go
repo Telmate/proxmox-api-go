@@ -151,9 +151,9 @@ func main() {
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
 		log.Println("Looking for template: " + flag.Args()[1])
-		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
 		failError(err)
-		if sourceVmr == nil {
+		if sourceVmrs == nil {
 			log.Fatal("Can't find template")
 			return
 		}
@@ -164,6 +164,14 @@ func main() {
 		vmr.SetNode(flag.Args()[2])
 		log.Print("Creating node: ")
 		log.Println(vmr)
+		// prefer source Vm located on same node
+		sourceVmr := sourceVmrs[0]
+		for _, candVmr := range sourceVmrs {
+			if candVmr.Node() == vmr.Node() {
+				sourceVmr = candVmr
+			}
+		}
+
 		failError(config.CloneVm(sourceVmr, vmr, c))
 		failError(config.UpdateConfig(vmr, c))
 		log.Println("Complete")
@@ -180,17 +188,39 @@ func main() {
 
 	case "listQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
-		jbody, _, err = c.ListQemuSnapshot(sourceVmr)
-		if rec, ok := jbody.(map[string]interface{}); ok {
-			temp := rec["data"].([]interface{})
-			for _, val := range temp {
-				snapshotName := val.(map[string]interface{})
-				if snapshotName["name"] != "current" {
-					fmt.Println(snapshotName["name"])
+		if err == nil {
+			jbody, _, err = c.ListQemuSnapshot(sourceVmr)
+			if rec, ok := jbody.(map[string]interface{}); ok {
+				temp := rec["data"].([]interface{})
+				for _, val := range temp {
+					snapshotName := val.(map[string]interface{})
+					if snapshotName["name"] != "current" {
+						fmt.Println(snapshotName["name"])
+					}
+				}
+			} else {
+				fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
+			}
+		}
+		failError(err)
+
+	case "listQemuSnapshot2":
+		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
+		if err == nil {
+			for _, sourceVmr := range sourceVmrs {
+				jbody, _, err = c.ListQemuSnapshot(sourceVmr)
+				if rec, ok := jbody.(map[string]interface{}); ok {
+					temp := rec["data"].([]interface{})
+					for _, val := range temp {
+						snapshotName := val.(map[string]interface{})
+						if snapshotName["name"] != "current" {
+							fmt.Printf("%d@%s:%s\n", sourceVmr.VmId(), sourceVmr.Node(), snapshotName["name"])
+						}
+					}
+				} else {
+					fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
 				}
 			}
-		} else {
-			fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
 		}
 		failError(err)
 

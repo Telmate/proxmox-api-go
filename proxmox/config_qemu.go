@@ -78,10 +78,23 @@ type ConfigQemu struct {
 	Nameserver   string `json:"nameserver"`
 	Sshkeys      string `json:"sshkeys"`
 
-	// arrays are hard, support 3 interfaces for now
+	// arrays are hard, support 16 interfaces for now
 	Ipconfig0 string `json:"ipconfig0"`
 	Ipconfig1 string `json:"ipconfig1"`
 	Ipconfig2 string `json:"ipconfig2"`
+	Ipconfig3 string `json:"ipconfig3"`
+	Ipconfig4 string `json:"ipconfig4"`
+	Ipconfig5 string `json:"ipconfig5"`
+	Ipconfig6 string `json:"ipconfig6"`
+	Ipconfig7 string `json:"ipconfig7"`
+	Ipconfig8 string `json:"ipconfig8"`
+	Ipconfig9 string `json:"ipconfig9"`
+	Ipconfig10 string `json:"ipconfig10"`
+	Ipconfig11 string `json:"ipconfig11"`
+	Ipconfig12 string `json:"ipconfig12"`
+	Ipconfig13 string `json:"ipconfig13"`
+	Ipconfig14 string `json:"ipconfig14"`
+	Ipconfig15 string `json:"ipconfig15"`
 }
 
 // CreateVm - Tell Proxmox API to make the VM
@@ -182,6 +195,20 @@ func (config ConfigQemu) HasCloudInit() bool {
 		config.Sshkeys != "" ||
 		config.Ipconfig0 != "" ||
 		config.Ipconfig1 != "" ||
+		config.Ipconfig2 != "" ||
+		config.Ipconfig3 != "" ||
+		config.Ipconfig4 != "" ||
+		config.Ipconfig5 != "" ||
+		config.Ipconfig6 != "" ||
+		config.Ipconfig7 != "" ||
+		config.Ipconfig8 != "" ||
+		config.Ipconfig9 != "" ||
+		config.Ipconfig10 != "" ||
+		config.Ipconfig11 != "" ||
+		config.Ipconfig12 != "" ||
+		config.Ipconfig13 != "" ||
+		config.Ipconfig14 != "" ||
+		config.Ipconfig15 != "" ||
 		config.CIcustom != ""
 }
 
@@ -347,6 +374,45 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	if config.Ipconfig2 != "" {
 		configParams["ipconfig2"] = config.Ipconfig2
 	}
+	if config.Ipconfig3 != "" {
+		configParams["ipconfig3"] = config.Ipconfig3
+	}
+	if config.Ipconfig4 != "" {
+		configParams["ipconfig4"] = config.Ipconfig4
+	}
+	if config.Ipconfig5 != "" {
+		configParams["ipconfig5"] = config.Ipconfig5
+	}
+	if config.Ipconfig6 != "" {
+		configParams["ipconfig6"] = config.Ipconfig6
+	}
+	if config.Ipconfig7 != "" {
+		configParams["ipconfig7"] = config.Ipconfig7
+	}
+	if config.Ipconfig8 != "" {
+		configParams["ipconfig8"] = config.Ipconfig8
+	}
+	if config.Ipconfig9 != "" {
+		configParams["ipconfig9"] = config.Ipconfig9
+	}
+	if config.Ipconfig10 != "" {
+		configParams["ipconfig10"] = config.Ipconfig10
+	}
+	if config.Ipconfig11 != "" {
+		configParams["ipconfig11"] = config.Ipconfig11
+	}
+	if config.Ipconfig12 != "" {
+		configParams["ipconfig12"] = config.Ipconfig12
+	}
+	if config.Ipconfig13 != "" {
+		configParams["ipconfig13"] = config.Ipconfig13
+	}
+	if config.Ipconfig14 != "" {
+		configParams["ipconfig14"] = config.Ipconfig14
+	}
+	if config.Ipconfig15 != "" {
+		configParams["ipconfig15"] = config.Ipconfig15
+	}
 
 	if len(deleteParams) > 0 {
 		configParams["delete"] = strings.Join(deleteParams, ", ")
@@ -434,7 +500,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
         args := ""
         if _, isSet := vmConfig["args"]; isSet {
-                tags = vmConfig["args"].(string)
+                args = vmConfig["args"].(string)
         }
 
 	bios := "seabios"
@@ -581,6 +647,45 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 	if _, isSet := vmConfig["ipconfig2"]; isSet {
 		config.Ipconfig2 = vmConfig["ipconfig2"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig3"]; isSet {
+		config.Ipconfig3 = vmConfig["ipconfig3"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig4"]; isSet {
+		config.Ipconfig4 = vmConfig["ipconfig4"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig5"]; isSet {
+		config.Ipconfig5 = vmConfig["ipconfig5"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig6"]; isSet {
+		config.Ipconfig6 = vmConfig["ipconfig6"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig7"]; isSet {
+		config.Ipconfig7 = vmConfig["ipconfig7"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig8"]; isSet {
+		config.Ipconfig8 = vmConfig["ipconfig8"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig9"]; isSet {
+		config.Ipconfig9 = vmConfig["ipconfig9"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig10"]; isSet {
+		config.Ipconfig10 = vmConfig["ipconfig10"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig11"]; isSet {
+		config.Ipconfig11 = vmConfig["ipconfig11"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig12"]; isSet {
+		config.Ipconfig12 = vmConfig["ipconfig12"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig13"]; isSet {
+		config.Ipconfig13 = vmConfig["ipconfig13"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig14"]; isSet {
+		config.Ipconfig14 = vmConfig["ipconfig14"].(string)
+	}
+	if _, isSet := vmConfig["ipconfig15"]; isSet {
+		config.Ipconfig15 = vmConfig["ipconfig15"].(string)
 	}
 
 	// Add disks.
