@@ -245,6 +245,24 @@ func main() {
 		}
 		log.Printf("VM %d is moved on %s\n", vmid, args[1])
 
+	case "getNodeList":
+		nodes, err := c.GetNodeList()
+		if err != nil {
+			log.Printf("Error listing Nodes %+v\n", err)
+			os.Exit(1)
+		}
+		nodeList, err := json.Marshal(nodes)
+		fmt.Println(string(nodeList))
+
+	case "getVmList":
+		vms, err := c.GetVmList()
+		if err != nil {
+			log.Printf("Error listing VMs %+v\n", err)
+			os.Exit(1)
+		}
+		vmList, err := json.Marshal(vms)
+		fmt.Println(string(vmList))
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
