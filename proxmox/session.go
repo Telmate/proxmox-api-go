@@ -52,7 +52,13 @@ func NewSession(apiUrl string, hclient *http.Client, tls *tls.Config) (session *
 }
 
 func ParamsToBody(params map[string]interface{}) (body []byte) {
-	vals := url.Values{}
+	vals := ParamsToValues(params)
+	body = bytes.NewBufferString(vals.Encode()).Bytes()
+	return
+}
+
+func ParamsToValues(params map[string]interface{}) (vals url.Values) {
+	vals = url.Values{}
 	for k, intrV := range params {
 		var v string
 		switch intrV.(type) {
@@ -70,7 +76,6 @@ func ParamsToBody(params map[string]interface{}) (body []byte) {
 			vals.Set(k, v)
 		}
 	}
-	body = bytes.NewBufferString(vals.Encode()).Bytes()
 	return
 }
 
