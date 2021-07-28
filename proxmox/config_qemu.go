@@ -33,8 +33,8 @@ type ConfigQemu struct {
 	Description     string      `json:"desc"`
 	Pool            string      `json:"pool,omitempty"`
 	Bios            string      `json:"bios"`
-	EFIDisk         string      `json:"efidisk"`
-	Machine         string      `json:"machine"`
+	EFIDisk         string      `json:"efidisk,omitempty"`
+	Machine         string      `json:"machine,omitempty"`
 	Onboot          bool        `json:"onboot"`
 	Agent           int         `json:"agent"`
 	Memory          int         `json:"memory"`
