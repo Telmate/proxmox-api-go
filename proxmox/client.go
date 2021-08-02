@@ -1017,6 +1017,25 @@ func (c *Client) DeleteQemuIPSet(vmr *VmRef, IPSetName string) (exitStatus inter
 	return
 }
 
+// DeleteQemuIPSetNetwork - Remove IP or Network from IPSet.
+func (c *Client) DeleteQemuIPSetNetwork(vmr *VmRef, IPSetName string, network string, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	values := ParamsToValues(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", vmr.node, vmr.vmId, IPSetName, network)
+	resp, err := c.session.Delete(url, &values, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
 func (c *Client) Upload(node string, storage string, contentType string, filename string, file io.Reader) error {
 	var doStreamingIO bool
 	var fileSize int64
