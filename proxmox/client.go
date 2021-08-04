@@ -967,6 +967,28 @@ func (c *Client) QemuAgentFileWrite(vmr *VmRef, params map[string]interface{}) (
 	return
 }
 
+// QemuAgentSetUserPassword - Sets the password for the given user to the given password.
+func (c *Client) QemuAgentSetUserPassword(vmr *VmRef, params map[string]interface{}) (result map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		if taskResponse["data"] == nil {
+			return nil, errors.New("Qemu Agent Set User Password not readable")
+		}
+		result = taskResponse["data"].(map[string]interface{})
+	}
+	return
+}
+
 // QemuAgentExec - Executes the given command in the vm via the guest-agent and returns an object with the pid.
 func (c *Client) QemuAgentExec(vmr *VmRef, params map[string]interface{}) (result map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
@@ -982,7 +1004,7 @@ func (c *Client) QemuAgentExec(vmr *VmRef, params map[string]interface{}) (resul
 			return nil, err
 		}
 		if taskResponse["data"] == nil {
-			return nil, errors.New("VNC Proxy not readable")
+			return nil, errors.New("Qemu Agent Exec not readable")
 		}
 		result = taskResponse["data"].(map[string]interface{})
 	}
