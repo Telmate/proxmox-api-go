@@ -950,7 +950,7 @@ func (c *Client) QemuAgentFileWrite(vmr *VmRef, params map[string]interface{}) (
 }
 
 // QemuAgentExec - Executes the given command in the vm via the guest-agent and returns an object with the pid.
-func (c *Client) QemuAgentExec(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+func (c *Client) QemuAgentExec(vmr *VmRef, params map[string]interface{}) (result map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return nil, err
@@ -963,7 +963,10 @@ func (c *Client) QemuAgentExec(vmr *VmRef, params map[string]interface{}) (exitS
 		if err != nil {
 			return nil, err
 		}
-		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if taskResponse["data"] == nil {
+			return nil, errors.New("VNC Proxy not readable")
+		}
+		result = taskResponse["data"].(map[string]interface{})
 	}
 	return
 }
