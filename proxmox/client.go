@@ -931,7 +931,7 @@ func (c *Client) CreateVNCProxy(vmr *VmRef, params map[string]interface{}) (vncP
 }
 
 // QemuAgentPing - Execute ping.
-func (c *Client) QemuAgentPing(vmr *VmRef) (exitStatus interface{}, err error) {
+func (c *Client) QemuAgentPing(vmr *VmRef) (pingRes map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return nil, err
@@ -943,27 +943,23 @@ func (c *Client) QemuAgentPing(vmr *VmRef) (exitStatus interface{}, err error) {
 		if err != nil {
 			return nil, err
 		}
-		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if taskResponse["data"] == nil {
+			return nil, errors.New("Qemu Agent Ping not readable")
+		}
+		pingRes = taskResponse["data"].(map[string]interface{})
 	}
 	return
 }
 
 // QemuAgentFileWrite - Writes the given file via guest agent.
-func (c *Client) QemuAgentFileWrite(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+func (c *Client) QemuAgentFileWrite(vmr *VmRef, params map[string]interface{}) (err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	reqbody := ParamsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/file-write", vmr.node, vmr.vmId)
-	resp, err := c.session.Post(url, nil, nil, &reqbody)
-	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
-		if err != nil {
-			return nil, err
-		}
-		exitStatus, err = c.WaitForCompletion(taskResponse)
-	}
+	_, err = c.session.Post(url, nil, nil, &reqbody)
 	return
 }
 
