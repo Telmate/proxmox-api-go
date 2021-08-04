@@ -912,6 +912,65 @@ func (c *Client) CreateVNCProxy(vmr *VmRef, params map[string]interface{}) (vncP
 	return
 }
 
+// QemuAgentPing - Execute ping.
+func (c *Client) QemuAgentPing(vmr *VmRef) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/ping", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// QemuAgentFileWrite - Writes the given file via guest agent.
+func (c *Client) QemuAgentFileWrite(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/file-write", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// QemuAgentExec - Executes the given command in the vm via the guest-agent and returns an object with the pid.
+func (c *Client) QemuAgentExec(vmr *VmRef, params map[string]interface{}) (result map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		if taskResponse["data"] == nil {
+			return nil, errors.New("VNC Proxy not readable")
+		}
+		result = taskResponse["data"].(map[string]interface{})
+	}
+	return
+}
+
 // GetExecStatus - Gets the status of the given pid started by the guest-agent
 func (c *Client) GetExecStatus(vmr *VmRef, pid string) (status map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
@@ -981,6 +1040,25 @@ func (c *Client) CreateQemuIPSet(vmr *VmRef, params map[string]interface{}) (exi
 	return
 }
 
+// AddQemuIPSet - Add IP or Network to IPSet.
+func (c *Client) AddQemuIPSet(vmr *VmRef, name string, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, name)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
 // GetQemuIPSet - List IPSets
 func (c *Client) GetQemuIPSet(vmr *VmRef) (ipsets map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
@@ -995,6 +1073,43 @@ func (c *Client) GetQemuIPSet(vmr *VmRef) (ipsets map[string]interface{}, err er
 			return nil, err
 		}
 		return ipsets, nil
+	}
+	return
+}
+
+// DeleteQemuIPSet - Delete IPSet
+func (c *Client) DeleteQemuIPSet(vmr *VmRef, IPSetName string) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, IPSetName)
+	resp, err := c.session.Delete(url, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// DeleteQemuIPSetNetwork - Remove IP or Network from IPSet.
+func (c *Client) DeleteQemuIPSetNetwork(vmr *VmRef, IPSetName string, network string, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	values := ParamsToValues(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", vmr.node, vmr.vmId, IPSetName, network)
+	resp, err := c.session.Delete(url, &values, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
 	}
 	return
 }
