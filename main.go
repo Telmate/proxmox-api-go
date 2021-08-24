@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
@@ -23,10 +24,19 @@ func main() {
 	if !*insecure {
 		tlsconf = nil
 	}
-	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *taskTimeout)
-	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
-	if err != nil {
-		log.Fatal(err)
+	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *taskTimeout)
+	if userRequiresAPIToken(os.Getenv("PM_USER")) {
+		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
+		// As test, get the version of the server
+		_, err := c.GetVersion()
+		if err != nil {
+			log.Fatalf("login error: %s", err)
+		}
+	} else {
+		err = c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	vmid := *fvmid
@@ -318,4 +328,10 @@ func failError(err error) {
 		log.Fatal(err)
 	}
 	return
+}
+
+var rxUserRequiresToken = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+![a-z0-9]+")
+
+func userRequiresAPIToken(userID string) bool {
+	return rxUserRequiresToken.MatchString(userID)
 }
