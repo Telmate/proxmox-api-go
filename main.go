@@ -297,6 +297,13 @@ func main() {
 		vmList, err := json.Marshal(vms)
 		fmt.Println(string(vmList))
 
+	case "getVersion":
+		versionInfo, err := c.GetVersion()
+		failError(err)
+		version, err := json.Marshal(versionInfo)
+		failError(err)
+		fmt.Println(string(version))
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}

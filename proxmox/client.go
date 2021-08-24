@@ -112,6 +112,15 @@ func (c *Client) Login(username string, password string, otp string) (err error)
 	return c.session.Login(username, password, otp)
 }
 
+func (c *Client) GetVersion() (data map[string]interface{}, err error) {
+	resp, err := c.session.Get("/version", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return ResponseJSON(resp)
+}
+
 func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int) error {
 	var statErr error
 	for ii := 0; ii < tries; ii++ {
