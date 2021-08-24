@@ -253,6 +253,10 @@ func main() {
 		log.Printf("Getting Next Free ID: %d\n", id)
 
 	case "checkid":
+		if len(flag.Args()) < 2 {
+			fmt.Printf("Missing vmid\n")
+			os.Exit(1)
+		}
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
 		id, err := c.VMIdExists(i)
