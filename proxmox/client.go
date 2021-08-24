@@ -1363,3 +1363,63 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{},
 
 	return
 }
+
+func (c *Client) GetPoolList() (pools map[string]interface{}, err error) {
+	resp, err := c.session.Get("/pools", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return ResponseJSON(resp)
+}
+
+func (c *Client) GetPoolInfo(poolid string) (poolInfo map[string]interface{}, err error) {
+	url := fmt.Sprintf("/pools/%s", poolid)
+	resp, err := c.session.Get(url, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return ResponseJSON(resp)
+}
+
+func (c *Client) CreatePool(poolid string, comment string) error {
+	paramMap := map[string]interface{}{
+		"poolid":  poolid,
+		"comment": comment,
+	}
+
+	reqbody := ParamsToBody(paramMap)
+	_, err := c.session.Post("/pools", nil, nil, &reqbody)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) UpdatePoolComment(poolid string, comment string) error {
+	paramMap := map[string]interface{}{
+		"poolid":  poolid,
+		"comment": comment,
+	}
+
+	reqbody := ParamsToBody(paramMap)
+	url := fmt.Sprintf("/pools/%s", poolid)
+	_, err := c.session.Put(url, nil, nil, &reqbody)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) DeletePool(poolid string) error {
+	url := fmt.Sprintf("/pools/%s", poolid)
+	_, err := c.session.Delete(url, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

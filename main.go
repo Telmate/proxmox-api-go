@@ -314,6 +314,69 @@ func main() {
 		failError(err)
 		fmt.Println(string(version))
 
+	case "getPoolList":
+		pools, err := c.GetPoolList()
+		if err != nil {
+			log.Printf("Error listing pools %+v\n", err)
+			os.Exit(1)
+		}
+		poolList, err := json.Marshal(pools)
+		fmt.Println(string(poolList))
+
+	case "getPoolInfo":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+		poolinfo, err := c.GetPoolInfo(poolid)
+		if err != nil {
+			log.Printf("Error getting pool info %+v\n", err)
+			os.Exit(1)
+		}
+		poolList, err := json.Marshal(poolinfo)
+		fmt.Println(string(poolList))
+
+	case "createPool":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+
+		comment := ""
+		if len(flag.Args()) == 3 {
+			comment = flag.Args()[2]
+		}
+
+		err := c.CreatePool(poolid, comment)
+		failError(err)
+		fmt.Printf("Pool %s created\n", poolid)
+
+	case "deletePool":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+
+		err := c.DeletePool(poolid)
+		failError(err)
+		fmt.Printf("Pool %s removed\n", poolid)
+
+	case "updatePoolComment":
+		if len(flag.Args()) < 3 {
+			log.Printf("Error: poolid and comment required")
+			os.Exit(1)
+		}
+
+		poolid := flag.Args()[1]
+		comment := flag.Args()[2]
+
+		err := c.UpdatePoolComment(poolid, comment)
+		failError(err)
+		fmt.Printf("Pool %s updated\n", poolid)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
