@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
@@ -23,10 +24,19 @@ func main() {
 	if !*insecure {
 		tlsconf = nil
 	}
-	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *taskTimeout)
-	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
-	if err != nil {
-		log.Fatal(err)
+	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *taskTimeout)
+	if userRequiresAPIToken(os.Getenv("PM_USER")) {
+		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
+		// As test, get the version of the server
+		_, err := c.GetVersion()
+		if err != nil {
+			log.Fatalf("login error: %s", err)
+		}
+	} else {
+		err = c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	vmid := *fvmid
@@ -253,6 +263,10 @@ func main() {
 		log.Printf("Getting Next Free ID: %d\n", id)
 
 	case "checkid":
+		if len(flag.Args()) < 2 {
+			fmt.Printf("Missing vmid\n")
+			os.Exit(1)
+		}
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
 		id, err := c.VMIdExists(i)
@@ -293,6 +307,76 @@ func main() {
 		vmList, err := json.Marshal(vms)
 		fmt.Println(string(vmList))
 
+	case "getVersion":
+		versionInfo, err := c.GetVersion()
+		failError(err)
+		version, err := json.Marshal(versionInfo)
+		failError(err)
+		fmt.Println(string(version))
+
+	case "getPoolList":
+		pools, err := c.GetPoolList()
+		if err != nil {
+			log.Printf("Error listing pools %+v\n", err)
+			os.Exit(1)
+		}
+		poolList, err := json.Marshal(pools)
+		fmt.Println(string(poolList))
+
+	case "getPoolInfo":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+		poolinfo, err := c.GetPoolInfo(poolid)
+		if err != nil {
+			log.Printf("Error getting pool info %+v\n", err)
+			os.Exit(1)
+		}
+		poolList, err := json.Marshal(poolinfo)
+		fmt.Println(string(poolList))
+
+	case "createPool":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+
+		comment := ""
+		if len(flag.Args()) == 3 {
+			comment = flag.Args()[2]
+		}
+
+		err := c.CreatePool(poolid, comment)
+		failError(err)
+		fmt.Printf("Pool %s created\n", poolid)
+
+	case "deletePool":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+
+		err := c.DeletePool(poolid)
+		failError(err)
+		fmt.Printf("Pool %s removed\n", poolid)
+
+	case "updatePoolComment":
+		if len(flag.Args()) < 3 {
+			log.Printf("Error: poolid and comment required")
+			os.Exit(1)
+		}
+
+		poolid := flag.Args()[1]
+		comment := flag.Args()[2]
+
+		err := c.UpdatePoolComment(poolid, comment)
+		failError(err)
+		fmt.Printf("Pool %s updated\n", poolid)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
@@ -307,4 +391,10 @@ func failError(err error) {
 		log.Fatal(err)
 	}
 	return
+}
+
+var rxUserRequiresToken = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+![a-z0-9]+")
+
+func userRequiresAPIToken(userID string) bool {
+	return rxUserRequiresToken.MatchString(userID)
 }
