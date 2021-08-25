@@ -52,12 +52,23 @@ func NewSession(apiUrl string, hclient *http.Client, tls *tls.Config) (session *
 }
 
 func ParamsToBody(params map[string]interface{}) (body []byte) {
-	vals := ParamsToValues(params)
+	vals := ParamsToValuesWithEmpty(params, []string{})
 	body = bytes.NewBufferString(vals.Encode()).Bytes()
 	return
 }
 
 func ParamsToValues(params map[string]interface{}) (vals url.Values) {
+	vals = ParamsToValuesWithEmpty(params, []string{})
+	return
+}
+
+func ParamsToBodyWithEmpty(params map[string]interface{}, allowedEmpty []string) (body []byte) {
+	vals := ParamsToValuesWithEmpty(params, allowedEmpty)
+	body = bytes.NewBufferString(vals.Encode()).Bytes()
+	return
+}
+
+func ParamsToValuesWithEmpty(params map[string]interface{}, allowedEmpty []string) (vals url.Values) {
 	vals = url.Values{}
 	for k, intrV := range params {
 		var v string
@@ -72,7 +83,7 @@ func ParamsToValues(params map[string]interface{}) (vals url.Values) {
 		default:
 			v = fmt.Sprintf("%v", intrV)
 		}
-		if v != "" {
+		if v != "" || inArray(allowedEmpty, k) {
 			vals.Set(k, v)
 		}
 	}
