@@ -1440,7 +1440,7 @@ func (c *Client) UpdatePoolComment(poolid string, comment string) error {
 		"comment": comment,
 	}
 
-	reqbody := ParamsToBody(paramMap)
+	reqbody := ParamsToBodyWithEmpty(paramMap, []string{"comment"})
 	url := fmt.Sprintf("/pools/%s", poolid)
 	_, err := c.session.Put(url, nil, nil, &reqbody)
 	if err != nil {
