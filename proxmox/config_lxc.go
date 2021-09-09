@@ -181,7 +181,13 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 		mpID, _ := strconv.Atoi(id[0])
 		mpConfMap["slot"] = mpID
 
-		mpConfMap["backup"] = mpConfMap["backup"] != 0
+		// 5 potential boolean flags need to be converted
+		for _, key := range []string{"acl", "backup", "quota", "replicate", "shared"} {
+			// if flag is set, need to convert int to bool
+			if _, isSet := mpConfMap[key]; isSet {
+				mpConfMap[key] = Itob(mpConfMap[key].(int))
+			}
+		}
 
 		// prepare empty mountpoint map
 		if config.Mountpoints == nil {
@@ -220,7 +226,10 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 		// add rest of device config
 		nicConfMap.readDeviceConfig(nicConfList)
 
-		nicConfMap["firewall"] = nicConfMap["firewall"] != 0
+		// if firewall flag is set, need to convert int to bool
+		if _, isSet := nicConfMap["firewall"]; isSet {
+			nicConfMap["firewall"] = Itob(nicConfMap["firewall"].(int))
+		}
 
 		// prepare empty network map
 		if config.Networks == nil {
