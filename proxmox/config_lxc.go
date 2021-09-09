@@ -181,6 +181,8 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 		mpID, _ := strconv.Atoi(id[0])
 		mpConfMap["slot"] = mpID
 
+		mpConfMap["backup"] = mpConfMap["backup"] != 0
+
 		// prepare empty mountpoint map
 		if config.Mountpoints == nil {
 			config.Mountpoints = QemuDevices{}
@@ -218,11 +220,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 		// add rest of device config
 		nicConfMap.readDeviceConfig(nicConfList)
 
-		if nicConfMap["firewall"] == 1 {
-			nicConfMap["firewall"] = true
-		} else if nicConfMap["firewall"] == 0 {
-			nicConfMap["firewall"] = false
-		}
+		nicConfMap["firewall"] = nicConfMap["firewall"] != 0
 
 		// prepare empty network map
 		if config.Networks == nil {
