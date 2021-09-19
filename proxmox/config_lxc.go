@@ -13,6 +13,8 @@ type ConfigLxc struct {
 	Ostemplate         string      `json:"ostemplate"`
 	Arch               string      `json:"arch"`
 	BWLimit            int         `json:"bwlimit,omitempty"`
+	Clone              string      `json:"clone,omitempty"`
+	CloneStorage       string      `json:"clone-storage,omitempty"`
 	CMode              string      `json:"cmode"`
 	Console            bool        `json:"console"`
 	Cores              int         `json:"cores,omitempty"`
@@ -21,6 +23,7 @@ type ConfigLxc struct {
 	Description        string      `json:"description,omitempty"`
 	Features           QemuDevice  `json:"features,omitempty"`
 	Force              bool        `json:"force,omitempty"`
+	Full               bool        `json:"full,omitempty"`
 	HaState            string      `json:"hastate,omitempty"`
 	Hookscript         string      `json:"hookscript,omitempty"`
 	Hostname           string      `json:"hostname,omitempty"`
@@ -38,6 +41,7 @@ type ConfigLxc struct {
 	Restore            bool        `json:"restore,omitempty"`
 	RootFs             QemuDevice  `json:"rootfs,omitempty"`
 	SearchDomain       string      `json:"searchdomain,omitempty"`
+	Snapname           string      `json:"snapname,omitempty"`
 	SSHPublicKeys      string      `json:"ssh-public-keys,omitempty"`
 	Start              bool        `json:"start"`
 	Startup            string      `json:"startup,omitempty"`
@@ -321,6 +325,55 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		params, _ := json.Marshal(&paramMap)
 		return fmt.Errorf("Error creating LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
+	}
+
+	_, err = client.UpdateVMHA(vmr, config.HaState)
+	if err != nil {
+		return fmt.Errorf("[ERROR] %q", err)
+	}
+
+	return
+}
+
+func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
+	vmr.SetVmType("lxc")
+
+	//map the clone specific parameters
+	paramMap := map[string]interface{}{
+		"newid":  vmr.vmId,
+		"vmid":   config.Clone,
+		"node":   vmr.node,
+		"target": vmr.node,
+	}
+
+	if config.BWLimit != 0 {
+		paramMap["bwlimit"] = config.Hostname
+	}
+
+	if config.CloneStorage != "" {
+		paramMap["storage"] = config.CloneStorage
+	}
+
+	if config.Description != "" {
+		paramMap["description"] = config.Description
+	}
+
+	if config.Hostname != "" {
+		paramMap["hostname"] = config.Hostname
+	}
+
+	if config.Pool != "" {
+		paramMap["pool"] = config.Pool
+	}
+
+	if config.Snapname != "" {
+		paramMap["snapname"] = config.Snapname
+	}
+
+	exitStatus, err := client.CloneLxcContainer(vmr, paramMap)
+	if err != nil {
+		params, _ := json.Marshal(&paramMap)
+		return fmt.Errorf("Error cloning LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
 	}
 
 	_, err = client.UpdateVMHA(vmr, config.HaState)
