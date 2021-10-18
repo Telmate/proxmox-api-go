@@ -36,6 +36,7 @@ type ConfigQemu struct {
 	EFIDisk         string      `json:"efidisk,omitempty"`
 	Machine         string      `json:"machine,omitempty"`
 	Onboot          bool        `json:"onboot"`
+	Tablet          bool        `json:"tablet"`
 	Agent           int         `json:"agent"`
 	Memory          int         `json:"memory"`
 	Balloon         int         `json:"balloon"`
@@ -82,16 +83,16 @@ type ConfigQemu struct {
 	Sshkeys      string `json:"sshkeys"`
 
 	// arrays are hard, support 16 interfaces for now
-	Ipconfig0 string `json:"ipconfig0"`
-	Ipconfig1 string `json:"ipconfig1"`
-	Ipconfig2 string `json:"ipconfig2"`
-	Ipconfig3 string `json:"ipconfig3"`
-	Ipconfig4 string `json:"ipconfig4"`
-	Ipconfig5 string `json:"ipconfig5"`
-	Ipconfig6 string `json:"ipconfig6"`
-	Ipconfig7 string `json:"ipconfig7"`
-	Ipconfig8 string `json:"ipconfig8"`
-	Ipconfig9 string `json:"ipconfig9"`
+	Ipconfig0  string `json:"ipconfig0"`
+	Ipconfig1  string `json:"ipconfig1"`
+	Ipconfig2  string `json:"ipconfig2"`
+	Ipconfig3  string `json:"ipconfig3"`
+	Ipconfig4  string `json:"ipconfig4"`
+	Ipconfig5  string `json:"ipconfig5"`
+	Ipconfig6  string `json:"ipconfig6"`
+	Ipconfig7  string `json:"ipconfig7"`
+	Ipconfig8  string `json:"ipconfig8"`
+	Ipconfig9  string `json:"ipconfig9"`
 	Ipconfig10 string `json:"ipconfig10"`
 	Ipconfig11 string `json:"ipconfig11"`
 	Ipconfig12 string `json:"ipconfig12"`
@@ -111,6 +112,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"vmid":        vmr.vmId,
 		"name":        config.Name,
 		"onboot":      config.Onboot,
+		"tablet":      config.Tablet,
 		"agent":       config.Agent,
 		"ide2":        config.QemuIso + ",media=cdrom",
 		"ostype":      config.QemuOs,
@@ -275,6 +277,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"tags":        config.Tags,
 		"args":        config.Args,
 		"onboot":      config.Onboot,
+		"tablet":      config.Tablet,
 		"agent":       config.Agent,
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
@@ -512,10 +515,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["tags"]; isSet {
 		tags = vmConfig["tags"].(string)
 	}
-        args := ""
-        if _, isSet := vmConfig["args"]; isSet {
-                args = vmConfig["args"].(string)
-        }
+	args := ""
+	if _, isSet := vmConfig["args"]; isSet {
+		args = vmConfig["args"].(string)
+	}
 
 	bios := "seabios"
 	if _, isSet := vmConfig["bios"]; isSet {
@@ -528,6 +531,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	onboot := true
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
+	}
+	tablet := true
+	if _, isSet := vmConfig["tablet"]; isSet {
+		tablet = Itob(int(vmConfig["tablet"].(float64)))
 	}
 
 	agent := 0
@@ -607,6 +614,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Bios:            bios,
 		EFIDisk:         efidisk,
 		Onboot:          onboot,
+		Tablet:          tablet,
 		Agent:           agent,
 		QemuOs:          ostype,
 		Memory:          int(memory),
