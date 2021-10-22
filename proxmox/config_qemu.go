@@ -59,6 +59,7 @@ type ConfigQemu struct {
 	QemuNetworks    QemuDevices `json:"network"`
 	QemuSerials     QemuDevices `json:"serial,omitempty"`
 	HaState         string      `json:"hastate,omitempty"`
+	HaGroup         string      `json:"hagroup,omitempty"`
 	Tags            string      `json:"tags"`
 	Args            string      `json:"args"`
 
@@ -194,7 +195,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		return fmt.Errorf("Error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
 
-	_, err = client.UpdateVMHA(vmr, config.HaState)
+	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
 	}
@@ -441,7 +442,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		return err
 	}
 
-	_, err = client.UpdateVMHA(vmr, config.HaState)
+	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
 	}
