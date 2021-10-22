@@ -43,6 +43,7 @@ type VmRef struct {
 	pool    string
 	vmType  string
 	haState string
+	haGroup string
 }
 
 func (vmr *VmRef) SetNode(node string) {
@@ -77,6 +78,10 @@ func (vmr *VmRef) Pool() string {
 
 func (vmr *VmRef) HaState() string {
 	return vmr.haState
+}
+
+func (vmr *VmRef) HaGroup() string {
+	return vmr.haGroup
 }
 
 func NewVmRef(vmId int) (vmr *VmRef) {
@@ -1357,9 +1362,9 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 	return
 }
 
-func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{}, err error) {
-	// Same hastate
-	if vmr.haState == haState {
+func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, err error) {
+	// Same hastate & hagroup
+	if vmr.haState == haState && vmr.haGroup == haGroup {
 		return
 	}
 
@@ -1382,6 +1387,9 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{},
 		paramMap := map[string]interface{}{
 			"sid": vmr.vmId,
 		}
+		if haGroup != "" {
+			paramMap["group"] = haGroup
+		}
 		reqbody := ParamsToBody(paramMap)
 		resp, err := c.session.Post("/cluster/ha/resources", nil, nil, &reqbody)
 		if err == nil {
@@ -1400,6 +1408,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{},
 	//Set wanted state
 	paramMap := map[string]interface{}{
 		"state": haState,
+		"group": haGroup,
 	}
 	reqbody := ParamsToBody(paramMap)
 	url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)

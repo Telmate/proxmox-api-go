@@ -25,6 +25,7 @@ type ConfigLxc struct {
 	Force              bool        `json:"force,omitempty"`
 	Full               bool        `json:"full,omitempty"`
 	HaState            string      `json:"hastate,omitempty"`
+	HaGroup            string      `json:"hagroup,omitempty"`
 	Hookscript         string      `json:"hookscript,omitempty"`
 	Hostname           string      `json:"hostname,omitempty"`
 	IgnoreUnpackErrors bool        `json:"ignore-unpack-errors,omitempty"`
@@ -334,7 +335,7 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 		return fmt.Errorf("Error creating LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
 	}
 
-	_, err = client.UpdateVMHA(vmr, config.HaState)
+	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
 	if err != nil {
 		return fmt.Errorf("[ERROR] %q", err)
 	}
@@ -383,7 +384,7 @@ func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 		return fmt.Errorf("Error cloning LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
 	}
 
-	_, err = client.UpdateVMHA(vmr, config.HaState)
+	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
 	if err != nil {
 		return fmt.Errorf("[ERROR] %q", err)
 	}
@@ -406,7 +407,7 @@ func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	// also, error "500 unable to modify read-only option: 'unprivileged'"
 	delete(paramMap, "unprivileged")
 
-	_, err = client.UpdateVMHA(vmr, config.HaState)
+	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
 	if err != nil {
 		return err
 	}
