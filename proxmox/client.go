@@ -720,7 +720,7 @@ func (c *Client) SetLxcConfig(vmr *VmRef, vmParams map[string]interface{}) (exit
 
 // MigrateNode - Migrate a VM
 func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exitStatus interface{}, err error) {
-	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online})
+	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online, "with-local-disks": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	if err == nil {
