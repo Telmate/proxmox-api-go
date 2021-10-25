@@ -145,6 +145,10 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	if _, isSet := lxcConfig["hastate"]; isSet {
 		hastate = lxcConfig["hastate"].(string)
 	}
+	hagroup := ""
+	if _, isSet := lxcConfig["hagroup"]; isSet {
+		hagroup = lxcConfig["hagroup"].(string)
+	}
 	hookscript := ""
 	if _, isSet := lxcConfig["hookscript"]; isSet {
 		hookscript = lxcConfig["hookscript"].(string)
@@ -300,6 +304,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	config.Description = description
 	config.OnBoot = onboot
 	config.HaState = hastate
+	config.HaGroup = hagroup
 	config.Hookscript = hookscript
 	config.Hostname = hostname
 	config.Lock = lock
@@ -487,8 +492,9 @@ func (config ConfigLxc) mapToAPIParams() map[string]interface{} {
 	delete(paramMap, "mountpoints")
 	delete(paramMap, "unused")
 
-	// also delete the hastate key which is used elsewhere
+	// also delete the hastate & hagroup key which is used elsewhere
 	delete(paramMap, "hastate")
+	delete(paramMap, "hagroup")
 
 	return paramMap
 }
