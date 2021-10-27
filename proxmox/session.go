@@ -34,29 +34,29 @@ type Session struct {
 
 func NewSession(apiUrl string, hclient *http.Client, proxyString string, tls *tls.Config) (session *Session, err error) {
 	if hclient == nil {
-		proxyURL, err := url.ParseRequestURI(proxyString)
-		if err != nil {
-			return nil, err
-		}
-		if _, _, err := net.SplitHostPort(proxyURL.Host); err != nil {
-			return nil, err
-		} else {
-			// Only build a transport if we're also building the client
+		if proxyString == "" {
 			tr := &http.Transport{
 				TLSClientConfig:    tls,
 				DisableCompression: true,
-				Proxy:              http.ProxyURL(proxyURL),
+				Proxy:              nil,
 			}
-			if proxyURL.String() == "" {
-				tr = &http.Transport{
+			hclient = &http.Client{Transport: tr}
+		} else {
+			proxyURL, err := url.ParseRequestURI(proxyString)
+			if err != nil {
+				return nil, err
+			}
+			if _, _, err := net.SplitHostPort(proxyURL.Host); err != nil {
+				return nil, err
+			} else {
+				// Only build a transport if we're also building the client
+				tr := &http.Transport{
 					TLSClientConfig:    tls,
 					DisableCompression: true,
-					Proxy:              nil,
+					Proxy:              http.ProxyURL(proxyURL),
 				}
-
+				hclient = &http.Client{Transport: tr}
 			}
-
-			hclient = &http.Client{Transport: tr}
 		}
 	}
 	session = &Session{
