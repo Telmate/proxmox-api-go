@@ -796,7 +796,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 			unusedDiskNames = append(unusedDiskNames, unusedDiskName[0])
 		}
 	}
-	if unusedDiskNames == nil {
+	if unusedDiskNames != nil {
 		log.Printf("unusedDiskNames: %v", unusedDiskNames)
 	}
 
