@@ -39,6 +39,14 @@ export PM_OTP=otpcode (only if required)
 ./proxmox-api-go rollbackQemu vm-name
 ```
 
+## Proxy server support
+
+Just use the flag -proxy and specify your proxy url and port
+
+```sh
+./proxmox-api-go -proxy https://localhost:8080 start 123
+```
+
 ### Format
 
 createQemu JSON Sample:
@@ -76,7 +84,7 @@ createQemu JSON Sample:
   }
 }
 ```
- 
+
 cloneQemu JSON Sample:
 
 ```json
@@ -102,32 +110,32 @@ cloneQemu cloud-init JSON Sample:
   "cores": 2,
   "sockets": 1,
   "ipconfig0": "gw=10.0.2.2,ip=10.0.2.17/24",
-  "sshkeys" : "...",
+  "sshkeys": "...",
   "nameserver": "8.8.8.8"
 }
 ```
 
 ### Cloud-init options
 
-Cloud-init VMs must be cloned from a cloud-init ready template. 
+Cloud-init VMs must be cloned from a cloud-init ready template.
 See: https://pve.proxmox.com/wiki/Cloud-Init_Support
 
-* ciuser - User name to change ssh keys and password for instead of the image’s configured default user.
-* cipassword - Password to assign the user. 
-* cicustom - Specify custom files to replace the automatically generated ones at start.
-* searchdomain - Sets DNS search domains for a container.
-* nameserver - Sets DNS server IP address for a container.
-* sshkeys - public ssh keys, one per line
-* ipconfig0 - [gw=<GatewayIPv4>] [,gw6=<GatewayIPv6>] [,ip=<IPv4Format/CIDR>] [,ip6=<IPv6Format/CIDR>]
-* ipconfig1 - optional, same as ipconfig0 format
+- ciuser - User name to change ssh keys and password for instead of the image’s configured default user.
+- cipassword - Password to assign the user.
+- cicustom - Specify custom files to replace the automatically generated ones at start.
+- searchdomain - Sets DNS search domains for a container.
+- nameserver - Sets DNS server IP address for a container.
+- sshkeys - public ssh keys, one per line
+- ipconfig0 - [gw=<GatewayIPv4>] [,gw6=<GatewayIPv6>] [,ip=<IPv4Format/CIDR>] [,ip6=<IPv6Format/CIDR>]
+- ipconfig1 - optional, same as ipconfig0 format
 
 ### ISO requirements (non cloud-init)
 
 Kickstart auto install
 
-* partition /dev/vda
-* network eth1
-* sshd (with preshared key/password)
+- partition /dev/vda
+- network eth1
+- sshd (with preshared key/password)
 
 Network is temprorarily eth1 during the pre-provision phase.
 
