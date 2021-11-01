@@ -18,13 +18,14 @@ func main() {
 	insecure = flag.Bool("insecure", false, "TLS insecure mode")
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
 	taskTimeout := flag.Int("timeout", 300, "api task timeout in seconds")
+	proxyUrl := flag.String("proxy", "", "proxy url to connect to")
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
 	tlsconf := &tls.Config{InsecureSkipVerify: true}
 	if !*insecure {
 		tlsconf = nil
 	}
-	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *taskTimeout)
+	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *proxyUrl, *taskTimeout)
 	if userRequiresAPIToken(os.Getenv("PM_USER")) {
 		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
 		// As test, get the version of the server

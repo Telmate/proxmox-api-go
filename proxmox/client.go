@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -48,7 +47,6 @@ type VmRef struct {
 
 func (vmr *VmRef) SetNode(node string) {
 	vmr.node = node
-	return
 }
 
 func (vmr *VmRef) SetPool(pool string) {
@@ -57,7 +55,6 @@ func (vmr *VmRef) SetPool(pool string) {
 
 func (vmr *VmRef) SetVmType(vmType string) {
 	vmr.vmType = vmType
-	return
 }
 
 func (vmr *VmRef) GetVmType() string {
@@ -89,9 +86,9 @@ func NewVmRef(vmId int) (vmr *VmRef) {
 	return
 }
 
-func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config, taskTimeout int) (client *Client, err error) {
+func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config, proxyString string, taskTimeout int) (client *Client, err error) {
 	var sess *Session
-	sess, err = NewSession(apiUrl, hclient, tls)
+	sess, err = NewSession(apiUrl, hclient, proxyString, tls)
 	if err == nil {
 		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout}
 	}
@@ -177,7 +174,7 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 			return
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Vm '%d' not found", vmr.vmId))
+	return nil, fmt.Errorf("vm '%d' not found", vmr.vmId)
 }
 
 func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
@@ -209,7 +206,7 @@ func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
 		}
 	}
 	if len(vmrs) == 0 {
-		return nil, errors.New(fmt.Sprintf("Vm '%s' not found", vmName))
+		return nil, fmt.Errorf("vm '%s' not found", vmName)
 	} else {
 		return
 	}
@@ -227,7 +224,7 @@ func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err err
 		return nil, err
 	}
 	if data["data"] == nil {
-		return nil, errors.New("Vm STATE not readable")
+		return nil, fmt.Errorf("vm STATE not readable")
 	}
 	vmState = data["data"].(map[string]interface{})
 	return
@@ -245,7 +242,7 @@ func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err e
 		return nil, err
 	}
 	if data["data"] == nil {
-		return nil, errors.New("Vm CONFIG not readable")
+		return nil, fmt.Errorf("vm CONFIG not readable")
 	}
 	vmConfig = data["data"].(map[string]interface{})
 	return
@@ -263,7 +260,7 @@ func (c *Client) GetStorageStatus(vmr *VmRef, storageName string) (storageStatus
 		return nil, err
 	}
 	if data["data"] == nil {
-		return nil, errors.New("Storage STATUS not readable")
+		return nil, fmt.Errorf("storage STATUS not readable")
 	}
 	storageStatus = data["data"].(map[string]interface{})
 	return
@@ -280,7 +277,7 @@ func (c *Client) GetStorageContent(vmr *VmRef, storageName string) (data map[str
 		return nil, err
 	}
 	if data["data"] == nil {
-		return nil, errors.New("Storage Content not readable")
+		return nil, fmt.Errorf("storage Content not readable")
 	}
 	return
 }
@@ -297,7 +294,7 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 		return nil, err
 	}
 	if data["data"] == nil {
-		return nil, errors.New("Vm SpiceProxy not readable")
+		return nil, fmt.Errorf("vm SpiceProxy not readable")
 	}
 	vmSpiceProxy = data["data"].(map[string]interface{})
 	return
@@ -330,7 +327,7 @@ func (a *AgentNetworkInterface) UnmarshalJSON(b []byte) error {
 	for idx, ip := range intermediate.IPAddresses {
 		a.IPAddresses[idx] = net.ParseIP((strings.Split(ip.IPAddress, "%"))[0])
 		if a.IPAddresses[idx] == nil {
-			return fmt.Errorf("Could not parse %s as IP", ip.IPAddress)
+			return fmt.Errorf("could not parse %s as IP", ip.IPAddress)
 		}
 	}
 	a.MACAddress = intermediate.HardwareAddress
@@ -407,7 +404,7 @@ func (c *Client) Sendkey(vmr *VmRef, qmKey string) error {
 func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExitStatus string, err error) {
 	if taskResponse["errors"] != nil {
 		errJSON, _ := json.MarshalIndent(taskResponse["errors"], "", "  ")
-		return string(errJSON), errors.New("Error reponse")
+		return string(errJSON), fmt.Errorf("error reponse")
 	}
 	if taskResponse["data"] == nil {
 		return "", nil
@@ -428,7 +425,7 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 		time.Sleep(TaskStatusCheckInterval * time.Second)
 		waited = waited + TaskStatusCheckInterval
 	}
-	return "", errors.New("Wait timeout for:" + taskUpid)
+	return "", fmt.Errorf("Wait timeout for:" + taskUpid)
 }
 
 var rxTaskNode = regexp.MustCompile("UPID:(.*?):")
@@ -442,7 +439,7 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
 	if exitStatus != nil && exitStatus != exitStatusSuccess {
-		err = errors.New(exitStatus.(string))
+		err = fmt.Errorf(exitStatus.(string))
 	}
 	return
 }
@@ -544,8 +541,8 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 	url := fmt.Sprintf("/nodes/%s/qemu", node)
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
-	defer resp.Body.Close()
 	if err != nil {
+		defer resp.Body.Close()
 		// This might not work if we never got a body. We'll ignore errors in trying to read,
 		// but extract the body if possible to give any error information back in the exitStatus
 		b, _ := ioutil.ReadAll(resp.Body)
@@ -574,8 +571,8 @@ func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}
 	url := fmt.Sprintf("/nodes/%s/lxc", node)
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
-	defer resp.Body.Close()
 	if err != nil {
+		defer resp.Body.Close()
 		// This might not work if we never got a body. We'll ignore errors in trying to read,
 		// but extract the body if possible to give any error information back in the exitStatus
 		b, _ := ioutil.ReadAll(resp.Body)
@@ -811,7 +808,7 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 			if currentID >= 100 {
 				return c.GetNextID(currentID + 1)
 			} else {
-				return -1, errors.New("error using /cluster/nextid")
+				return -1, fmt.Errorf("error using /cluster/nextid")
 			}
 		}
 		nextID, err = strconv.Atoi(data["data"].(string))
@@ -838,7 +835,7 @@ func (c *Client) CreateVMDisk(
 			return err
 		}
 		if diskName, containsData := taskResponse["data"]; !containsData || diskName != fullDiskName {
-			return errors.New(fmt.Sprintf("Cannot create VM disk %s - %s", fullDiskName, diskName))
+			return fmt.Errorf("cannot create VM disk %s - %s", fullDiskName, diskName)
 		}
 	} else {
 		return err
@@ -846,6 +843,8 @@ func (c *Client) CreateVMDisk(
 
 	return nil
 }
+
+var rxStorageModels = regexp.MustCompile(`(ide|sata|scsi|virtio)\d+`)
 
 // createVMDisks - Make disks parameters and create all VM disks on host node.
 func (c *Client) createVMDisks(
@@ -855,8 +854,7 @@ func (c *Client) createVMDisks(
 	var createdDisks []string
 	vmID := vmParams["vmid"].(int)
 	for deviceName, deviceConf := range vmParams {
-		rxStorageModels := `(ide|sata|scsi|virtio)\d+`
-		if matched, _ := regexp.MatchString(rxStorageModels, deviceName); matched {
+		if matched := rxStorageModels.MatchString(deviceName); matched {
 			deviceConfMap := ParsePMConf(deviceConf.(string), "")
 			// This if condition to differentiate between `disk` and `cdrom`.
 			if media, containsFile := deviceConfMap["media"]; containsFile && media == "disk" {
@@ -953,7 +951,7 @@ func (c *Client) CreateVNCProxy(vmr *VmRef, params map[string]interface{}) (vncP
 		return nil, err
 	}
 	if vncProxyRes["data"] == nil {
-		return nil, errors.New("VNC Proxy not readable")
+		return nil, fmt.Errorf("VNC Proxy not readable")
 	}
 	vncProxyRes = vncProxyRes["data"].(map[string]interface{})
 	return
@@ -973,7 +971,7 @@ func (c *Client) QemuAgentPing(vmr *VmRef) (pingRes map[string]interface{}, err 
 			return nil, err
 		}
 		if taskResponse["data"] == nil {
-			return nil, errors.New("Qemu Agent Ping not readable")
+			return nil, fmt.Errorf("qemu agent ping not readable")
 		}
 		pingRes = taskResponse["data"].(map[string]interface{})
 	}
@@ -1007,7 +1005,7 @@ func (c *Client) QemuAgentSetUserPassword(vmr *VmRef, params map[string]interfac
 			return nil, err
 		}
 		if taskResponse["data"] == nil {
-			return nil, errors.New("Qemu Agent Set User Password not readable")
+			return nil, fmt.Errorf("qemu agent set user password not readable")
 		}
 		result = taskResponse["data"].(map[string]interface{})
 	}
@@ -1029,7 +1027,7 @@ func (c *Client) QemuAgentExec(vmr *VmRef, params map[string]interface{}) (resul
 			return nil, err
 		}
 		if taskResponse["data"] == nil {
-			return nil, errors.New("Qemu Agent Exec not readable")
+			return nil, fmt.Errorf("qemu agent exec not readable")
 		}
 		result = taskResponse["data"].(map[string]interface{})
 	}
@@ -1232,7 +1230,7 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 		return err
 	}
 	if exitStatus != exitStatusSuccess {
-		return fmt.Errorf("Moving file to destination failed: %v", exitStatus)
+		return fmt.Errorf("moving file to destination failed: %v", exitStatus)
 	}
 	return nil
 }
@@ -1360,6 +1358,25 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 		}
 	}
 	return
+}
+
+func (c *Client) ReadVMHA(vmr *VmRef) (err error) {
+	var list map[string]interface{}
+	url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
+	err = c.GetJsonRetryable(url, &list, 3)
+	if err == nil {
+		list = list["data"].(map[string]interface{})
+		for elem, value := range list {
+			if elem == "group" {
+				vmr.haGroup = value.(string)
+			}
+			if elem == "state" {
+				vmr.haState = value.(string)
+			}
+		}
+	}
+	return
+
 }
 
 func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, err error) {

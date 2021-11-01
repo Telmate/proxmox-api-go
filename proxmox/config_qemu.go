@@ -2,7 +2,6 @@ package proxmox
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -105,7 +104,7 @@ type ConfigQemu struct {
 // CreateVm - Tell Proxmox API to make the VM
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if config.HasCloudInit() {
-		return errors.New("Cloud-init parameters only supported on clones or updates")
+		return fmt.Errorf("cloud-init parameters only supported on clones or updates")
 	}
 	vmr.SetVmType("qemu")
 
@@ -192,7 +191,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 	exitStatus, err := client.CreateQemuVm(vmr.node, params)
 	if err != nil {
-		return fmt.Errorf("Error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		return fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
 
 	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
@@ -492,7 +491,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 
 	if vmConfig["lock"] != nil {
-		return nil, errors.New("vm locked, could not obtain config")
+		return nil, fmt.Errorf("vm locked, could not obtain config")
 	}
 
 	// vmConfig Sample: map[ cpu:host
@@ -775,13 +774,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 			diskConfMap["size"] = "4M" // default cloud-init disk size
 		}
 
+		var sizeInTerabytes = regexp.MustCompile(`[0-9]+T`)
 		// Convert to gigabytes if disk size was received in terabytes
-		sizeIsInTerabytes, err := regexp.MatchString("[0-9]+T", diskConfMap["size"].(string))
-		if err != nil {
-			log.Fatal(err)
-			return nil, err
-		}
-		if sizeIsInTerabytes {
+		matched := sizeInTerabytes.MatchString(diskConfMap["size"].(string))
+		if matched {
 			diskConfMap["size"] = fmt.Sprintf("%.0fG", DiskSizeGB(diskConfMap["size"]))
 		}
 
@@ -800,8 +796,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 			unusedDiskNames = append(unusedDiskNames, unusedDiskName[0])
 		}
 	}
+	if unusedDiskNames != nil {
+		log.Printf("unusedDiskNames: %v", unusedDiskNames)
+	}
 
-	fmt.Println(fmt.Sprintf("unusedDiskNames: %v", unusedDiskNames))
 	for _, unusedDiskName := range unusedDiskNames {
 		unusedDiskConfStr := vmConfig[unusedDiskName].(string)
 		finalDiskConfMap := QemuDevice{}
@@ -810,7 +808,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		id := rxDeviceID.FindStringSubmatch(unusedDiskName)
 		diskID, err := strconv.Atoi(id[0])
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Unable to parse unused disk id from input string '%v' tried to convert '%v' to integer.", unusedDiskName, diskID))
+			return nil, fmt.Errorf(fmt.Sprintf("Unable to parse unused disk id from input string '%v' tried to convert '%v' to integer.", unusedDiskName, diskID))
 		}
 		finalDiskConfMap["slot"] = diskID
 
@@ -924,7 +922,7 @@ func WaitForShutdown(vmr *VmRef, client *Client) (err error) {
 		}
 		time.Sleep(5 * time.Second)
 	}
-	return errors.New("Not shutdown within wait time")
+	return fmt.Errorf("not shutdown within wait time")
 }
 
 // This is because proxmox create/config API won't let us make usernet devices
@@ -934,7 +932,7 @@ func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
 		return "", err
 	}
 	if vmState["status"] == "stopped" {
-		return "", errors.New("VM must be running first")
+		return "", fmt.Errorf("VM must be running first")
 	}
 	sshPort = strconv.Itoa(vmr.VmId() + 22000)
 	_, err = client.MonitorCmd(vmr, "netdev_add user,id=net1,hostfwd=tcp::"+sshPort+"-:22")
@@ -956,7 +954,7 @@ func RemoveSshForwardUsernet(vmr *VmRef, client *Client) (err error) {
 		return err
 	}
 	if vmState["status"] == "stopped" {
-		return errors.New("VM must be running first")
+		return fmt.Errorf("VM must be running first")
 	}
 	_, err = client.MonitorCmd(vmr, "device_del net1")
 	if err != nil {
@@ -989,7 +987,7 @@ func SendKeysString(vmr *VmRef, client *Client, keys string) (err error) {
 		return err
 	}
 	if vmState["status"] == "stopped" {
-		return errors.New("VM must be running first")
+		return fmt.Errorf("VM must be running first")
 	}
 	for _, r := range keys {
 		c := string(r)
@@ -1044,7 +1042,7 @@ func SendKeysString(vmr *VmRef, client *Client, keys string) (err error) {
 		if err != nil {
 			return err
 		}
-		time.Sleep(100)
+		time.Sleep(1 * time.Millisecond)
 	}
 	return nil
 }
@@ -1241,7 +1239,7 @@ func (c ConfigQemu) CreateQemuMachineParam(
 		params["machine"] = c.Machine
 		return nil
 	}
-	return errors.New("unsupported machine type, fall back to default")
+	return fmt.Errorf("unsupported machine type, fall back to default")
 }
 
 func (p QemuDeviceParam) createDeviceParam(

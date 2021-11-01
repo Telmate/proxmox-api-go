@@ -17,10 +17,7 @@ func inArray(arr []string, str string) bool {
 }
 
 func Itob(i int) bool {
-	if i == 1 {
-		return true
-	}
-	return false
+	return i == 1
 }
 
 // ParseSubConf - Parse standard sub-conf strings `key=value`.
@@ -81,9 +78,9 @@ func ParsePMConf(
 // Convert a disk-size string to a GB float
 func DiskSizeGB(dcSize interface{}) float64 {
 	var diskSize float64
-	switch dcSize.(type) {
+	switch dcSize := dcSize.(type) {
 	case string:
-		diskString := strings.ToUpper(dcSize.(string))
+		diskString := strings.ToUpper(dcSize)
 		re := regexp.MustCompile("([0-9]+)([A-Z]*)")
 		diskArray := re.FindStringSubmatch(diskString)
 
@@ -102,7 +99,7 @@ func DiskSizeGB(dcSize interface{}) float64 {
 			}
 		}
 	case float64:
-		diskSize = dcSize.(float64)
+		diskSize = dcSize
 	}
 	return diskSize
 }

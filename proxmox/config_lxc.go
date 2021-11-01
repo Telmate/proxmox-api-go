@@ -77,7 +77,7 @@ func NewConfigLxc() ConfigLxc {
 
 func NewConfigLxcFromJson(io io.Reader) (config ConfigLxc, err error) {
 	config = NewConfigLxc()
-	err = json.NewDecoder(io).Decode(config)
+	err = json.NewDecoder(io).Decode(&config)
 	return config, err
 }
 
@@ -85,6 +85,11 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	// prepare json map to receive the information from the api
 	var lxcConfig map[string]interface{}
 	lxcConfig, err = client.GetVmConfig(vmr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = client.ReadVMHA(vmr)
 	if err != nil {
 		return nil, err
 	}
@@ -140,15 +145,6 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 			config.Features = featureMap
 		}
 	}
-
-	hastate := ""
-	if _, isSet := lxcConfig["hastate"]; isSet {
-		hastate = lxcConfig["hastate"].(string)
-	}
-	hagroup := ""
-	if _, isSet := lxcConfig["hagroup"]; isSet {
-		hagroup = lxcConfig["hagroup"].(string)
-	}
 	hookscript := ""
 	if _, isSet := lxcConfig["hookscript"]; isSet {
 		hookscript = lxcConfig["hookscript"].(string)
@@ -175,7 +171,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	// add mountpoints
 	mpNames := []string{}
 
-	for k, _ := range lxcConfig {
+	for k := range lxcConfig {
 		if mpName := rxMpName.FindStringSubmatch(k); len(mpName) > 0 {
 			mpNames = append(mpNames, mpName[0])
 		}
@@ -216,7 +212,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	// add networks
 	nicNames := []string{}
 
-	for k, _ := range lxcConfig {
+	for k := range lxcConfig {
 		if nicName := rxNicName.FindStringSubmatch(k); len(nicName) > 0 {
 			nicNames = append(nicNames, nicName[0])
 		}
@@ -290,9 +286,12 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	if _, isSet := lxcConfig["tags"]; isSet {
 		tags = lxcConfig["tags"].(string)
 	}
-	var unused []string
-	if _, isset := lxcConfig["unused"]; isset {
-		unused = lxcConfig["unused"].([]string)
+	unused := []string{}
+	for k := range lxcConfig {
+		// look for entries from the config in the format "unusedX:<storagepath>" where X is an integer
+		if unusedDiskName := rxUnusedDiskName.FindStringSubmatch(k); len(unusedDiskName) > 0 {
+			unused = append(unused, unusedDiskName[0])
+		}
 	}
 
 	config.Arch = arch
@@ -303,8 +302,8 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	config.CPUUnits = cpuunits
 	config.Description = description
 	config.OnBoot = onboot
-	config.HaState = hastate
-	config.HaGroup = hagroup
+	config.HaState = vmr.HaState()
+	config.HaGroup = vmr.HaGroup()
 	config.Hookscript = hookscript
 	config.Hostname = hostname
 	config.Lock = lock
@@ -337,7 +336,7 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	exitStatus, err := client.CreateLxcContainer(vmr.node, paramMap)
 	if err != nil {
 		params, _ := json.Marshal(&paramMap)
-		return fmt.Errorf("Error creating LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
+		return fmt.Errorf("error creating LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
 	}
 
 	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
@@ -386,7 +385,7 @@ func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 	exitStatus, err := client.CloneLxcContainer(vmr, paramMap)
 	if err != nil {
 		params, _ := json.Marshal(&paramMap)
-		return fmt.Errorf("Error cloning LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
+		return fmt.Errorf("error cloning LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
 	}
 
 	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
