@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -85,11 +86,6 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	// prepare json map to receive the information from the api
 	var lxcConfig map[string]interface{}
 	lxcConfig, err = client.GetVmConfig(vmr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = client.ReadVMHA(vmr)
 	if err != nil {
 		return nil, err
 	}
@@ -302,8 +298,6 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	config.CPUUnits = cpuunits
 	config.Description = description
 	config.OnBoot = onboot
-	config.HaState = vmr.HaState()
-	config.HaGroup = vmr.HaGroup()
 	config.Hookscript = hookscript
 	config.Hostname = hostname
 	config.Lock = lock
@@ -321,6 +315,15 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	config.Unprivileged = unprivileged
 	config.Unused = unused
 	config.Tags = tags
+
+	err = client.ReadVMHA(vmr)
+	if err == nil {
+		config.HaState = vmr.HaState()
+		config.HaGroup = vmr.HaGroup()
+	} else {
+		log.Printf("[DEBUG] Container %d(%s) has no HA config", vmr.vmId, lxcConfig["hostname"])
+		return config, nil
+	}
 
 	return
 }

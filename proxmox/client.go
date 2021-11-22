@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -130,10 +131,8 @@ func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, trie
 		if statErr == nil {
 			return nil
 		}
-		// if statErr != io.ErrUnexpectedEOF { // don't give up on ErrUnexpectedEOF
-		//   return statErr
-		// }
-		time.Sleep(5 * time.Second)
+		log.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
+		time.Sleep(time.Duration(ii+1) * time.Second)
 	}
 	return statErr
 }
