@@ -1121,24 +1121,41 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 		qemuNicName := "net" + strconv.Itoa(nicID)
 
 		// Set Mac address.
-		if nicConfMap["macaddr"] == nil || nicConfMap["macaddr"].(string) == "" {
-			// Generate Mac based on VmID and NicID so it will be the same always.
+		var macAddr string
+		switch nicConfMap["macaddr"] {
+		case nil, "":
+			// Generate random Mac based on time
 			macaddr := make(net.HardwareAddr, 6)
 			rand.Seed(time.Now().UnixNano())
 			rand.Read(macaddr)
 			macaddr[0] = (macaddr[0] | 2) & 0xfe // fix from github issue #18
-			macAddrUppr := strings.ToUpper(fmt.Sprintf("%v", macaddr))
-			// use model=mac format for older proxmox compatability
-			macAddr := fmt.Sprintf("%v=%v", nicConfMap["model"], macAddrUppr)
+			macAddr = strings.ToUpper(fmt.Sprintf("%v", macaddr))
 
 			// Add Mac to source map so it will be returned. (useful for some use case like Terraform)
-			nicConfMap["macaddr"] = macAddrUppr
-			// and also add it to the parameters which will be sent to Proxmox API.
-			nicConfParam = append(nicConfParam, macAddr)
-		} else {
-			macAddr := fmt.Sprintf("%v=%v", nicConfMap["model"], nicConfMap["macaddr"].(string))
-			nicConfParam = append(nicConfParam, macAddr)
+			nicConfMap["macaddr"] = macAddr
+		case "repeatable":
+			// Generate deterministic Mac based on VmID and NicID
+			// Assume that rare VM has more than 32 nics
+			macaddr := make(net.HardwareAddr, 6)
+			pairing := vmID<<5 | nicID
+			// Linux MAC vendor - 00:18:59
+			macaddr[0] = 0x00
+			macaddr[1] = 0x18
+			macaddr[2] = 0x59
+			macaddr[3] = byte((pairing >> 16) & 0xff)
+			macaddr[4] = byte((pairing >> 8) & 0xff)
+			macaddr[5] = byte(pairing & 0xff)
+			// Convert to string
+			macAddr = strings.ToUpper(fmt.Sprintf("%v", macaddr))
+
+			// Add Mac to source map so it will be returned. (useful for some use case like Terraform)
+			nicConfMap["macaddr"] = macAddr
+		default:
+			macAddr = nicConfMap["macaddr"].(string)
 		}
+
+		// use model=mac format for older proxmox compatability as the parameters which will be sent to Proxmox API.
+		nicConfParam = append(nicConfParam, fmt.Sprintf("%v=%v", nicConfMap["model"], macAddr))
 
 		// Set bridge if not nat.
 		if nicConfMap["bridge"].(string) != "nat" {
