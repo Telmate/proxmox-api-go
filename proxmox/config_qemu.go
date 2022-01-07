@@ -114,7 +114,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"onboot":      config.Onboot,
 		"tablet":      config.Tablet,
 		"agent":       config.Agent,
-		"ide2":        config.QemuIso + ",media=cdrom",
 		"ostype":      config.QemuOs,
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
@@ -128,6 +127,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"tags":        config.Tags,
 		"machine":     config.Machine,
 		"args":        config.Args,
+	}
+
+	if config.QemuIso != "" {
+		params["ide2"] = config.QemuIso + ",media=cdrom"
 	}
 
 	if config.Bios != "" {
