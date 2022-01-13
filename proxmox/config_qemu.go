@@ -134,10 +134,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		params["ide2"] = config.QemuIso + ",media=cdrom"
 	}
 
-	if config.QemuPxe {
-		params["pxe"] = config.QemuPxe
-	}
-
 	if config.Bios != "" {
 		params["bios"] = config.Bios
 	}
