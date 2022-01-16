@@ -57,6 +57,7 @@ type ConfigQemu struct {
 	QemuVga         QemuDevice  `json:"vga,omitempty"`
 	QemuNetworks    QemuDevices `json:"network"`
 	QemuSerials     QemuDevices `json:"serial,omitempty"`
+	QemuUsbs        QemuDevices `json:"usb,omitempty"`
 	HaState         string      `json:"hastate,omitempty"`
 	HaGroup         string      `json:"hagroup,omitempty"`
 	Tags            string      `json:"tags"`
@@ -188,6 +189,12 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 	// Create serial interfaces
 	err = config.CreateQemuSerialsParams(vmr.vmId, params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
+	// Create usb interfaces
+	err = config.CreateQemuUsbsParams(vmr.vmId, params)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
 	}
@@ -362,6 +369,12 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		log.Printf("[ERROR] %q", err)
 	}
 
+	// Create usb interfaces
+	err = config.CreateQemuUsbsParams(vmr.vmId, configParams)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
 	// cloud-init options
 	if config.CIuser != "" {
 		configParams["ciuser"] = config.CIuser
@@ -461,7 +474,6 @@ func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
 		log.Fatal(err)
 		return nil, err
 	}
-	log.Println(config)
 	return
 }
 
@@ -474,6 +486,7 @@ var (
 	rxNicName        = regexp.MustCompile(`net\d+`)
 	rxMpName         = regexp.MustCompile(`mp\d+`)
 	rxSerialName     = regexp.MustCompile(`serial\d+`)
+	rxUsbName        = regexp.MustCompile(`usb\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
@@ -637,6 +650,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuVga:         QemuDevice{},
 		QemuNetworks:    QemuDevices{},
 		QemuSerials:     QemuDevices{},
+		QemuUsbs:        QemuDevices{},
 	}
 
 	if balloon >= 1 {
@@ -910,6 +924,42 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		}
 	}
 
+	// Add usbs
+	usbNames := []string{}
+
+	for k := range vmConfig {
+		if usbName := rxUsbName.FindStringSubmatch(k); len(usbName) > 0 {
+			usbNames = append(usbNames, usbName[0])
+		}
+	}
+
+	for _, usbName := range usbNames {
+		usbConfStr := vmConfig[usbName]
+		usbConfList := strings.Split(usbConfStr.(string), ",")
+		
+		id := rxDeviceID.FindStringSubmatch(usbName)
+		usbID, _ := strconv.Atoi(id[0])
+		_, host := ParseSubConf(usbConfList[0], "=")
+
+		usbConfMap := QemuDevice{
+			"id":   usbID,
+			"host": host,
+		}
+
+		err = usbConfMap.readDeviceConfig(usbConfList[1:])
+		if err != nil {
+			log.Printf("[ERROR] %q", err)
+		}
+		if usbConfMap["usb3"] == 1 {
+			usbConfMap["usb3"] = true
+		}
+
+		// And device config to usbs map.
+		if len(usbConfMap) > 0 {
+			config.QemuUsbs[usbID] = usbConfMap
+		}
+	}
+
 	return
 }
 
@@ -1096,6 +1146,15 @@ func FormatDiskParam(disk QemuDevice) string {
 	return strings.Join(diskConfParam, ",")
 }
 
+// Given a QemuDevice (represesting a usb), return a param string to give to ProxMox
+func FormatUsbParam(usb QemuDevice) string {
+	usbConfParam := QemuDeviceParam{}
+
+	usbConfParam = usbConfParam.createDeviceParam(usb, []string{})
+
+	return strings.Join(usbConfParam, ",")
+}
+
 // Create parameters for each Nic device.
 func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interface{}) error {
 
@@ -1243,6 +1302,21 @@ func (c ConfigQemu) CreateQemuSerialsParams(
 
 		// Add back to Qemu prams.
 		params[qemuSerialName] = deviceType
+	}
+
+	return nil
+}
+
+// Create parameters for usb interface
+func (c ConfigQemu) CreateQemuUsbsParams(
+	vmID int,
+	params map[string]interface{},
+) error {
+	for usbID, usbConfMap := range c.QemuUsbs {
+		qemuUsbName := "usb" + strconv.Itoa(usbID)
+
+		// Add back to Qemu prams.
+		params[qemuUsbName] = FormatUsbParam(usbConfMap)
 	}
 
 	return nil

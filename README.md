@@ -81,6 +81,12 @@ createQemu JSON Sample:
       "backup": true,
       "tag": -1
     }
+  },
+  "usb": {
+    "0": {
+      "host": "0658:0200",
+      "usb3": true
+    }
   }
 }
 ```
