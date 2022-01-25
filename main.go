@@ -122,6 +122,12 @@ func main() {
 
 	case "installQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
+		var mode string
+		if config.QemuIso != "" {
+			mode = "(ISO boot mode)"
+		} else if config.QemuPxe == true {
+			mode = "(PXE boot mode)"
+		}
 		failError(err)
 		if vmid > 0 {
 			vmr = proxmox.NewVmRef(vmid)
@@ -131,21 +137,27 @@ func main() {
 			vmr = proxmox.NewVmRef(nextid)
 		}
 		vmr.SetNode(flag.Args()[1])
-		log.Print("Creating node: ")
+		log.Printf("Creating node %s: \n", mode)
 		log.Println(vmr)
 		failError(config.CreateVm(vmr, c))
 		_, err = c.StartVm(vmr)
 		failError(err)
-		sshPort, err := proxmox.SshForwardUsernet(vmr, c)
-		failError(err)
-		log.Println("Waiting for CDRom install shutdown (at least 5 minutes)")
-		failError(proxmox.WaitForShutdown(vmr, c))
-		log.Println("Restarting")
-		_, err = c.StartVm(vmr)
-		failError(err)
-		sshPort, err = proxmox.SshForwardUsernet(vmr, c)
-		failError(err)
-		log.Println("SSH Portforward on:" + sshPort)
+
+		// ISO mode waits for the VM to reboot to exit
+		// while PXE mode just launches the VM and is done
+		if config.QemuIso != "" {
+			sshPort, err := proxmox.SshForwardUsernet(vmr, c)
+			failError(err)
+			log.Println("Waiting for CDRom install shutdown (at least 5 minutes)")
+			failError(proxmox.WaitForShutdown(vmr, c))
+			log.Println("Restarting")
+			_, err = c.StartVm(vmr)
+			failError(err)
+			sshPort, err = proxmox.SshForwardUsernet(vmr, c)
+			failError(err)
+			log.Println("SSH Portforward on:" + sshPort)
+		}
+
 		log.Println("Complete")
 
 	case "idstatus":

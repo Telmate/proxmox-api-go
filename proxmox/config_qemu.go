@@ -48,6 +48,7 @@ type ConfigQemu struct {
 	QemuKVM         bool        `json:"kvm"`
 	Hotplug         string      `json:"hotplug"`
 	QemuIso         string      `json:"iso"`
+	QemuPxe         bool        `json:"pxe"`
 	FullClone       *int        `json:"fullclone"`
 	Boot            string      `json:"boot"`
 	BootDisk        string      `json:"bootdisk,omitempty"`
