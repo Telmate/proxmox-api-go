@@ -127,7 +127,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create disks config.
-	config.CreateQemuDisksParams(vmr.vmId, params, false)
+	err = config.CreateQemuDisksParams(vmr.vmId, params, false)
+	if err != nil {
+		return fmt.Errorf("Error configure disk parameters of VM: %v, error: %s (params: %v)", vmr.vmId, err, params)
+	}
 
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
@@ -137,17 +140,26 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create networks config.
-	config.CreateQemuNetworksParams(vmr.vmId, params)
+	err = config.CreateQemuNetworksParams(vmr.vmId, params)
+	if err != nil {
+		return fmt.Errorf("Error configure network parameters of VM: %v, error: %s (params: %v)", vmr.vmId, err, params)
+	}
 
 	// Create serial interfaces
-	config.CreateQemuSerialsParams(vmr.vmId, params)
+	err = config.CreateQemuSerialsParams(vmr.vmId, params)
+	if err != nil {
+		return fmt.Errorf("Error configure serial interface parameters of VM: %v, error: %s (params: %v)", vmr.vmId, err, params)
+	}
 
 	exitStatus, err := client.CreateQemuVm(vmr.node, params)
 	if err != nil {
 		return fmt.Errorf("Error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
 
-	client.UpdateVMHA(vmr, config.HaState)
+	_, err = client.UpdateVMHA(vmr, config.HaState)
+	if err != nil {
+		return fmt.Errorf("Error update HA of VM: %v, error: %s (params: %v)", vmr.vmId, err, params)
+	}
 
 	return
 }
@@ -206,7 +218,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	return err
 }
 
-func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
+func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client, isCloned bool) (err error) {
 	configParams := map[string]interface{}{
 		"name":        config.Name,
 		"description": config.Description,
@@ -253,7 +265,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParamsDisk := map[string]interface{}{
 		"vmid": vmr.vmId,
 	}
-	config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, false)
+	config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, isCloned)
 	client.createVMDisks(vmr.node, configParamsDisk)
 	//Copy the disks to the global configParams
 	for key, value := range configParamsDisk {
