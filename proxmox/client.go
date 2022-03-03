@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -43,11 +43,11 @@ type VmRef struct {
 	pool    string
 	vmType  string
 	haState string
+	haGroup string
 }
 
 func (vmr *VmRef) SetNode(node string) {
 	vmr.node = node
-	return
 }
 
 func (vmr *VmRef) SetPool(pool string) {
@@ -56,7 +56,6 @@ func (vmr *VmRef) SetPool(pool string) {
 
 func (vmr *VmRef) SetVmType(vmType string) {
 	vmr.vmType = vmType
-	return
 }
 
 func (vmr *VmRef) GetVmType() string {
@@ -79,18 +78,34 @@ func (vmr *VmRef) HaState() string {
 	return vmr.haState
 }
 
+func (vmr *VmRef) HaGroup() string {
+	return vmr.haGroup
+}
+
 func NewVmRef(vmId int) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
 	return
 }
 
-func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config, taskTimeout int) (client *Client, err error) {
+func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config, proxyString string, taskTimeout int) (client *Client, err error) {
 	var sess *Session
-	sess, err = NewSession(apiUrl, hclient, tls)
+	sess, err = NewSession(apiUrl, hclient, proxyString, tls)
 	if err == nil {
 		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout}
 	}
 	return client, err
+}
+
+// SetAPIToken specifies a pair of user identifier and token UUID to use
+// for authenticating API calls.
+// If this is set, a ticket from calling `Login` will not be used.
+//
+// - `userID` is expected to be in the form `USER@REALM!TOKENID`
+// - `token` is just the UUID you get when initially creating the token
+//
+// See https://pve.proxmox.com/wiki/User_Management#pveum_tokens
+func (c *Client) SetAPIToken(userID, token string) {
+	c.session.SetAPIToken(userID, token)
 }
 
 func (c *Client) Login(username string, password string, otp string) (err error) {
@@ -100,6 +115,15 @@ func (c *Client) Login(username string, password string, otp string) (err error)
 	return c.session.Login(username, password, otp)
 }
 
+func (c *Client) GetVersion() (data map[string]interface{}, err error) {
+	resp, err := c.session.Get("/version", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return ResponseJSON(resp)
+}
+
 func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int) error {
 	var statErr error
 	for ii := 0; ii < tries; ii++ {
@@ -107,10 +131,8 @@ func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, trie
 		if statErr == nil {
 			return nil
 		}
-		// if statErr != io.ErrUnexpectedEOF { // don't give up on ErrUnexpectedEOF
-		//   return statErr
-		// }
-		time.Sleep(5 * time.Second)
+		log.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
+		time.Sleep(time.Duration(ii+1) * time.Second)
 	}
 	return statErr
 }
@@ -151,16 +173,25 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 			return
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Vm '%d' not found", vmr.vmId))
+	return nil, fmt.Errorf("vm '%d' not found", vmr.vmId)
 }
 
 func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
+	vmrs, err := c.GetVmRefsByName(vmName)
+	if err != nil {
+		return nil, err
+	}
+
+	return vmrs[0], nil
+}
+
+func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
 	resp, err := c.GetVmList()
 	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vm["name"] != nil && vm["name"].(string) == vmName {
-			vmr = NewVmRef(int(vm["vmid"].(float64)))
+			vmr := NewVmRef(int(vm["vmid"].(float64)))
 			vmr.node = vm["node"].(string)
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
@@ -170,10 +201,14 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 			if vm["hastate"] != nil {
 				vmr.haState = vm["hastate"].(string)
 			}
-			return
+			vmrs = append(vmrs, vmr)
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("Vm '%s' not found", vmName))
+	if len(vmrs) == 0 {
+		return nil, fmt.Errorf("vm '%s' not found", vmName)
+	} else {
+		return
+	}
 }
 
 func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err error) {
@@ -188,7 +223,7 @@ func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err err
 		return nil, err
 	}
 	if data["data"] == nil {
-		return nil, errors.New("Vm STATE not readable")
+		return nil, fmt.Errorf("vm STATE not readable")
 	}
 	vmState = data["data"].(map[string]interface{})
 	return
@@ -206,9 +241,43 @@ func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err e
 		return nil, err
 	}
 	if data["data"] == nil {
-		return nil, errors.New("Vm CONFIG not readable")
+		return nil, fmt.Errorf("vm CONFIG not readable")
 	}
 	vmConfig = data["data"].(map[string]interface{})
+	return
+}
+
+func (c *Client) GetStorageStatus(vmr *VmRef, storageName string) (storageStatus map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	var data map[string]interface{}
+	url := fmt.Sprintf("/nodes/%s/storage/%s/status", vmr.node, storageName)
+	err = c.GetJsonRetryable(url, &data, 3)
+	if err != nil {
+		return nil, err
+	}
+	if data["data"] == nil {
+		return nil, fmt.Errorf("storage STATUS not readable")
+	}
+	storageStatus = data["data"].(map[string]interface{})
+	return
+}
+
+func (c *Client) GetStorageContent(vmr *VmRef, storageName string) (data map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/storage/%s/content", vmr.node, storageName)
+	err = c.GetJsonRetryable(url, &data, 3)
+	if err != nil {
+		return nil, err
+	}
+	if data["data"] == nil {
+		return nil, fmt.Errorf("storage Content not readable")
+	}
 	return
 }
 
@@ -224,7 +293,7 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 		return nil, err
 	}
 	if data["data"] == nil {
-		return nil, errors.New("Vm SpiceProxy not readable")
+		return nil, fmt.Errorf("vm SpiceProxy not readable")
 	}
 	vmSpiceProxy = data["data"].(map[string]interface{})
 	return
@@ -255,9 +324,9 @@ func (a *AgentNetworkInterface) UnmarshalJSON(b []byte) error {
 
 	a.IPAddresses = make([]net.IP, len(intermediate.IPAddresses))
 	for idx, ip := range intermediate.IPAddresses {
-		a.IPAddresses[idx] = net.ParseIP(ip.IPAddress)
+		a.IPAddresses[idx] = net.ParseIP((strings.Split(ip.IPAddress, "%"))[0])
 		if a.IPAddresses[idx] == nil {
-			return fmt.Errorf("Could not parse %s as IP", ip.IPAddress)
+			return fmt.Errorf("could not parse %s as IP", ip.IPAddress)
 		}
 	}
 	a.MACAddress = intermediate.HardwareAddress
@@ -334,7 +403,7 @@ func (c *Client) Sendkey(vmr *VmRef, qmKey string) error {
 func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExitStatus string, err error) {
 	if taskResponse["errors"] != nil {
 		errJSON, _ := json.MarshalIndent(taskResponse["errors"], "", "  ")
-		return string(errJSON), errors.New("Error reponse")
+		return string(errJSON), fmt.Errorf("error reponse")
 	}
 	if taskResponse["data"] == nil {
 		return "", nil
@@ -355,7 +424,7 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 		time.Sleep(TaskStatusCheckInterval * time.Second)
 		waited = waited + TaskStatusCheckInterval
 	}
-	return "", errors.New("Wait timeout for:" + taskUpid)
+	return "", fmt.Errorf("Wait timeout for:" + taskUpid)
 }
 
 var rxTaskNode = regexp.MustCompile("UPID:(.*?):")
@@ -369,7 +438,7 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
 	if exitStatus != nil && exitStatus != exitStatusSuccess {
-		err = errors.New(exitStatus.(string))
+		err = fmt.Errorf(exitStatus.(string))
 	}
 	return
 }
@@ -419,6 +488,10 @@ func (c *Client) ResumeVm(vmr *VmRef) (exitStatus string, err error) {
 }
 
 func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.DeleteVmParams(vmr, nil)
+}
+
+func (c *Client) DeleteVmParams(vmr *VmRef, params map[string]interface{}) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return "", err
@@ -440,9 +513,17 @@ func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
 		}
 	}
 
+	values := ParamsToValues(params)
 	url := fmt.Sprintf("/nodes/%s/%s/%d", vmr.node, vmr.vmType, vmr.vmId)
 	var taskResponse map[string]interface{}
-	_, err = c.session.RequestJSON("DELETE", url, nil, nil, nil, &taskResponse)
+	if len(values) != 0 {
+		_, err = c.session.RequestJSON("DELETE", url, &values, nil, nil, &taskResponse)
+	} else {
+		_, err = c.session.RequestJSON("DELETE", url, nil, nil, nil, &taskResponse)
+	}
+	if err != nil {
+		return
+	}
 	exitStatus, err = c.WaitForCompletion(taskResponse)
 	return
 }
@@ -459,8 +540,8 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 	url := fmt.Sprintf("/nodes/%s/qemu", node)
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
-	defer resp.Body.Close()
 	if err != nil {
+		defer resp.Body.Close()
 		// This might not work if we never got a body. We'll ignore errors in trying to read,
 		// but extract the body if possible to give any error information back in the exitStatus
 		b, _ := ioutil.ReadAll(resp.Body)
@@ -489,8 +570,8 @@ func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}
 	url := fmt.Sprintf("/nodes/%s/lxc", node)
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
-	defer resp.Body.Close()
 	if err != nil {
+		defer resp.Body.Close()
 		// This might not work if we never got a body. We'll ignore errors in trying to read,
 		// but extract the body if possible to give any error information back in the exitStatus
 		b, _ := ioutil.ReadAll(resp.Body)
@@ -507,6 +588,21 @@ func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}
 	return
 }
 
+func (c *Client) CloneLxcContainer(vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
+
+	reqbody := ParamsToBody(vmParams)
+	url := fmt.Sprintf("/nodes/%s/lxc/%s/clone", vmr.node, vmParams["vmid"])
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return "", err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
 func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
@@ -517,6 +613,61 @@ func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitS
 			return "", err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	snapshotParams := map[string]interface{}{
+		"snapname": snapshotName,
+	}
+	reqbody := ParamsToBody(snapshotParams)
+	if err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return "", err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/%s", vmr.node, vmr.vmType, vmr.vmId, snapshotName)
+	resp, err := c.session.Delete(url, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return "", err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface{}, exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, "", err
+	}
+	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Get(url, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, "", err
+		}
+		return taskResponse, "", nil
 	}
 	return
 }
@@ -565,7 +716,7 @@ func (c *Client) SetLxcConfig(vmr *VmRef, vmParams map[string]interface{}) (exit
 
 // MigrateNode - Migrate a VM
 func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exitStatus interface{}, err error) {
-	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online})
+	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online, "with-local-disks": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	if err == nil {
@@ -579,17 +730,41 @@ func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exi
 	return nil, err
 }
 
+// ResizeQemuDisk allows the caller to increase the size of a disk by the indicated number of gigabytes
 func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
+	size := fmt.Sprintf("+%dG", moreSizeGB)
+	return c.ResizeQemuDiskRaw(vmr, disk, size)
+}
+
+// ResizeQemuDiskRaw allows the caller to provide the raw resize string to be send to proxmox.
+// See the proxmox API documentation for full information, but the short version is if you prefix
+// your desired size with a '+' character it will ADD size to the disk.  If you just specify the size by
+// itself it will do an absolute resizing to the specified size. Permitted suffixes are K, M, G, T
+// to indicate order of magnitude (kilobyte, megabyte, etc). Decrease of disk size is not permitted.
+func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitStatus interface{}, err error) {
 	// PUT
 	//disk:virtio0
 	//size:+2G
 	if disk == "" {
 		disk = "virtio0"
 	}
-	size := fmt.Sprintf("+%dG", moreSizeGB)
 	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "size": size})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
+	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
+	url := fmt.Sprintf("/nodes/%s/%s/%d/move_volume", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
@@ -632,7 +807,7 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 			if currentID >= 100 {
 				return c.GetNextID(currentID + 1)
 			} else {
-				return -1, errors.New("error using /cluster/nextid")
+				return -1, fmt.Errorf("error using /cluster/nextid")
 			}
 		}
 		nextID, err = strconv.Atoi(data["data"].(string))
@@ -659,7 +834,7 @@ func (c *Client) CreateVMDisk(
 			return err
 		}
 		if diskName, containsData := taskResponse["data"]; !containsData || diskName != fullDiskName {
-			return errors.New(fmt.Sprintf("Cannot create VM disk %s", fullDiskName))
+			return fmt.Errorf("cannot create VM disk %s - %s", fullDiskName, diskName)
 		}
 	} else {
 		return err
@@ -667,6 +842,8 @@ func (c *Client) CreateVMDisk(
 
 	return nil
 }
+
+var rxStorageModels = regexp.MustCompile(`(ide|sata|scsi|virtio)\d+`)
 
 // createVMDisks - Make disks parameters and create all VM disks on host node.
 func (c *Client) createVMDisks(
@@ -676,9 +853,8 @@ func (c *Client) createVMDisks(
 	var createdDisks []string
 	vmID := vmParams["vmid"].(int)
 	for deviceName, deviceConf := range vmParams {
-		rxStorageModels := `(ide|sata|scsi|virtio)\d+`
-		if matched, _ := regexp.MatchString(rxStorageModels, deviceName); matched {
-			deviceConfMap := ParseConf(deviceConf.(string), ",", "=")
+		if matched := rxStorageModels.MatchString(deviceName); matched {
+			deviceConfMap := ParsePMConf(deviceConf.(string), "")
 			// This if condition to differentiate between `disk` and `cdrom`.
 			if media, containsFile := deviceConfMap["media"]; containsFile && media == "disk" {
 				fullDiskName := deviceConfMap["file"].(string)
@@ -718,6 +894,286 @@ func (c *Client) DeleteVMDisks(
 	}
 
 	return nil
+}
+
+// VzDump - Create backup
+func (c *Client) VzDump(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/vzdump", vmr.node)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// DeleteVolume - Delete volume
+func (c *Client) DeleteVolume(vmr *VmRef, storageName string, volumeName string) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/storage/%s/content/%s", vmr.node, storageName, volumeName)
+	resp, err := c.session.Delete(url, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// CreateVNCProxy - Creates a TCP VNC proxy connections
+func (c *Client) CreateVNCProxy(vmr *VmRef, params map[string]interface{}) (vncProxyRes map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/vncproxy", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err != nil {
+		return nil, err
+	}
+	vncProxyRes, err = ResponseJSON(resp)
+	if err != nil {
+		return nil, err
+	}
+	if vncProxyRes["data"] == nil {
+		return nil, fmt.Errorf("VNC Proxy not readable")
+	}
+	vncProxyRes = vncProxyRes["data"].(map[string]interface{})
+	return
+}
+
+// QemuAgentPing - Execute ping.
+func (c *Client) QemuAgentPing(vmr *VmRef) (pingRes map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/ping", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		if taskResponse["data"] == nil {
+			return nil, fmt.Errorf("qemu agent ping not readable")
+		}
+		pingRes = taskResponse["data"].(map[string]interface{})
+	}
+	return
+}
+
+// QemuAgentFileWrite - Writes the given file via guest agent.
+func (c *Client) QemuAgentFileWrite(vmr *VmRef, params map[string]interface{}) (err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/file-write", vmr.node, vmr.vmId)
+	_, err = c.session.Post(url, nil, nil, &reqbody)
+	return
+}
+
+// QemuAgentSetUserPassword - Sets the password for the given user to the given password.
+func (c *Client) QemuAgentSetUserPassword(vmr *VmRef, params map[string]interface{}) (result map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		if taskResponse["data"] == nil {
+			return nil, fmt.Errorf("qemu agent set user password not readable")
+		}
+		result = taskResponse["data"].(map[string]interface{})
+	}
+	return
+}
+
+// QemuAgentExec - Executes the given command in the vm via the guest-agent and returns an object with the pid.
+func (c *Client) QemuAgentExec(vmr *VmRef, params map[string]interface{}) (result map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		if taskResponse["data"] == nil {
+			return nil, fmt.Errorf("qemu agent exec not readable")
+		}
+		result = taskResponse["data"].(map[string]interface{})
+	}
+	return
+}
+
+// GetExecStatus - Gets the status of the given pid started by the guest-agent
+func (c *Client) GetExecStatus(vmr *VmRef, pid string) (status map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	err = c.GetJsonRetryable(fmt.Sprintf("/nodes/%s/%s/%d/agent/exec-status?pid=%s", vmr.node, vmr.vmType, vmr.vmId, pid), &status, 3)
+	if err == nil {
+		status = status["data"].(map[string]interface{})
+	}
+	return
+}
+
+// SetQemuFirewallOptions - Set Firewall options.
+func (c *Client) SetQemuFirewallOptions(vmr *VmRef, fwOptions map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(fwOptions)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", vmr.node, vmr.vmId)
+	resp, err := c.session.Put(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// GetQemuFirewallOptions - Get VM firewall options.
+func (c *Client) GetQemuFirewallOptions(vmr *VmRef) (firewallOptions map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", vmr.node, vmr.vmId)
+	resp, err := c.session.Get(url, nil, nil)
+	if err == nil {
+		firewallOptions, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		return firewallOptions, nil
+	}
+	return
+}
+
+// CreateQemuIPSet - Create new IPSet
+func (c *Client) CreateQemuIPSet(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// AddQemuIPSet - Add IP or Network to IPSet.
+func (c *Client) AddQemuIPSet(vmr *VmRef, name string, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, name)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// GetQemuIPSet - List IPSets
+func (c *Client) GetQemuIPSet(vmr *VmRef) (ipsets map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", vmr.node, vmr.vmId)
+	resp, err := c.session.Get(url, nil, nil)
+	if err == nil {
+		ipsets, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		return ipsets, nil
+	}
+	return
+}
+
+// DeleteQemuIPSet - Delete IPSet
+func (c *Client) DeleteQemuIPSet(vmr *VmRef, IPSetName string) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, IPSetName)
+	resp, err := c.session.Delete(url, nil, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// DeleteQemuIPSetNetwork - Remove IP or Network from IPSet.
+func (c *Client) DeleteQemuIPSetNetwork(vmr *VmRef, IPSetName string, network string, params map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	values := ParamsToValues(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", vmr.node, vmr.vmId, IPSetName, network)
+	resp, err := c.session.Delete(url, &values, nil)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
 }
 
 func (c *Client) Upload(node string, storage string, contentType string, filename string, file io.Reader) error {
@@ -773,7 +1229,7 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 		return err
 	}
 	if exitStatus != exitStatusSuccess {
-		return fmt.Errorf("Moving file to destination failed: %v", exitStatus)
+		return fmt.Errorf("moving file to destination failed: %v", exitStatus)
 	}
 	return nil
 }
@@ -903,9 +1359,28 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 	return
 }
 
-func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{}, err error) {
-	// Same hastate
-	if vmr.haState == haState {
+func (c *Client) ReadVMHA(vmr *VmRef) (err error) {
+	var list map[string]interface{}
+	url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
+	err = c.GetJsonRetryable(url, &list, 3)
+	if err == nil {
+		list = list["data"].(map[string]interface{})
+		for elem, value := range list {
+			if elem == "group" {
+				vmr.haGroup = value.(string)
+			}
+			if elem == "state" {
+				vmr.haState = value.(string)
+			}
+		}
+	}
+	return
+
+}
+
+func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, err error) {
+	// Same hastate & hagroup
+	if vmr.haState == haState && vmr.haGroup == haGroup {
 		return
 	}
 
@@ -928,6 +1403,9 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{},
 		paramMap := map[string]interface{}{
 			"sid": vmr.vmId,
 		}
+		if haGroup != "" {
+			paramMap["group"] = haGroup
+		}
 		reqbody := ParamsToBody(paramMap)
 		resp, err := c.session.Post("/cluster/ha/resources", nil, nil, &reqbody)
 		if err == nil {
@@ -946,6 +1424,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{},
 	//Set wanted state
 	paramMap := map[string]interface{}{
 		"state": haState,
+		"group": haGroup,
 	}
 	reqbody := ParamsToBody(paramMap)
 	url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
@@ -959,4 +1438,64 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string) (exitStatus interface{},
 	}
 
 	return
+}
+
+func (c *Client) GetPoolList() (pools map[string]interface{}, err error) {
+	resp, err := c.session.Get("/pools", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return ResponseJSON(resp)
+}
+
+func (c *Client) GetPoolInfo(poolid string) (poolInfo map[string]interface{}, err error) {
+	url := fmt.Sprintf("/pools/%s", poolid)
+	resp, err := c.session.Get(url, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return ResponseJSON(resp)
+}
+
+func (c *Client) CreatePool(poolid string, comment string) error {
+	paramMap := map[string]interface{}{
+		"poolid":  poolid,
+		"comment": comment,
+	}
+
+	reqbody := ParamsToBody(paramMap)
+	_, err := c.session.Post("/pools", nil, nil, &reqbody)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) UpdatePoolComment(poolid string, comment string) error {
+	paramMap := map[string]interface{}{
+		"poolid":  poolid,
+		"comment": comment,
+	}
+
+	reqbody := ParamsToBodyWithEmpty(paramMap, []string{"comment"})
+	url := fmt.Sprintf("/pools/%s", poolid)
+	_, err := c.session.Put(url, nil, nil, &reqbody)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) DeletePool(poolid string) error {
+	url := fmt.Sprintf("/pools/%s", poolid)
+	_, err := c.session.Delete(url, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

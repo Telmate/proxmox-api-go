@@ -6,11 +6,11 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -28,17 +28,36 @@ type Session struct {
 	ApiUrl     string
 	AuthTicket string
 	CsrfToken  string
+	AuthToken  string // Combination of user, realm, token ID and UUID
 	Headers    http.Header
 }
 
-func NewSession(apiUrl string, hclient *http.Client, tls *tls.Config) (session *Session, err error) {
+func NewSession(apiUrl string, hclient *http.Client, proxyString string, tls *tls.Config) (session *Session, err error) {
 	if hclient == nil {
-		// Only build a transport if we're also building the client
-		tr := &http.Transport{
-			TLSClientConfig:    tls,
-			DisableCompression: true,
+		if proxyString == "" {
+			tr := &http.Transport{
+				TLSClientConfig:    tls,
+				DisableCompression: true,
+				Proxy:              nil,
+			}
+			hclient = &http.Client{Transport: tr}
+		} else {
+			proxyURL, err := url.ParseRequestURI(proxyString)
+			if err != nil {
+				return nil, err
+			}
+			if _, _, err := net.SplitHostPort(proxyURL.Host); err != nil {
+				return nil, err
+			} else {
+				// Only build a transport if we're also building the client
+				tr := &http.Transport{
+					TLSClientConfig:    tls,
+					DisableCompression: true,
+					Proxy:              http.ProxyURL(proxyURL),
+				}
+				hclient = &http.Client{Transport: tr}
+			}
 		}
-		hclient = &http.Client{Transport: tr}
 	}
 	session = &Session{
 		httpClient: hclient,
@@ -51,13 +70,30 @@ func NewSession(apiUrl string, hclient *http.Client, tls *tls.Config) (session *
 }
 
 func ParamsToBody(params map[string]interface{}) (body []byte) {
-	vals := url.Values{}
+	vals := ParamsToValuesWithEmpty(params, []string{})
+	body = bytes.NewBufferString(vals.Encode()).Bytes()
+	return
+}
+
+func ParamsToValues(params map[string]interface{}) (vals url.Values) {
+	vals = ParamsToValuesWithEmpty(params, []string{})
+	return
+}
+
+func ParamsToBodyWithEmpty(params map[string]interface{}, allowedEmpty []string) (body []byte) {
+	vals := ParamsToValuesWithEmpty(params, allowedEmpty)
+	body = bytes.NewBufferString(vals.Encode()).Bytes()
+	return
+}
+
+func ParamsToValuesWithEmpty(params map[string]interface{}, allowedEmpty []string) (vals url.Values) {
+	vals = url.Values{}
 	for k, intrV := range params {
 		var v string
-		switch intrV.(type) {
+		switch intrV := intrV.(type) {
 		// Convert true/false bool to 1/0 string where Proxmox API can understand it.
 		case bool:
-			if intrV.(bool) {
+			if intrV {
 				v = "1"
 			} else {
 				v = "0"
@@ -65,11 +101,10 @@ func ParamsToBody(params map[string]interface{}) (body []byte) {
 		default:
 			v = fmt.Sprintf("%v", intrV)
 		}
-		if v != "" {
+		if v != "" || inArray(allowedEmpty, k) {
 			vals.Set(k, v)
 		}
 	}
-	body = bytes.NewBufferString(vals.Encode()).Bytes()
 	return
 }
 
@@ -108,6 +143,11 @@ func TypedResponse(resp *http.Response, v interface{}) error {
 	return nil
 }
 
+func (s *Session) SetAPIToken(userID, token string) {
+	auth := fmt.Sprintf("%s=%s", userID, token)
+	s.AuthToken = auth
+}
+
 func (s *Session) Login(username string, password string, otp string) (err error) {
 	reqUser := map[string]interface{}{"username": username, "password": password}
 	if otp != "" {
@@ -122,7 +162,7 @@ func (s *Session) Login(username string, password string, otp string) (err error
 		return err
 	}
 	if resp == nil {
-		return errors.New("Login error reading response")
+		return fmt.Errorf("Login error reading response")
 	}
 	dr, _ := httputil.DumpResponse(resp, true)
 	jbody, err := ResponseJSON(resp)
@@ -130,12 +170,12 @@ func (s *Session) Login(username string, password string, otp string) (err error
 		return err
 	}
 	if jbody == nil || jbody["data"] == nil {
-		return fmt.Errorf("Invalid login response:\n-----\n%s\n-----", dr)
+		return fmt.Errorf("invalid login response:\n-----\n%s\n-----", dr)
 	}
 	dat := jbody["data"].(map[string]interface{})
 	//Check if the 2FA was required
 	if dat["NeedTFA"] == 1.0 {
-		return errors.New("Missing TFA code")
+		return fmt.Errorf("missing TFA code")
 	}
 	s.AuthTicket = dat["ticket"].(string)
 	s.CsrfToken = dat["CSRFPreventionToken"].(string)
@@ -150,7 +190,9 @@ func (s *Session) NewRequest(method, url string, headers *http.Header, body io.R
 	if headers != nil {
 		req.Header = *headers
 	}
-	if s.AuthTicket != "" {
+	if s.AuthToken != "" {
+		req.Header.Add("Authorization", "PVEAPIToken="+s.AuthToken)
+	} else if s.AuthTicket != "" {
 		req.Header.Add("Cookie", "PVEAuthCookie="+s.AuthTicket)
 		req.Header.Add("CSRFPreventionToken", s.CsrfToken)
 	}
@@ -190,7 +232,7 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return resp, errors.New(resp.Status)
+		return resp, fmt.Errorf(resp.Status)
 	}
 
 	return resp, nil
@@ -260,7 +302,7 @@ func (s *Session) RequestJSON(
 
 	rbody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return resp, errors.New("error reading response body")
+		return resp, fmt.Errorf("error reading response body")
 	}
 	if err = json.Unmarshal(rbody, &responseContainer); err != nil {
 		return resp, err

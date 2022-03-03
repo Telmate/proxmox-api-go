@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
@@ -17,17 +18,28 @@ func main() {
 	insecure = flag.Bool("insecure", false, "TLS insecure mode")
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
 	taskTimeout := flag.Int("timeout", 300, "api task timeout in seconds")
+	proxyUrl := flag.String("proxy", "", "proxy url to connect to")
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
 	tlsconf := &tls.Config{InsecureSkipVerify: true}
 	if !*insecure {
 		tlsconf = nil
 	}
-	c, _ := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *taskTimeout)
-	err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
-	if err != nil {
-		log.Fatal(err)
+	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *proxyUrl, *taskTimeout)
+	if userRequiresAPIToken(os.Getenv("PM_USER")) {
+		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
+		// As test, get the version of the server
+		_, err := c.GetVersion()
+		if err != nil {
+			log.Fatalf("login error: %s", err)
+		}
+	} else {
+		err = c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
+
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {
@@ -35,7 +47,7 @@ func main() {
 			if err != nil {
 				vmid = 0
 			}
-		} else if flag.Args()[0] == "idstatus" {
+		} else if len(flag.Args()) == 0 || (flag.Args()[0] == "idstatus") {
 			vmid = 0
 		}
 	}
@@ -51,25 +63,28 @@ func main() {
 	switch flag.Args()[0] {
 	case "start":
 		vmr = proxmox.NewVmRef(vmid)
-		jbody, _ = c.StartVm(vmr)
+		jbody, err = c.StartVm(vmr)
+		failError(err)
 
 	case "stop":
 
 		vmr = proxmox.NewVmRef(vmid)
-		jbody, _ = c.StopVm(vmr)
+		jbody, err = c.StopVm(vmr)
+		failError(err)
 
 	case "destroy":
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, err = c.StopVm(vmr)
 		failError(err)
-		jbody, _ = c.DeleteVm(vmr)
+		jbody, err = c.DeleteVm(vmr)
+		failError(err)
 
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
-		c.CheckVmRef(vmr)
+		err := c.CheckVmRef(vmr)
+		failError(err)
 		vmType := vmr.GetVmType()
 		var config interface{}
-		var err error
 		if vmType == "qemu" {
 			config, err = proxmox.NewConfigQemuFromApi(vmr, c)
 		} else if vmType == "lxc" {
@@ -81,7 +96,8 @@ func main() {
 
 	case "getNetworkInterfaces":
 		vmr = proxmox.NewVmRef(vmid)
-		c.CheckVmRef(vmr)
+		err := c.CheckVmRef(vmr)
+		failError(err)
 		networkInterfaces, err := c.GetVmAgentNetworkInterfaces(vmr)
 		failError(err)
 
@@ -106,6 +122,12 @@ func main() {
 
 	case "installQemu":
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
+		var mode string
+		if config.QemuIso != "" {
+			mode = "(ISO boot mode)"
+		} else if config.QemuPxe == true {
+			mode = "(PXE boot mode)"
+		}
 		failError(err)
 		if vmid > 0 {
 			vmr = proxmox.NewVmRef(vmid)
@@ -115,21 +137,27 @@ func main() {
 			vmr = proxmox.NewVmRef(nextid)
 		}
 		vmr.SetNode(flag.Args()[1])
-		log.Print("Creating node: ")
+		log.Printf("Creating node %s: \n", mode)
 		log.Println(vmr)
 		failError(config.CreateVm(vmr, c))
 		_, err = c.StartVm(vmr)
 		failError(err)
-		sshPort, err := proxmox.SshForwardUsernet(vmr, c)
-		failError(err)
-		log.Println("Waiting for CDRom install shutdown (at least 5 minutes)")
-		failError(proxmox.WaitForShutdown(vmr, c))
-		log.Println("Restarting")
-		_, err = c.StartVm(vmr)
-		failError(err)
-		sshPort, err = proxmox.SshForwardUsernet(vmr, c)
-		failError(err)
-		log.Println("SSH Portforward on:" + sshPort)
+
+		// ISO mode waits for the VM to reboot to exit
+		// while PXE mode just launches the VM and is done
+		if config.QemuIso != "" {
+			sshPort, err := proxmox.SshForwardUsernet(vmr, c)
+			failError(err)
+			log.Println("Waiting for CDRom install shutdown (at least 5 minutes)")
+			failError(proxmox.WaitForShutdown(vmr, c))
+			log.Println("Restarting")
+			_, err = c.StartVm(vmr)
+			failError(err)
+			sshPort, err = proxmox.SshForwardUsernet(vmr, c)
+			failError(err)
+			log.Println("SSH Portforward on:" + sshPort)
+		}
+
 		log.Println("Complete")
 
 	case "idstatus":
@@ -146,9 +174,9 @@ func main() {
 		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
 		failError(err)
 		log.Println("Looking for template: " + flag.Args()[1])
-		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
 		failError(err)
-		if sourceVmr == nil {
+		if sourceVmrs == nil {
 			log.Fatal("Can't find template")
 			return
 		}
@@ -159,13 +187,69 @@ func main() {
 		vmr.SetNode(flag.Args()[2])
 		log.Print("Creating node: ")
 		log.Println(vmr)
+		// prefer source Vm located on same node
+		sourceVmr := sourceVmrs[0]
+		for _, candVmr := range sourceVmrs {
+			if candVmr.Node() == vmr.Node() {
+				sourceVmr = candVmr
+			}
+		}
+
 		failError(config.CloneVm(sourceVmr, vmr, c))
 		failError(config.UpdateConfig(vmr, c))
 		log.Println("Complete")
 
+	case "createQemuSnapshot":
+		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		jbody, err = c.CreateQemuSnapshot(sourceVmr, flag.Args()[2])
+		failError(err)
+
+	case "deleteQemuSnapshot":
+		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		jbody, err = c.DeleteQemuSnapshot(sourceVmr, flag.Args()[2])
+		failError(err)
+
+	case "listQemuSnapshot":
+		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		if err == nil {
+			jbody, _, err = c.ListQemuSnapshot(sourceVmr)
+			if rec, ok := jbody.(map[string]interface{}); ok {
+				temp := rec["data"].([]interface{})
+				for _, val := range temp {
+					snapshotName := val.(map[string]interface{})
+					if snapshotName["name"] != "current" {
+						fmt.Println(snapshotName["name"])
+					}
+				}
+			} else {
+				fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
+			}
+		}
+		failError(err)
+
+	case "listQemuSnapshot2":
+		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
+		if err == nil {
+			for _, sourceVmr := range sourceVmrs {
+				jbody, _, err = c.ListQemuSnapshot(sourceVmr)
+				if rec, ok := jbody.(map[string]interface{}); ok {
+					temp := rec["data"].([]interface{})
+					for _, val := range temp {
+						snapshotName := val.(map[string]interface{})
+						if snapshotName["name"] != "current" {
+							fmt.Printf("%d@%s:%s\n", sourceVmr.VmId(), sourceVmr.Node(), snapshotName["name"])
+						}
+					}
+				} else {
+					fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
+				}
+			}
+		}
+		failError(err)
+
 	case "rollbackQemu":
-		vmr = proxmox.NewVmRef(vmid)
-		jbody, err = c.RollbackQemuVm(vmr, flag.Args()[2])
+		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		jbody, err = c.RollbackQemuVm(sourceVmr, flag.Args()[2])
 		failError(err)
 
 	case "sshforward":
@@ -187,11 +271,15 @@ func main() {
 		log.Println("Keys sent")
 
 	case "nextid":
-		id, err := c.NextId()
+		id, err := c.GetNextID(0)
 		failError(err)
 		log.Printf("Getting Next Free ID: %d\n", id)
 
 	case "checkid":
+		if len(flag.Args()) < 2 {
+			fmt.Printf("Missing vmid\n")
+			os.Exit(1)
+		}
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
 		id, err := c.VMIdExists(i)
@@ -214,6 +302,94 @@ func main() {
 		}
 		log.Printf("VM %d is moved on %s\n", vmid, args[1])
 
+	case "getNodeList":
+		nodes, err := c.GetNodeList()
+		if err != nil {
+			log.Printf("Error listing Nodes %+v\n", err)
+			os.Exit(1)
+		}
+		nodeList, err := json.Marshal(nodes)
+		fmt.Println(string(nodeList))
+
+	case "getVmList":
+		vms, err := c.GetVmList()
+		if err != nil {
+			log.Printf("Error listing VMs %+v\n", err)
+			os.Exit(1)
+		}
+		vmList, err := json.Marshal(vms)
+		fmt.Println(string(vmList))
+
+	case "getVersion":
+		versionInfo, err := c.GetVersion()
+		failError(err)
+		version, err := json.Marshal(versionInfo)
+		failError(err)
+		fmt.Println(string(version))
+
+	case "getPoolList":
+		pools, err := c.GetPoolList()
+		if err != nil {
+			log.Printf("Error listing pools %+v\n", err)
+			os.Exit(1)
+		}
+		poolList, err := json.Marshal(pools)
+		fmt.Println(string(poolList))
+
+	case "getPoolInfo":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+		poolinfo, err := c.GetPoolInfo(poolid)
+		if err != nil {
+			log.Printf("Error getting pool info %+v\n", err)
+			os.Exit(1)
+		}
+		poolList, err := json.Marshal(poolinfo)
+		fmt.Println(string(poolList))
+
+	case "createPool":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+
+		comment := ""
+		if len(flag.Args()) == 3 {
+			comment = flag.Args()[2]
+		}
+
+		err := c.CreatePool(poolid, comment)
+		failError(err)
+		fmt.Printf("Pool %s created\n", poolid)
+
+	case "deletePool":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: poolid required")
+			os.Exit(1)
+		}
+		poolid := flag.Args()[1]
+
+		err := c.DeletePool(poolid)
+		failError(err)
+		fmt.Printf("Pool %s removed\n", poolid)
+
+	case "updatePoolComment":
+		if len(flag.Args()) < 3 {
+			log.Printf("Error: poolid and comment required")
+			os.Exit(1)
+		}
+
+		poolid := flag.Args()[1]
+		comment := flag.Args()[2]
+
+		err := c.UpdatePoolComment(poolid, comment)
+		failError(err)
+		fmt.Printf("Pool %s updated\n", poolid)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
@@ -228,4 +404,10 @@ func failError(err error) {
 		log.Fatal(err)
 	}
 	return
+}
+
+var rxUserRequiresToken = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+![a-z0-9]+")
+
+func userRequiresAPIToken(userID string) bool {
+	return rxUserRequiresToken.MatchString(userID)
 }
