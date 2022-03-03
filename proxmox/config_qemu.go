@@ -281,7 +281,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	return err
 }
 
-func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
+func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client, isCloned bool) (err error) {
 	configParams := map[string]interface{}{
 		"name":        config.Name,
 		"description": config.Description,
@@ -332,7 +332,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"vmid": vmr.vmId,
 	}
 	// TODO keep going if error=
-	err = config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, false)
+	err = config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, isCloned)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
 	}
@@ -937,7 +937,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	for _, usbName := range usbNames {
 		usbConfStr := vmConfig[usbName]
 		usbConfList := strings.Split(usbConfStr.(string), ",")
-		
+
 		id := rxDeviceID.FindStringSubmatch(usbName)
 		usbID, _ := strconv.Atoi(id[0])
 		_, host := ParseSubConf(usbConfList[0], "=")
