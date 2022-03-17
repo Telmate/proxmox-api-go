@@ -43,7 +43,7 @@ func main() {
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {
-			vmid, err = strconv.Atoi(flag.Args()[len(flag.Args())-1])
+			vmid, err = strconv.Atoi(flag.Args()[1])
 			if err != nil {
 				vmid = 0
 			}
@@ -294,7 +294,7 @@ func main() {
 			fmt.Printf("Missing target node\n")
 			os.Exit(1)
 		}
-		_, err := c.MigrateNode(vmr, args[1], true)
+		_, err := c.MigrateNode(vmr, args[2], true)
 
 		if err != nil {
 			log.Printf("Error to move %+v\n", err)
