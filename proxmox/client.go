@@ -155,6 +155,9 @@ func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
 
 func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error) {
 	resp, err := c.GetVmList()
+	if resp["data"] == nil {
+		return nil, err
+	}
 	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
