@@ -86,7 +86,17 @@ func ParamsToBodyWithEmpty(params map[string]interface{}, allowedEmpty []string)
 	return
 }
 
+func ParamsToBodyWithAllEmpty(params map[string]interface{}) (body []byte) {
+	vals := ParamsToValuesWithAllEmpty(params, []string{}, true)
+	body = bytes.NewBufferString(vals.Encode()).Bytes()
+	return
+}
+
 func ParamsToValuesWithEmpty(params map[string]interface{}, allowedEmpty []string) (vals url.Values) {
+	return ParamsToValuesWithAllEmpty(params, allowedEmpty, false)
+}
+
+func ParamsToValuesWithAllEmpty(params map[string]interface{}, allowedEmpty []string, allowEmpty bool) (vals url.Values) {
 	vals = url.Values{}
 	for k, intrV := range params {
 		var v string
@@ -101,7 +111,9 @@ func ParamsToValuesWithEmpty(params map[string]interface{}, allowedEmpty []strin
 		default:
 			v = fmt.Sprintf("%v", intrV)
 		}
-		if v != "" || inArray(allowedEmpty, k) {
+		if allowEmpty == true {
+			vals.Set(k, v)
+		} else if v != "" || inArray(allowedEmpty, k) {
 			vals.Set(k, v)
 		}
 	}

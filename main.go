@@ -390,6 +390,55 @@ func main() {
 		failError(err)
 		fmt.Printf("Pool %s updated\n", poolid)
 
+	//Users
+	case "getUser":
+		var config interface{}
+		userid := flag.Args()[1]
+		config, err := proxmox.NewConfigUserFromApi(userid, c)
+		failError(err)
+		cj, err := json.MarshalIndent(config, "", "  ")
+		log.Println(string(cj))
+
+	case "getUserList":
+		users, err := c.GetUserList()
+		if err != nil {
+			log.Printf("Error listing users %+v\n", err)
+			os.Exit(1)
+		}
+		userList, err := json.Marshal(users)
+		fmt.Println(string(userList))
+
+	case "updateUserPassword":
+		if len(flag.Args()) < 3 {
+			log.Printf("Error: Userid and Password required")
+			os.Exit(1)
+		}
+		userid := flag.Args()[1]
+		err := c.UpdateUserPassword(userid, flag.Args()[2])
+		failError(err)
+		fmt.Printf("Password of User %s updated\n", userid)
+
+	case "setUser":
+		var password string
+		config, err := proxmox.NewConfigUserFromJson(os.Stdin)
+		failError(err)
+		userid := flag.Args()[1]
+		if len(flag.Args()) > 2 {
+			password = flag.Args()[2]
+		}
+		failError(config.SetUser(userid, password, c))
+		log.Printf("User %s has been configured\n", userid)
+
+	case "deleteUser":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: userid required")
+			os.Exit(1)
+		}
+		userid := flag.Args()[1]
+		err := c.DeleteUser(userid)
+		failError(err)
+		fmt.Printf("User %s removed\n", userid)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}

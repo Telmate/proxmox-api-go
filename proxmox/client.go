@@ -1499,3 +1499,101 @@ func (c *Client) DeletePool(poolid string) error {
 
 	return nil
 }
+
+//User
+func (c *Client) GetUserConfig(id string) (config map[string]interface{}, err error) {
+	var data map[string]interface{}
+	err = c.GetJsonRetryable("/access/users/" + id, &data, 3)
+	if err != nil {
+		return nil, err
+	}
+	if data["data"] == nil {
+		return nil, fmt.Errorf("User CONFIG not readable")
+	}
+	config = data["data"].(map[string]interface{})
+	return
+}
+
+func (c *Client) GetUserList() (users map[string]interface{}, err error) {
+	resp, err := c.session.Get("/access/users", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return ResponseJSON(resp)
+}
+
+func (c *Client) UpdateUserPassword(userid string, password string) error {
+	err := ValidateUserPassword(password)
+	if err != nil {
+		return err
+	}
+	paramMap := map[string]interface{}{
+		"userid":   userid,
+		"password": password,
+	}
+
+	reqbody := ParamsToBody(paramMap)
+	_, err = c.session.Put("/access/password", nil, nil, &reqbody)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) CreateUser(params map[string]interface{}) (exitStatus string, err error) {
+	err = ValidateUserPassword(params["password"].(string))
+	if err != nil {
+		return "", err
+	}
+	reqbody := ParamsToBody(params)
+	var resp *http.Response
+	resp, err = c.session.Post("/access/users", nil, nil, &reqbody)
+	if err != nil {
+		defer resp.Body.Close()
+		// This might not work if we never got a body. We'll ignore errors in trying to read,
+		// but extract the body if possible to give any error information back in the exitStatus
+		b, _ := ioutil.ReadAll(resp.Body)
+		exitStatus = string(b)
+		return exitStatus, err
+	}
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return "", err
+	}
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	return
+}
+
+func (c *Client) UpdateUser(id string, params map[string]interface{}) (exitStatus string, err error) {
+	reqbody := ParamsToBodyWithAllEmpty(params)
+	// reqbody := ParamsToBody(params)
+	var resp *http.Response
+	resp, err = c.session.Put("/access/users/" + id, nil, nil, &reqbody)
+	if err != nil {
+		defer resp.Body.Close()
+		// This might not work if we never got a body. We'll ignore errors in trying to read,
+		// but extract the body if possible to give any error information back in the exitStatus
+		b, _ := ioutil.ReadAll(resp.Body)
+		exitStatus = string(b)
+		return exitStatus, err
+	}
+
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return "", err
+	}
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	return
+}
+
+func (c *Client) CheckUserExistance(id string) (existance bool, err error) {
+	list, err := c.GetUserList()
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "userid", id)
+	return
+}
+
+func (c *Client) DeleteUser(id string) (err error) {
+	_, err = c.session.Delete("/access/users/" + id, nil, nil)
+	return
+}

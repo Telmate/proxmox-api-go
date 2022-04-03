@@ -20,6 +20,17 @@ func Itob(i int) bool {
 	return i == 1
 }
 
+// Check the value of a key in a nested array of map[string]interface{}
+func ItemInKeyOfArray(array []interface{}, key, value string) (existance bool){
+	for i := range array {
+		item := array[i].(map[string]interface{})
+		if string(item[key].(string)) == value {
+			return true
+		}
+	}
+	return false
+}
+
 // ParseSubConf - Parse standard sub-conf strings `key=value`.
 func ParseSubConf(
 	element string,
@@ -102,4 +113,26 @@ func DiskSizeGB(dcSize interface{}) float64 {
 		diskSize = dcSize
 	}
 	return diskSize
+}
+
+// Convert Array to a comma (,) delimited list
+func ArrayToCSV(array interface{}) (csv string) {
+	var arrayString []string
+	switch array.(type) {
+	case []interface{}:
+		arrayString = ArrayToStringType(array.([]interface{}))
+	case []string:
+		arrayString = array.([]string)
+	}
+	csv = strings.Join(arrayString, `,`)
+	return
+}
+
+// Convert Array of type []interface{} to array of type []string
+func ArrayToStringType(inputarray []interface{}) (array []string) {
+	array = make([]string, len(inputarray))
+	for i, v := range inputarray {
+		array[i] = v.(string)
+	}
+	return
 }

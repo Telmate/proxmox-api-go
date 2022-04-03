@@ -37,6 +37,16 @@ export PM_OTP=otpcode (only if required)
 ./proxmox-api-go listQemuSnapshot vm-name
 
 ./proxmox-api-go rollbackQemu vm-name
+
+./proxmox-api-go getUserList
+
+./proxmox-api-go getUser userid
+
+./proxmox-api-go updateUserPassword userid password
+
+./proxmox-api-go setUser userid password < user.json
+
+./proxmox-api-go deleteUser userid
 ```
 
 ## Proxy server support
@@ -118,6 +128,24 @@ cloneQemu cloud-init JSON Sample:
   "ipconfig0": "gw=10.0.2.2,ip=10.0.2.17/24",
   "sshkeys": "...",
   "nameserver": "8.8.8.8"
+}
+```
+
+setUser JSON Sample:
+
+```json
+{
+  "comment": "",
+  "email": "b.wayne@proxmox.com",
+  "enable": true,
+  "expire": 0,
+  "firstname": "Bruce",
+  "lastname": "Wayne",
+  "groups": [
+    "admins",
+    "usergroup"
+  ],
+  "keys": "2fa key"
 }
 ```
 
