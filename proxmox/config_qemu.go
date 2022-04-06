@@ -618,10 +618,6 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["scsihw"]; isSet {
 		scsihw = vmConfig["scsihw"].(string)
 	}
-	hastate := ""
-	if _, isSet := vmConfig["hastate"]; isSet {
-		hastate = vmConfig["hastate"].(string)
-	}
 
 	config = &ConfigQemu{
 		Name:            name,
@@ -645,7 +641,6 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Boot:            boot,
 		BootDisk:        bootdisk,
 		Scsihw:          scsihw,
-		HaState:         hastate,
 		QemuDisks:       QemuDevices{},
 		QemuUnusedDisks: QemuDevices{},
 		QemuVga:         QemuDevice{},
@@ -937,7 +932,6 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	for _, usbName := range usbNames {
 		usbConfStr := vmConfig[usbName]
 		usbConfList := strings.Split(usbConfStr.(string), ",")
-		
 		id := rxDeviceID.FindStringSubmatch(usbName)
 		usbID, _ := strconv.Atoi(id[0])
 		_, host := ParseSubConf(usbConfList[0], "=")
@@ -959,6 +953,16 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		if len(usbConfMap) > 0 {
 			config.QemuUsbs[usbID] = usbConfMap
 		}
+	}
+
+	// hastate is return by the api for a vm resource type but not the hagroup
+	err = client.ReadVMHA(vmr)
+	if err == nil {
+		config.HaState = vmr.HaState()
+		config.HaGroup = vmr.HaGroup()
+	} else {
+		log.Printf("[DEBUG] VM %d(%s) has no HA config", vmr.vmId, vmConfig["hostname"])
+		return config, nil
 	}
 
 	return
