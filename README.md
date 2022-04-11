@@ -171,7 +171,6 @@ createAcmeAccount JSON Sample:
 
 ```json
 {
-  "name": "acme-staging",
   "contact": [
     "b.wayne@proxmox.com",
     "c.kent@proxmox.com"
@@ -185,7 +184,6 @@ setAcmePlugin JSON Sample:
 
 ```json
 {
-  "pluginid": "AWS",
   "api": "aws",
   "data": "AWS_ACCESS_KEY_ID=DEMOACCESSKEYID\nAWS_SECRET_ACCESS_KEY=DEMOSECRETACCESSKEY\n",
   "enable": true,
