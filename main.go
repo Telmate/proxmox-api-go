@@ -492,6 +492,45 @@ func main() {
 		failError(err)
 		fmt.Printf("Acme account %s removed\n", acmeid)
 
+	//ACME Plugin
+	case "getAcmePluginList":
+		plugins, err := c.GetAcmePluginList()
+		if err != nil {
+			log.Printf("Error listing Acme plugins %+v\n", err)
+			os.Exit(1)
+		}
+		pluginList, err := json.Marshal(plugins)
+		fmt.Println(string(pluginList))
+
+	case "getAcmePlugin":
+		var config interface{}
+		pluginid := flag.Args()[1]
+		config, err := proxmox.NewConfigAcmePluginFromApi(pluginid, c)
+		failError(err)
+		cj, err := json.MarshalIndent(config, "", "  ")
+		log.Println(string(cj))
+
+	case "setAcmePlugin":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Acme plugin name required")
+			os.Exit(1)
+		}
+		config, err := proxmox.NewConfigAcmePluginFromJson(os.Stdin)
+		failError(err)
+		pluginid := flag.Args()[1]
+		failError(config.SetAcmePlugin(pluginid, c))
+		log.Printf("Acme plugin %s has been configured\n", pluginid)
+
+	case "deleteAcmePlugin":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Acme plugin name required")
+			os.Exit(1)
+		}
+		pluginid := flag.Args()[1]
+		err := c.DeleteAcmePlugin(pluginid)
+		failError(err)
+		fmt.Printf("Acme plugin %s removed\n", pluginid)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}

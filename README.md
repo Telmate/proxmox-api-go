@@ -57,6 +57,14 @@ export PM_OTP=otpcode (only if required)
 ./proxmox-api-go updateAcmeAccountEmail accountid email0,email1,email2
 
 ./proxmox-api-go deleteAcmeAccount accountid
+
+./proxmox-api-go getAcmePluginList
+
+./proxmox-api-go getAcmePlugin pluginid
+
+./proxmox-api-go setAcmePlugin pluginid < acmePlugin.json
+
+./proxmox-api-go deleteAcmePlugin pluginid
 ```
 
 ## Proxy server support
@@ -170,6 +178,18 @@ createAcmeAccount JSON Sample:
   ],
   "directory": "https://acme-staging-v02.api.letsencrypt.org/directory",
   "tos": true
+}
+```
+
+setAcmePlugin JSON Sample:
+
+```json
+{
+  "pluginid": "AWS",
+  "api": "aws",
+  "data": "AWS_ACCESS_KEY_ID=DEMOACCESSKEYID\nAWS_SECRET_ACCESS_KEY=DEMOSECRETACCESSKEY\n",
+  "enable": true,
+  "validation-delay": 30
 }
 ```
 

@@ -1639,6 +1639,34 @@ func (c *Client) DeleteAcmeAccount(id string) (err error) {
 	return
 }
 
+//ACME Plugin
+func (c *Client) GetAcmePluginList() (accounts map[string]interface{}, err error) {
+	return c.GetItemList("/cluster/acme/plugins")
+}
+
+func (c *Client) GetAcmePluginConfig(id string) (config map[string]interface{}, err error) {
+	return c.GetItemConfigMapStringInterface("/cluster/acme/plugins/" + id, "acme plugin")
+}
+
+func (c *Client) CreateAcmePlugin(params map[string]interface{}) (exitStatus string, err error) {
+	return c.CreateItem(params, "/cluster/acme/plugins/")
+}
+
+func (c *Client) UpdateAcmePlugin(id string, params map[string]interface{}) (exitStatus string, err error) {
+	return c.UpdateItem(params, "/cluster/acme/plugins/" + id)
+}
+
+func (c *Client) CheckAcmePluginExistance(id string) (existance bool, err error) {
+	list, err := c.GetAcmePluginList()
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "plugin", id)
+	return
+}
+
+func (c *Client) DeleteAcmePlugin(id string) (err error) {
+	_, err = c.session.Delete("/cluster/acme/plugins/" + id, nil, nil)
+	return
+}
+
 
 
 //Shared
@@ -1679,6 +1707,25 @@ func (c *Client) CreateItem(Params map[string]interface{}, url string) (exitStat
 		exitStatus = string(b)
 		return exitStatus, err
 	}
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {return "", err}
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	return
+}
+
+func (c *Client) UpdateItem(Params map[string]interface{}, url string) (exitStatus string, err error) {
+	reqbody := ParamsToBody(Params)
+	var resp *http.Response
+	resp, err = c.session.Put(url, nil, nil, &reqbody)
+	if err != nil {
+		defer resp.Body.Close()
+		// This might not work if we never got a body. We'll ignore errors in trying to read,
+		// but extract the body if possible to give any error information back in the exitStatus
+		b, _ := ioutil.ReadAll(resp.Body)
+		exitStatus = string(b)
+		return exitStatus, err
+	}
+
 	taskResponse, err := ResponseJSON(resp)
 	if err != nil {return "", err}
 	exitStatus, err = c.WaitForCompletion(taskResponse)
