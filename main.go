@@ -439,6 +439,59 @@ func main() {
 		failError(err)
 		fmt.Printf("User %s removed\n", userid)
 
+	//ACME Account
+	case "getAcmeAccountList":
+		accounts, err := c.GetAcmeAccountList()
+		if err != nil {
+			log.Printf("Error listing Acme accounts %+v\n", err)
+			os.Exit(1)
+		}
+		accountList, err := json.Marshal(accounts)
+		fmt.Println(string(accountList))
+
+	case "getAcmeAccount":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Acme account name required")
+			os.Exit(1)
+		}
+		var config interface{}
+		acmeid := flag.Args()[1]
+		config, err := proxmox.NewConfigAcmeAccountFromApi(acmeid, c)
+		failError(err)
+		cj, err := json.MarshalIndent(config, "", "  ")
+		log.Println(string(cj))
+
+	case "createAcmeAccount":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Acme account name required")
+			os.Exit(1)
+		}
+		config, err := proxmox.NewConfigAcmeAccountFromJson(os.Stdin)
+		failError(err)
+		acmeid := flag.Args()[1]
+		failError(config.CreateAcmeAccount(acmeid, c))
+		log.Printf("Acme account %s has been created\n", acmeid)
+
+	case "updateAcmeAccountEmail":
+		if len(flag.Args()) < 3 {
+			log.Printf("Error: acme name and email(s) required")
+			os.Exit(1)
+		}
+		acmeid := flag.Args()[1]
+		err := c.UpdateAcmeAccountEmails(acmeid, flag.Args()[2])
+		failError(err)
+		fmt.Printf("Acme account %s has been updated\n", acmeid)
+
+	case "deleteAcmeAccount":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Acme account name required")
+			os.Exit(1)
+		}
+		acmeid := flag.Args()[1]
+		err := c.DeleteAcmeAccount(acmeid)
+		failError(err)
+		fmt.Printf("Acme account %s removed\n", acmeid)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}

@@ -47,6 +47,16 @@ export PM_OTP=otpcode (only if required)
 ./proxmox-api-go setUser userid password < user.json
 
 ./proxmox-api-go deleteUser userid
+
+./proxmox-api-go getAcmeAccountList
+
+./proxmox-api-go getAcmeAccount accountid
+
+./proxmox-api-go createAcmeAccount accountid < acmeAccount.json
+
+./proxmox-api-go updateAcmeAccountEmail accountid email0,email1,email2
+
+./proxmox-api-go deleteAcmeAccount accountid
 ```
 
 ## Proxy server support
@@ -146,6 +156,20 @@ setUser JSON Sample:
     "usergroup"
   ],
   "keys": "2fa key"
+}
+```
+
+createAcmeAccount JSON Sample:
+
+```json
+{
+  "name": "acme-staging",
+  "contact": [
+    "b.wayne@proxmox.com",
+    "c.kent@proxmox.com"
+  ],
+  "directory": "https://acme-staging-v02.api.letsencrypt.org/directory",
+  "tos": true
 }
 ```
 

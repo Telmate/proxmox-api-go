@@ -1597,3 +1597,95 @@ func (c *Client) DeleteUser(id string) (err error) {
 	_, err = c.session.Delete("/access/users/" + id, nil, nil)
 	return
 }
+
+//ACME
+func (c *Client) GetAcmeDirectoriesUrl() (url []string, err error) {
+	config, err := c.GetItemConfigInterfaceArray("/cluster/acme/directories", "Acme directories")
+	url = make([]string, len(config))
+	for i, element := range config{
+		url[i] = element.(interface{}).(map[string]interface{})["url"].(string)
+	}
+	return
+}
+
+func (c *Client) GetAcmeTosUrl() (url string, err error) {
+	return c.GetItemConfigString("/cluster/acme/tos", "Acme T.O.S.")
+}
+
+//ACME Account
+func (c *Client) GetAcmeAccountList() (accounts map[string]interface{}, err error) {
+	return c.GetItemList("/cluster/acme/account")
+}
+
+func (c *Client) GetAcmeAccountConfig(id string) (config map[string]interface{}, err error) {
+	return c.GetItemConfigMapStringInterface("/cluster/acme/account/" + id, "acme")
+}
+
+func (c *Client) CreateAcmeAccount(params map[string]interface{}) (exitStatus string, err error) {
+	return c.CreateItem(params, "/cluster/acme/account/")
+}
+
+func (c *Client) UpdateAcmeAccountEmails(id, emails string) (err error) {
+	params := map[string]interface{}{
+		"contact": emails,
+	}
+	reqbody := ParamsToBody(params)
+	_, err = c.session.Put("/cluster/acme/account/" + id, nil, nil, &reqbody)
+	return
+}
+
+func (c *Client) DeleteAcmeAccount(id string) (err error) {
+	_, err = c.session.Delete("/cluster/acme/account/" + id, nil, nil)
+	return
+}
+
+
+
+//Shared
+func (c *Client) GetItemConfigMapStringInterface(url, text string) (map[string]interface{}, error) {
+	data, err := c.GetItemConfig(url, text)
+	if err != nil {return nil, err}
+	return data["data"].(map[string]interface{}), err
+}
+
+func (c *Client) GetItemConfigString(url, text string) (string, error) {
+	data, err := c.GetItemConfig(url, text)
+	if err != nil {return "", err}
+	return data["data"].(string), err
+}
+
+func (c *Client) GetItemConfigInterfaceArray(url, text string) ([]interface{}, error) {
+	data, err := c.GetItemConfig(url, text)
+	if err != nil {return nil, err}
+	return data["data"].([]interface{}), err
+}
+
+func (c *Client) GetItemConfig(url, text string) (config map[string]interface{}, err error) {
+	err = c.GetJsonRetryable(url, &config, 3)
+	if err != nil {return nil, err}
+	if config["data"] == nil {return nil, fmt.Errorf(text + " CONFIG not readable")}
+	return
+}
+
+func (c *Client) CreateItem(Params map[string]interface{}, url string) (exitStatus string, err error) {
+	reqbody := ParamsToBody(Params)
+	var resp *http.Response
+	resp, err = c.session.Post(url, nil, nil, &reqbody)
+	if err != nil {
+		defer resp.Body.Close()
+		// This might not work if we never got a body. We'll ignore errors in trying to read,
+		// but extract the body if possible to give any error information back in the exitStatus
+		b, _ := ioutil.ReadAll(resp.Body)
+		exitStatus = string(b)
+		return exitStatus, err
+	}
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {return "", err}
+	exitStatus, err = c.WaitForCompletion(taskResponse)
+	return
+}
+
+func (c *Client) GetItemList(url string) (list map[string]interface{}, err error) {
+	err = c.GetJsonRetryable(url, &list, 3)
+	return	
+}
