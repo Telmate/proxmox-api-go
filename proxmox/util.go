@@ -20,6 +20,10 @@ func Itob(i int) bool {
 	return i == 1
 }
 
+func BoolInvert(b bool) bool{
+	return b == false
+}
+
 // Check the value of a key in a nested array of map[string]interface{}
 func ItemInKeyOfArray(array []interface{}, key, value string) (existance bool){
 	for i := range array {
