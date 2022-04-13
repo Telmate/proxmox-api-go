@@ -1611,6 +1611,7 @@ func (c *Client) CreateItem(Params map[string]interface{}, url string) (err erro
 	return
 }
 
+// Create Item and wait on proxmox for the task to complete
 func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
 	reqbody := ParamsToBody(Params)
 	var resp *http.Response
@@ -1625,6 +1626,7 @@ func (c *Client) UpdateItem(Params map[string]interface{}, url string) (err erro
 	return
 }
 
+// Update Item and wait on proxmox for the task to complete
 func (c *Client) UpdateItemWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
 	reqbody := ParamsToBodyWithAllEmpty(Params)
 	var resp *http.Response
@@ -1638,6 +1640,7 @@ func (c *Client) DeleteUrl(url string) (err error) {
 	return
 }
 
+// Delete Item and wait on proxmox for the task to complete
 func (c *Client) DeleteUrlWithTask(url string) (exitStatus string, err error) {
 	var resp *http.Response
 	resp, err = c.session.Delete(url, nil, nil)
