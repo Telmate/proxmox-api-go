@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 )
 
@@ -86,12 +85,9 @@ func NewConfigAcmePluginFromApi(id string, client *Client) (config *ConfigAcmePl
 	return
 }
 
-func NewConfigAcmePluginFromJson(io io.Reader) (config *ConfigAcmePlugin, err error) {
+func NewConfigAcmePluginFromJson(input []byte) (config *ConfigAcmePlugin, err error) {
 	config = &ConfigAcmePlugin{}
-	err = json.NewDecoder(io).Decode(config)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
+	err = json.Unmarshal([]byte(input), config)
+	if err != nil {log.Fatal(err)}
 	return
 }

@@ -3,7 +3,6 @@ package proxmox
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"strconv"
 	"strings"
@@ -76,10 +75,11 @@ func NewConfigLxc() ConfigLxc {
 	}
 }
 
-func NewConfigLxcFromJson(io io.Reader) (config ConfigLxc, err error) {
+func NewConfigLxcFromJson(input []byte) (config ConfigLxc, err error) {
 	config = NewConfigLxc()
-	err = json.NewDecoder(io).Decode(&config)
-	return config, err
+	err = json.Unmarshal([]byte(input), &config)
+	if err != nil {log.Fatal(err)}
+	return
 }
 
 func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err error) {

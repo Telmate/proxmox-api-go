@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"io/ioutil"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
@@ -17,6 +18,7 @@ func main() {
 	var insecure *bool
 	insecure = flag.Bool("insecure", false, "TLS insecure mode")
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
+	fConfigFile := flag.String("file", "", "file to get the config from")
 	taskTimeout := flag.Int("timeout", 300, "api task timeout in seconds")
 	proxyUrl := flag.String("proxy", "", "proxy url to connect to")
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
@@ -40,6 +42,8 @@ func main() {
 		}
 	}
 
+	configSource := GetConfig(*fConfigFile)
+	
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {
@@ -105,7 +109,7 @@ func main() {
 		fmt.Println(string(networkInterfaceJson))
 
 	case "createQemu":
-		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
+		config, err := proxmox.NewConfigQemuFromJson(configSource)
 		failError(err)
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
@@ -113,7 +117,7 @@ func main() {
 		log.Println("Complete")
 
 	case "createLxc":
-		config, err := proxmox.NewConfigLxcFromJson(os.Stdin)
+		config, err := proxmox.NewConfigLxcFromJson(configSource)
 		failError(err)
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
@@ -121,7 +125,7 @@ func main() {
 		log.Println("Complete")
 
 	case "installQemu":
-		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
+		config, err := proxmox.NewConfigQemuFromJson(configSource)
 		var mode string
 		if config.QemuIso != "" {
 			mode = "(ISO boot mode)"
@@ -171,7 +175,7 @@ func main() {
 		log.Println("---")
 
 	case "cloneQemu":
-		config, err := proxmox.NewConfigQemuFromJson(os.Stdin)
+		config, err := proxmox.NewConfigQemuFromJson(configSource)
 		failError(err)
 		log.Println("Looking for template: " + flag.Args()[1])
 		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
@@ -420,7 +424,7 @@ func main() {
 
 	case "setUser":
 		var password string
-		config, err := proxmox.NewConfigUserFromJson(os.Stdin)
+		config, err := proxmox.NewConfigUserFromJson(configSource)
 		failError(err)
 		userid := flag.Args()[1]
 		if len(flag.Args()) > 2 {
@@ -466,7 +470,7 @@ func main() {
 			log.Printf("Error: Acme account name required")
 			os.Exit(1)
 		}
-		config, err := proxmox.NewConfigAcmeAccountFromJson(os.Stdin)
+		config, err := proxmox.NewConfigAcmeAccountFromJson(configSource)
 		failError(err)
 		acmeid := flag.Args()[1]
 		failError(config.CreateAcmeAccount(acmeid, c))
@@ -515,7 +519,7 @@ func main() {
 			log.Printf("Error: Acme plugin name required")
 			os.Exit(1)
 		}
-		config, err := proxmox.NewConfigAcmePluginFromJson(os.Stdin)
+		config, err := proxmox.NewConfigAcmePluginFromJson(configSource)
 		failError(err)
 		pluginid := flag.Args()[1]
 		failError(config.SetAcmePlugin(pluginid, c))
@@ -551,4 +555,17 @@ var rxUserRequiresToken = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+![a-z0-9]+")
 
 func userRequiresAPIToken(userID string) bool {
 	return rxUserRequiresToken.MatchString(userID)
+}
+
+func GetConfig(configFile string)(configSource []byte){
+	// var configSource []byte
+	var err error
+	if configFile != "" {
+		configSource, err = ioutil.ReadFile(configFile)
+		if err != nil {log.Fatal(err)}
+	} else {
+		configSource, err = ioutil.ReadAll(os.Stdin)
+		if err != nil {log.Fatal(err)}
+	}
+	return
 }

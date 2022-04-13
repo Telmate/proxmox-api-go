@@ -5,7 +5,6 @@ import (
 	"strings"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 )
 
@@ -73,12 +72,9 @@ func NewConfigAcmeAccountFromApi(id string, client *Client) (config *ConfigAcmeA
 	return
 }
 
-func NewConfigAcmeAccountFromJson(io io.Reader) (config *ConfigAcmeAccount, err error) {
+func NewConfigAcmeAccountFromJson(input []byte) (config *ConfigAcmeAccount, err error) {
 	config = &ConfigAcmeAccount{}
-	err = json.NewDecoder(io).Decode(config)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
+	err = json.Unmarshal([]byte(input), config)
+	if err != nil {log.Fatal(err)}
 	return
 }
