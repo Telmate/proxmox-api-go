@@ -28,6 +28,7 @@ func main() {
 		tlsconf = nil
 	}
 	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *proxyUrl, *taskTimeout)
+	failError(err)
 	if userRequiresAPIToken(os.Getenv("PM_USER")) {
 		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
 		// As test, get the version of the server
@@ -37,9 +38,7 @@ func main() {
 		}
 	} else {
 		err = c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
-		if err != nil {
-			log.Fatal(err)
-		}
+		failError(err)
 	}
 
 	configSource := GetConfig(*fConfigFile)
@@ -96,6 +95,7 @@ func main() {
 		}
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
+		failError(err)
 		log.Println(string(cj))
 
 	case "getNetworkInterfaces":
@@ -106,6 +106,7 @@ func main() {
 		failError(err)
 
 		networkInterfaceJson, err := json.Marshal(networkInterfaces)
+		failError(err)
 		fmt.Println(string(networkInterfaceJson))
 
 	case "createQemu":
@@ -186,6 +187,7 @@ func main() {
 		}
 		if vmid == 0 {
 			vmid, err = c.GetNextID(0)
+			failError(err)
 		}
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
@@ -205,11 +207,13 @@ func main() {
 
 	case "createQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		failError(err)
 		jbody, err = c.CreateQemuSnapshot(sourceVmr, flag.Args()[2])
 		failError(err)
 
 	case "deleteQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		failError(err)
 		jbody, err = c.DeleteQemuSnapshot(sourceVmr, flag.Args()[2])
 		failError(err)
 
@@ -253,6 +257,7 @@ func main() {
 
 	case "rollbackQemu":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
+		failError(err)
 		jbody, err = c.RollbackQemuVm(sourceVmr, flag.Args()[2])
 		failError(err)
 
@@ -313,6 +318,7 @@ func main() {
 			os.Exit(1)
 		}
 		nodeList, err := json.Marshal(nodes)
+		failError(err)
 		fmt.Println(string(nodeList))
 
 	case "getVmList":
@@ -322,6 +328,7 @@ func main() {
 			os.Exit(1)
 		}
 		vmList, err := json.Marshal(vms)
+		failError(err)
 		fmt.Println(string(vmList))
 
 	case "getVersion":
@@ -331,6 +338,7 @@ func main() {
 		failError(err)
 		fmt.Println(string(version))
 
+	//Pool
 	case "getPoolList":
 		pools, err := c.GetPoolList()
 		if err != nil {
@@ -338,6 +346,7 @@ func main() {
 			os.Exit(1)
 		}
 		poolList, err := json.Marshal(pools)
+		failError(err)
 		fmt.Println(string(poolList))
 
 	case "getPoolInfo":
@@ -352,6 +361,7 @@ func main() {
 			os.Exit(1)
 		}
 		poolList, err := json.Marshal(poolinfo)
+		failError(err)
 		fmt.Println(string(poolList))
 
 	case "createPool":
@@ -401,6 +411,7 @@ func main() {
 		config, err := proxmox.NewConfigUserFromApi(userid, c)
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
+		failError(err)
 		log.Println(string(cj))
 
 	case "getUserList":
@@ -410,6 +421,7 @@ func main() {
 			os.Exit(1)
 		}
 		userList, err := json.Marshal(users)
+		failError(err)
 		fmt.Println(string(userList))
 
 	case "updateUserPassword":
@@ -451,6 +463,7 @@ func main() {
 			os.Exit(1)
 		}
 		accountList, err := json.Marshal(accounts)
+		failError(err)
 		fmt.Println(string(accountList))
 
 	case "getAcmeAccount":
@@ -463,6 +476,7 @@ func main() {
 		config, err := proxmox.NewConfigAcmeAccountFromApi(acmeid, c)
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
+		failError(err)
 		log.Println(string(cj))
 
 	case "createAcmeAccount":
@@ -482,7 +496,7 @@ func main() {
 			os.Exit(1)
 		}
 		acmeid := flag.Args()[1]
-		err := c.UpdateAcmeAccountEmails(acmeid, flag.Args()[2])
+		_, err := c.UpdateAcmeAccountEmails(acmeid, flag.Args()[2])
 		failError(err)
 		fmt.Printf("Acme account %s has been updated\n", acmeid)
 
@@ -492,7 +506,7 @@ func main() {
 			os.Exit(1)
 		}
 		acmeid := flag.Args()[1]
-		err := c.DeleteAcmeAccount(acmeid)
+		_, err := c.DeleteAcmeAccount(acmeid)
 		failError(err)
 		fmt.Printf("Acme account %s removed\n", acmeid)
 
@@ -504,6 +518,7 @@ func main() {
 			os.Exit(1)
 		}
 		pluginList, err := json.Marshal(plugins)
+		failError(err)
 		fmt.Println(string(pluginList))
 
 	case "getAcmePlugin":
@@ -512,6 +527,7 @@ func main() {
 		config, err := proxmox.NewConfigAcmePluginFromApi(pluginid, c)
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
+		failError(err)
 		log.Println(string(cj))
 
 	case "setAcmePlugin":

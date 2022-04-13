@@ -1441,22 +1441,12 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 }
 
 func (c *Client) GetPoolList() (pools map[string]interface{}, err error) {
-	resp, err := c.session.Get("/pools", nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return ResponseJSON(resp)
+	return c.GetItemList("/pools")
 }
 
 func (c *Client) GetPoolInfo(poolid string) (poolInfo map[string]interface{}, err error) {
 	url := fmt.Sprintf("/pools/%s", poolid)
-	resp, err := c.session.Get(url, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return ResponseJSON(resp)
+	return c.GetItemConfigMapStringInterface(url, "pool")
 }
 
 func (c *Client) CreatePool(poolid string, comment string) error {
@@ -1464,14 +1454,7 @@ func (c *Client) CreatePool(poolid string, comment string) error {
 		"poolid":  poolid,
 		"comment": comment,
 	}
-
-	reqbody := ParamsToBody(paramMap)
-	_, err := c.session.Post("/pools", nil, nil, &reqbody)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.CreateItem(paramMap, "/pools")
 }
 
 func (c *Client) UpdatePoolComment(poolid string, comment string) error {
@@ -1479,112 +1462,42 @@ func (c *Client) UpdatePoolComment(poolid string, comment string) error {
 		"poolid":  poolid,
 		"comment": comment,
 	}
-
-	reqbody := ParamsToBodyWithEmpty(paramMap, []string{"comment"})
 	url := fmt.Sprintf("/pools/%s", poolid)
-	_, err := c.session.Put(url, nil, nil, &reqbody)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.UpdateItem(paramMap, url)
 }
 
 func (c *Client) DeletePool(poolid string) error {
 	url := fmt.Sprintf("/pools/%s", poolid)
-	_, err := c.session.Delete(url, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.DeleteUrl(url)
 }
 
 //User
 func (c *Client) GetUserConfig(id string) (config map[string]interface{}, err error) {
-	var data map[string]interface{}
-	err = c.GetJsonRetryable("/access/users/" + id, &data, 3)
-	if err != nil {
-		return nil, err
-	}
-	if data["data"] == nil {
-		return nil, fmt.Errorf("User CONFIG not readable")
-	}
-	config = data["data"].(map[string]interface{})
-	return
+	return c.GetItemConfigMapStringInterface("/access/users/" + id, "user")
 }
 
-func (c *Client) GetUserList() (users map[string]interface{}, err error) {
-	resp, err := c.session.Get("/access/users", nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return ResponseJSON(resp)
+func (c *Client) GetUserList() (users map[string]interface{}, err error){
+	return c.GetItemList("/access/users")
 }
 
 func (c *Client) UpdateUserPassword(userid string, password string) error {
 	err := ValidateUserPassword(password)
-	if err != nil {
-		return err
-	}
+	if err != nil {return err}
 	paramMap := map[string]interface{}{
 		"userid":   userid,
 		"password": password,
 	}
-
-	reqbody := ParamsToBody(paramMap)
-	_, err = c.session.Put("/access/password", nil, nil, &reqbody)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.UpdateItem(paramMap, "/access/password")
 }
 
-func (c *Client) CreateUser(params map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CreateUser(params map[string]interface{}) (err error) {
 	err = ValidateUserPassword(params["password"].(string))
-	if err != nil {
-		return "", err
-	}
-	reqbody := ParamsToBody(params)
-	var resp *http.Response
-	resp, err = c.session.Post("/access/users", nil, nil, &reqbody)
-	if err != nil {
-		defer resp.Body.Close()
-		// This might not work if we never got a body. We'll ignore errors in trying to read,
-		// but extract the body if possible to give any error information back in the exitStatus
-		b, _ := ioutil.ReadAll(resp.Body)
-		exitStatus = string(b)
-		return exitStatus, err
-	}
-	taskResponse, err := ResponseJSON(resp)
-	if err != nil {
-		return "", err
-	}
-	exitStatus, err = c.WaitForCompletion(taskResponse)
-	return
+	if err != nil {return err}
+	return c.CreateItem(params, "/access/users")
 }
 
-func (c *Client) UpdateUser(id string, params map[string]interface{}) (exitStatus string, err error) {
-	reqbody := ParamsToBodyWithAllEmpty(params)
-	// reqbody := ParamsToBody(params)
-	var resp *http.Response
-	resp, err = c.session.Put("/access/users/" + id, nil, nil, &reqbody)
-	if err != nil {
-		defer resp.Body.Close()
-		// This might not work if we never got a body. We'll ignore errors in trying to read,
-		// but extract the body if possible to give any error information back in the exitStatus
-		b, _ := ioutil.ReadAll(resp.Body)
-		exitStatus = string(b)
-		return exitStatus, err
-	}
-
-	taskResponse, err := ResponseJSON(resp)
-	if err != nil {
-		return "", err
-	}
-	exitStatus, err = c.WaitForCompletion(taskResponse)
-	return
+func (c *Client) UpdateUser(id string, params map[string]interface{}) error {
+	return c.UpdateItem(params, "/access/users/" + id)
 }
 
 func (c *Client) CheckUserExistance(id string) (existance bool, err error) {
@@ -1603,7 +1516,7 @@ func (c *Client) GetAcmeDirectoriesUrl() (url []string, err error) {
 	config, err := c.GetItemConfigInterfaceArray("/cluster/acme/directories", "Acme directories")
 	url = make([]string, len(config))
 	for i, element := range config{
-		url[i] = element.(interface{}).(map[string]interface{})["url"].(string)
+		url[i] = element.(map[string]interface{})["url"].(string)
 	}
 	return
 }
@@ -1622,20 +1535,18 @@ func (c *Client) GetAcmeAccountConfig(id string) (config map[string]interface{},
 }
 
 func (c *Client) CreateAcmeAccount(params map[string]interface{}) (exitStatus string, err error) {
-	return c.CreateItem(params, "/cluster/acme/account/")
+	return c.CreateItemWithTask(params, "/cluster/acme/account/")
 }
 
-func (c *Client) UpdateAcmeAccountEmails(id, emails string) (err error) {
+func (c *Client) UpdateAcmeAccountEmails(id, emails string) (exitStatus string, err error) {
 	params := map[string]interface{}{
 		"contact": emails,
 	}
-	reqbody := ParamsToBody(params)
-	_, err = c.session.Put("/cluster/acme/account/" + id, nil, nil, &reqbody)
-	return
+	return c.UpdateItemWithTask(params, "/cluster/acme/account/" + id)
 }
 
-func (c *Client) DeleteAcmeAccount(id string) (err error) {
-	_, err = c.session.Delete("/cluster/acme/account/" + id, nil, nil)
+func (c *Client) DeleteAcmeAccount(id string) (exitStatus string, err error) {
+	exitStatus, err = c.DeleteUrlWithTask("/cluster/acme/account/" + id)
 	return
 }
 
@@ -1648,11 +1559,11 @@ func (c *Client) GetAcmePluginConfig(id string) (config map[string]interface{}, 
 	return c.GetItemConfigMapStringInterface("/cluster/acme/plugins/" + id, "acme plugin")
 }
 
-func (c *Client) CreateAcmePlugin(params map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CreateAcmePlugin(params map[string]interface{}) error {
 	return c.CreateItem(params, "/cluster/acme/plugins/")
 }
 
-func (c *Client) UpdateAcmePlugin(id string, params map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) UpdateAcmePlugin(id string, params map[string]interface{}) error {
 	return c.UpdateItem(params, "/cluster/acme/plugins/" + id)
 }
 
@@ -1663,8 +1574,7 @@ func (c *Client) CheckAcmePluginExistance(id string) (existance bool, err error)
 }
 
 func (c *Client) DeleteAcmePlugin(id string) (err error) {
-	_, err = c.session.Delete("/cluster/acme/plugins/" + id, nil, nil)
-	return
+	return c.DeleteUrl("/cluster/acme/plugins/" + id)
 }
 
 
@@ -1695,44 +1605,64 @@ func (c *Client) GetItemConfig(url, text string) (config map[string]interface{},
 	return
 }
 
-func (c *Client) CreateItem(Params map[string]interface{}, url string) (exitStatus string, err error) {
+func (c *Client) CreateItem(Params map[string]interface{}, url string) (err error) {
 	reqbody := ParamsToBody(Params)
-	var resp *http.Response
-	resp, err = c.session.Post(url, nil, nil, &reqbody)
-	if err != nil {
-		defer resp.Body.Close()
-		// This might not work if we never got a body. We'll ignore errors in trying to read,
-		// but extract the body if possible to give any error information back in the exitStatus
-		b, _ := ioutil.ReadAll(resp.Body)
-		exitStatus = string(b)
-		return exitStatus, err
-	}
-	taskResponse, err := ResponseJSON(resp)
-	if err != nil {return "", err}
-	exitStatus, err = c.WaitForCompletion(taskResponse)
+	_, err = c.session.Post(url, nil, nil, &reqbody)
 	return
 }
 
-func (c *Client) UpdateItem(Params map[string]interface{}, url string) (exitStatus string, err error) {
+func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
 	reqbody := ParamsToBody(Params)
 	var resp *http.Response
-	resp, err = c.session.Put(url, nil, nil, &reqbody)
-	if err != nil {
-		defer resp.Body.Close()
-		// This might not work if we never got a body. We'll ignore errors in trying to read,
-		// but extract the body if possible to give any error information back in the exitStatus
-		b, _ := ioutil.ReadAll(resp.Body)
-		exitStatus = string(b)
-		return exitStatus, err
-	}
+	resp, err = c.session.Post(url, nil, nil, &reqbody)
+	if err != nil {return c.HandleTaskError(resp)}
+	return c.CheckTask(resp)
+}
 
-	taskResponse, err := ResponseJSON(resp)
-	if err != nil {return "", err}
-	exitStatus, err = c.WaitForCompletion(taskResponse)
+func (c *Client) UpdateItem(Params map[string]interface{}, url string) (err error) {
+	reqbody := ParamsToBodyWithAllEmpty(Params)
+	_, err = c.session.Put(url, nil, nil, &reqbody)
 	return
+}
+
+func (c *Client) UpdateItemWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
+	reqbody := ParamsToBodyWithAllEmpty(Params)
+	var resp *http.Response
+	resp, err = c.session.Put(url, nil, nil, &reqbody)
+	if err != nil {return c.HandleTaskError(resp)}
+	return c.CheckTask(resp)
+}
+
+func (c *Client) DeleteUrl(url string) (err error) {
+	_, err = c.session.Delete(url, nil, nil)
+	return
+}
+
+func (c *Client) DeleteUrlWithTask(url string) (exitStatus string, err error) {
+	var resp *http.Response
+	resp, err = c.session.Delete(url, nil, nil)
+	if err != nil {return c.HandleTaskError(resp)}
+	return c.CheckTask(resp)
 }
 
 func (c *Client) GetItemList(url string) (list map[string]interface{}, err error) {
 	err = c.GetJsonRetryable(url, &list, 3)
-	return	
+	return
+}
+
+// Close task responce
+func (c *Client) HandleTaskError(resp *http.Response)(exitStatus string, err error){
+	defer resp.Body.Close()
+	// This might not work if we never got a body. We'll ignore errors in trying to read,
+	// but extract the body if possible to give any error information back in the exitStatus
+	b, _ := ioutil.ReadAll(resp.Body)
+	exitStatus = string(b)
+	return
+}
+
+// Check if the proxmox task has been completed
+func (c *Client) CheckTask(resp *http.Response)(exitStatus string, err error){
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {return "", err}
+	return c.WaitForCompletion(taskResponse)
 }
