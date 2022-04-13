@@ -3,7 +3,6 @@ package proxmox
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -468,13 +467,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	return err
 }
 
-func NewConfigQemuFromJson(io io.Reader) (config *ConfigQemu, err error) {
+func NewConfigQemuFromJson(input []byte) (config *ConfigQemu, err error) {
 	config = &ConfigQemu{QemuVlanTag: -1, QemuKVM: true}
-	err = json.NewDecoder(io).Decode(config)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
+	err = json.Unmarshal([]byte(input), config)
+	if err != nil {log.Fatal(err)}
 	return
 }
 

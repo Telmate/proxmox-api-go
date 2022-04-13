@@ -5,7 +5,6 @@ import (
 	"unicode/utf8"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 )
 
@@ -105,13 +104,10 @@ func NewConfigUserFromApi(userid string, client *Client) (config *ConfigUser, er
 	return
 }
 
-func NewConfigUserFromJson(io io.Reader) (config *ConfigUser, err error) {
+func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
 	config = &ConfigUser{}
-	err = json.NewDecoder(io).Decode(config)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
+	err = json.Unmarshal([]byte(input), config)
+	if err != nil {log.Fatal(err)}
 	return
 }
 
