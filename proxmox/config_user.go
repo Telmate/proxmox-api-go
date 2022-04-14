@@ -37,19 +37,16 @@ func (config ConfigUser) MapUserValues()(params map[string]interface{}) {
 
 func (config ConfigUser) SetUser(userid string, password string, client *Client) (err error) {
 	err = ValidateUserPassword(password)
-	if err != nil {
-		return err
-	}
+	if err != nil {return err}
 
 	config.UserID = userid
 
 	userExists, err := client.CheckUserExistance(userid)
+	if err != nil {return err}
 
-	if userExists == true {
+	if userExists {
 		err = config.UpdateUser(client)
-		if err != nil {
-			return err
-		}
+		if err != nil {return err}
 		if password != "" {
 			err = client.UpdateUserPassword(userid, password)
 		}
@@ -63,20 +60,20 @@ func (config ConfigUser) CreateUser(password string, client *Client) (err error)
 	params := config.MapUserValues()
 	params["userid"] = config.UserID
 	params["password"] = password
-	exitStatus, err := client.CreateUser(params)
+	err = client.CreateUser(params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error creating User: %v, error status: %s (params: %v)", err, exitStatus, string(params))
+		return fmt.Errorf("error creating User: %v, (params: %v)", err, string(params))
 	}
 	return
 }
 
 func (config ConfigUser) UpdateUser(client *Client) (err error) {
 	params := config.MapUserValues()
-	exitStatus, err := client.UpdateUser(config.UserID, params)
+	err = client.UpdateUser(config.UserID, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error updating User: %v, error status: %s (params: %v)", err, exitStatus, string(params))
+		return fmt.Errorf("error updating User: %v, (params: %v)", err, string(params))
 	}
 	return
 }
@@ -85,9 +82,7 @@ func NewConfigUserFromApi(userid string, client *Client) (config *ConfigUser, er
 	// prepare json map to receive the information from the api
 	var userConfig map[string]interface{}
 	userConfig, err = client.GetUserConfig(userid)
-	if err != nil {
-		return nil, err
-	}
+	if err != nil {return nil, err}
 	config = new(ConfigUser)
 
 	config.UserID = userid
@@ -112,8 +107,6 @@ func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
 }
 
 func ValidateUserPassword(password string) error{
-	if utf8.RuneCountInString(password) >= 5 || password == ""{
-		return nil
-	}
+	if utf8.RuneCountInString(password) >= 5 || password == ""{return nil}
 	return errors.New("error updating User: the minimum password length is 5")
 }

@@ -49,20 +49,20 @@ func (config ConfigAcmePlugin) CreateAcmePlugin(client *Client) (err error) {
 	params := config.MapAcmePluginValues()
 	params["id"] = config.ID
 	params["type"] = "dns"
-	exitStatus, err := client.CreateAcmePlugin(params)
+	err = client.CreateAcmePlugin(params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error creating Acme plugin: %v, error status: %s (params: %v)", err, exitStatus, string(params))
+		return fmt.Errorf("error creating Acme plugin: %v, (params: %v)", err, string(params))
 	}
 	return
 }
 
 func (config ConfigAcmePlugin) UpdateAcmePlugin(client *Client) (err error) {
 	params := config.MapAcmePluginValues()
-	exitStatus, err := client.UpdateAcmePlugin(config.ID, params)
+	err = client.UpdateAcmePlugin(config.ID, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error updating Acme plugin: %v, error status: %s (params: %v)", err, exitStatus, string(params))
+		return fmt.Errorf("error updating Acme plugin: %v, (params: %v)", err, string(params))
 	}
 	return
 }
