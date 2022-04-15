@@ -411,6 +411,8 @@ func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	delete(paramMap, "password")
 	delete(paramMap, "ostemplate")
 	delete(paramMap, "start")
+	delete(paramMap, "clone")
+	delete(paramMap, "full")
 
 	// even though it is listed as a PUT option in the API documentation
 	// we remove it here because "it should not be modified manually";
