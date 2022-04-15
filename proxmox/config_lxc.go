@@ -78,7 +78,9 @@ func NewConfigLxc() ConfigLxc {
 func NewConfigLxcFromJson(input []byte) (config ConfigLxc, err error) {
 	config = NewConfigLxc()
 	err = json.Unmarshal([]byte(input), &config)
-	if err != nil {log.Fatal(err)}
+	if err != nil {
+		log.Fatal(err)
+	}
 	return
 }
 
@@ -359,6 +361,7 @@ func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 		"vmid":   config.Clone,
 		"node":   vmr.node,
 		"target": vmr.node,
+		"full":   config.Full,
 	}
 
 	if config.BWLimit != 0 {
