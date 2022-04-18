@@ -551,6 +551,44 @@ func main() {
 		failError(err)
 		fmt.Printf("Acme plugin %s removed\n", pluginid)
 
+	//Metrics
+	case "getMetricsServer":
+		var config interface{}
+		metricsid := flag.Args()[1]
+		config, err := proxmox.NewConfigMetricsFromApi(metricsid, c)
+		failError(err)
+		cj, err := json.MarshalIndent(config, "", "  ")
+		failError(err)
+		log.Println(string(cj))
+
+	case "getMetricsServerList":
+		metrics, err := c.GetMetricsServerList()
+		if err != nil {
+			log.Printf("Error listing Metrics Servers %+v\n", err)
+			os.Exit(1)
+		}
+		metricList, err := json.Marshal(metrics)
+		failError(err)
+		fmt.Println(string(metricList))
+
+	case "setMetricsServer":
+		config, err := proxmox.NewConfigMetricsFromJson(configSource)
+		failError(err)
+		meticsid := flag.Args()[1]
+		failError(config.SetMetrics(meticsid, c))
+		log.Printf("Merics Server %s has been configured\n", meticsid)
+
+	case "deleteMetricsServer":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Metrics Server name required")
+			os.Exit(1)
+		}
+		metricsid := flag.Args()[1]
+		err := c.DeleteMetricServer(metricsid)
+		failError(err)
+		fmt.Printf("Metrics Server %s removed\n", metricsid)
+
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
@@ -574,7 +612,6 @@ func userRequiresAPIToken(userID string) bool {
 }
 
 func GetConfig(configFile string)(configSource []byte){
-	// var configSource []byte
 	var err error
 	if configFile != "" {
 		configSource, err = ioutil.ReadFile(configFile)

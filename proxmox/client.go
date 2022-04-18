@@ -1577,6 +1577,34 @@ func (c *Client) DeleteAcmePlugin(id string) (err error) {
 	return c.DeleteUrl("/cluster/acme/plugins/" + id)
 }
 
+//Metrics
+func (c *Client) GetMetricServerConfig(id string) (config map[string]interface{}, err error) {
+	return c.GetItemConfigMapStringInterface("/cluster/metrics/server/" + id, "metrics server")
+}
+
+func (c *Client) GetMetricsServerList() (metricServers map[string]interface{}, err error){
+	return c.GetItemList("/cluster/metrics/server")
+}
+
+func (c *Client) CreateMetricServer(id string, params map[string]interface{}) error {
+	return c.CreateItem(params, "/cluster/metrics/server/" + id)
+}
+
+func (c *Client) UpdateMetricServer(id string, params map[string]interface{}) error {
+	return c.UpdateItem(params, "/cluster/metrics/server/" + id)
+}
+
+func (c *Client) CheckMetricServerExistance(id string) (existance bool, err error) {
+	list, err := c.GetMetricsServerList()
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "id", id)
+	return
+}
+
+func (c *Client) DeleteMetricServer(id string) error {
+	return c.DeleteUrl("/cluster/metrics/server/" + id)
+}
+
+
 
 
 //Shared
