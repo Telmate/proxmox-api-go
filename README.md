@@ -65,6 +65,14 @@ export PM_OTP=otpcode (only if required)
 ./proxmox-api-go setAcmePlugin pluginid < acmePlugin.json
 
 ./proxmox-api-go deleteAcmePlugin pluginid
+
+./proxmox-api-go getMetricsServerList
+
+./proxmox-api-go getMetricsServer metricsid
+
+./proxmox-api-go setMetricsServer metricsid < metricsServer.json
+
+./proxmox-api-go deleteMetricsServer metricsid
 ```
 
 ## Proxy server support
@@ -188,6 +196,25 @@ setAcmePlugin JSON Sample:
   "data": "AWS_ACCESS_KEY_ID=DEMOACCESSKEYID\nAWS_SECRET_ACCESS_KEY=DEMOSECRETACCESSKEY\n",
   "enable": true,
   "validation-delay": 30
+}
+```
+
+setMetricsServer JSON Sample:
+
+```json
+{
+  "port": 8086,
+  "server": "192.168.67.3",
+  "type": "influxdb",
+  "enable": true,
+  "mtu": 1500,
+  "timeout": 1,
+  "influxdb": {
+    "protocol": "https",
+    "max-body-size": 25000000,
+    "verify-certificate": false,
+    "token": "Rm8mqheWSVrrKKBW"
+  }
 }
 ```
 
