@@ -588,6 +588,62 @@ func main() {
 		failError(err)
 		fmt.Printf("Metrics Server %s removed\n", metricsid)
 
+	//Storage
+	case "getStorageList":
+		storage, err := c.GetStorageList()
+		if err != nil {
+			log.Printf("Error listing Storages %+v\n", err)
+			os.Exit(1)
+		}
+		storageList, err := json.Marshal(storage)
+		failError(err)
+		fmt.Println(string(storageList))
+
+	case "getStorage":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Storage id required")
+			os.Exit(1)
+		}
+		var config interface{}
+		storageid := flag.Args()[1]
+		config, err := proxmox.NewConfigStorageFromApi(storageid, c)
+		failError(err)
+		cj, err := json.MarshalIndent(config, "", "  ")
+		failError(err)
+		log.Println(string(cj))
+
+	case "createStorage":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Storage id required")
+			os.Exit(1)
+		}
+		config, err := proxmox.NewConfigStorageFromJson(configSource)
+		failError(err)
+		storageid := flag.Args()[1]
+		failError(config.CreateWithValidate(storageid, c))
+		log.Printf("Storage %s has been created\n", storageid)
+
+	case "updateStorage":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Storage id required")
+			os.Exit(1)
+		}
+		config, err := proxmox.NewConfigStorageFromJson(configSource)
+		failError(err)
+		storageid := flag.Args()[1]
+		failError(config.UpdateWithValidate(storageid, c))
+		log.Printf("Storage %s has been updated\n", storageid)
+
+	case "deleteStorage":
+		if len(flag.Args()) < 2 {
+			log.Printf("Error: Storage id required")
+			os.Exit(1)
+		}
+		storageid := flag.Args()[1]
+		err := c.DeleteStorage(storageid)
+		failError(err)
+		fmt.Printf("Storage %s removed\n", storageid)
+
 
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
