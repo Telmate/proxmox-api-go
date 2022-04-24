@@ -1604,6 +1604,40 @@ func (c *Client) DeleteMetricServer(id string) error {
 	return c.DeleteUrl("/cluster/metrics/server/" + id)
 }
 
+//storage
+func (c *Client) EnableStorage(id string) error {
+	param := map[string]interface{}{
+		"disable": false,
+	}
+	return c.UpdateItem(param, "/storage/" + id)
+}
+
+func (c *Client) GetStorageList() (metricServers map[string]interface{}, err error){
+	return c.GetItemList("/storage")
+}
+
+func (c *Client) GetStorageConfig(id string) (config map[string]interface{}, err error) {
+	return c.GetItemConfigMapStringInterface("/storage/" + id, "storage")
+}
+
+func (c *Client) CreateStorage(id string, params map[string]interface{}) error {
+	return c.CreateItem(params, "/storage")
+}
+
+func (c *Client) CheckStorageExistance(id string) (existance bool, err error) {
+	list, err := c.GetStorageList()
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "storage", id)
+	return
+}
+
+func (c *Client) UpdateStorage(id string, params map[string]interface{}) error {
+	return c.UpdateItem(params, "/storage/" + id)
+}
+
+func (c *Client) DeleteStorage(id string) error {
+	return c.DeleteUrl("/storage/" + id)
+}
+
 
 
 

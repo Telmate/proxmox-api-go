@@ -92,7 +92,7 @@ func (config *ConfigMetrics) ValidateMetrics() (err error) {
 	if err != nil{
 		return
 	}
-	err = ValidateIntGreater(1, config.InfluxDB.MaxBodySize, "influxdb:{ max-body-size }")
+	err = ValidateIntGreaterOrEquals(1, config.InfluxDB.MaxBodySize, "influxdb:{ max-body-size }")
 	if err != nil{
 		return
 	}
@@ -100,7 +100,7 @@ func (config *ConfigMetrics) ValidateMetrics() (err error) {
 	if err != nil{
 		return
 	}
-	err = ValidateIntGreater(0, config.Timeout, "timeout")
+	err = ValidateIntGreaterOrEquals(0, config.Timeout, "timeout")
 	return
 }
 

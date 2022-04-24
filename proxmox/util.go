@@ -119,6 +119,17 @@ func DiskSizeGB(dcSize interface{}) float64 {
 	return diskSize
 }
 
+func AddToList(list, newItem string) string {
+	if list != "" {
+		return list + "," + newItem
+	}
+	return newItem
+}
+
+func CSVtoArray(csv string) []string{
+	return strings.Split(csv, ",")
+}
+
 // Convert Array to a comma (,) delimited list
 func ArrayToCSV(array interface{}) (csv string) {
 	var arrayString []string
@@ -139,4 +150,19 @@ func ArrayToStringType(inputarray []interface{}) (array []string) {
 		array[i] = v.(string)
 	}
 	return
+}
+
+// Creates a pointer to a string
+func PointerString(text string) *string {
+	return &text
+}
+
+// Creates a pointer to an int
+func PointerInt(number int) *int {
+	return &number
+}
+
+// Creates a pointer to a bool
+func PointerBool(boolean bool) *bool {
+	return &boolean
 }

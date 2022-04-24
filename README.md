@@ -73,6 +73,16 @@ export PM_OTP=otpcode (only if required)
 ./proxmox-api-go setMetricsServer metricsid < metricsServer.json
 
 ./proxmox-api-go deleteMetricsServer metricsid
+
+./proxmox-api-go getStorageList
+
+./proxmox-api-go getStorage storageid
+
+./proxmox-api-go createStorage storageid < storage.json
+
+./proxmox-api-go updateStorage storageid < storage.json
+
+./proxmox-api-go deleteStorage
 ```
 
 ## Proxy server support
@@ -214,6 +224,40 @@ setMetricsServer JSON Sample:
     "max-body-size": 25000000,
     "verify-certificate": false,
     "token": "Rm8mqheWSVrrKKBW"
+  }
+}
+```
+
+createStorage JSON Sample:
+
+```json
+{
+  "enable": true,
+  "type": "smb",
+  "smb": {
+    "username": "b.wayne",
+    "share": "NetworkShare",
+    "preallocation": "metadata",
+    "domain": "organization.com",
+    "server": "10.20.1.1",
+    "version": "3.11",
+    "password": "Enter123!"
+  },
+  "content": {
+    "backup": true,
+    "iso": false,
+    "template": true,
+    "diskimage": true,
+    "container": true,
+    "snippets": false
+  },
+  "backupretention": {
+    "last": 10,
+    "hourly": 4,
+    "daily": 7,
+    "monthly": 3,
+    "weekly": 2,
+    "yearly": 1
   }
 }
 ```
