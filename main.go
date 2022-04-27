@@ -320,7 +320,7 @@ func main() {
 		fmt.Println(string(nodeList))
 
 	case "getResourceList":
-		resource, err := c.GetResourceList()
+		resource, err := c.GetResourceList("")
 		if err != nil {
 			log.Printf("Error listing resources %+v\n", err)
 			os.Exit(1)

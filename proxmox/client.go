@@ -142,13 +142,17 @@ func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
 	return
 }
 
-func (c *Client) GetResourceList() (list map[string]interface{}, err error) {
-	err = c.GetJsonRetryable("/cluster/resources", &list, 3)
+func (c *Client) GetResourceList(resourceType string) (list map[string]interface{}, err error) {
+	var endpoint = "/cluster/resources"
+	if resourceType != "" {
+		endpoint = fmt.Sprintf("%s?type=%s", endpoint, resourceType)
+	}
+	err = c.GetJsonRetryable(endpoint, &list, 3)
 	return
 }
 
 func (c *Client) GetVmList() (list map[string]interface{}, err error) {
-	err = c.GetJsonRetryable("/cluster/resources?type=vm", &list, 3)
+	list, err = c.GetResourceList("vm")
 	return
 }
 
