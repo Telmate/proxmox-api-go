@@ -41,8 +41,6 @@ func main() {
 		failError(err)
 	}
 
-	configSource := GetConfig(*fConfigFile)
-
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {
@@ -110,7 +108,7 @@ func main() {
 		fmt.Println(string(networkInterfaceJson))
 
 	case "createQemu":
-		config, err := proxmox.NewConfigQemuFromJson(configSource)
+		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
@@ -118,7 +116,7 @@ func main() {
 		log.Println("Complete")
 
 	case "createLxc":
-		config, err := proxmox.NewConfigLxcFromJson(configSource)
+		config, err := proxmox.NewConfigLxcFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
@@ -126,7 +124,7 @@ func main() {
 		log.Println("Complete")
 
 	case "installQemu":
-		config, err := proxmox.NewConfigQemuFromJson(configSource)
+		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		var mode string
 		if config.QemuIso != "" {
 			mode = "(ISO boot mode)"
@@ -176,7 +174,7 @@ func main() {
 		log.Println("---")
 
 	case "cloneQemu":
-		config, err := proxmox.NewConfigQemuFromJson(configSource)
+		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		log.Println("Looking for template: " + flag.Args()[1])
 		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
@@ -436,7 +434,7 @@ func main() {
 
 	case "setUser":
 		var password string
-		config, err := proxmox.NewConfigUserFromJson(configSource)
+		config, err := proxmox.NewConfigUserFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		userid := flag.Args()[1]
 		if len(flag.Args()) > 2 {
@@ -484,7 +482,7 @@ func main() {
 			log.Printf("Error: Acme account name required")
 			os.Exit(1)
 		}
-		config, err := proxmox.NewConfigAcmeAccountFromJson(configSource)
+		config, err := proxmox.NewConfigAcmeAccountFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		acmeid := flag.Args()[1]
 		failError(config.CreateAcmeAccount(acmeid, c))
@@ -535,7 +533,7 @@ func main() {
 			log.Printf("Error: Acme plugin name required")
 			os.Exit(1)
 		}
-		config, err := proxmox.NewConfigAcmePluginFromJson(configSource)
+		config, err := proxmox.NewConfigAcmePluginFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		pluginid := flag.Args()[1]
 		failError(config.SetAcmePlugin(pluginid, c))
@@ -572,7 +570,7 @@ func main() {
 		fmt.Println(string(metricList))
 
 	case "setMetricsServer":
-		config, err := proxmox.NewConfigMetricsFromJson(configSource)
+		config, err := proxmox.NewConfigMetricsFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		meticsid := flag.Args()[1]
 		failError(config.SetMetrics(meticsid, c))
@@ -617,7 +615,7 @@ func main() {
 			log.Printf("Error: Storage id required")
 			os.Exit(1)
 		}
-		config, err := proxmox.NewConfigStorageFromJson(configSource)
+		config, err := proxmox.NewConfigStorageFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		storageid := flag.Args()[1]
 		failError(config.CreateWithValidate(storageid, c))
@@ -628,7 +626,7 @@ func main() {
 			log.Printf("Error: Storage id required")
 			os.Exit(1)
 		}
-		config, err := proxmox.NewConfigStorageFromJson(configSource)
+		config, err := proxmox.NewConfigStorageFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		storageid := flag.Args()[1]
 		failError(config.UpdateWithValidate(storageid, c))
