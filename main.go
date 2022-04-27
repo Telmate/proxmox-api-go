@@ -319,6 +319,7 @@ func main() {
 		failError(err)
 		fmt.Println(string(nodeList))
 
+	// only returns enabled resources
 	case "getResourceList":
 		resource, err := c.GetResourceList("")
 		if err != nil {

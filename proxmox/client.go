@@ -142,6 +142,9 @@ func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
 	return
 }
 
+// GetResourceList returns a list of all enabled proxmox resources.
+// For resource types that can be in a disabled state, disabled resources
+// will not be returned
 func (c *Client) GetResourceList(resourceType string) (list map[string]interface{}, err error) {
 	var endpoint = "/cluster/resources"
 	if resourceType != "" {
