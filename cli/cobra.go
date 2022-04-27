@@ -1,6 +1,12 @@
 package cli
 
 import (
+	"crypto/tls"
+	"log"
+	"os"
+	"regexp"
+
+	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
@@ -22,4 +28,36 @@ func Execute() {
     if err := RootCmd.Execute(); err != nil {
     	LogFatalError(err)
    	}
+}
+
+func NewClient()(c *proxmox.Client) {
+	insecure, _ := RootCmd.Flags().GetBool("insecure")
+	timeout, _ := RootCmd.Flags().GetInt("timeout")
+	proxyUrl, _ := RootCmd.Flags().GetString("proxyurl")
+
+	tlsconf := &tls.Config{InsecureSkipVerify: true}
+	if !insecure {
+		tlsconf = nil
+	}
+
+	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, proxyUrl, timeout)
+	LogFatalError(err)
+	if userRequiresAPIToken(os.Getenv("PM_USER")) {
+		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
+		// As test, get the version of the server
+		_, err := c.GetVersion()
+		if err != nil {
+			log.Fatalf("login error: %s", err)
+		}
+	} else {
+		err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
+		LogFatalError(err)
+	}
+	return
+}
+
+var rxUserRequiresToken = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+![a-z0-9]+")
+
+func userRequiresAPIToken(userID string) bool {
+	return rxUserRequiresToken.MatchString(userID)
 }
