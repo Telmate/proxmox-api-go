@@ -326,6 +326,7 @@ func main() {
 			os.Exit(1)
 		}
 		rsList, err := json.Marshal(resource)
+		failError(err)
 		fmt.Println(string(rsList))
 
 	case "getVmList":
