@@ -155,8 +155,15 @@ func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
 }
 
 func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error) {
-	resp, err := c.GetVmList()
-	vms := resp["data"].([]interface{})
+	var resp map[string]interface{}
+	if resp, err = c.GetVmList(); err != nil {
+		return
+	}
+	vms, ok := resp["data"].([]interface{})
+	if !ok {
+		err = fmt.Errorf("failed to cast response to list, resp: %v", resp)
+		return
+	}
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if int(vm["vmid"].(float64)) == vmr.vmId {
@@ -1473,16 +1480,18 @@ func (c *Client) DeletePool(poolid string) error {
 
 //User
 func (c *Client) GetUserConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/access/users/" + id, "user")
+	return c.GetItemConfigMapStringInterface("/access/users/"+id, "user")
 }
 
-func (c *Client) GetUserList() (users map[string]interface{}, err error){
+func (c *Client) GetUserList() (users map[string]interface{}, err error) {
 	return c.GetItemList("/access/users")
 }
 
 func (c *Client) UpdateUserPassword(userid string, password string) error {
 	err := ValidateUserPassword(password)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 	paramMap := map[string]interface{}{
 		"userid":   userid,
 		"password": password,
@@ -1492,12 +1501,14 @@ func (c *Client) UpdateUserPassword(userid string, password string) error {
 
 func (c *Client) CreateUser(params map[string]interface{}) (err error) {
 	err = ValidateUserPassword(params["password"].(string))
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 	return c.CreateItem(params, "/access/users")
 }
 
 func (c *Client) UpdateUser(id string, params map[string]interface{}) error {
-	return c.UpdateItem(params, "/access/users/" + id)
+	return c.UpdateItem(params, "/access/users/"+id)
 }
 
 func (c *Client) CheckUserExistance(id string) (existance bool, err error) {
@@ -1507,7 +1518,7 @@ func (c *Client) CheckUserExistance(id string) (existance bool, err error) {
 }
 
 func (c *Client) DeleteUser(id string) (err error) {
-	_, err = c.session.Delete("/access/users/" + id, nil, nil)
+	_, err = c.session.Delete("/access/users/"+id, nil, nil)
 	return
 }
 
@@ -1515,7 +1526,7 @@ func (c *Client) DeleteUser(id string) (err error) {
 func (c *Client) GetAcmeDirectoriesUrl() (url []string, err error) {
 	config, err := c.GetItemConfigInterfaceArray("/cluster/acme/directories", "Acme directories")
 	url = make([]string, len(config))
-	for i, element := range config{
+	for i, element := range config {
 		url[i] = element.(map[string]interface{})["url"].(string)
 	}
 	return
@@ -1531,7 +1542,7 @@ func (c *Client) GetAcmeAccountList() (accounts map[string]interface{}, err erro
 }
 
 func (c *Client) GetAcmeAccountConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/cluster/acme/account/" + id, "acme")
+	return c.GetItemConfigMapStringInterface("/cluster/acme/account/"+id, "acme")
 }
 
 func (c *Client) CreateAcmeAccount(params map[string]interface{}) (exitStatus string, err error) {
@@ -1542,7 +1553,7 @@ func (c *Client) UpdateAcmeAccountEmails(id, emails string) (exitStatus string, 
 	params := map[string]interface{}{
 		"contact": emails,
 	}
-	return c.UpdateItemWithTask(params, "/cluster/acme/account/" + id)
+	return c.UpdateItemWithTask(params, "/cluster/acme/account/"+id)
 }
 
 func (c *Client) DeleteAcmeAccount(id string) (exitStatus string, err error) {
@@ -1556,7 +1567,7 @@ func (c *Client) GetAcmePluginList() (accounts map[string]interface{}, err error
 }
 
 func (c *Client) GetAcmePluginConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/cluster/acme/plugins/" + id, "acme plugin")
+	return c.GetItemConfigMapStringInterface("/cluster/acme/plugins/"+id, "acme plugin")
 }
 
 func (c *Client) CreateAcmePlugin(params map[string]interface{}) error {
@@ -1564,7 +1575,7 @@ func (c *Client) CreateAcmePlugin(params map[string]interface{}) error {
 }
 
 func (c *Client) UpdateAcmePlugin(id string, params map[string]interface{}) error {
-	return c.UpdateItem(params, "/cluster/acme/plugins/" + id)
+	return c.UpdateItem(params, "/cluster/acme/plugins/"+id)
 }
 
 func (c *Client) CheckAcmePluginExistance(id string) (existance bool, err error) {
@@ -1579,19 +1590,19 @@ func (c *Client) DeleteAcmePlugin(id string) (err error) {
 
 //Metrics
 func (c *Client) GetMetricServerConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/cluster/metrics/server/" + id, "metrics server")
+	return c.GetItemConfigMapStringInterface("/cluster/metrics/server/"+id, "metrics server")
 }
 
-func (c *Client) GetMetricsServerList() (metricServers map[string]interface{}, err error){
+func (c *Client) GetMetricsServerList() (metricServers map[string]interface{}, err error) {
 	return c.GetItemList("/cluster/metrics/server")
 }
 
 func (c *Client) CreateMetricServer(id string, params map[string]interface{}) error {
-	return c.CreateItem(params, "/cluster/metrics/server/" + id)
+	return c.CreateItem(params, "/cluster/metrics/server/"+id)
 }
 
 func (c *Client) UpdateMetricServer(id string, params map[string]interface{}) error {
-	return c.UpdateItem(params, "/cluster/metrics/server/" + id)
+	return c.UpdateItem(params, "/cluster/metrics/server/"+id)
 }
 
 func (c *Client) CheckMetricServerExistance(id string) (existance bool, err error) {
@@ -1609,15 +1620,15 @@ func (c *Client) EnableStorage(id string) error {
 	param := map[string]interface{}{
 		"disable": false,
 	}
-	return c.UpdateItem(param, "/storage/" + id)
+	return c.UpdateItem(param, "/storage/"+id)
 }
 
-func (c *Client) GetStorageList() (metricServers map[string]interface{}, err error){
+func (c *Client) GetStorageList() (metricServers map[string]interface{}, err error) {
 	return c.GetItemList("/storage")
 }
 
 func (c *Client) GetStorageConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/storage/" + id, "storage")
+	return c.GetItemConfigMapStringInterface("/storage/"+id, "storage")
 }
 
 func (c *Client) CreateStorage(id string, params map[string]interface{}) error {
@@ -1631,39 +1642,46 @@ func (c *Client) CheckStorageExistance(id string) (existance bool, err error) {
 }
 
 func (c *Client) UpdateStorage(id string, params map[string]interface{}) error {
-	return c.UpdateItem(params, "/storage/" + id)
+	return c.UpdateItem(params, "/storage/"+id)
 }
 
 func (c *Client) DeleteStorage(id string) error {
 	return c.DeleteUrl("/storage/" + id)
 }
 
-
-
-
 //Shared
 func (c *Client) GetItemConfigMapStringInterface(url, text string) (map[string]interface{}, error) {
 	data, err := c.GetItemConfig(url, text)
-	if err != nil {return nil, err}
+	if err != nil {
+		return nil, err
+	}
 	return data["data"].(map[string]interface{}), err
 }
 
 func (c *Client) GetItemConfigString(url, text string) (string, error) {
 	data, err := c.GetItemConfig(url, text)
-	if err != nil {return "", err}
+	if err != nil {
+		return "", err
+	}
 	return data["data"].(string), err
 }
 
 func (c *Client) GetItemConfigInterfaceArray(url, text string) ([]interface{}, error) {
 	data, err := c.GetItemConfig(url, text)
-	if err != nil {return nil, err}
+	if err != nil {
+		return nil, err
+	}
 	return data["data"].([]interface{}), err
 }
 
 func (c *Client) GetItemConfig(url, text string) (config map[string]interface{}, err error) {
 	err = c.GetJsonRetryable(url, &config, 3)
-	if err != nil {return nil, err}
-	if config["data"] == nil {return nil, fmt.Errorf(text + " CONFIG not readable")}
+	if err != nil {
+		return nil, err
+	}
+	if config["data"] == nil {
+		return nil, fmt.Errorf(text + " CONFIG not readable")
+	}
 	return
 }
 
@@ -1678,7 +1696,9 @@ func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (
 	reqbody := ParamsToBody(Params)
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
-	if err != nil {return c.HandleTaskError(resp)}
+	if err != nil {
+		return c.HandleTaskError(resp)
+	}
 	return c.CheckTask(resp)
 }
 
@@ -1693,7 +1713,9 @@ func (c *Client) UpdateItemWithTask(Params map[string]interface{}, url string) (
 	reqbody := ParamsToBodyWithAllEmpty(Params)
 	var resp *http.Response
 	resp, err = c.session.Put(url, nil, nil, &reqbody)
-	if err != nil {return c.HandleTaskError(resp)}
+	if err != nil {
+		return c.HandleTaskError(resp)
+	}
 	return c.CheckTask(resp)
 }
 
@@ -1706,7 +1728,9 @@ func (c *Client) DeleteUrl(url string) (err error) {
 func (c *Client) DeleteUrlWithTask(url string) (exitStatus string, err error) {
 	var resp *http.Response
 	resp, err = c.session.Delete(url, nil, nil)
-	if err != nil {return c.HandleTaskError(resp)}
+	if err != nil {
+		return c.HandleTaskError(resp)
+	}
 	return c.CheckTask(resp)
 }
 
@@ -1716,7 +1740,7 @@ func (c *Client) GetItemList(url string) (list map[string]interface{}, err error
 }
 
 // Close task responce
-func (c *Client) HandleTaskError(resp *http.Response)(exitStatus string, err error){
+func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string, err error) {
 	defer resp.Body.Close()
 	// This might not work if we never got a body. We'll ignore errors in trying to read,
 	// but extract the body if possible to give any error information back in the exitStatus
@@ -1726,8 +1750,10 @@ func (c *Client) HandleTaskError(resp *http.Response)(exitStatus string, err err
 }
 
 // Check if the proxmox task has been completed
-func (c *Client) CheckTask(resp *http.Response)(exitStatus string, err error){
+func (c *Client) CheckTask(resp *http.Response) (exitStatus string, err error) {
 	taskResponse, err := ResponseJSON(resp)
-	if err != nil {return "", err}
+	if err != nil {
+		return "", err
+	}
 	return c.WaitForCompletion(taskResponse)
 }

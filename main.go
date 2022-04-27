@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
 	"strconv"
-	"io/ioutil"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
@@ -42,7 +42,7 @@ func main() {
 	}
 
 	configSource := GetConfig(*fConfigFile)
-	
+
 	vmid := *fvmid
 	if vmid < 0 {
 		if len(flag.Args()) > 1 {
@@ -644,7 +644,6 @@ func main() {
 		failError(err)
 		fmt.Printf("Storage %s removed\n", storageid)
 
-
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
@@ -667,14 +666,18 @@ func userRequiresAPIToken(userID string) bool {
 	return rxUserRequiresToken.MatchString(userID)
 }
 
-func GetConfig(configFile string)(configSource []byte){
+func GetConfig(configFile string) (configSource []byte) {
 	var err error
 	if configFile != "" {
 		configSource, err = ioutil.ReadFile(configFile)
-		if err != nil {log.Fatal(err)}
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
 		configSource, err = ioutil.ReadAll(os.Stdin)
-		if err != nil {log.Fatal(err)}
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	return
 }
