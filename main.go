@@ -319,6 +319,15 @@ func main() {
 		failError(err)
 		fmt.Println(string(nodeList))
 
+	case "getResourceList":
+		resource, err := c.GetResourceList()
+		if err != nil {
+			log.Printf("Error listing resources %+v\n", err)
+			os.Exit(1)
+		}
+		rsList, err := json.Marshal(resource)
+		fmt.Println(string(rsList))
+
 	case "getVmList":
 		vms, err := c.GetVmList()
 		if err != nil {
