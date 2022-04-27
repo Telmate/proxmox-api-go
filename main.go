@@ -12,11 +12,16 @@ import (
 	"io/ioutil"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
+	"github.com/Telmate/proxmox-api-go/cli"
+	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 )
 
 func main() {
-	var insecure *bool
-	insecure = flag.Bool("insecure", false, "TLS insecure mode")
+	if os.Getenv("NEW_CLI") == "true" {
+		cli.Execute()
+		os.Exit(0)
+	}
+	insecure := flag.Bool("insecure", false, "TLS insecure mode")
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
 	fConfigFile := flag.String("file", "", "file to get the config from")
 	taskTimeout := flag.Int("timeout", 300, "api task timeout in seconds")
