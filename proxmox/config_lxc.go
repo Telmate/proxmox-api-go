@@ -53,6 +53,7 @@ type ConfigLxc struct {
 	Unique             bool        `json:"unique,omitempty"`
 	Unprivileged       bool        `json:"unprivileged"`
 	Tags               string      `json:"tags"`
+	DestNode	   string      `json:"destnode"`
 	Unused             []string    `json:"unused,omitempty"`
 }
 
@@ -360,7 +361,7 @@ func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 		"newid":  vmr.vmId,
 		"vmid":   config.Clone,
 		"node":   vmr.node,
-		"target": vmr.node,
+		"target": config.DestNode,
 		"full":   config.Full,
 	}
 
