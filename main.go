@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/Telmate/proxmox-api-go/proxmox"
+	"github.com/vmvarga/proxmox-api-go/proxmox"
 )
 
 func main() {
