@@ -142,8 +142,20 @@ func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
 	return
 }
 
+// GetResourceList returns a list of all enabled proxmox resources.
+// For resource types that can be in a disabled state, disabled resources
+// will not be returned
+func (c *Client) GetResourceList(resourceType string) (list map[string]interface{}, err error) {
+	var endpoint = "/cluster/resources"
+	if resourceType != "" {
+		endpoint = fmt.Sprintf("%s?type=%s", endpoint, resourceType)
+	}
+	err = c.GetJsonRetryable(endpoint, &list, 3)
+	return
+}
+
 func (c *Client) GetVmList() (list map[string]interface{}, err error) {
-	err = c.GetJsonRetryable("/cluster/resources?type=vm", &list, 3)
+	list, err = c.GetResourceList("vm")
 	return
 }
 

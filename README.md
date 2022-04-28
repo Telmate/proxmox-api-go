@@ -38,6 +38,10 @@ export PM_OTP=otpcode (only if required)
 
 ./proxmox-api-go rollbackQemu vm-name
 
+./proxmox-api-go getResourceList
+
+./proxmox-api-go getVmList
+
 ./proxmox-api-go getUserList
 
 ./proxmox-api-go getUser userid
