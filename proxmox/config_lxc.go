@@ -53,7 +53,7 @@ type ConfigLxc struct {
 	Unique             bool        `json:"unique,omitempty"`
 	Unprivileged       bool        `json:"unprivileged"`
 	Tags               string      `json:"tags"`
-	DestNode	   string      `json:"destnode"`
+	DestNode	   string      `json:"destnode,omitempty"`
 	Unused             []string    `json:"unused,omitempty"`
 }
 
@@ -355,13 +355,16 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 
 func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("lxc")
-
+	tempnode := vmr.node
+	if config.DestNode != "" {
+		tempnode = config.DestNode
+	}
 	//map the clone specific parameters
 	paramMap := map[string]interface{}{
 		"newid":  vmr.vmId,
 		"vmid":   config.Clone,
 		"node":   vmr.node,
-		"target": config.DestNode,
+		"target": tempnode,
 		"full":   config.Full,
 	}
 
@@ -414,6 +417,7 @@ func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	delete(paramMap, "start")
 	delete(paramMap, "clone")
 	delete(paramMap, "full")
+	delete(paramMap, "destnode")
 
 	// even though it is listed as a PUT option in the API documentation
 	// we remove it here because "it should not be modified manually";
