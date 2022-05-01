@@ -37,5 +37,5 @@ func ListRaw(IDtype string){
 		list, err = c.GetUserList()
 	}
 	cli.LogFatalListing(IDtype, err)
-	cli.PrintRawJson(list)
+	cli.PrintRawJson(listCmd.OutOrStdout(),list)
 }

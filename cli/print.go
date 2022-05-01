@@ -2,11 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"encoding/json"
 )
 
-func PrintRawJson(input interface{}){
+func PrintRawJson(out io.Writer, input interface{}){
 	list, err := json.Marshal(input)
 	LogFatalError(err)
-	fmt.Println(string(list))
+	fmt.Fprintln(out,string(list))
 }
