@@ -13,3 +13,17 @@ var deleteCmd = &cobra.Command{
 func init() {
 	cli.RootCmd.AddCommand(deleteCmd)
 }
+
+func DeleteID(args []string, IDtype string) (err error){
+	id := cli.ValidateIDset(args, 0, IDtype+"ID")
+	c := cli.NewClient()
+	switch IDtype {
+	case "Pool" :
+		err = c.DeletePool(id)
+	}
+	if err != nil {
+		return
+	}
+	cli.PrintItemDeleted(deleteCmd.OutOrStdout(), id, IDtype)
+	return
+}
