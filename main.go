@@ -18,7 +18,10 @@ import (
 
 func main() {
 	if os.Getenv("NEW_CLI") == "true" {
-		cli.Execute()
+		err := cli.Execute()
+		if err != nil {
+			failError(err)
+		}
 		os.Exit(0)
 	}
 	insecure := flag.Bool("insecure", false, "TLS insecure mode")

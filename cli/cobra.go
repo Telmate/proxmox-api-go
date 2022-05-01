@@ -24,10 +24,11 @@ func init() {
 	RootCmd.PersistentFlags().StringP("proxyurl", "p", "", "proxy url to connect to")
 }
 
-func Execute() {
-    if err := RootCmd.Execute(); err != nil {
-    	LogFatalError(err)
+func Execute() (err error) {
+    if err = RootCmd.Execute(); err != nil {
+    	return
    	}
+	return
 }
 
 func NewClient()(c *proxmox.Client) {
