@@ -18,6 +18,10 @@ func PrintItemDeleted(out io.Writer, id, text string){
 	fmt.Fprintf(out, "%s (%s) has been deleted\n", text, id)
 }
 
+func PrintItemSet(out io.Writer, id, text string){
+	fmt.Fprintf(out, "%s (%s) has been configured\n", text, id)
+}
+
 func PrintRawJson(out io.Writer, input interface{}){
 	list, err := json.Marshal(input)
 	LogFatalError(err)

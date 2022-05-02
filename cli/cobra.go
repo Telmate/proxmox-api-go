@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"regexp"
-
+	"io/ioutil"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
@@ -61,4 +61,17 @@ var rxUserRequiresToken = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+![a-z0-9]+")
 
 func userRequiresAPIToken(userID string) bool {
 	return rxUserRequiresToken.MatchString(userID)
+}
+
+func NewConfig()(configSource []byte) {
+	var err error
+	file, _ := RootCmd.Flags().GetString("file")
+	if file != "" {
+		configSource, err = ioutil.ReadFile(file)
+		LogFatalError(err)
+	} else {
+		configSource, err = ioutil.ReadAll(RootCmd.InOrStdin())
+		LogFatalError(err)
+	}
+	return
 }
