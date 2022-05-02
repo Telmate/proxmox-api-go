@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,6 +25,8 @@ import (
 const TaskStatusCheckInterval = 2
 
 const exitStatusSuccess = "OK"
+
+var ErrVMNotFound = errors.New("vm not found")
 
 // Client - URL, user and password to specifc Proxmox node
 type Client struct {
@@ -192,7 +195,7 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 			return
 		}
 	}
-	return nil, fmt.Errorf("vm '%d' not found", vmr.vmId)
+	return nil, ErrVMNotFound
 }
 
 func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
