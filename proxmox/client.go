@@ -1530,8 +1530,15 @@ func (c *Client) CheckUserExistance(id string) (existance bool, err error) {
 }
 
 func (c *Client) DeleteUser(id string) (err error) {
-	_, err = c.session.Delete("/access/users/"+id, nil, nil)
-	return
+	existance, err := c.CheckUserExistance(id)
+	if err != nil {
+		return
+	}
+	if !existance {
+		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", id)
+	}
+	// Proxmox silently fails a user delete if the users does not exist
+	return c.DeleteUrl("/access/users/" + id)
 }
 
 //ACME
