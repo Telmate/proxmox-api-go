@@ -307,8 +307,6 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	//Array to list deleted parameters
 	deleteParams := []string{}
 
-	deleteParams = append(deleteParams, "destnode")
-
 	if config.Bios != "" {
 		configParams["bios"] = config.Bios
 	}
