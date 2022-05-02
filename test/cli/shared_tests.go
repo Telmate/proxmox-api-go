@@ -4,6 +4,8 @@ import (
 	"testing"
 	"bytes"
 	"io/ioutil"
+	"strings"
+
 	"github.com/Telmate/proxmox-api-go/cli"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 	"github.com/stretchr/testify/assert"
@@ -11,13 +13,18 @@ import (
 )
 
 type Test struct {
-	Name string
-	Expected string
-	NotExpected string
-	ReqErr bool
-	Contains bool
-	NotContains bool
-	Args []string
+	InputJson string //the inputted json
+	OutputJson string //the outputted json
+
+	Expected string //the output that is expected
+	Contains bool //if the output contains (expected) or qeuals it
+
+	NotExpected string //the output that is notexpected
+	NotContains bool //if the output contains (notexpected) or qeuals it
+
+	ReqErr bool //if an error is expected as output
+
+	Args []string //cli arguments
 }
 
 func ListTest(t *testing.T, args []string, expected string) {
@@ -38,6 +45,7 @@ func (test *Test) StandardTest(t *testing.T) {
 	cli.RootCmd.SetArgs(test.Args)
 	buffer := new(bytes.Buffer)
 	cli.RootCmd.SetOut(buffer)
+	cli.RootCmd.SetIn(strings.NewReader(test.InputJson))
 	err := cli.RootCmd.Execute()
 
 	if test.ReqErr {
