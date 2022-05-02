@@ -20,6 +20,8 @@ func DeleteID(args []string, IDtype string) (err error){
 	switch IDtype {
 	case "Pool" :
 		err = c.DeletePool(id)
+	case "User" :
+		err = c.DeleteUser(id)
 	}
 	if err != nil {
 		return
