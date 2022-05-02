@@ -61,6 +61,7 @@ type ConfigQemu struct {
 	HaState         string      `json:"hastate,omitempty"`
 	HaGroup         string      `json:"hagroup,omitempty"`
 	Tags            string      `json:"tags"`
+	DestNode	   	  string      `json:"destnode,omitempty"`
 	Args            string      `json:"args"`
 
 	// Deprecated single disk.
@@ -262,9 +263,13 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	if disk0Storage, ok := config.QemuDisks[0]["storage"].(string); ok && len(disk0Storage) > 0 {
 		storage = disk0Storage
 	}
+	destnode := vmr.node
+	if config.DestNode != "" {
+		destnode = config.DestNode
+	}
 	params := map[string]interface{}{
 		"newid":  vmr.vmId,
-		"target": vmr.node,
+		"target": destnode,
 		"name":   config.Name,
 		"full":   fullclone,
 	}
@@ -301,6 +306,8 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 
 	//Array to list deleted parameters
 	deleteParams := []string{}
+
+	deleteParams = append(deleteParams, "destnode")
 
 	if config.Bios != "" {
 		configParams["bios"] = config.Bios

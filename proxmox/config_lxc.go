@@ -53,7 +53,7 @@ type ConfigLxc struct {
 	Unique             bool        `json:"unique,omitempty"`
 	Unprivileged       bool        `json:"unprivileged"`
 	Tags               string      `json:"tags"`
-	DestNode	   string      `json:"destnode,omitempty"`
+	DestNode	   			 string      `json:"destnode,omitempty"`
 	Unused             []string    `json:"unused,omitempty"`
 }
 
@@ -355,16 +355,16 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 
 func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("lxc")
-	tempnode := vmr.node
+	destnode := vmr.node
 	if config.DestNode != "" {
-		tempnode = config.DestNode
+		destnode = config.DestNode
 	}
 	//map the clone specific parameters
 	paramMap := map[string]interface{}{
 		"newid":  vmr.vmId,
 		"vmid":   config.Clone,
 		"node":   vmr.node,
-		"target": tempnode,
+		"target": destnode,
 		"full":   config.Full,
 	}
 
