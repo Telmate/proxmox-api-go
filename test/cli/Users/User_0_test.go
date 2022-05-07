@@ -9,13 +9,15 @@ import (
 func Test_User_0_Cleanup(t *testing.T){
 	Test := cliTest.Test{
 		ReqErr: true,
-		ErrContains: "test-user@pve",
-		Args: []string{"-i","delete","user","test-user@pve"},
+		ErrContains: "test-user0@pve",
+		Args: []string{"-i","delete","user","test-user0@pve"},
 	}
 	Test.StandardTest(t)
 }
 
-func Test_User_0_Set_Full_With_Password(t *testing.T){
+// Set groups
+
+func Test_User_0_Set_Full_With_Password_Set(t *testing.T){
 	Test := cliTest.Test{
 		InputJson: `
 {
@@ -29,14 +31,22 @@ func Test_User_0_Set_Full_With_Password(t *testing.T){
 	],
 	"keys": "2fa key"
 }`,
-		Expected: "(test-user@pve)",
+		Expected: "(test-user0@pve)",
 		Contains: true,
-		Args: []string{"-i","set","user","test-user@pve","Enter123!"},
+		Args: []string{"-i","set","user","test-user0@pve","Enter123!"},
 	}
 	Test.StandardTest(t)
 }
 
-// Test Login (no error)
+func Test_User_0_Login_Password_Set(t *testing.T) {
+	cliTest.SetEnvironmentVariables()
+	Test := cliTest.LoginTest{
+		UserID: "test-user0@pve",
+		Password: "Enter123!",
+		ReqErr: false,
+	}
+	Test.Login(t)
+}
 
 func Test_User_0_Get_Full(t *testing.T) {
 	cliTest.SetEnvironmentVariables()
@@ -44,7 +54,7 @@ func Test_User_0_Get_Full(t *testing.T) {
 		OutputJson: `
 {
 	"comment": "this is a comment",
-	"userid": "test-user@pve",
+	"userid": "test-user0@pve",
 	"email": "b.wayne@proxmox.com",
 	"enable": true,
 	"expire": 99999999,
@@ -52,7 +62,7 @@ func Test_User_0_Get_Full(t *testing.T) {
 	"keys": "2fa key",
 	"lastname": "Wayne"
 }`,
-		Args: []string{"-i","get","user","test-user@pve"},
+		Args: []string{"-i","get","user","test-user0@pve"},
 	}
 	Test.StandardTest(t)
 }
@@ -71,9 +81,9 @@ func Test_User_0_Set_Empty(t *testing.T){
 	],
 	"keys": ""
 }`,
-		Expected: "(test-user@pve)",
+		Expected: "(test-user0@pve)",
 		Contains: true,
-		Args: []string{"-i","set","user","test-user@pve"},
+		Args: []string{"-i","set","user","test-user0@pve"},
 	}
 	Test.StandardTest(t)
 }
@@ -83,11 +93,11 @@ func Test_User_0_Get_Empty(t *testing.T) {
 	Test := cliTest.Test{
 		OutputJson: `
 {
-	"userid": "test-user@pve",
+	"userid": "test-user0@pve",
 	"enable": false,
 	"expire": 0
 }`,
-		Args: []string{"-i","get","user","test-user@pve"},
+		Args: []string{"-i","get","user","test-user0@pve"},
 	}
 	Test.StandardTest(t)
 }
@@ -96,7 +106,7 @@ func Test_User_0_Delete(t *testing.T){
 	Test := cliTest.Test{
 		Expected: "",
 		ReqErr: false,
-		Args: []string{"-i","delete","user","test-user@pve"},
+		Args: []string{"-i","delete","user","test-user0@pve"},
 	}
 	Test.StandardTest(t)
 }

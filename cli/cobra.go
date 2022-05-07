@@ -2,10 +2,11 @@ package cli
 
 import (
 	"crypto/tls"
-	"log"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
-	"io/ioutil"
+
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +33,12 @@ func Execute() (err error) {
 }
 
 func NewClient()(c *proxmox.Client) {
+	c, err := Client("","","","")
+	LogFatalError(err)
+	return
+}
+
+func Client(apiUlr, userID, password, otp string) (c *proxmox.Client, err error) {
 	insecure, _ := RootCmd.Flags().GetBool("insecure")
 	timeout, _ := RootCmd.Flags().GetInt("timeout")
 	proxyUrl, _ := RootCmd.Flags().GetString("proxyurl")
@@ -40,19 +47,29 @@ func NewClient()(c *proxmox.Client) {
 	if !insecure {
 		tlsconf = nil
 	}
-
-	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, proxyUrl, timeout)
+	if apiUlr == "" {
+		apiUlr = os.Getenv("PM_API_URL")
+	}
+	if userID == "" {
+		userID = os.Getenv("PM_USER")
+	}
+	if password == "" {
+		password = os.Getenv("PM_PASS")
+	}
+	if otp == "" {
+		otp = os.Getenv("PM_OTP")
+	}
+	c, err = proxmox.NewClient(apiUlr, nil, tlsconf, proxyUrl, timeout)
 	LogFatalError(err)
-	if userRequiresAPIToken(os.Getenv("PM_USER")) {
-		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
+	if userRequiresAPIToken(userID) {
+		c.SetAPIToken(userID, password)
 		// As test, get the version of the server
-		_, err := c.GetVersion()
+		_, err = c.GetVersion()
 		if err != nil {
-			log.Fatalf("login error: %s", err)
+			err = fmt.Errorf("login error: %s", err)
 		}
 	} else {
-		err := c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
-		LogFatalError(err)
+		err = c.Login(userID, password, otp)
 	}
 	return
 }

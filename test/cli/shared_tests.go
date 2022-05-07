@@ -78,3 +78,20 @@ func (test *Test) StandardTest(t *testing.T) {
 		require.JSONEq(t, test.OutputJson ,string(out))
 	}
 }
+
+type LoginTest struct {
+	APIurl string
+	UserID string
+	Password string
+	OTP string
+	ReqErr bool //if an error is expected as output
+}
+
+func (test *LoginTest) Login(t *testing.T){
+	_, err := cli.Client(test.APIurl,test.UserID,test.Password,test.OTP)
+	if test.ReqErr {
+		require.Error(t, err)
+	} else {
+		require.NoError(t, err)
+	}
+}

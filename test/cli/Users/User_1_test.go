@@ -29,7 +29,15 @@ func Test_User_1_Set_Empty_Without_Password(t *testing.T){
 	Test.StandardTest(t)
 }
 
-// Test Login (error)
+func Test_User_1_Login_Password_Not_Set(t *testing.T) {
+	cliTest.SetEnvironmentVariables()
+	Test := cliTest.LoginTest{
+		UserID: "test-user1@pve",
+		Password: "Enter123!",
+		ReqErr: true,
+	}
+	Test.Login(t)
+}
 
 func Test_User_1_Get_Empty(t *testing.T) {
 	cliTest.SetEnvironmentVariables()
@@ -66,7 +74,15 @@ func Test_User_1_Set_Full_With_Password(t *testing.T){
 	Test.StandardTest(t)
 }
 
-// Test Login (no error)
+func Test_User_1_Login_Password_Set(t *testing.T) {
+	cliTest.SetEnvironmentVariables()
+	Test := cliTest.LoginTest{
+		UserID: "test-user1@pve",
+		Password: "Enter123!",
+		ReqErr: false,
+	}
+	Test.Login(t)
+}
 
 func Test_User_1_Get_Full(t *testing.T) {
 	cliTest.SetEnvironmentVariables()
