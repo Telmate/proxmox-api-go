@@ -27,3 +27,9 @@ func PrintRawJson(out io.Writer, input interface{}){
 	LogFatalError(err)
 	fmt.Fprintln(out,string(list))
 }
+
+func PrintFormattedJson(out io.Writer, input interface{}){
+	list, err := json.MarshalIndent(input, "", "  ")
+	LogFatalError(err)
+	fmt.Fprintln(out,string(list))
+}
