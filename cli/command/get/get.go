@@ -8,7 +8,7 @@ import (
 
 var getCmd = &cobra.Command{
 	Use:   "get",
-	Short: "With shows the current configuration an item in proxmox",
+	Short: "get shows the current configuration an item in proxmox",
 }
 
 func init() {

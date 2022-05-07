@@ -9,7 +9,7 @@ import (
 
 var get_poolCmd = &cobra.Command{
 	Use:   "pool POOLID",
-	Short: "Gets the configuration of the specied Pool",
+	Short: "Gets the configuration of the specified Pool",
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.ValidateIDset(args, 0, "PoolID")
 		c := cli.NewClient()
