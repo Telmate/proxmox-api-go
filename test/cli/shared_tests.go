@@ -23,6 +23,7 @@ type Test struct {
 	NotContains bool //if the output contains (notexpected) or qeuals it
 
 	ReqErr bool //if an error is expected as output
+	ErrContains string //the string the error should contain
 
 	Args []string //cli arguments
 }
@@ -50,6 +51,9 @@ func (test *Test) StandardTest(t *testing.T) {
 
 	if test.ReqErr {
 		require.Error(t, err)
+		if test.ErrContains != "" {
+			assert.Contains(t, err.Error(), test.ErrContains)
+		}
 	} else {
 		require.NoError(t, err)
 	}
@@ -68,5 +72,9 @@ func (test *Test) StandardTest(t *testing.T) {
 		} else {
 			assert.NotEqual(t, string(out), test.NotExpected)
 		}
+	}
+	if test.OutputJson != "" {
+		out, _ := ioutil.ReadAll(buffer)
+		require.JSONEq(t, test.OutputJson ,string(out))
 	}
 }
