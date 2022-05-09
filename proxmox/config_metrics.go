@@ -7,18 +7,18 @@ import (
 )
 
 type ConfigMetricsGraphite struct {
-	Protocol string `json:"protocol,omitempty"`
+	Protocol string `json:"protocol"`
 	Path     string `json:"path,omitempty"`
 }
 
 type ConfigMetricsInfluxDB struct {
 	ApiPathPrefix     string `json:"api-path-prefix,omitempty"`
 	Bucket            string `json:"bucket,omitempty"`
-	Protocol          string `json:"protocol,omitempty"`
+	Protocol          string `json:"protocol"`
 	MaxBodySize       int    `json:"max-body-size,omitempty"`
 	Organization      string `json:"organization,omitempty"`
 	Token             string `json:"token,omitempty"`//token key is never returned from api
-	VerifyCertificate bool   `json:"verify-certificate,omitempty"`
+	VerifyCertificate bool   `json:"verify-certificate"`
 }
 
 // Metrics options for the Proxmox API
@@ -27,14 +27,15 @@ type ConfigMetrics struct {
 	Port    int    `json:"port"`
 	Server  string `json:"server"`
 	Type    string `json:"type"`//type key is only used on create
-	Enable  bool   `json:"enable,omitempty"`
-	MTU     int    `json:"mtu,omitempty"`
+	Enable  bool   `json:"enable"`
+	MTU     int    `json:"mtu"`
 	Timeout int    `json:"timeout,omitempty"`
 	Graphite *ConfigMetricsGraphite `json:"graphite,omitempty"`
 	InfluxDB *ConfigMetricsInfluxDB `json:"influxdb,omitempty"`
 }
 
-func (config *ConfigMetrics) MapMetricsToApiValues()(params map[string]interface{}) {
+func (config *ConfigMetrics) MapMetricsToApiValues(create bool) (params map[string]interface{}) {
+	var deletions string
 	params = map[string]interface{}{
 		"port":    config.Port,
 		"server":  config.Server,
@@ -42,7 +43,7 @@ func (config *ConfigMetrics) MapMetricsToApiValues()(params map[string]interface
 		"mtu":     config.MTU,
 		"timeout": config.Timeout,
 	}
-	if config.Type != "" {
+	if create {
 		params["type"] = config.Type
 	}
 	if config.Graphite != nil{
@@ -50,7 +51,11 @@ func (config *ConfigMetrics) MapMetricsToApiValues()(params map[string]interface
 		params["proto"] = config.Graphite.Protocol
 	}
 	if config.InfluxDB != nil{
-		params["api-path-prefix"] = config.InfluxDB.ApiPathPrefix
+		if config.InfluxDB.ApiPathPrefix != "" {
+			params["api-path-prefix"] = config.InfluxDB.ApiPathPrefix
+		} else {
+			deletions = AddToList(deletions, "api-path-prefix")
+		}
 		params["bucket"] = config.InfluxDB.Bucket
 		params["max-body-size"] = config.InfluxDB.MaxBodySize
 		params["organization"] = config.InfluxDB.Organization
@@ -59,6 +64,10 @@ func (config *ConfigMetrics) MapMetricsToApiValues()(params map[string]interface
 			params["token"] = config.InfluxDB.Token
 		}
 		params["verify-certificate"] = config.InfluxDB.VerifyCertificate
+	}
+
+	if !create && deletions != "" {
+		params["delete"] = deletions
 	}
 	return
 }
@@ -127,7 +136,7 @@ func (config *ConfigMetrics) SetMetrics(metricsid string, client *Client) (err e
 
 func (config *ConfigMetrics) CreateMetrics(client *Client) (err error) {
 	config.RemoveMetricsNestedStructs()
-	params := config.MapMetricsToApiValues()
+	params := config.MapMetricsToApiValues(true)
 	err = client.CreateMetricServer(config.Name, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
@@ -138,8 +147,7 @@ func (config *ConfigMetrics) CreateMetrics(client *Client) (err error) {
 
 func (config *ConfigMetrics) UpdateMetrics(client *Client) (err error) {
 	config.RemoveMetricsNestedStructs()
-	config.Type = ""
-	params := config.MapMetricsToApiValues()
+	params := config.MapMetricsToApiValues(false)
 	err = client.UpdateMetricServer(config.Name, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
