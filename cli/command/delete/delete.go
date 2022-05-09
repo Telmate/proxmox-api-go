@@ -18,6 +18,8 @@ func DeleteID(args []string, IDtype string) (err error){
 	id := cli.ValidateIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
 	switch IDtype {
+	case "MetricServer" :
+		err = c.DeleteMetricServer(id)
 	case "Pool" :
 		err = c.DeletePool(id)
 	case "User" :
