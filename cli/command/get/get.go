@@ -20,6 +20,8 @@ func GetConfig(args []string, IDtype string) (err error) {
 	c := cli.NewClient()
 	var config interface{}
 	switch IDtype {
+	case "MetricServer" :
+		config, err = proxmox.NewConfigMetricsFromApi(id, c)
 	case "User" :
 		config, err = proxmox.NewConfigUserFromApi(id, c)
 	}
