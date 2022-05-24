@@ -31,7 +31,7 @@ type ConfigQemu struct {
 	Description     string      `json:"desc"`
 	Pool            string      `json:"pool,omitempty"`
 	Bios            string      `json:"bios"`
-	EFIDisk         string      `json:"efidisk,omitempty"`
+	EFIDisk         QemuDevice  `json:"efidisk,omitempty"`
 	Machine         string      `json:"machine,omitempty"`
 	Onboot          bool        `json:"onboot"`
 	Tablet          bool        `json:"tablet"`
@@ -169,9 +169,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		log.Printf("[ERROR] %q", err)
 	}
 
-	//Creat additional efi disk
-	if config.EFIDisk != "" {
-		params["efidisk0"] = fmt.Sprintf("%s:1", config.EFIDisk)
+	// Create EFI disk
+	err = config.CreateQemuEfiParams(params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
 	}
 
 	// Create vga config.
@@ -537,10 +538,6 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["bios"]; isSet {
 		bios = vmConfig["bios"].(string)
 	}
-	efidisk := ""
-	if _, isSet := vmConfig["efidisk0"]; isSet {
-		efidisk = vmConfig["efidisk0"].(string)
-	}
 	onboot := true
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
@@ -621,7 +618,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Tags:            strings.TrimSpace(tags),
 		Args:            strings.TrimSpace(args),
 		Bios:            bios,
-		EFIDisk:         efidisk,
+		EFIDisk:         QemuDevice{},
 		Onboot:          onboot,
 		Tablet:          tablet,
 		Agent:           agent,
@@ -1236,6 +1233,33 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 		params[qemuNicName] = strings.Join(nicConfParam, ",")
 	}
 
+	return nil
+}
+
+// Create efi parameter.
+func (c ConfigQemu) CreateQemuEfiParams(
+	params map[string]interface{},
+) error {
+	efiParam := QemuDeviceParam{}
+	efiParam = efiParam.createDeviceParam(c.EFIDisk, nil)
+
+	if len(efiParam) > 0 {
+		storage_info := []string{}
+		storage := ""
+		for _, param := range efiParam {
+			key := strings.Split(param, "=")
+			if key[0] == "storage" {
+				// Proxmox format for disk creation
+				storage = fmt.Sprintf("%s:1", key[1])
+			} else {
+				storage_info = append(storage_info, param)
+			}
+		}
+		if len(storage_info) > 0 {
+			storage = fmt.Sprintf("%s,%s", storage, strings.Join(storage_info, ","))
+		}
+		params["efidisk0"] = storage
+	}
 	return nil
 }
 
