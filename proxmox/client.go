@@ -206,6 +206,9 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 
 func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
 	resp, err := c.GetVmList()
+	if err != nil {
+		return
+	}
 	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
