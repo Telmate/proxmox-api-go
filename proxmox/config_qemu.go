@@ -34,6 +34,7 @@ type ConfigQemu struct {
 	EFIDisk         QemuDevice  `json:"efidisk,omitempty"`
 	Machine         string      `json:"machine,omitempty"`
 	Onboot          bool        `json:"onboot"`
+	Startup         string      `json:"startup,omitempty"`
 	Tablet          bool        `json:"tablet"`
 	Agent           int         `json:"agent"`
 	Memory          int         `json:"memory"`
@@ -113,6 +114,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"vmid":        vmr.vmId,
 		"name":        config.Name,
 		"onboot":      config.Onboot,
+		"startup":     config.Startup,
 		"tablet":      config.Tablet,
 		"agent":       config.Agent,
 		"ostype":      config.QemuOs,
@@ -288,6 +290,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"tags":        config.Tags,
 		"args":        config.Args,
 		"onboot":      config.Onboot,
+		"startup":     config.Startup,
 		"tablet":      config.Tablet,
 		"agent":       config.Agent,
 		"sockets":     config.QemuSockets,
@@ -542,6 +545,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
 	}
+	startup := ""
+	if _, isSet := vmConfig["startup"]; isSet {
+		startup = vmConfig["startup"].(string)
+	}
 	tablet := true
 	if _, isSet := vmConfig["tablet"]; isSet {
 		tablet = Itob(int(vmConfig["tablet"].(float64)))
@@ -620,6 +627,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Bios:            bios,
 		EFIDisk:         QemuDevice{},
 		Onboot:          onboot,
+		Startup:         startup,
 		Tablet:          tablet,
 		Agent:           agent,
 		QemuOs:          ostype,
