@@ -797,12 +797,28 @@ func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatu
 	return
 }
 
+// MoveQemuDisk - Move a disk from one storage to another
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	if disk == "" {
 		disk = "virtio0"
 	}
 	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
+// MoveQemuDiskToVM - Move a disk to a different VM, using the same storage
+func (c *Client) MoveQemuDiskToVM(vmrSource *VmRef, disk string, vmrTarget *VmRef) (exitStatus interface{}, err error) {
+	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "target-vmid": vmrTarget.vmId, "delete": true})
+	url := fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmrSource.node, vmrSource.vmType, vmrSource.vmId)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
