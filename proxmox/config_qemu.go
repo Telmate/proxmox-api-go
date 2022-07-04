@@ -302,6 +302,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
+		"hookscript":  config.Hookscript,
 	}
 
 	//Array to list deleted parameters
@@ -325,6 +326,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 
 	if config.BootDisk != "" {
 		configParams["bootdisk"] = config.BootDisk
+	}
+
+	if config.Hookscript != "" {
+		configParams["hookscript"] = config.Hookscript
 	}
 
 	if config.Scsihw != "" {
