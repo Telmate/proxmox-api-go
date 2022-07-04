@@ -899,6 +899,23 @@ func (c *Client) createVMDisks(
 	return createdDisks, nil
 }
 
+// CreateNewDisk - This method allows simpler disk creation for direct client users
+// It should work for any existing container and virtual machine
+func (c *Client) CreateNewDisk(vmr *VmRef, disk string, volume string) (exitStatus interface{}, err error) {
+
+	reqbody := ParamsToBody(map[string]interface{}{disk: volume})
+	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
+	resp, err := c.session.Put(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(taskResponse)
+	}
+	return
+}
+
 // DeleteVMDisks - Delete VM disks from host node.
 // By default the VM disks are deteled when the VM is deleted,
 // so mainly this is used to delete the disks in case VM creation didn't complete.
