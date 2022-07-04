@@ -59,6 +59,7 @@ type ConfigQemu struct {
 	QemuNetworks    QemuDevices `json:"network"`
 	QemuSerials     QemuDevices `json:"serial,omitempty"`
 	QemuUsbs        QemuDevices `json:"usb,omitempty"`
+	Hookscript      string      `json:"hookscript,omitempty"`
 	HaState         string      `json:"hastate,omitempty"`
 	HaGroup         string      `json:"hagroup,omitempty"`
 	Tags            string      `json:"tags"`
@@ -618,6 +619,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["scsihw"]; isSet {
 		scsihw = vmConfig["scsihw"].(string)
 	}
+	hookscript := ""
+	if _, isSet := vmConfig["hookscript"]; isSet {
+		hookscript = vmConfig["hookscript"].(string)
+	}
 
 	config = &ConfigQemu{
 		Name:            name,
@@ -642,6 +647,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Boot:            boot,
 		BootDisk:        bootdisk,
 		Scsihw:          scsihw,
+		Hookscript:      hookscript,
 		QemuDisks:       QemuDevices{},
 		QemuUnusedDisks: QemuDevices{},
 		QemuVga:         QemuDevice{},
