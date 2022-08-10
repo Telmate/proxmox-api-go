@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
 var GlusterfsFull = proxmox.ConfigStorage{
@@ -46,18 +45,12 @@ var GlusterfsEmpty = proxmox.ConfigStorage{
 }
 
 func GlusterfsGetFull(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(GlusterfsFull)
 	s.ID = name
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }
 
 func GlusterfsGetEmpty(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(GlusterfsEmpty)
 	s.ID = name
 	s.GlusterFS.Preallocation = proxmox.PointerString("metadata")
@@ -65,9 +58,5 @@ func GlusterfsGetEmpty(name string, t *testing.T) {
 	s.Content.DiskImage = proxmox.PointerBool(false)
 	s.Content.Snippets = proxmox.PointerBool(false)
 	s.Content.Template = proxmox.PointerBool(false)
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }

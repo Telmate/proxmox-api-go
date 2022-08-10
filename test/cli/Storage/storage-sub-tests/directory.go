@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
 var DirectoryFull = proxmox.ConfigStorage{
@@ -45,18 +44,12 @@ var DirectoryEmpty = proxmox.ConfigStorage{
 }
 
 func DirectoryGetFull(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(DirectoryFull)
 	s.ID = name
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }
 
 func DirectoryGetEmpty(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(DirectoryEmpty)
 	s.ID = name
 	s.Directory.Preallocation = proxmox.PointerString("metadata")
@@ -65,9 +58,5 @@ func DirectoryGetEmpty(name string, t *testing.T) {
 	s.Content.DiskImage = proxmox.PointerBool(false)
 	s.Content.Snippets = proxmox.PointerBool(false)
 	s.Content.Template = proxmox.PointerBool(false)
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }

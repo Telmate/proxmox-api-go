@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
 var LVMThinFull = proxmox.ConfigStorage{
@@ -33,24 +32,14 @@ var LVMThinEmpty = proxmox.ConfigStorage{
 }
 
 func LVMThinGetFull(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(LVMThinFull)
 	s.ID = name
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }
 
 func LVMThinGetEmpty(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(LVMThinEmpty)
 	s.ID = name
 	s.Content.DiskImage = proxmox.PointerBool(false)
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
 var RBDFull = proxmox.ConfigStorage{
@@ -38,25 +37,15 @@ var RBDEmpty = proxmox.ConfigStorage{
 }
 
 func RBDGetFull(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(RBDFull)
 	s.ID = name
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }
 
 func RBDGetEmpty(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(RBDEmpty)
 	s.ID = name
 	s.RBD.KRBD = false
 	s.Content.DiskImage = proxmox.PointerBool(false)
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }

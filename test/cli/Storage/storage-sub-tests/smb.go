@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
 var SMBFull = proxmox.ConfigStorage{
@@ -51,18 +50,12 @@ var SMBEmpty = proxmox.ConfigStorage{
 }
 
 func SMBGetFull(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(SMBFull)
 	s.ID = name
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }
 
 func SMBGetEmpty(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(SMBEmpty)
 	s.ID = name
 	s.SMB.Preallocation = proxmox.PointerString("metadata")
@@ -71,9 +64,5 @@ func SMBGetEmpty(name string, t *testing.T) {
 	s.Content.DiskImage = proxmox.PointerBool(false)
 	s.Content.Iso = proxmox.PointerBool(false)
 	s.Content.Template = proxmox.PointerBool(false)
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }

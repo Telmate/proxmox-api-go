@@ -26,7 +26,6 @@ func Test_Storage_ZFSoverISCSI_Comstar_1_Create_Empty(t *testing.T) {
 }
 
 func Test_Storage_ZFSoverISCSI_Comstar_1_Get_Empty(t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := storagesubtests.CloneJson(storagesubtests.ZFSoverISCSI_ComstarEmpty)
 	s.ID = "zfs-over-iscsi_comstar-test-1"
 	s.ZFSoverISCSI.Blocksize = proxmox.PointerString("4k")
@@ -38,11 +37,7 @@ func Test_Storage_ZFSoverISCSI_Comstar_1_Get_Empty(t *testing.T) {
 	s.Content = &proxmox.ConfigStorageContent{
 		DiskImage: proxmox.PointerBool(true),
 	}
-	Test := cliTest.Test{
-		OutputJson: storagesubtests.InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", "zfs-over-iscsi_comstar-test-1"},
-	}
-	Test.StandardTest(t)
+	storagesubtests.Get(s, s.ID, t)
 }
 
 func Test_Storage_ZFSoverISCSI_Comstar_1_Update_Full(t *testing.T) {
@@ -59,17 +54,12 @@ func Test_Storage_ZFSoverISCSI_Comstar_1_Update_Full(t *testing.T) {
 }
 
 func Test_Storage_ZFSoverISCSI_Comstar_1_Get_Full(t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := storagesubtests.CloneJson(storagesubtests.ZFSoverISCSI_ComstarFull)
 	s.ID = "zfs-over-iscsi_comstar-test-1"
 	s.ZFSoverISCSI.Blocksize = proxmox.PointerString("4k")
 	s.ZFSoverISCSI.Comstar.HostGroup = ""
 	s.ZFSoverISCSI.Comstar.TargetGroup = ""
-	Test := cliTest.Test{
-		OutputJson: storagesubtests.InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", "zfs-over-iscsi_comstar-test-1"},
-	}
-	Test.StandardTest(t)
+	storagesubtests.Get(s, s.ID, t)
 }
 
 func Test_Storage_ZFSoverISCSI_Comstar_1_Delete(t *testing.T) {

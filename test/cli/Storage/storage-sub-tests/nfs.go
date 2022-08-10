@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
 var NFSFull = proxmox.ConfigStorage{
@@ -47,18 +46,12 @@ var NFSEmpty = proxmox.ConfigStorage{
 }
 
 func NFSGetFull(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(NFSFull)
 	s.ID = name
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }
 
 func NFSGetEmpty(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
 	s := CloneJson(NFSEmpty)
 	s.ID = name
 	s.NFS.Preallocation = proxmox.PointerString("metadata")
@@ -67,9 +60,5 @@ func NFSGetEmpty(name string, t *testing.T) {
 	s.Content.Snippets = proxmox.PointerBool(false)
 	s.Content.Iso = proxmox.PointerBool(false)
 	s.Content.Template = proxmox.PointerBool(false)
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
+	Get(s, name, t)
 }
