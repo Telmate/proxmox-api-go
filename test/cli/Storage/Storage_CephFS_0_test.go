@@ -5,7 +5,6 @@ import (
 
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 	storagesubtests "github.com/Telmate/proxmox-api-go/test/cli/Storage/storage-sub-tests"
 )
 
@@ -15,13 +14,7 @@ func Test_Storage_CephFS_0_Cleanup(t *testing.T) {
 
 func Test_Storage_CephFS_0_Create_Full(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.CephfsFull)
-	Test := cliTest.Test{
-		InputJson: storagesubtests.InlineMarshal(s),
-		Expected:  "(cephfs-test-0)",
-		Contains:  true,
-		Args:      []string{"-i", "create", "storage", "cephfs-test-0"},
-	}
-	Test.StandardTest(t)
+	storagesubtests.Create(s, "cephfs-test-0", t)
 }
 
 func Test_Storage_CephFS_0_Get_Full(t *testing.T) {
@@ -31,13 +24,7 @@ func Test_Storage_CephFS_0_Get_Full(t *testing.T) {
 func Test_Storage_CephFS_0_Update_Empty(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.CephfsEmpty)
 	s.BackupRetention = &proxmox.ConfigStorageBackupRetention{}
-	Test := cliTest.Test{
-		InputJson: storagesubtests.InlineMarshal(s),
-		Expected:  "(cephfs-test-0)",
-		Contains:  true,
-		Args:      []string{"-i", "update", "storage", "cephfs-test-0"},
-	}
-	Test.StandardTest(t)
+	storagesubtests.Update(s, "cephfs-test-0", t)
 }
 
 func Test_Storage_CephFS_0_Get_Empty(t *testing.T) {

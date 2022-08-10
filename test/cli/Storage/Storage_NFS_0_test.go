@@ -15,13 +15,7 @@ func Test_Storage_NFS_0_Cleanup(t *testing.T) {
 
 func Test_Storage_NFS_0_Create_Full(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.NFSFull)
-	Test := cliTest.Test{
-		InputJson: storagesubtests.InlineMarshal(s),
-		Expected:  "(nfs-test-0)",
-		Contains:  true,
-		Args:      []string{"-i", "create", "storage", "nfs-test-0"},
-	}
-	Test.StandardTest(t)
+	storagesubtests.Create(s, "nfs-test-0", t)
 }
 
 func Test_Storage_NFS_0_Get_Full(t *testing.T) {
@@ -32,13 +26,7 @@ func Test_Storage_NFS_0_Update_Empty(t *testing.T) {
 	cliTest.SetEnvironmentVariables()
 	s := storagesubtests.CloneJson(storagesubtests.NFSEmpty)
 	s.BackupRetention = &proxmox.ConfigStorageBackupRetention{}
-	Test := cliTest.Test{
-		InputJson: storagesubtests.InlineMarshal(s),
-		Expected:  "(nfs-test-0)",
-		Contains:  true,
-		Args:      []string{"-i", "update", "storage", "nfs-test-0"},
-	}
-	Test.StandardTest(t)
+	storagesubtests.Update(s, "nfs-test-0", t)
 }
 
 func Test_Storage_NFS_0_Get_Empty(t *testing.T) {
