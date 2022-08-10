@@ -1,10 +1,7 @@
 package storagesubtests
 
 import (
-	"testing"
-
 	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
 var PBSFull = proxmox.ConfigStorage{
@@ -38,30 +35,4 @@ var PBSEmpty = proxmox.ConfigStorage{
 		Datastore: "proxmox",
 		Username:  "root@pam",
 	},
-}
-
-func PBSGetFull(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
-	s := CloneJson(PBSFull)
-	s.ID = name
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
-}
-
-func PBSGetEmpty(name string, t *testing.T) {
-	cliTest.SetEnvironmentVariables()
-	s := CloneJson(PBSEmpty)
-	s.ID = name
-	s.PBS.Port = proxmox.PointerInt(8007)
-	s.Content = &proxmox.ConfigStorageContent{
-		Backup: proxmox.PointerBool(true),
-	}
-	Test := cliTest.Test{
-		OutputJson: InlineMarshal(s),
-		Args:       []string{"-i", "get", "storage", name},
-	}
-	Test.StandardTest(t)
 }

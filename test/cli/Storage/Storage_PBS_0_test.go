@@ -16,6 +16,7 @@ func Test_Storage_PBS_0_Cleanup(t *testing.T) {
 func Test_Storage_PBS_0_Create_Full(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.PBSFull)
 	s.PBS.Password = proxmox.PointerString("Enter123!")
+	s.PBS.Namespace = "test"
 	Test := cliTest.Test{
 		InputJson: storagesubtests.InlineMarshal(s),
 		Expected:  "(pbs-test-0)",
@@ -26,12 +27,16 @@ func Test_Storage_PBS_0_Create_Full(t *testing.T) {
 }
 
 func Test_Storage_PBS_0_Get_Full(t *testing.T) {
-	storagesubtests.PBSGetFull("pbs-test-0", t)
+	s := storagesubtests.CloneJson(storagesubtests.PBSFull)
+	s.ID = "pbs-test-0"
+	s.PBS.Namespace = "test"
+	storagesubtests.Get(s, s.ID, t)
 }
 
 func Test_Storage_PBS_0_Update_Empty(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.PBSEmpty)
 	s.BackupRetention = &proxmox.ConfigStorageBackupRetention{}
+	s.PBS.Namespace = "/test"
 	Test := cliTest.Test{
 		InputJson: storagesubtests.InlineMarshal(s),
 		Expected:  "(pbs-test-0)",
@@ -42,7 +47,14 @@ func Test_Storage_PBS_0_Update_Empty(t *testing.T) {
 }
 
 func Test_Storage_PBS_0_Get_Empty(t *testing.T) {
-	storagesubtests.PBSGetEmpty("pbs-test-0", t)
+	s := storagesubtests.CloneJson(storagesubtests.PBSEmpty)
+	s.ID = "pbs-test-0"
+	s.PBS.Port = proxmox.PointerInt(8007)
+	s.PBS.Namespace = "test"
+	s.Content = &proxmox.ConfigStorageContent{
+		Backup: proxmox.PointerBool(true),
+	}
+	storagesubtests.Get(s, s.ID, t)
 }
 
 func Test_Storage_PBS_0_Delete(t *testing.T) {

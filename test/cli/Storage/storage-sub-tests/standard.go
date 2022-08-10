@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	"github.com/Telmate/proxmox-api-go/proxmox"
 	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
@@ -22,6 +23,15 @@ func Delete(name string, t *testing.T) {
 		Contains: true,
 		ReqErr:   false,
 		Args:     []string{"-i", "delete", "storage", name},
+	}
+	Test.StandardTest(t)
+}
+
+func Get(s *proxmox.ConfigStorage, name string, t *testing.T) {
+	cliTest.SetEnvironmentVariables()
+	Test := cliTest.Test{
+		OutputJson: InlineMarshal(s),
+		Args:       []string{"-i", "get", "storage", name},
 	}
 	Test.StandardTest(t)
 }

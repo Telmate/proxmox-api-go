@@ -267,6 +267,7 @@ type ConfigStoragePBS struct {
 	Password    *string `json:"password,omitempty"`
 	Fingerprint string  `json:"fingerprint,omitempty"`
 	Port        *int    `json:"port,omitempty"`
+	Namespace   string  `json:"namespace,omitempty"`
 }
 
 func (pbs *ConfigStoragePBS) SetDefaults() {
@@ -912,6 +913,9 @@ func (config *ConfigStorage) MapToApiValues(create bool) (params map[string]inte
 			if config.PBS.Password != nil {
 				params["password"] = *config.PBS.Password
 			}
+			if config.PBS.Namespace != "" {
+				params["namespace"] = strings.TrimLeft(config.PBS.Namespace, "/")
+			}
 		}
 		config.Content = &ConfigStorageContent{
 			Backup: PointerBool(true),
@@ -1136,6 +1140,9 @@ func NewConfigStorageFromApi(storageid string, client *Client) (config *ConfigSt
 		}
 		if _, isSet := rawConfig["fingerprint"]; isSet {
 			config.PBS.Fingerprint = rawConfig["fingerprint"].(string)
+		}
+		if _, isSet := rawConfig["namespace"]; isSet {
+			config.PBS.Namespace = rawConfig["namespace"].(string)
 		}
 	}
 	config.SetDefaults()

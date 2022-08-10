@@ -27,7 +27,13 @@ func Test_Storage_PBS_1_Create_Empty(t *testing.T) {
 }
 
 func Test_Storage_PBS_1_Get_Empty(t *testing.T) {
-	storagesubtests.PBSGetEmpty("pbs-test-1", t)
+	s := storagesubtests.CloneJson(storagesubtests.PBSEmpty)
+	s.ID = "pbs-test-1"
+	s.PBS.Port = proxmox.PointerInt(8007)
+	s.Content = &proxmox.ConfigStorageContent{
+		Backup: proxmox.PointerBool(true),
+	}
+	storagesubtests.Get(s, s.ID, t)
 }
 
 func Test_Storage_PBS_1_Update_Full(t *testing.T) {
@@ -42,7 +48,9 @@ func Test_Storage_PBS_1_Update_Full(t *testing.T) {
 }
 
 func Test_Storage_PBS_1_Get_Full(t *testing.T) {
-	storagesubtests.PBSGetFull("pbs-test-1", t)
+	s := storagesubtests.CloneJson(storagesubtests.PBSFull)
+	s.ID = "pbs-test-1"
+	storagesubtests.Get(s, s.ID, t)
 }
 
 func Test_Storage_PBS_1_Delete(t *testing.T) {
