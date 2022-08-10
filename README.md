@@ -119,6 +119,11 @@ createQemu JSON Sample:
       "backup": true
     }
   },
+  "efidisk": {
+    "storage": "local",
+    "pre-enrolled-keys": "1",
+    "efitype": "4m"
+  },
   "network": {
     "0": {
       "model": "virtio",

@@ -31,9 +31,10 @@ type ConfigQemu struct {
 	Description     string      `json:"desc"`
 	Pool            string      `json:"pool,omitempty"`
 	Bios            string      `json:"bios"`
-	EFIDisk         string      `json:"efidisk,omitempty"`
+	EFIDisk         QemuDevice  `json:"efidisk,omitempty"`
 	Machine         string      `json:"machine,omitempty"`
 	Onboot          bool        `json:"onboot"`
+	Startup         string      `json:"startup,omitempty"`
 	Tablet          bool        `json:"tablet"`
 	Agent           int         `json:"agent"`
 	Memory          int         `json:"memory"`
@@ -58,6 +59,7 @@ type ConfigQemu struct {
 	QemuNetworks    QemuDevices `json:"network"`
 	QemuSerials     QemuDevices `json:"serial,omitempty"`
 	QemuUsbs        QemuDevices `json:"usb,omitempty"`
+	Hookscript      string      `json:"hookscript,omitempty"`
 	HaState         string      `json:"hastate,omitempty"`
 	HaGroup         string      `json:"hagroup,omitempty"`
 	Tags            string      `json:"tags"`
@@ -113,6 +115,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"vmid":        vmr.vmId,
 		"name":        config.Name,
 		"onboot":      config.Onboot,
+		"startup":     config.Startup,
 		"tablet":      config.Tablet,
 		"agent":       config.Agent,
 		"ostype":      config.QemuOs,
@@ -169,9 +172,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		log.Printf("[ERROR] %q", err)
 	}
 
-	//Creat additional efi disk
-	if config.EFIDisk != "" {
-		params["efidisk0"] = fmt.Sprintf("%s:1", config.EFIDisk)
+	// Create EFI disk
+	err = config.CreateQemuEfiParams(params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
 	}
 
 	// Create vga config.
@@ -287,6 +291,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"tags":        config.Tags,
 		"args":        config.Args,
 		"onboot":      config.Onboot,
+		"startup":     config.Startup,
 		"tablet":      config.Tablet,
 		"agent":       config.Agent,
 		"sockets":     config.QemuSockets,
@@ -297,6 +302,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
+		"hookscript":  config.Hookscript,
 	}
 
 	//Array to list deleted parameters
@@ -320,6 +326,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 
 	if config.BootDisk != "" {
 		configParams["bootdisk"] = config.BootDisk
+	}
+
+	if config.Hookscript != "" {
+		configParams["hookscript"] = config.Hookscript
 	}
 
 	if config.Scsihw != "" {
@@ -537,13 +547,13 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["bios"]; isSet {
 		bios = vmConfig["bios"].(string)
 	}
-	efidisk := ""
-	if _, isSet := vmConfig["efidisk0"]; isSet {
-		efidisk = vmConfig["efidisk0"].(string)
-	}
 	onboot := true
 	if _, isSet := vmConfig["onboot"]; isSet {
 		onboot = Itob(int(vmConfig["onboot"].(float64)))
+	}
+	startup := ""
+	if _, isSet := vmConfig["startup"]; isSet {
+		startup = vmConfig["startup"].(string)
 	}
 	tablet := true
 	if _, isSet := vmConfig["tablet"]; isSet {
@@ -614,6 +624,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["scsihw"]; isSet {
 		scsihw = vmConfig["scsihw"].(string)
 	}
+	hookscript := ""
+	if _, isSet := vmConfig["hookscript"]; isSet {
+		hookscript = vmConfig["hookscript"].(string)
+	}
 
 	config = &ConfigQemu{
 		Name:            name,
@@ -621,8 +635,9 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Tags:            strings.TrimSpace(tags),
 		Args:            strings.TrimSpace(args),
 		Bios:            bios,
-		EFIDisk:         efidisk,
+		EFIDisk:         QemuDevice{},
 		Onboot:          onboot,
+		Startup:         startup,
 		Tablet:          tablet,
 		Agent:           agent,
 		QemuOs:          ostype,
@@ -637,6 +652,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Boot:            boot,
 		BootDisk:        bootdisk,
 		Scsihw:          scsihw,
+		Hookscript:      hookscript,
 		QemuDisks:       QemuDevices{},
 		QemuUnusedDisks: QemuDevices{},
 		QemuVga:         QemuDevice{},
@@ -1236,6 +1252,33 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 		params[qemuNicName] = strings.Join(nicConfParam, ",")
 	}
 
+	return nil
+}
+
+// Create efi parameter.
+func (c ConfigQemu) CreateQemuEfiParams(
+	params map[string]interface{},
+) error {
+	efiParam := QemuDeviceParam{}
+	efiParam = efiParam.createDeviceParam(c.EFIDisk, nil)
+
+	if len(efiParam) > 0 {
+		storage_info := []string{}
+		storage := ""
+		for _, param := range efiParam {
+			key := strings.Split(param, "=")
+			if key[0] == "storage" {
+				// Proxmox format for disk creation
+				storage = fmt.Sprintf("%s:1", key[1])
+			} else {
+				storage_info = append(storage_info, param)
+			}
+		}
+		if len(storage_info) > 0 {
+			storage = fmt.Sprintf("%s,%s", storage, strings.Join(storage_info, ","))
+		}
+		params["efidisk0"] = storage
+	}
 	return nil
 }
 
