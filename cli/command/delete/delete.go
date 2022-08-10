@@ -22,6 +22,8 @@ func DeleteID(args []string, IDtype string) (err error){
 		err = c.DeleteMetricServer(id)
 	case "Pool" :
 		err = c.DeletePool(id)
+	case "Storage" :
+		err = c.DeleteStorage(id)
 	case "User" :
 		err = c.DeleteUser(id)
 	}
