@@ -22,6 +22,8 @@ func GetConfig(args []string, IDtype string) (err error) {
 	switch IDtype {
 	case "MetricServer" :
 		config, err = proxmox.NewConfigMetricsFromApi(id, c)
+	case "Storage" :
+		config, err = proxmox.NewConfigStorageFromApi(id, c)
 	case "User" :
 		config, err = proxmox.NewConfigUserFromApi(id, c)
 	}
