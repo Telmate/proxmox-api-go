@@ -1,6 +1,8 @@
 package delete
 
 import (
+	"fmt"
+
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/spf13/cobra"
 )
@@ -14,20 +16,26 @@ func init() {
 	cli.RootCmd.AddCommand(deleteCmd)
 }
 
-func DeleteID(args []string, IDtype string) (err error){
+func DeleteID(args []string, IDtype string) (err error) {
+	var exitStatus string
 	id := cli.ValidateIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
 	switch IDtype {
-	case "MetricServer" :
+	case "AcmeAccount":
+		exitStatus, err = c.DeleteAcmeAccount(id)
+	case "MetricServer":
 		err = c.DeleteMetricServer(id)
-	case "Pool" :
+	case "Pool":
 		err = c.DeletePool(id)
-	case "Storage" :
+	case "Storage":
 		err = c.DeleteStorage(id)
-	case "User" :
+	case "User":
 		err = c.DeleteUser(id)
 	}
 	if err != nil {
+		if exitStatus != "" {
+			err = fmt.Errorf("error deleting %s (%s): %v, error status: %s ", IDtype, id, err, exitStatus)
+		}
 		return
 	}
 	cli.PrintItemDeleted(deleteCmd.OutOrStdout(), id, IDtype)
