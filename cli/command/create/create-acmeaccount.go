@@ -7,9 +7,11 @@ import (
 )
 
 var create_acmeaccountCmd = &cobra.Command{
-	Use:   "acmeaccount",
-	Short: "Placeholder",
-	Long:  `A longer Placeholder`,
+	Use:   "acmeaccount ACMEACCOUNTID",
+	Short: "Creates a new AcmeAccount",
+	Long: `Creates a new AcmeAccount.
+The config can be set with the --file flag or piped from stdin.
+For config examples see "example acmeaccount"`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.ValidateIDset(args, 0, "AcmeAccountID")
 		config, err := proxmox.NewConfigAcmeAccountFromJson(cli.NewConfig())

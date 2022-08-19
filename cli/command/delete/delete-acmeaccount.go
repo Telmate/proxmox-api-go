@@ -6,7 +6,7 @@ import (
 
 var delete_acmeaccountCmd = &cobra.Command{
 	Use:   "acmeaccount ACMEACCOUNTID",
-	Short: "Deletes the Speciefied acmeaccount",
+	Short: "Deletes the Speciefied AcmeAccount",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return DeleteID(args, "AcmeAccount")
 	},
