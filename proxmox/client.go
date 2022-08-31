@@ -1752,7 +1752,7 @@ func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
 	if err != nil {
-		return c.HandleTaskError(resp)
+		return c.HandleTaskError(resp), err
 	}
 	return c.CheckTask(resp)
 }
@@ -1769,7 +1769,7 @@ func (c *Client) UpdateItemWithTask(Params map[string]interface{}, url string) (
 	var resp *http.Response
 	resp, err = c.session.Put(url, nil, nil, &reqbody)
 	if err != nil {
-		return c.HandleTaskError(resp)
+		return c.HandleTaskError(resp), err
 	}
 	return c.CheckTask(resp)
 }
@@ -1784,7 +1784,7 @@ func (c *Client) DeleteUrlWithTask(url string) (exitStatus string, err error) {
 	var resp *http.Response
 	resp, err = c.session.Delete(url, nil, nil)
 	if err != nil {
-		return c.HandleTaskError(resp)
+		return c.HandleTaskError(resp), err
 	}
 	return c.CheckTask(resp)
 }
@@ -1795,7 +1795,7 @@ func (c *Client) GetItemList(url string) (list map[string]interface{}, err error
 }
 
 // Close task responce
-func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string, err error) {
+func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
 	defer resp.Body.Close()
 	// This might not work if we never got a body. We'll ignore errors in trying to read,
 	// but extract the body if possible to give any error information back in the exitStatus
