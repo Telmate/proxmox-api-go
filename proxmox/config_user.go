@@ -2,10 +2,10 @@ package proxmox
 
 import (
 	"encoding/json"
-	"unicode/utf8"
 	"errors"
 	"fmt"
 	"log"
+	"unicode/utf8"
 )
 
 // User options for the Proxmox API
@@ -21,7 +21,7 @@ type ConfigUser struct {
 	Lastname  string   `json:"lastname,omitempty"`
 }
 
-func (config ConfigUser) MapUserValues()(params map[string]interface{}) {
+func (config ConfigUser) MapUserValues() (params map[string]interface{}) {
 	params = map[string]interface{}{
 		"comment":   config.Comment,
 		"email":     config.Email,
@@ -35,18 +35,28 @@ func (config ConfigUser) MapUserValues()(params map[string]interface{}) {
 	return
 }
 
-func (config ConfigUser) SetUser(userid string, password string, client *Client) (err error) {
+func (config *ConfigUser) SetUser(userid string, password string, client *Client) (err error) {
 	err = ValidateUserPassword(password)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 
-	config.UserID = userid
+	if config != nil {
+		config.UserID = userid
+	}
 
 	userExists, err := client.CheckUserExistance(userid)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 
 	if userExists {
-		err = config.UpdateUser(client)
-		if err != nil {return err}
+		if config != nil {
+			err = config.UpdateUser(client)
+			if err != nil {
+				return err
+			}
+		}
 		if password != "" {
 			err = client.UpdateUserPassword(userid, password)
 		}
@@ -68,7 +78,7 @@ func (config ConfigUser) CreateUser(password string, client *Client) (err error)
 	return
 }
 
-func (config ConfigUser) UpdateUser(client *Client) (err error) {
+func (config *ConfigUser) UpdateUser(client *Client) (err error) {
 	params := config.MapUserValues()
 	err = client.UpdateUser(config.UserID, params)
 	if err != nil {
@@ -82,31 +92,55 @@ func NewConfigUserFromApi(userid string, client *Client) (config *ConfigUser, er
 	// prepare json map to receive the information from the api
 	var userConfig map[string]interface{}
 	userConfig, err = client.GetUserConfig(userid)
-	if err != nil {return nil, err}
+	if err != nil {
+		return nil, err
+	}
 	config = new(ConfigUser)
 
 	config.UserID = userid
 
-	if _, isSet := userConfig["comment"]; isSet {config.Comment = userConfig["comment"].(string)}
-	if _, isSet := userConfig["email"]; isSet {config.Email = userConfig["email"].(string)}
-	if _, isSet := userConfig["enable"]; isSet {config.Enable = Itob(int(userConfig["enable"].(float64)))}
-	if _, isSet := userConfig["expire"]; isSet {config.Expire = int(userConfig["expire"].(float64))}
-	if _, isSet := userConfig["firstname"]; isSet {config.Firstname = userConfig["firstname"].(string)}
-	if _, isSet := userConfig["keys"]; isSet {config.Keys = userConfig["keys"].(string)}
-	if _, isSet := userConfig["lastname"]; isSet {config.Lastname = userConfig["lastname"].(string)}
-	if _, isSet := userConfig["groups"]; isSet {config.Groups = ArrayToStringType(userConfig["groups"].(interface{}).([]interface{}))}
+	if _, isSet := userConfig["comment"]; isSet {
+		config.Comment = userConfig["comment"].(string)
+	}
+	if _, isSet := userConfig["email"]; isSet {
+		config.Email = userConfig["email"].(string)
+	}
+	if _, isSet := userConfig["enable"]; isSet {
+		config.Enable = Itob(int(userConfig["enable"].(float64)))
+	}
+	if _, isSet := userConfig["expire"]; isSet {
+		config.Expire = int(userConfig["expire"].(float64))
+	}
+	if _, isSet := userConfig["firstname"]; isSet {
+		config.Firstname = userConfig["firstname"].(string)
+	}
+	if _, isSet := userConfig["keys"]; isSet {
+		config.Keys = userConfig["keys"].(string)
+	}
+	if _, isSet := userConfig["lastname"]; isSet {
+		config.Lastname = userConfig["lastname"].(string)
+	}
+	if _, isSet := userConfig["groups"]; isSet {
+		config.Groups = ArrayToStringType(userConfig["groups"].(interface{}).([]interface{}))
+	}
 
 	return
 }
 
 func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
-	config = &ConfigUser{}
-	err = json.Unmarshal([]byte(input), config)
-	if err != nil {log.Fatal(err)}
+	if len(input) != 0 {
+		config = &ConfigUser{}
+		err = json.Unmarshal([]byte(input), config)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	return
 }
 
-func ValidateUserPassword(password string) error{
-	if utf8.RuneCountInString(password) >= 5 || password == ""{return nil}
+func ValidateUserPassword(password string) error {
+	if utf8.RuneCountInString(password) >= 5 || password == "" {
+		return nil
+	}
 	return errors.New("error updating User: the minimum password length is 5")
 }
