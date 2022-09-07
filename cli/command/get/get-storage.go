@@ -13,5 +13,5 @@ var get_storageCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.AddCommand(get_storageCmd)
+	GetCmd.AddCommand(get_storageCmd)
 }

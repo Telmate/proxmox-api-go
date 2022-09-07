@@ -6,13 +6,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var getCmd = &cobra.Command{
+var GetCmd = &cobra.Command{
 	Use:   "get",
 	Short: "get shows the current configuration an item in proxmox",
 }
 
 func init() {
-	cli.RootCmd.AddCommand(getCmd)
+	cli.RootCmd.AddCommand(GetCmd)
 }
 
 func GetConfig(args []string, IDtype string) (err error) {
@@ -32,6 +32,6 @@ func GetConfig(args []string, IDtype string) (err error) {
 	if err != nil {
 		return
 	}
-	cli.PrintFormattedJson(getCmd.OutOrStdout(), config)
+	cli.PrintFormattedJson(GetCmd.OutOrStdout(), config)
 	return
 }

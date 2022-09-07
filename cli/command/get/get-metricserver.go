@@ -13,5 +13,5 @@ var get_metricserverCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.AddCommand(get_metricserverCmd)
+	GetCmd.AddCommand(get_metricserverCmd)
 }
