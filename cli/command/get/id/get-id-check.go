@@ -13,11 +13,11 @@ var id_checkCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.ValidateIntIDset(args, "ID")
 		c := cli.NewClient()
-		exixst, err := c.VMIdExists(id)
+		exists, err := c.VMIdExists(id)
 		if err != nil {
 			return
 		}
-		if exixst {
+		if exists {
 			fmt.Fprintf(idCmd.OutOrStdout(), "Selected ID is in use: %d\n", id)
 		} else {
 			fmt.Fprintf(idCmd.OutOrStdout(), "Selected ID is free: %d\n", id)
