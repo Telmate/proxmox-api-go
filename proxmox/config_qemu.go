@@ -480,7 +480,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 func NewConfigQemuFromJson(input []byte) (config *ConfigQemu, err error) {
 	config = &ConfigQemu{QemuVlanTag: -1, QemuKVM: true}
 	err = json.Unmarshal([]byte(input), config)
-	if err != nil {log.Fatal(err)}
+	if err != nil {
+		log.Fatal(err)
+	}
 	return
 }
 
@@ -757,6 +759,11 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		diskType := rxDiskType.FindStringSubmatch(diskName)[0]
 
 		diskConfMap := ParsePMConf(diskConfStr, "volume")
+
+		if diskConfMap["volume"].(string) == "none" {
+			continue
+		}
+
 		diskConfMap["slot"] = diskID
 		diskConfMap["type"] = diskType
 
