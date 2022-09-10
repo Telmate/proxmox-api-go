@@ -568,7 +568,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		case float64:
 			agent = int(vmConfig["agent"].(float64))
 		case string:
-			agent, _ = strconv.Atoi(vmConfig["agent"].(string))
+			AgentConfList := strings.Split(vmConfig["agent"].(string), ",")
+			agent, _ = strconv.Atoi(AgentConfList[0])
 		}
 
 	}
@@ -759,6 +760,11 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		diskType := rxDiskType.FindStringSubmatch(diskName)[0]
 
 		diskConfMap := ParsePMConf(diskConfStr, "volume")
+
+		if diskConfMap["volume"].(string) == "none" {
+			continue
+		}
+
 		diskConfMap["slot"] = diskID
 		diskConfMap["type"] = diskType
 
