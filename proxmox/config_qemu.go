@@ -568,7 +568,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		case float64:
 			agent = int(vmConfig["agent"].(float64))
 		case string:
-			agent, _ = strconv.Atoi(vmConfig["agent"].(string))
+			AgentConfList := strings.Split(vmConfig["agent"].(string), ",")
+			agent, _ = strconv.Atoi(AgentConfList[0])
 		}
 
 	}
