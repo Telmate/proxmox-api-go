@@ -11,9 +11,9 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/cli"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
 func main() {
@@ -297,9 +297,15 @@ func main() {
 		}
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
-		id, err := c.VMIdExists(i)
-		failError(err)
-		log.Printf("Selected ID is free: %d\n", id)
+		exists, err := c.VMIdExists(i)
+		if err != nil {
+			return
+		}
+		if exists {
+			log.Printf("Selected ID is in use: %d\n", i)
+		} else {
+			log.Printf("Selected ID is free: %d\n", i)
+		}
 
 	case "migrate":
 		vmr := proxmox.NewVmRef(vmid)

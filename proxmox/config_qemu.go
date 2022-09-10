@@ -480,7 +480,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 func NewConfigQemuFromJson(input []byte) (config *ConfigQemu, err error) {
 	config = &ConfigQemu{QemuVlanTag: -1, QemuKVM: true}
 	err = json.Unmarshal([]byte(input), config)
-	if err != nil {log.Fatal(err)}
+	if err != nil {
+		log.Fatal(err)
+	}
 	return
 }
 
@@ -1418,13 +1420,4 @@ func (confMap QemuDevice) readDeviceConfig(confList []string) error {
 func (c ConfigQemu) String() string {
 	jsConf, _ := json.Marshal(c)
 	return string(jsConf)
-}
-
-// VMIdExists - If you pass an VMID that exists it will raise an error otherwise it will return the vmID
-func (c *Client) VMIdExists(vmID int) (id int, err error) {
-	_, err = c.session.Get(fmt.Sprintf("/cluster/nextid?vmid=%d", vmID), nil, nil)
-	if err != nil {
-		return -1, err
-	}
-	return vmID, nil
 }

@@ -13,5 +13,5 @@ var get_acmeaccountCmd = &cobra.Command{
 }
 
 func init() {
-	getCmd.AddCommand(get_acmeaccountCmd)
+	GetCmd.AddCommand(get_acmeaccountCmd)
 }

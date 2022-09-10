@@ -855,6 +855,22 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 	return
 }
 
+// VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false
+func (c *Client) VMIdExists(vmID int) (exists bool, err error) {
+	resp, err := c.GetVmList()
+	if err != nil {
+		return
+	}
+	vms := resp["data"].([]interface{})
+	for vmii := range vms {
+		vm := vms[vmii].(map[string]interface{})
+		if vmID == int(vm["vmid"].(float64)) {
+			return true, err
+		}
+	}
+	return
+}
+
 // CreateVMDisk - Create single disk for VM on host node.
 func (c *Client) CreateVMDisk(
 	nodeName string,
