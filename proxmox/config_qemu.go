@@ -64,7 +64,7 @@ type ConfigQemu struct {
 	HaGroup         string      `json:"hagroup,omitempty"`
 	Tags            string      `json:"tags"`
 	Args            string      `json:"args"`
-	Protection      bool        `json:"protection"`
+	Protection      bool        `json:"protection,omitempty"`
 
 
 	// Deprecated single disk.
@@ -277,9 +277,6 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		"full":   fullclone,
 		"protection": protection,
 	}
-	if config.Protection != nil {
-		protection = strconv.Itoa(*config.Protection)
-	}
 	if vmr.pool != "" {
 		params["pool"] = vmr.pool
 	}
@@ -288,8 +285,8 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		params["storage"] = storage
 	}
 
-	if protection == true {
-		params["protection"] = protection
+	if config.Protection != nil {
+		protection = strconv.Itoa(*config.Protection)
 	}
 
 	_, err = client.CloneQemuVm(sourceVmr, params)
