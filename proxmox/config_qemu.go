@@ -275,6 +275,10 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		"target": vmr.node,
 		"name":   config.Name,
 		"full":   fullclone,
+		"protection": protection,
+	}
+	if config.Protection != nil {
+		protection = strconv.Itoa(*config.Protection)
 	}
 	if vmr.pool != "" {
 		params["pool"] = vmr.pool
@@ -282,6 +286,10 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 
 	if fullclone == "1" {
 		params["storage"] = storage
+	}
+
+	if protection == true {
+		params["protection"] = protection
 	}
 
 	_, err = client.CloneQemuVm(sourceVmr, params)
