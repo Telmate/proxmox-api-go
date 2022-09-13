@@ -298,9 +298,7 @@ func main() {
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
 		exists, err := c.VMIdExists(i)
-		if err != nil {
-			return
-		}
+		failError(err)
 		if exists {
 			log.Printf("Selected ID is in use: %d\n", i)
 		} else {
