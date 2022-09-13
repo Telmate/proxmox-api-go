@@ -64,6 +64,8 @@ type ConfigQemu struct {
 	HaGroup         string      `json:"hagroup,omitempty"`
 	Tags            string      `json:"tags"`
 	Args            string      `json:"args"`
+	Protection      bool        `json:"protection"`
+
 
 	// Deprecated single disk.
 	DiskSize    float64 `json:"diskGB"`
@@ -131,6 +133,8 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"tags":        config.Tags,
 		"machine":     config.Machine,
 		"args":        config.Args,
+		"protection":  config.Protection,
+
 	}
 
 	if config.QemuIso != "" {
@@ -303,6 +307,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"memory":      config.Memory,
 		"boot":        config.Boot,
 		"hookscript":  config.Hookscript,
+		"protection":  config.Protection,
 	}
 
 	//Array to list deleted parameters
@@ -561,7 +566,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["tablet"]; isSet {
 		tablet = Itob(int(vmConfig["tablet"].(float64)))
 	}
-
+	protection := false
+	if _, isSet := vmConfig["protection"]; isSet {
+		protection = Itob(int(vmConfig["protection"].(float64)))
+	}
 	agent := 0
 	if _, isSet := vmConfig["agent"]; isSet {
 		switch vmConfig["agent"].(type) {
@@ -640,6 +648,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		Bios:            bios,
 		EFIDisk:         QemuDevice{},
 		Onboot:          onboot,
+		Protection:      protection,
 		Startup:         startup,
 		Tablet:          tablet,
 		Agent:           agent,
