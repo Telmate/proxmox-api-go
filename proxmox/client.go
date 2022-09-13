@@ -455,14 +455,14 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	return
 }
 
-func (c *Client) StatusChangeVm(vmr *VmRef, setStatus string) (exitStatus string, err error) {
+func (c *Client) StatusChangeVm(vmr *VmRef, params map[string]interface{}, setStatus string) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return
 	}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/status/%s", vmr.node, vmr.vmType, vmr.vmId, setStatus)
 	for i := 0; i < 3; i++ {
-		exitStatus, err = c.CreateItemWithTask(nil, url)
+		exitStatus, err = c.CreateItemWithTask(params, url)
 		if err != nil {
 			time.Sleep(TaskStatusCheckInterval * time.Second)
 		} else {
@@ -473,27 +473,34 @@ func (c *Client) StatusChangeVm(vmr *VmRef, setStatus string) (exitStatus string
 }
 
 func (c *Client) StartVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "start")
+	return c.StatusChangeVm(vmr, nil, "start")
 }
 
 func (c *Client) StopVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "stop")
+	return c.StatusChangeVm(vmr, nil, "stop")
 }
 
 func (c *Client) ShutdownVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "shutdown")
+	return c.StatusChangeVm(vmr, nil, "shutdown")
 }
 
 func (c *Client) ResetVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "reset")
+	return c.StatusChangeVm(vmr, nil, "reset")
 }
 
-func (c *Client) SuspendVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "suspend")
+func (c *Client) PauseVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, nil, "suspend")
+}
+
+func (c *Client) HibernateVm(vmr *VmRef) (exitStatus string, err error) {
+	params := map[string]interface{}{
+		"todisk": true,
+	}
+	return c.StatusChangeVm(vmr, params, "suspend")
 }
 
 func (c *Client) ResumeVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "resume")
+	return c.StatusChangeVm(vmr, nil, "resume")
 }
 
 func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
