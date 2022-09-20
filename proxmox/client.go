@@ -238,17 +238,7 @@ func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err err
 	if err != nil {
 		return nil, err
 	}
-	var data map[string]interface{}
-	url := fmt.Sprintf("/nodes/%s/%s/%d/status/current", vmr.node, vmr.vmType, vmr.vmId)
-	err = c.GetJsonRetryable(url, &data, 3)
-	if err != nil {
-		return nil, err
-	}
-	if data["data"] == nil {
-		return nil, fmt.Errorf("vm STATE not readable")
-	}
-	vmState = data["data"].(map[string]interface{})
-	return
+	return c.GetItemConfigMapStringInterface(fmt.Sprintf("/nodes/%s/%s/%d/status/current", vmr.node, vmr.vmType, vmr.vmId), "vm", "STATE")
 }
 
 func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err error) {
@@ -465,18 +455,15 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	return
 }
 
-func (c *Client) StatusChangeVm(vmr *VmRef, setStatus string) (exitStatus string, err error) {
+func (c *Client) StatusChangeVm(vmr *VmRef, params map[string]interface{}, setStatus string) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
-		return "", err
+		return
 	}
-
 	url := fmt.Sprintf("/nodes/%s/%s/%d/status/%s", vmr.node, vmr.vmType, vmr.vmId, setStatus)
-	var taskResponse map[string]interface{}
 	for i := 0; i < 3; i++ {
-		_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
-		exitStatus, err = c.WaitForCompletion(taskResponse)
-		if exitStatus == "" {
+		exitStatus, err = c.CreateItemWithTask(params, url)
+		if err != nil {
 			time.Sleep(TaskStatusCheckInterval * time.Second)
 		} else {
 			return
@@ -486,27 +473,34 @@ func (c *Client) StatusChangeVm(vmr *VmRef, setStatus string) (exitStatus string
 }
 
 func (c *Client) StartVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "start")
+	return c.StatusChangeVm(vmr, nil, "start")
 }
 
 func (c *Client) StopVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "stop")
+	return c.StatusChangeVm(vmr, nil, "stop")
 }
 
 func (c *Client) ShutdownVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "shutdown")
+	return c.StatusChangeVm(vmr, nil, "shutdown")
 }
 
 func (c *Client) ResetVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "reset")
+	return c.StatusChangeVm(vmr, nil, "reset")
 }
 
-func (c *Client) SuspendVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "suspend")
+func (c *Client) PauseVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, nil, "suspend")
+}
+
+func (c *Client) HibernateVm(vmr *VmRef) (exitStatus string, err error) {
+	params := map[string]interface{}{
+		"todisk": true,
+	}
+	return c.StatusChangeVm(vmr, params, "suspend")
 }
 
 func (c *Client) ResumeVm(vmr *VmRef) (exitStatus string, err error) {
-	return c.StatusChangeVm(vmr, "resume")
+	return c.StatusChangeVm(vmr, nil, "resume")
 }
 
 func (c *Client) DeleteVm(vmr *VmRef) (exitStatus string, err error) {
@@ -1517,7 +1511,7 @@ func (c *Client) GetPoolList() (pools map[string]interface{}, err error) {
 
 func (c *Client) GetPoolInfo(poolid string) (poolInfo map[string]interface{}, err error) {
 	url := fmt.Sprintf("/pools/%s", poolid)
-	return c.GetItemConfigMapStringInterface(url, "pool")
+	return c.GetItemConfigMapStringInterface(url, "pool", "CONFIG")
 }
 
 func (c *Client) CreatePool(poolid string, comment string) error {
@@ -1544,7 +1538,7 @@ func (c *Client) DeletePool(poolid string) error {
 
 //User
 func (c *Client) GetUserConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/access/users/"+id, "user")
+	return c.GetItemConfigMapStringInterface("/access/users/"+id, "user", "CONFIG")
 }
 
 func (c *Client) GetUserList() (users map[string]interface{}, err error) {
@@ -1595,7 +1589,7 @@ func (c *Client) DeleteUser(id string) (err error) {
 
 //ACME
 func (c *Client) GetAcmeDirectoriesUrl() (url []string, err error) {
-	config, err := c.GetItemConfigInterfaceArray("/cluster/acme/directories", "Acme directories")
+	config, err := c.GetItemConfigInterfaceArray("/cluster/acme/directories", "Acme directories", "CONFIG")
 	url = make([]string, len(config))
 	for i, element := range config {
 		url[i] = element.(map[string]interface{})["url"].(string)
@@ -1604,7 +1598,7 @@ func (c *Client) GetAcmeDirectoriesUrl() (url []string, err error) {
 }
 
 func (c *Client) GetAcmeTosUrl() (url string, err error) {
-	return c.GetItemConfigString("/cluster/acme/tos", "Acme T.O.S.")
+	return c.GetItemConfigString("/cluster/acme/tos", "Acme T.O.S.", "CONFIG")
 }
 
 //ACME Account
@@ -1613,7 +1607,7 @@ func (c *Client) GetAcmeAccountList() (accounts map[string]interface{}, err erro
 }
 
 func (c *Client) GetAcmeAccountConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/cluster/acme/account/"+id, "acme")
+	return c.GetItemConfigMapStringInterface("/cluster/acme/account/"+id, "acme", "CONFIG")
 }
 
 func (c *Client) CreateAcmeAccount(params map[string]interface{}) (exitStatus string, err error) {
@@ -1638,7 +1632,7 @@ func (c *Client) GetAcmePluginList() (accounts map[string]interface{}, err error
 }
 
 func (c *Client) GetAcmePluginConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/cluster/acme/plugins/"+id, "acme plugin")
+	return c.GetItemConfigMapStringInterface("/cluster/acme/plugins/"+id, "acme plugin", "CONFIG")
 }
 
 func (c *Client) CreateAcmePlugin(params map[string]interface{}) error {
@@ -1661,7 +1655,7 @@ func (c *Client) DeleteAcmePlugin(id string) (err error) {
 
 //Metrics
 func (c *Client) GetMetricServerConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/cluster/metrics/server/"+id, "metrics server")
+	return c.GetItemConfigMapStringInterface("/cluster/metrics/server/"+id, "metrics server", "CONFIG")
 }
 
 func (c *Client) GetMetricsServerList() (metricServers map[string]interface{}, err error) {
@@ -1699,7 +1693,7 @@ func (c *Client) GetStorageList() (metricServers map[string]interface{}, err err
 }
 
 func (c *Client) GetStorageConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/storage/"+id, "storage")
+	return c.GetItemConfigMapStringInterface("/storage/"+id, "storage", "CONFIG")
 }
 
 func (c *Client) CreateStorage(id string, params map[string]interface{}) error {
@@ -1721,37 +1715,37 @@ func (c *Client) DeleteStorage(id string) error {
 }
 
 //Shared
-func (c *Client) GetItemConfigMapStringInterface(url, text string) (map[string]interface{}, error) {
-	data, err := c.GetItemConfig(url, text)
+func (c *Client) GetItemConfigMapStringInterface(url, text, message string) (map[string]interface{}, error) {
+	data, err := c.GetItemConfig(url, text, message)
 	if err != nil {
 		return nil, err
 	}
 	return data["data"].(map[string]interface{}), err
 }
 
-func (c *Client) GetItemConfigString(url, text string) (string, error) {
-	data, err := c.GetItemConfig(url, text)
+func (c *Client) GetItemConfigString(url, text, message string) (string, error) {
+	data, err := c.GetItemConfig(url, text, message)
 	if err != nil {
 		return "", err
 	}
 	return data["data"].(string), err
 }
 
-func (c *Client) GetItemConfigInterfaceArray(url, text string) ([]interface{}, error) {
-	data, err := c.GetItemConfig(url, text)
+func (c *Client) GetItemConfigInterfaceArray(url, text, message string) ([]interface{}, error) {
+	data, err := c.GetItemConfig(url, text, message)
 	if err != nil {
 		return nil, err
 	}
 	return data["data"].([]interface{}), err
 }
 
-func (c *Client) GetItemConfig(url, text string) (config map[string]interface{}, err error) {
+func (c *Client) GetItemConfig(url, text, message string) (config map[string]interface{}, err error) {
 	err = c.GetJsonRetryable(url, &config, 3)
 	if err != nil {
 		return nil, err
 	}
 	if config["data"] == nil {
-		return nil, fmt.Errorf(text + " CONFIG not readable")
+		return nil, fmt.Errorf(text + " " + message + " not readable")
 	}
 	return
 }
