@@ -59,6 +59,7 @@ type ConfigQemu struct {
 	QemuNetworks    QemuDevices `json:"network"`
 	QemuSerials     QemuDevices `json:"serial,omitempty"`
 	QemuUsbs        QemuDevices `json:"usb,omitempty"`
+	QemuPCIDevices  QemuDevices `json:"pcis,omitempty"`
 	Hookscript      string      `json:"hookscript,omitempty"`
 	HaState         string      `json:"hastate,omitempty"`
 	HaGroup         string      `json:"hagroup,omitempty"`
@@ -197,6 +198,11 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		log.Printf("[ERROR] %q", err)
 	}
 
+	err = config.CreateQemuPCIsParams(vmr.vmId, params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
 	// Create usb interfaces
 	err = config.CreateQemuUsbsParams(vmr.vmId, params)
 	if err != nil {
@@ -243,7 +249,6 @@ func (config ConfigQemu) HasCloudInit() bool {
 }
 
 /*
-
 CloneVm
 Example: Request
 
@@ -254,7 +259,6 @@ name:tf-clone1
 target:proxmox1-xx
 full:1
 storage:xxx
-
 */
 func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
@@ -661,6 +665,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuVga:         QemuDevice{},
 		QemuNetworks:    QemuDevices{},
 		QemuSerials:     QemuDevices{},
+		QemuPCIDevices:  QemuDevices{},
 		QemuUsbs:        QemuDevices{},
 	}
 
@@ -1337,6 +1342,23 @@ func (c ConfigQemu) CreateQemuDisksParams(
 		params[qemuDiskName] = FormatDiskParam(diskConfMap)
 	}
 
+	return nil
+}
+
+// Create parameters for each PCI Device
+func (c ConfigQemu) CreateQemuPCIsParams(
+	vmID int,
+	params map[string]interface{},
+) error {
+
+	// For new style with multi pci device.
+	for pciConfID, pciConfMap := range c.QemuPCIDevices {
+		qemuPCIName := "hostpci" + strconv.Itoa(pciConfID)
+		pciId := pciConfMap["pciid"].(string)
+
+		// Add back to Qemu prams.
+		params[qemuPCIName] = pciId
+	}
 	return nil
 }
 
