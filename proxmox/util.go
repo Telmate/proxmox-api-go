@@ -1,10 +1,13 @@
 package proxmox
 
 import (
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
 )
+
+var rxUserTokenExtract = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+!([a-z0-9]+)")
 
 func inArray(arr []string, str string) bool {
 	for _, elem := range arr {
@@ -20,16 +23,29 @@ func Itob(i int) bool {
 	return i == 1
 }
 
-func BoolInvert(b bool) bool{
+func BoolInvert(b bool) bool {
 	return b == false
 }
 
 // Check the value of a key in a nested array of map[string]interface{}
-func ItemInKeyOfArray(array []interface{}, key, value string) (existance bool){
+func ItemInKeyOfArray(array []interface{}, key, value string) (existance bool) {
+	//search for userid first
 	for i := range array {
 		item := array[i].(map[string]interface{})
 		if string(item[key].(string)) == value {
 			return true
+		}
+		if tok, keyok := item["tokens"]; keyok && tok != nil {
+			if rxUserTokenExtract.MatchString(value) {
+				matches := rxUserTokenExtract.FindStringSubmatch(value)
+				for _, v := range tok.([]interface{}) {
+					for _, v := range v.(map[string]interface{}) {
+						if matches[1] == v {
+							return true
+						}
+					}
+				}
+			}
 		}
 	}
 	return false
@@ -126,7 +142,7 @@ func AddToList(list, newItem string) string {
 	return newItem
 }
 
-func CSVtoArray(csv string) []string{
+func CSVtoArray(csv string) []string {
 	return strings.Split(csv, ",")
 }
 
@@ -165,4 +181,10 @@ func PointerInt(number int) *int {
 // Creates a pointer to a bool
 func PointerBool(boolean bool) *bool {
 	return &boolean
+}
+
+func failError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }

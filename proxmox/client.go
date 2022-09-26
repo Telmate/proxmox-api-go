@@ -1536,13 +1536,13 @@ func (c *Client) DeletePool(poolid string) error {
 	return c.DeleteUrl(url)
 }
 
-//User
+// User
 func (c *Client) GetUserConfig(id string) (config map[string]interface{}, err error) {
 	return c.GetItemConfigMapStringInterface("/access/users/"+id, "user", "CONFIG")
 }
 
 func (c *Client) GetUserList() (users map[string]interface{}, err error) {
-	return c.GetItemList("/access/users")
+	return c.GetItemList("/access/users" + "?full=1")
 }
 
 func (c *Client) UpdateUserPassword(userid string, password string) error {
@@ -1587,7 +1587,31 @@ func (c *Client) DeleteUser(id string) (err error) {
 	return c.DeleteUrl("/access/users/" + id)
 }
 
-//ACME
+//permissions check
+
+func (c *Client) GetUserPermissions(id string, path string) (permissions []string, err error) {
+	existance, err := c.CheckUserExistance(id)
+	if err != nil {
+		return nil, err
+	}
+	if !existance {
+		return nil, fmt.Errorf("cannot get user (%s) permissions, the user does not exist", id)
+	}
+	permlist, err := c.GetItemList("/access/permissions?userid=" + id + "&path=" + path)
+	failError(err)
+	data := permlist["data"].(map[string]interface{})
+	for pth, prm := range data {
+		// ignoring other paths than "/" for now!
+		if pth == "/" {
+			for k := range prm.(map[string]interface{}) {
+				permissions = append(permissions, k)
+			}
+		}
+	}
+	return
+}
+
+// ACME
 func (c *Client) GetAcmeDirectoriesUrl() (url []string, err error) {
 	config, err := c.GetItemConfigInterfaceArray("/cluster/acme/directories", "Acme directories", "CONFIG")
 	url = make([]string, len(config))
@@ -1601,7 +1625,7 @@ func (c *Client) GetAcmeTosUrl() (url string, err error) {
 	return c.GetItemConfigString("/cluster/acme/tos", "Acme T.O.S.", "CONFIG")
 }
 
-//ACME Account
+// ACME Account
 func (c *Client) GetAcmeAccountList() (accounts map[string]interface{}, err error) {
 	return c.GetItemList("/cluster/acme/account")
 }
@@ -1626,7 +1650,7 @@ func (c *Client) DeleteAcmeAccount(id string) (exitStatus string, err error) {
 	return
 }
 
-//ACME Plugin
+// ACME Plugin
 func (c *Client) GetAcmePluginList() (accounts map[string]interface{}, err error) {
 	return c.GetItemList("/cluster/acme/plugins")
 }
@@ -1653,7 +1677,7 @@ func (c *Client) DeleteAcmePlugin(id string) (err error) {
 	return c.DeleteUrl("/cluster/acme/plugins/" + id)
 }
 
-//Metrics
+// Metrics
 func (c *Client) GetMetricServerConfig(id string) (config map[string]interface{}, err error) {
 	return c.GetItemConfigMapStringInterface("/cluster/metrics/server/"+id, "metrics server", "CONFIG")
 }
@@ -1680,7 +1704,7 @@ func (c *Client) DeleteMetricServer(id string) error {
 	return c.DeleteUrl("/cluster/metrics/server/" + id)
 }
 
-//storage
+// storage
 func (c *Client) EnableStorage(id string) error {
 	param := map[string]interface{}{
 		"disable": false,
@@ -1714,7 +1738,7 @@ func (c *Client) DeleteStorage(id string) error {
 	return c.DeleteUrl("/storage/" + id)
 }
 
-//Shared
+// Shared
 func (c *Client) GetItemConfigMapStringInterface(url, text, message string) (map[string]interface{}, error) {
 	data, err := c.GetItemConfig(url, text, message)
 	if err != nil {

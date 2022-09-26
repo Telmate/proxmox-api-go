@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 
 	"github.com/Telmate/proxmox-api-go/cli"
@@ -70,6 +71,27 @@ func main() {
 	}
 
 	switch flag.Args()[0] {
+
+	case "testUserPermissions":
+		// testuserpermission [user] [path]
+		// ex: testuserpermission root@pam(default) /(default)
+		var testpath string
+		var testuser string
+		if len(flag.Args()) < 2 {
+			testuser = os.Getenv("PM_USER")
+		} else {
+			testuser = flag.Args()[1]
+		}
+		if len(flag.Args()) < 3 {
+			testpath = ""
+		} else {
+			testpath = flag.Args()[2]
+		}
+		permissions, err := c.GetUserPermissions(testuser, testpath)
+		failError(err)
+		sort.Strings(permissions)
+		log.Println(permissions)
+
 	case "start":
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, err = c.StartVm(vmr)
@@ -674,13 +696,6 @@ func main() {
 	//log.Println(vmr)
 }
 
-func failError(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-	return
-}
-
 var rxUserRequiresToken = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+![a-z0-9]+")
 
 func userRequiresAPIToken(userID string) bool {
@@ -701,4 +716,10 @@ func GetConfig(configFile string) (configSource []byte) {
 		}
 	}
 	return
+}
+
+func failError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
