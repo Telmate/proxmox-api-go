@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net"
@@ -560,7 +559,7 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 		defer resp.Body.Close()
 		// This might not work if we never got a body. We'll ignore errors in trying to read,
 		// but extract the body if possible to give any error information back in the exitStatus
-		b, _ := ioutil.ReadAll(resp.Body)
+		b, _ := io.ReadAll(resp.Body)
 		exitStatus = string(b)
 		return exitStatus, err
 	}
@@ -590,7 +589,7 @@ func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}
 		defer resp.Body.Close()
 		// This might not work if we never got a body. We'll ignore errors in trying to read,
 		// but extract the body if possible to give any error information back in the exitStatus
-		b, _ := ioutil.ReadAll(resp.Body)
+		b, _ := io.ReadAll(resp.Body)
 		exitStatus = string(b)
 		return exitStatus, err
 	}
@@ -1899,7 +1898,7 @@ func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
 	defer resp.Body.Close()
 	// This might not work if we never got a body. We'll ignore errors in trying to read,
 	// but extract the body if possible to give any error information back in the exitStatus
-	b, _ := ioutil.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 	exitStatus = string(b)
 	return
 }

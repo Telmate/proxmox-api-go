@@ -1,10 +1,10 @@
 package test
 
 import (
-	"testing"
 	"bytes"
-	"io/ioutil"
+	"io"
 	"strings"
+	"testing"
 
 	"github.com/Telmate/proxmox-api-go/cli"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
@@ -13,31 +13,31 @@ import (
 )
 
 type Test struct {
-	InputJson string //the inputted json
+	InputJson  string //the inputted json
 	OutputJson string //the outputted json
 
 	Expected string //the output that is expected
-	Contains bool //if the output contains (expected) or qeuals it
+	Contains bool   //if the output contains (expected) or qeuals it
 
 	NotExpected string //the output that is notexpected
-	NotContains bool //if the output contains (notexpected) or qeuals it
+	NotContains bool   //if the output contains (notexpected) or qeuals it
 
-	ReqErr bool //if an error is expected as output
+	ReqErr      bool   //if an error is expected as output
 	ErrContains string //the string the error should contain
 
 	Args []string //cli arguments
 }
 
 func ListTest(t *testing.T, args []string, expected string) {
-	cli.RootCmd.SetArgs(append(args))
-	
+	cli.RootCmd.SetArgs(args)
+
 	buffer := new(bytes.Buffer)
 
 	cli.RootCmd.SetOut(buffer)
 	err := cli.RootCmd.Execute()
 	require.NoError(t, err)
 
-	out, _ := ioutil.ReadAll(buffer)
+	out, _ := io.ReadAll(buffer)
 	assert.Contains(t, string(out), expected)
 }
 
@@ -58,7 +58,7 @@ func (test *Test) StandardTest(t *testing.T) {
 		require.NoError(t, err)
 	}
 	if test.Expected != "" {
-		out, _ := ioutil.ReadAll(buffer)
+		out, _ := io.ReadAll(buffer)
 		if test.Contains {
 			assert.Contains(t, string(out), test.Expected)
 		} else {
@@ -66,7 +66,7 @@ func (test *Test) StandardTest(t *testing.T) {
 		}
 	}
 	if test.NotExpected != "" {
-		out, _ := ioutil.ReadAll(buffer)
+		out, _ := io.ReadAll(buffer)
 		if test.NotContains {
 			assert.NotContains(t, string(out), test.NotExpected)
 		} else {
@@ -74,21 +74,21 @@ func (test *Test) StandardTest(t *testing.T) {
 		}
 	}
 	if test.OutputJson != "" {
-		out, _ := ioutil.ReadAll(buffer)
-		require.JSONEq(t, test.OutputJson ,string(out))
+		out, _ := io.ReadAll(buffer)
+		require.JSONEq(t, test.OutputJson, string(out))
 	}
 }
 
 type LoginTest struct {
-	APIurl string
-	UserID string
+	APIurl   string
+	UserID   string
 	Password string
-	OTP string
-	ReqErr bool //if an error is expected as output
+	OTP      string
+	ReqErr   bool //if an error is expected as output
 }
 
-func (test *LoginTest) Login(t *testing.T){
-	_, err := cli.Client(test.APIurl,test.UserID,test.Password,test.OTP)
+func (test *LoginTest) Login(t *testing.T) {
+	_, err := cli.Client(test.APIurl, test.UserID, test.Password, test.OTP)
 	if test.ReqErr {
 		require.Error(t, err)
 	} else {
