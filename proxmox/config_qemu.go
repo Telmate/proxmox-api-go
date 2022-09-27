@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -59,7 +60,7 @@ type ConfigQemu struct {
 	QemuNetworks    QemuDevices `json:"network"`
 	QemuSerials     QemuDevices `json:"serial,omitempty"`
 	QemuUsbs        QemuDevices `json:"usb,omitempty"`
-	QemuPCIDevices  QemuDevices `json:"pcis,omitempty"`
+	QemuPCIDevices  QemuDevices `json:"hostpci,omitempty"`
 	Hookscript      string      `json:"hookscript,omitempty"`
 	HaState         string      `json:"hastate,omitempty"`
 	HaGroup         string      `json:"hagroup,omitempty"`
@@ -1354,10 +1355,16 @@ func (c ConfigQemu) CreateQemuPCIsParams(
 	// For new style with multi pci device.
 	for pciConfID, pciConfMap := range c.QemuPCIDevices {
 		qemuPCIName := "hostpci" + strconv.Itoa(pciConfID)
-		pciId := pciConfMap["pciid"].(string)
+		var pcistring bytes.Buffer
+		for elem := range pciConfMap {
+			pcistring.WriteString(elem)
+			pcistring.WriteString("=")
+			pcistring.WriteString(fmt.Sprintf("%v", pciConfMap[elem]))
+			pcistring.WriteString(",")
+		}
 
 		// Add back to Qemu prams.
-		params[qemuPCIName] = pciId
+		params[qemuPCIName] = strings.TrimSuffix(pcistring.String(), ",")
 	}
 	return nil
 }
