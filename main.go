@@ -29,14 +29,14 @@ func main() {
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
 	fConfigFile := flag.String("file", "", "file to get the config from")
 	taskTimeout := flag.Int("timeout", 300, "api task timeout in seconds")
-	proxyUrl := flag.String("proxy", "", "proxy url to connect to")
+	proxyURL := flag.String("proxy", "", "proxy url to connect to")
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
 	tlsconf := &tls.Config{InsecureSkipVerify: true}
 	if !*insecure {
 		tlsconf = nil
 	}
-	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *proxyUrl, *taskTimeout)
+	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *proxyURL, *taskTimeout)
 	failError(err)
 	if userRequiresAPIToken(os.Getenv("PM_USER")) {
 		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
@@ -134,9 +134,9 @@ func main() {
 		networkInterfaces, err := c.GetVmAgentNetworkInterfaces(vmr)
 		failError(err)
 
-		networkInterfaceJson, err := json.Marshal(networkInterfaces)
+		networkInterfaceJSON, err := json.Marshal(networkInterfaces)
 		failError(err)
-		fmt.Println(string(networkInterfaceJson))
+		fmt.Println(string(networkInterfaceJSON))
 
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
@@ -703,6 +703,7 @@ func userRequiresAPIToken(userID string) bool {
 	return rxUserRequiresToken.MatchString(userID)
 }
 
+// GetConfig get config from file
 func GetConfig(configFile string) (configSource []byte) {
 	var err error
 	if configFile != "" {
