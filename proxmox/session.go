@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -111,7 +110,7 @@ func ParamsToValuesWithAllEmpty(params map[string]interface{}, allowedEmpty []st
 		default:
 			v = fmt.Sprintf("%v", intrV)
 		}
-		if allowEmpty == true {
+		if allowEmpty {
 			vals.Set(k, v)
 		} else if v != "" || inArray(allowedEmpty, k) {
 			vals.Set(k, v)
@@ -124,7 +123,7 @@ func decodeResponse(resp *http.Response, v interface{}) error {
 	if resp.Body == nil {
 		return nil
 	}
-	rbody, err := ioutil.ReadAll(resp.Body)
+	rbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response body: %s", err)
 	}
@@ -231,12 +230,12 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	// session.Do, and they might not be able to reliably close it themselves.
 	// Therefore, read the body out, close the original, then replace it with
 	// a NopCloser over the bytes, which does not need to be closed downsteam.
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 	resp.Body.Close()
-	resp.Body = ioutil.NopCloser(bytes.NewReader(respBody))
+	resp.Body = io.NopCloser(bytes.NewReader(respBody))
 
 	if *Debug {
 		dr, _ := httputil.DumpResponse(resp, true)
@@ -312,7 +311,7 @@ func (s *Session) RequestJSON(
 	// 	return nil, err
 	// }
 
-	rbody, err := ioutil.ReadAll(resp.Body)
+	rbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return resp, fmt.Errorf("error reading response body")
 	}

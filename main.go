@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -29,14 +29,14 @@ func main() {
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
 	fConfigFile := flag.String("file", "", "file to get the config from")
 	taskTimeout := flag.Int("timeout", 300, "api task timeout in seconds")
-	proxyUrl := flag.String("proxy", "", "proxy url to connect to")
+	proxyURL := flag.String("proxy", "", "proxy url to connect to")
 	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
 	flag.Parse()
 	tlsconf := &tls.Config{InsecureSkipVerify: true}
 	if !*insecure {
 		tlsconf = nil
 	}
-	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *proxyUrl, *taskTimeout)
+	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *proxyURL, *taskTimeout)
 	failError(err)
 	if userRequiresAPIToken(os.Getenv("PM_USER")) {
 		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
@@ -116,9 +116,10 @@ func main() {
 		failError(err)
 		vmType := vmr.GetVmType()
 		var config interface{}
-		if vmType == "qemu" {
+		switch vmType {
+		case "qemu":
 			config, err = proxmox.NewConfigQemuFromApi(vmr, c)
-		} else if vmType == "lxc" {
+		case "lxc":
 			config, err = proxmox.NewConfigLxcFromApi(vmr, c)
 		}
 		failError(err)
@@ -133,9 +134,9 @@ func main() {
 		networkInterfaces, err := c.GetVmAgentNetworkInterfaces(vmr)
 		failError(err)
 
-		networkInterfaceJson, err := json.Marshal(networkInterfaces)
+		networkInterfaceJSON, err := json.Marshal(networkInterfaces)
 		failError(err)
-		fmt.Println(string(networkInterfaceJson))
+		fmt.Println(string(networkInterfaceJSON))
 
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
@@ -158,7 +159,7 @@ func main() {
 		var mode string
 		if config.QemuIso != "" {
 			mode = "(ISO boot mode)"
-		} else if config.QemuPxe == true {
+		} else if config.QemuPxe {
 			mode = "(PXE boot mode)"
 		}
 		failError(err)
@@ -179,16 +180,16 @@ func main() {
 		// ISO mode waits for the VM to reboot to exit
 		// while PXE mode just launches the VM and is done
 		if config.QemuIso != "" {
-			sshPort, err := proxmox.SshForwardUsernet(vmr, c)
+			_, err := proxmox.SshForwardUsernet(vmr, c)
 			failError(err)
 			log.Println("Waiting for CDRom install shutdown (at least 5 minutes)")
 			failError(proxmox.WaitForShutdown(vmr, c))
 			log.Println("Restarting")
 			_, err = c.StartVm(vmr)
 			failError(err)
-			sshPort, err = proxmox.SshForwardUsernet(vmr, c)
+			_, err = proxmox.SshForwardUsernet(vmr, c)
 			failError(err)
-			log.Println("SSH Portforward on:" + sshPort)
+			//log.Println("SSH Portforward on:" + sshPort)
 		}
 
 		log.Println("Complete")
@@ -702,15 +703,16 @@ func userRequiresAPIToken(userID string) bool {
 	return rxUserRequiresToken.MatchString(userID)
 }
 
+// GetConfig get config from file
 func GetConfig(configFile string) (configSource []byte) {
 	var err error
 	if configFile != "" {
-		configSource, err = ioutil.ReadFile(configFile)
+		configSource, err = os.ReadFile(configFile)
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		configSource, err = ioutil.ReadAll(os.Stdin)
+		configSource, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -16,7 +16,7 @@ import (
 
 // Currently ZFS local, LVM, Ceph RBD, CephFS, Directory and virtio-scsi-pci are considered.
 // Other formats are not verified, but could be added if they're needed.
-const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
+// const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
 const machineModels = `(pc|q35|pc-i440fx)`
 
 type (
@@ -905,14 +905,16 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		if err != nil {
 			log.Printf("[ERROR] %q", err)
 		}
-		if nicConfMap["firewall"] == 1 {
+		switch nicConfMap["firewall"] {
+		case 1:
 			nicConfMap["firewall"] = true
-		} else if nicConfMap["firewall"] == 0 {
+		case 0:
 			nicConfMap["firewall"] = false
 		}
-		if nicConfMap["link_down"] == 1 {
+		switch nicConfMap["link_down"] {
+		case 1:
 			nicConfMap["link_down"] = true
-		} else if nicConfMap["link_down"] == 0 {
+		case 0:
 			nicConfMap["link_down"] = false
 		}
 

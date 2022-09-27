@@ -3,7 +3,7 @@ package cli
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"regexp"
 
@@ -13,8 +13,8 @@ import (
 
 // Global else the nested folders dont work
 var RootCmd = &cobra.Command{
-    Use:   "proxmox-api-go",
-    Short: "Application to configure Proxmox from the Api",
+	Use:   "proxmox-api-go",
+	Short: "Application to configure Proxmox from the Api",
 }
 
 func init() {
@@ -26,14 +26,14 @@ func init() {
 }
 
 func Execute() (err error) {
-    if err = RootCmd.Execute(); err != nil {
-    	return
-   	}
+	if err = RootCmd.Execute(); err != nil {
+		return
+	}
 	return
 }
 
-func NewClient()(c *proxmox.Client) {
-	c, err := Client("","","","")
+func NewClient() (c *proxmox.Client) {
+	c, err := Client("", "", "", "")
 	LogFatalError(err)
 	return
 }
@@ -80,14 +80,14 @@ func userRequiresAPIToken(userID string) bool {
 	return rxUserRequiresToken.MatchString(userID)
 }
 
-func NewConfig()(configSource []byte) {
+func NewConfig() (configSource []byte) {
 	var err error
 	file, _ := RootCmd.Flags().GetString("file")
 	if file != "" {
-		configSource, err = ioutil.ReadFile(file)
+		configSource, err = os.ReadFile(file)
 		LogFatalError(err)
 	} else {
-		configSource, err = ioutil.ReadAll(RootCmd.InOrStdin())
+		configSource, err = io.ReadAll(RootCmd.InOrStdin())
 		LogFatalError(err)
 	}
 	return

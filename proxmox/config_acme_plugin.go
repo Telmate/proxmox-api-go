@@ -17,7 +17,7 @@ type ConfigAcmePlugin struct {
 	ValidationDelay int      `json:"validation-delay"`
 }
 
-func (config ConfigAcmePlugin) MapAcmePluginValues()(params map[string]interface{}) {
+func (config ConfigAcmePlugin) MapAcmePluginValues() (params map[string]interface{}) {
 	params = map[string]interface{}{
 		"api":              config.API,
 		"data":             base64.StdEncoding.EncodeToString([]byte(config.Data)),
@@ -30,14 +30,18 @@ func (config ConfigAcmePlugin) MapAcmePluginValues()(params map[string]interface
 
 func (config ConfigAcmePlugin) SetAcmePlugin(pluginid string, client *Client) (err error) {
 	err = ValidateIntInRange(0, 172800, config.ValidationDelay, "validation-delay")
-	if err != nil {return}
+	if err != nil {
+		return
+	}
 
 	config.ID = pluginid
 
 	pluginExists, err := client.CheckAcmePluginExistance(pluginid)
-	if err != nil {return}
+	if err != nil {
+		return
+	}
 
-	if pluginExists == true {
+	if pluginExists {
 		err = config.UpdateAcmePlugin(client)
 	} else {
 		err = config.CreateAcmePlugin(client)
@@ -71,16 +75,28 @@ func NewConfigAcmePluginFromApi(id string, client *Client) (config *ConfigAcmePl
 	// prepare json map to receive the information from the api
 	var rawConfig map[string]interface{}
 	rawConfig, err = client.GetAcmePluginConfig(id)
-	if err != nil {return nil, err}
+	if err != nil {
+		return nil, err
+	}
 
 	config = new(ConfigAcmePlugin)
 
 	config.ID = id
 	config.API = rawConfig["api"].(string)
-	
-	if _, isSet := rawConfig["data"]; isSet {config.Data = rawConfig["data"].(string)}
-	if _, isSet := rawConfig["disable"]; isSet {config.Enable = BoolInvert(Itob(int(rawConfig["disable"].(float64))))} else {config.Enable = true}
-	if _, isSet := rawConfig["validation-delay"]; isSet {config.ValidationDelay = int(rawConfig["validation-delay"].(float64))} else {config.ValidationDelay = 30}
+
+	if _, isSet := rawConfig["data"]; isSet {
+		config.Data = rawConfig["data"].(string)
+	}
+	if _, isSet := rawConfig["disable"]; isSet {
+		config.Enable = BoolInvert(Itob(int(rawConfig["disable"].(float64))))
+	} else {
+		config.Enable = true
+	}
+	if _, isSet := rawConfig["validation-delay"]; isSet {
+		config.ValidationDelay = int(rawConfig["validation-delay"].(float64))
+	} else {
+		config.ValidationDelay = 30
+	}
 
 	return
 }
@@ -88,6 +104,8 @@ func NewConfigAcmePluginFromApi(id string, client *Client) (config *ConfigAcmePl
 func NewConfigAcmePluginFromJson(input []byte) (config *ConfigAcmePlugin, err error) {
 	config = &ConfigAcmePlugin{}
 	err = json.Unmarshal([]byte(input), config)
-	if err != nil {log.Fatal(err)}
+	if err != nil {
+		log.Fatal(err)
+	}
 	return
 }

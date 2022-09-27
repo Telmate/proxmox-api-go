@@ -2,15 +2,16 @@ package proxmox
 
 import (
 	"crypto/tls"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestClient_Login(t *testing.T) {
-	client, err := NewClient("https://localhost:8006/api2/json", nil, &tls.Config{InsecureSkipVerify: true}, "", 300)
+	client, err := NewClient(os.Getenv("PM_API_URL"), nil, &tls.Config{InsecureSkipVerify: true}, "", 300)
 	assert.Nil(t, err)
 
-	err = client.Login("root@pam", "root", "")
+	err = client.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), "")
 	assert.Nil(t, err)
 }

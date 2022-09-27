@@ -2,10 +2,10 @@ package proxmox
 
 import (
 	"encoding/json"
-	"strings"
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 )
 
 // Acme Account options for the Proxmox API
@@ -18,23 +18,29 @@ type ConfigAcmeAccount struct {
 
 func (config ConfigAcmeAccount) CreateAcmeAccount(acmeid string, client *Client) (err error) {
 	params := map[string]interface{}{
-		"name":      acmeid,
-		"contact":   ArrayToCSV(config.Contact),
+		"name":    acmeid,
+		"contact": ArrayToCSV(config.Contact),
 	}
-	if config.Tos == false{
+	if !config.Tos {
 		return errors.New("error creating Acme account: the terms of service must be accepted")
 	}
 
 	acmeDirectories, err := client.GetAcmeDirectoriesUrl()
+	if err != nil {
+		return err
+	}
 
 	var tos string
-	if inArray(acmeDirectories ,config.Directory){
+	if inArray(acmeDirectories, config.Directory) {
 		tos, err = client.GetAcmeTosUrl()
+		if err != nil {
+			return err
+		}
 	} else {
 		tos = "true"
 	}
-	params["tos_url"]=tos
-	params["directory"]=config.Directory
+	params["tos_url"] = tos
+	params["directory"] = config.Directory
 
 	exitStatus, err := client.CreateAcmeAccount(params)
 	if err != nil {
@@ -48,8 +54,10 @@ func NewConfigAcmeAccountFromApi(id string, client *Client) (config *ConfigAcmeA
 	// prepare json map to receive the information from the api
 	var acmeConfig map[string]interface{}
 	acmeConfig, err = client.GetAcmeAccountConfig(id)
-	if err != nil {return nil, err}
-	
+	if err != nil {
+		return nil, err
+	}
+
 	config = new(ConfigAcmeAccount)
 
 	config.Name = id
@@ -58,23 +66,25 @@ func NewConfigAcmeAccountFromApi(id string, client *Client) (config *ConfigAcmeA
 
 	// Using the proxmox cli you can make the "tos" key empty
 	if acmeConfig["tos"] != nil {
-		if acmeConfig["tos"].(string) != ""{
+		if acmeConfig["tos"].(string) != "" {
 			config.Tos = true
 		}
 	}
 
 	contactArray := ArrayToStringType(acmeConfig["account"].(map[string]interface{})["contact"].([]interface{}))
 	config.Contact = make([]string, len(contactArray))
-	for i, element := range contactArray{
+	for i, element := range contactArray {
 		config.Contact[i] = strings.TrimPrefix(element, "mailto:")
 	}
-	
+
 	return
 }
 
 func NewConfigAcmeAccountFromJson(input []byte) (config *ConfigAcmeAccount, err error) {
 	config = &ConfigAcmeAccount{}
 	err = json.Unmarshal([]byte(input), config)
-	if err != nil {log.Fatal(err)}
+	if err != nil {
+		log.Fatal(err)
+	}
 	return
 }
