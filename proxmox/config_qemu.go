@@ -243,7 +243,6 @@ func (config ConfigQemu) HasCloudInit() bool {
 }
 
 /*
-
 CloneVm
 Example: Request
 
@@ -254,7 +253,6 @@ name:tf-clone1
 target:proxmox1-xx
 full:1
 storage:xxx
-
 */
 func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
@@ -899,14 +897,16 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		if err != nil {
 			log.Printf("[ERROR] %q", err)
 		}
-		if nicConfMap["firewall"] == 1 {
+		switch nicConfMap["firewall"] {
+		case 1:
 			nicConfMap["firewall"] = true
-		} else if nicConfMap["firewall"] == 0 {
+		case 0:
 			nicConfMap["firewall"] = false
 		}
-		if nicConfMap["link_down"] == 1 {
+		switch nicConfMap["link_down"] {
+		case 1:
 			nicConfMap["link_down"] = true
-		} else if nicConfMap["link_down"] == 0 {
+		case 0:
 			nicConfMap["link_down"] = false
 		}
 

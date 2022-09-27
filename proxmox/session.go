@@ -111,7 +111,7 @@ func ParamsToValuesWithAllEmpty(params map[string]interface{}, allowedEmpty []st
 		default:
 			v = fmt.Sprintf("%v", intrV)
 		}
-		if allowEmpty == true {
+		if allowEmpty {
 			vals.Set(k, v)
 		} else if v != "" || inArray(allowedEmpty, k) {
 			vals.Set(k, v)

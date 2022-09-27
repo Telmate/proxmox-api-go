@@ -121,7 +121,7 @@ func NewConfigUserFromApi(userid string, client *Client) (config *ConfigUser, er
 		config.Lastname = userConfig["lastname"].(string)
 	}
 	if _, isSet := userConfig["groups"]; isSet {
-		config.Groups = ArrayToStringType(userConfig["groups"].(interface{}).([]interface{}))
+		config.Groups = ArrayToStringType(userConfig["groups"].([]interface{}))
 	}
 
 	return

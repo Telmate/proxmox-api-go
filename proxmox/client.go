@@ -615,6 +615,9 @@ func (c *Client) CloneLxcContainer(vmr *VmRef, vmParams map[string]interface{}) 
 			return "", err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -629,6 +632,9 @@ func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitS
 			return "", err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -650,6 +656,9 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 			return "", err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -667,6 +676,9 @@ func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 			return "", err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -696,6 +708,9 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/%s/rollback", vmr.node, vmr.vmType, vmr.vmId, snapshot)
 	var taskResponse map[string]interface{}
 	_, err = c.session.PostJSON(url, nil, nil, nil, &taskResponse)
+	if err != nil {
+		return "", err
+	}
 	exitStatus, err = c.WaitForCompletion(taskResponse)
 	return
 }
@@ -711,6 +726,9 @@ func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]interface{}) (exitS
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -726,6 +744,9 @@ func (c *Client) SetLxcConfig(vmr *VmRef, vmParams map[string]interface{}) (exit
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -773,6 +794,9 @@ func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitSt
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -787,6 +811,9 @@ func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatu
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -805,6 +832,9 @@ func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStat
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -820,6 +850,9 @@ func (c *Client) MoveQemuDiskToVM(vmrSource *VmRef, disk string, vmrTarget *VmRe
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -938,6 +971,9 @@ func (c *Client) CreateNewDisk(vmr *VmRef, disk string, volume string) (exitStat
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -976,6 +1012,9 @@ func (c *Client) VzDump(vmr *VmRef, params map[string]interface{}) (exitStatus i
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -994,6 +1033,9 @@ func (c *Client) DeleteVolume(vmr *VmRef, storageName string, volumeName string)
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -1126,6 +1168,9 @@ func (c *Client) SetQemuFirewallOptions(vmr *VmRef, fwOptions map[string]interfa
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -1163,6 +1208,9 @@ func (c *Client) CreateQemuIPSet(vmr *VmRef, params map[string]interface{}) (exi
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -1182,6 +1230,9 @@ func (c *Client) AddQemuIPSet(vmr *VmRef, name string, params map[string]interfa
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -1218,6 +1269,9 @@ func (c *Client) DeleteQemuIPSet(vmr *VmRef, IPSetName string) (exitStatus inter
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -1237,6 +1291,9 @@ func (c *Client) DeleteQemuIPSetNetwork(vmr *VmRef, IPSetName string, network st
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return "", err
+		}
 	}
 	return
 }
@@ -1417,6 +1474,9 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 				return nil, err
 			}
 			exitStatus, err = c.WaitForCompletion(taskResponse)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			return nil, err
 		}
@@ -1459,6 +1519,9 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 				return nil, err
 			}
 			exitStatus, err = c.WaitForCompletion(taskResponse)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return nil, err
 	}
@@ -1500,6 +1563,9 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 			return nil, err
 		}
 		exitStatus, err = c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return

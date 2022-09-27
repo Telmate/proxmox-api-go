@@ -24,7 +24,7 @@ func Itob(i int) bool {
 }
 
 func BoolInvert(b bool) bool {
-	return b == false
+	return !b
 }
 
 // Check the value of a key in a nested array of map[string]interface{}
@@ -149,11 +149,11 @@ func CSVtoArray(csv string) []string {
 // Convert Array to a comma (,) delimited list
 func ArrayToCSV(array interface{}) (csv string) {
 	var arrayString []string
-	switch array.(type) {
+	switch array := array.(type) {
 	case []interface{}:
-		arrayString = ArrayToStringType(array.([]interface{}))
+		arrayString = ArrayToStringType(array)
 	case []string:
-		arrayString = array.([]string)
+		arrayString = array
 	}
 	csv = strings.Join(arrayString, `,`)
 	return
