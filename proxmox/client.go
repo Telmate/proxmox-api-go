@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -130,7 +129,10 @@ func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, trie
 		if statErr == nil {
 			return nil
 		}
-		log.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
+		if strings.Contains(statErr.Error(), "500 no such resource") {
+			return statErr
+		}
+		//fmt.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
 		time.Sleep(time.Duration(ii+1) * time.Second)
 	}
 	return statErr
