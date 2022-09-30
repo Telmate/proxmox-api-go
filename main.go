@@ -207,6 +207,7 @@ func main() {
 	case "cloneQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		failError(err)
+		fmt.Println("Parsed conf: ", config)
 		log.Println("Looking for template: " + flag.Args()[1])
 		sourceVmrs, err := c.GetVmRefsByName(flag.Args()[1])
 		failError(err)
@@ -374,6 +375,18 @@ func main() {
 		vmList, err := json.Marshal(vms)
 		failError(err)
 		fmt.Println(string(vmList))
+
+	case "getVmInfo":
+		if len(flag.Args()) < 2 {
+			fmt.Printf("Missing vmid\n")
+			os.Exit(1)
+		}
+		i, err := strconv.Atoi(flag.Args()[1])
+		failError(err)
+		vmr := proxmox.NewVmRef(i)
+		config, err := proxmox.NewConfigQemuFromApi(vmr, c)
+		failError(err)
+		fmt.Println(config)
 
 	case "getVersion":
 		versionInfo, err := c.GetVersion()
