@@ -312,13 +312,6 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 	return
 }
 
-type AgentNetworkInterface struct {
-	MACAddress  string
-	IPAddresses []net.IP
-	Name        string
-	Statistics  map[string]int64
-}
-
 func (a *AgentNetworkInterface) UnmarshalJSON(b []byte) error {
 	var intermediate struct {
 		HardwareAddress string `json:"hardware-address"`
