@@ -323,7 +323,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 		config.HaState = vmr.HaState()
 		config.HaGroup = vmr.HaGroup()
 	} else {
-		log.Printf("[DEBUG] Container %d(%s) has no HA config", vmr.vmId, lxcConfig["hostname"])
+		//log.Printf("[DEBUG] Container %d(%s) has no HA config", vmr.vmId, lxcConfig["hostname"])
 		return config, nil
 	}
 
