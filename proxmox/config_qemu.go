@@ -112,16 +112,12 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	params := map[string]interface{}{
 		"vmid":        vmr.vmId,
 		"name":        config.Name,
-		"onboot":      getBoolValueFromPointer(config.Onboot),
 		"startup":     config.Startup,
-		"tablet":      getBoolValueFromPointer(config.Tablet),
 		"agent":       config.Agent,
 		"ostype":      config.QemuOs,
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
 		"cpu":         config.QemuCpu,
-		"numa":        getBoolValueFromPointer(config.QemuNuma),
-		"kvm":         getBoolValueFromPointer(config.QemuKVM),
 		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
@@ -129,6 +125,22 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"tags":        config.Tags,
 		"machine":     config.Machine,
 		"args":        config.Args,
+	}
+
+	if config.QemuNuma != nil {
+		params["numa"] = *config.QemuNuma
+	}
+
+	if config.QemuKVM != nil {
+		params["numa"] = *config.QemuKVM
+	}
+
+	if config.Tablet != nil {
+		params["numa"] = *config.Tablet
+	}
+
+	if config.Onboot != nil {
+		params["numa"] = *config.Onboot
 	}
 
 	if config.QemuIso != "" {
