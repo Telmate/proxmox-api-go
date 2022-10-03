@@ -197,7 +197,7 @@ func createHeaderList(header_string string, sess *Session) (*Session, error) {
 		return nil, err
 	}
 	for i := 0; i < len(header_string_split); i += 2 {
-		sess.Headers.Add(header_string_split[i], header_string_split[i+1])
+		sess.Headers[header_string_split[i]] = []string{header_string_split[i+1]}
 	}
 	return sess, nil
 }
