@@ -183,6 +183,11 @@ func PointerBool(boolean bool) *bool {
 	return &boolean
 }
 
+// Returns bool if *bool exists
+func boolPointerHasValue(b *bool) bool {
+	return b != nil
+}
+
 func failError(err error) {
 	if err != nil {
 		log.Fatal(err)
