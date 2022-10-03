@@ -188,6 +188,14 @@ func boolPointerHasValue(b *bool) bool {
 	return b != nil
 }
 
+// Default return false, otherwise return the value of the pointer
+func getBoolValueFromPointer(b *bool) bool {
+	if boolPointerHasValue(b) {
+		return *b
+	}
+	return false
+}
+
 func failError(err error) {
 	if err != nil {
 		log.Fatal(err)
