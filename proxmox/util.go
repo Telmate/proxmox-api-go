@@ -188,3 +188,16 @@ func failError(err error) {
 		log.Fatal(err)
 	}
 }
+
+// Create list of http.Header out of string, separator is ","
+func createHeaderList(header_string string, sess *Session) (*Session, error) {
+	header_string_split := strings.Split(header_string, ",")
+	err := ValidateArrayEven(header_string_split, "Header key(s) and value(s) not even. Check your HTTP_HEADERS.")
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < len(header_string_split); i += 2 {
+		sess.Headers.Add(header_string_split[i], header_string_split[i+1])
+	}
+	return sess, nil
+}

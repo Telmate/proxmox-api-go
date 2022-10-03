@@ -36,7 +36,7 @@ func main() {
 	if !*insecure {
 		tlsconf = nil
 	}
-	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, tlsconf, *proxyURL, *taskTimeout)
+	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, os.Getenv("HTTP_HEADERS"), tlsconf, *proxyURL, *taskTimeout)
 	failError(err)
 	if userRequiresAPIToken(os.Getenv("PM_USER")) {
 		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))

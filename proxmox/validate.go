@@ -70,6 +70,13 @@ func ValidateArrayNotEmpty(array interface{}, text string) error {
 	return ErrorKeyEmpty(text)
 }
 
+func ValidateArrayEven(array interface{}, text string) error {
+	if len(array.([]string))%2 == 0 {
+		return nil
+	}
+	return ErrorKeyEmpty(text)
+}
+
 func ErrorKeyEmpty(text string) error {
 	return fmt.Errorf("error the value of key (%s) may not be empty", text)
 }

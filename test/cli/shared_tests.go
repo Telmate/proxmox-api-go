@@ -80,15 +80,16 @@ func (test *Test) StandardTest(t *testing.T) {
 }
 
 type LoginTest struct {
-	APIurl   string
-	UserID   string
-	Password string
-	OTP      string
-	ReqErr   bool //if an error is expected as output
+	APIurl      string
+	UserID      string
+	Password    string
+	OTP         string
+	HttpHeaders string
+	ReqErr      bool //if an error is expected as output
 }
 
 func (test *LoginTest) Login(t *testing.T) {
-	_, err := cli.Client(test.APIurl, test.UserID, test.Password, test.OTP)
+	_, err := cli.Client(test.APIurl, test.UserID, test.Password, test.OTP, test.HttpHeaders)
 	if test.ReqErr {
 		require.Error(t, err)
 	} else {
