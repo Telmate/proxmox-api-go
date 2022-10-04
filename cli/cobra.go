@@ -60,7 +60,7 @@ func Client(apiUrl, userID, password, otp string, http_headers string) (c *proxm
 		otp = os.Getenv("PM_OTP")
 	}
 	if http_headers == "" {
-		otp = os.Getenv("HTTP_HEADERS")
+		http_headers = os.Getenv("HTTP_HEADERS")
 	}
 	c, err = proxmox.NewClient(apiUrl, nil, http_headers, tlsconf, proxyUrl, timeout)
 	LogFatalError(err)
