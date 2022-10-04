@@ -1325,7 +1325,7 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 	}
 
 	url := fmt.Sprintf("%s/nodes/%s/storage/%s/upload", c.session.ApiUrl, node, storage)
-	req, err := c.session.NewRequest(http.MethodPost, url, nil, body)
+	req, err := c.session.NewRequest(http.MethodPost, url, &c.session.Headers, body)
 	if err != nil {
 		return err
 	}
