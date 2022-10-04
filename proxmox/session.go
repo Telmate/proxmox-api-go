@@ -167,7 +167,7 @@ func (s *Session) Login(username string, password string, otp string) (err error
 	reqbody := ParamsToBody(reqUser)
 	olddebug := *Debug
 	*Debug = false // don't share passwords in debug log
-	resp, err := s.Post("/access/ticket", nil, nil, &reqbody)
+	resp, err := s.Post("/access/ticket", nil, &s.Headers, &reqbody)
 	*Debug = olddebug
 	if err != nil {
 		return err
@@ -202,18 +202,18 @@ func (s *Session) NewRequest(method, url string, headers *http.Header, body io.R
 		req.Header = *headers
 	}
 	if s.AuthToken != "" {
-		req.Header.Add("Authorization", "PVEAPIToken="+s.AuthToken)
+		req.Header["Authorization"] = []string{"PVEAPIToken=" + s.AuthToken}
 	} else if s.AuthTicket != "" {
-		req.Header.Add("Cookie", "PVEAuthCookie="+s.AuthTicket)
-		req.Header.Add("CSRFPreventionToken", s.CsrfToken)
+		req.Header["Authorization"] = []string{"PVEAuthCookie=" + s.AuthTicket}
+		req.Header["CSRFPreventionToken"] = []string{s.CsrfToken}
 	}
 	return
 }
 
 func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	// Add session headers
-	for k := range s.Headers {
-		req.Header.Set(k, s.Headers.Get(k))
+	for k, v := range s.Headers {
+		req.Header[k] = v
 	}
 
 	if *Debug {
