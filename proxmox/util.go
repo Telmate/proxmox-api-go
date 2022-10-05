@@ -191,6 +191,9 @@ func failError(err error) {
 
 // Create list of http.Header out of string, separator is ","
 func createHeaderList(header_string string, sess *Session) (*Session, error) {
+	if header_string == "" {
+		return sess, nil
+	}
 	header_string_split := strings.Split(header_string, ",")
 	err := ValidateArrayEven(header_string_split, "Header key(s) and value(s) not even. Check your PM_HTTP_HEADERS env.")
 	if err != nil {
