@@ -9,7 +9,7 @@ import (
 )
 
 func TestClient_Login(t *testing.T) {
-	client, err := NewClient(os.Getenv("PM_API_URL"), nil, os.Getenv("HTTP_HEADERS"), &tls.Config{InsecureSkipVerify: true}, "", 300)
+	client, err := NewClient(os.Getenv("PM_API_URL"), nil, os.Getenv("PM_HTTP_HEADERS"), &tls.Config{InsecureSkipVerify: true}, "", 300)
 	assert.Nil(t, err)
 
 	err = client.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), "")
