@@ -85,13 +85,18 @@ func NewVmRef(vmId int) (vmr *VmRef) {
 	return
 }
 
-func NewClient(apiUrl string, hclient *http.Client, tls *tls.Config, proxyString string, taskTimeout int) (client *Client, err error) {
+func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tls.Config, proxyString string, taskTimeout int) (client *Client, err error) {
 	var sess *Session
-	sess, err = NewSession(apiUrl, hclient, proxyString, tls)
-	if err == nil {
+	sess, err_s := NewSession(apiUrl, hclient, proxyString, tls)
+	sess, err = createHeaderList(http_headers, sess)
+	if err != nil {
+		return nil, err
+	}
+	if err_s == nil {
 		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout}
 	}
-	return client, err
+
+	return client, err_s
 }
 
 // SetAPIToken specifies a pair of user identifier and token UUID to use
@@ -1320,7 +1325,7 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 	}
 
 	url := fmt.Sprintf("%s/nodes/%s/storage/%s/upload", c.session.ApiUrl, node, storage)
-	req, err := c.session.NewRequest(http.MethodPost, url, nil, body)
+	req, err := c.session.NewRequest(http.MethodPost, url, &c.session.Headers, body)
 	if err != nil {
 		return err
 	}
