@@ -7,9 +7,8 @@ import (
 var delete_poolCmd = &cobra.Command{
 	Use:   "pool POOLID",
 	Short: "Deletes the Speciefied pool",
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		err = DeleteID(args, "Pool")	
-		return
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return DeleteID(args, "Pool")
 	},
 }
 
