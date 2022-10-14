@@ -72,6 +72,7 @@ func main() {
 
 	switch flag.Args()[0] {
 
+	// TODO make testUserPermissions in new cli
 	case "testUserPermissions":
 		// testuserpermission [user] [path]
 		// ex: testuserpermission root@pam(default) /(default)
@@ -102,14 +103,14 @@ func main() {
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, err = c.StopVm(vmr)
 		failError(err)
-
+		// TODO make destroy in new cli
 	case "destroy":
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, err = c.StopVm(vmr)
 		failError(err)
 		jbody, err = c.DeleteVm(vmr)
 		failError(err)
-
+		// TODO make getConfig in new cli
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
 		err := c.CheckVmRef(vmr)
@@ -126,7 +127,7 @@ func main() {
 		cj, err := json.MarshalIndent(config, "", "  ")
 		failError(err)
 		log.Println(string(cj))
-
+		// TODO make getNetworkInterfaces in new cli
 	case "getNetworkInterfaces":
 		vmr = proxmox.NewVmRef(vmid)
 		err := c.CheckVmRef(vmr)
@@ -137,7 +138,7 @@ func main() {
 		networkInterfaceJSON, err := json.Marshal(networkInterfaces)
 		failError(err)
 		fmt.Println(string(networkInterfaceJSON))
-
+		// TODO make createQemu in new cli
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		failError(err)
@@ -145,7 +146,7 @@ func main() {
 		vmr.SetNode(flag.Args()[2])
 		failError(config.CreateVm(vmr, c))
 		log.Println("Complete")
-
+		// TODO make createLxc in new cli
 	case "createLxc":
 		config, err := proxmox.NewConfigLxcFromJson(GetConfig(*fConfigFile))
 		failError(err)
@@ -153,7 +154,7 @@ func main() {
 		vmr.SetNode(flag.Args()[2])
 		failError(config.CreateLxc(vmr, c))
 		log.Println("Complete")
-
+		// TODO make installQemu in new cli
 	case "installQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		var mode string
@@ -203,7 +204,7 @@ func main() {
 		log.Printf("MaxID: %d\n", maxid)
 		log.Printf("NextID: %d\n", nextid)
 		log.Println("---")
-
+		// TODO make cloneQemu in new cli
 	case "cloneQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		failError(err)
@@ -234,13 +235,13 @@ func main() {
 		failError(config.CloneVm(sourceVmr, vmr, c))
 		failError(config.UpdateConfig(vmr, c))
 		log.Println("Complete")
-
+		// TODO make createQemuSnapshot in new cli
 	case "createQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
 		failError(err)
 		jbody, err = c.CreateQemuSnapshot(sourceVmr, flag.Args()[2])
 		failError(err)
-
+		// TODO make deleteQemuSnapshot in new cli
 	case "deleteQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
 		failError(err)
@@ -284,36 +285,36 @@ func main() {
 			}
 		}
 		failError(err)
-
+		// TODO make rollbackQemu in new cli
 	case "rollbackQemu":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
 		failError(err)
 		jbody, err = c.RollbackQemuVm(sourceVmr, flag.Args()[2])
 		failError(err)
-
+		// TODO make sshforward in new cli
 	case "sshforward":
 		vmr = proxmox.NewVmRef(vmid)
 		sshPort, err := proxmox.SshForwardUsernet(vmr, c)
 		failError(err)
 		log.Println("SSH Portforward on:" + sshPort)
-
+		// TODO make sshbackward in new cli
 	case "sshbackward":
 		vmr = proxmox.NewVmRef(vmid)
 		err = proxmox.RemoveSshForwardUsernet(vmr, c)
 		failError(err)
 		log.Println("SSH Portforward off")
-
+		// TODO make sendstring in new cli
 	case "sendstring":
 		vmr = proxmox.NewVmRef(vmid)
 		err = proxmox.SendKeysString(vmr, c, flag.Args()[2])
 		failError(err)
 		log.Println("Keys sent")
-
+		// TODO make nextid in new cli
 	case "nextid":
 		id, err := c.GetNextID(0)
 		failError(err)
 		log.Printf("Getting Next Free ID: %d\n", id)
-
+		// TODO make checkid in new cli
 	case "checkid":
 		if len(flag.Args()) < 2 {
 			fmt.Printf("Missing vmid\n")
@@ -328,7 +329,7 @@ func main() {
 		} else {
 			log.Printf("Selected ID is free: %d\n", i)
 		}
-
+		// TODO make migrate in new cli
 	case "migrate":
 		vmr := proxmox.NewVmRef(vmid)
 		c.GetVmInfo(vmr)
@@ -344,7 +345,7 @@ func main() {
 			os.Exit(1)
 		}
 		log.Printf("VM %d is moved on %s\n", vmid, args[1])
-
+		// TODO make getNodeList in new cli
 	case "getNodeList":
 		nodes, err := c.GetNodeList()
 		if err != nil {
@@ -356,6 +357,7 @@ func main() {
 		fmt.Println(string(nodeList))
 
 	// only returns enabled resources
+	// TODO make getResourceList in new cli
 	case "getResourceList":
 		resource, err := c.GetResourceList("")
 		if err != nil {
@@ -387,7 +389,7 @@ func main() {
 		config, err := proxmox.NewConfigQemuFromApi(vmr, c)
 		failError(err)
 		fmt.Println(config)
-
+		// TODO make getVmInfo in new cli
 	case "getVersion":
 		versionInfo, err := c.GetVersion()
 		failError(err)
@@ -546,7 +548,7 @@ func main() {
 		acmeid := flag.Args()[1]
 		failError(config.CreateAcmeAccount(acmeid, c))
 		log.Printf("Acme account %s has been created\n", acmeid)
-
+		// TODO make updateAcmeAccountEmail in new cli
 	case "updateAcmeAccountEmail":
 		if len(flag.Args()) < 3 {
 			log.Printf("Error: acme name and email(s) required")
@@ -577,7 +579,7 @@ func main() {
 		pluginList, err := json.Marshal(plugins)
 		failError(err)
 		fmt.Println(string(pluginList))
-
+		// TODO make getAcmePlugin in new cli
 	case "getAcmePlugin":
 		var config interface{}
 		pluginid := flag.Args()[1]
@@ -586,7 +588,7 @@ func main() {
 		cj, err := json.MarshalIndent(config, "", "  ")
 		failError(err)
 		log.Println(string(cj))
-
+		// TODO make setAcmePlugin in new cli
 	case "setAcmePlugin":
 		if len(flag.Args()) < 2 {
 			log.Printf("Error: Acme plugin name required")
@@ -597,7 +599,7 @@ func main() {
 		pluginid := flag.Args()[1]
 		failError(config.SetAcmePlugin(pluginid, c))
 		log.Printf("Acme plugin %s has been configured\n", pluginid)
-
+		// TODO make deleteAcmePlugin in new cli
 	case "deleteAcmePlugin":
 		if len(flag.Args()) < 2 {
 			log.Printf("Error: Acme plugin name required")
