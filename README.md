@@ -88,6 +88,10 @@ export PM_HTTP_HEADERS=Key,Value,Key1,Value1 (only if required)
 ./proxmox-api-go updateStorage storageid < storage.json
 
 ./proxmox-api-go deleteStorage
+
+./proxmox-api-go node reboot proxmox-node-name
+
+./proxmox-api-go node shutdown proxmox-node-name
 ```
 
 ## Proxy server support
