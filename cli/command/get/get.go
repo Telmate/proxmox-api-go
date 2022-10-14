@@ -24,6 +24,8 @@ func GetConfig(args []string, IDtype string) (err error) {
 		config, err = proxmox.NewConfigAcmeAccountFromApi(id, c)
 	case "MetricServer":
 		config, err = proxmox.NewConfigMetricsFromApi(id, c)
+	case "Pool":
+		config, err = c.GetPoolInfo(id)
 	case "Storage":
 		config, err = proxmox.NewConfigStorageFromApi(id, c)
 	case "User":
