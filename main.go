@@ -103,14 +103,14 @@ func main() {
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, err = c.StopVm(vmr)
 		failError(err)
-		// TODO make destroy in new cli
+
 	case "destroy":
 		vmr = proxmox.NewVmRef(vmid)
 		jbody, err = c.StopVm(vmr)
 		failError(err)
 		jbody, err = c.DeleteVm(vmr)
 		failError(err)
-		// TODO make getConfig in new cli
+
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
 		err := c.CheckVmRef(vmr)
@@ -138,7 +138,7 @@ func main() {
 		networkInterfaceJSON, err := json.Marshal(networkInterfaces)
 		failError(err)
 		fmt.Println(string(networkInterfaceJSON))
-		// TODO make createQemu in new cli
+
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		failError(err)
@@ -146,7 +146,7 @@ func main() {
 		vmr.SetNode(flag.Args()[2])
 		failError(config.CreateVm(vmr, c))
 		log.Println("Complete")
-		// TODO make createLxc in new cli
+
 	case "createLxc":
 		config, err := proxmox.NewConfigLxcFromJson(GetConfig(*fConfigFile))
 		failError(err)
@@ -345,7 +345,7 @@ func main() {
 			os.Exit(1)
 		}
 		log.Printf("VM %d is moved on %s\n", vmid, args[1])
-		// TODO make getNodeList in new cli
+
 	case "getNodeList":
 		nodes, err := c.GetNodeList()
 		if err != nil {
