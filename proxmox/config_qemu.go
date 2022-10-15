@@ -132,15 +132,15 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	if config.QemuKVM != nil {
-		params["numa"] = *config.QemuKVM
+		params["kvm"] = *config.QemuKVM
 	}
 
 	if config.Tablet != nil {
-		params["numa"] = *config.Tablet
+		params["tablet"] = *config.Tablet
 	}
 
 	if config.Onboot != nil {
-		params["numa"] = *config.Onboot
+		params["onboot"] = *config.Onboot
 	}
 
 	if config.QemuIso != "" {
