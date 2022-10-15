@@ -8,7 +8,7 @@ var get_poolCmd = &cobra.Command{
 	Use:   "pool POOLID",
 	Short: "Gets the configuration of the specified Pool",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return GetConfig(args, "Pool")
+		return getConfig(args, "Pool")
 	},
 }
 

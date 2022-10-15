@@ -8,7 +8,7 @@ var delete_storageCmd = &cobra.Command{
 	Use:   "storage STORAGEID",
 	Short: "Deletes the speciefied Storage",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return DeleteID(args, "Storage")
+		return deleteID(args, "Storage")
 	},
 }
 

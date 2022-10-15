@@ -15,7 +15,7 @@ func init() {
 	cli.RootCmd.AddCommand(GetCmd)
 }
 
-func GetConfig(args []string, IDtype string) (err error) {
+func getConfig(args []string, IDtype string) (err error) {
 	id := cli.ValidateIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
 	var config interface{}
