@@ -309,12 +309,12 @@ func main() {
 		err = proxmox.SendKeysString(vmr, c, flag.Args()[2])
 		failError(err)
 		log.Println("Keys sent")
-		// TODO make nextid in new cli
+
 	case "nextid":
 		id, err := c.GetNextID(0)
 		failError(err)
 		log.Printf("Getting Next Free ID: %d\n", id)
-		// TODO make checkid in new cli
+
 	case "checkid":
 		if len(flag.Args()) < 2 {
 			fmt.Printf("Missing vmid\n")
