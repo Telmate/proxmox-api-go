@@ -3,7 +3,6 @@ package proxmox
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 )
 
 type ConfigNetwork struct {
@@ -40,9 +39,6 @@ type ConfigNetwork struct {
 func NewConfigNetworkFromJson(input []byte) (config *ConfigNetwork, err error) {
 	config = &ConfigNetwork{}
 	err = json.Unmarshal([]byte(input), config)
-	if err != nil {
-		log.Fatal(err)
-	}
 	return
 }
 
