@@ -1828,6 +1828,14 @@ func (client *Client) CreateNetwork(node string, params map[string]interface{}) 
 	return
 }
 
+func (client Client) ApplyNetwork(node string) (exitStatus string, err error) {
+	paramMap := map[string]interface{}{
+		"node": node,
+	}
+
+	return client.UpdateItemWithTask(paramMap, "/nodes/"+node+"/network")
+}
+
 // Shared
 func (c *Client) GetItemConfigMapStringInterface(url, text, message string) (map[string]interface{}, error) {
 	data, err := c.GetItemConfig(url, text, message)

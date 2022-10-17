@@ -708,6 +708,17 @@ func main() {
 		failError(config.CreateNetwork(c))
 		log.Printf("Network %s has been created\n", config.Iface)
 
+	case "applyNetwork":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: Proxmox node name required"))
+		}
+		node := flag.Args()[1]
+		exitStatus, err := c.ApplyNetwork(node)
+		if err != nil {
+			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
+		}
+		log.Printf("Network configuration on node %s has been applied\n", node)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
