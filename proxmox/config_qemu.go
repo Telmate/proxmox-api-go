@@ -112,16 +112,12 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	params := map[string]interface{}{
 		"vmid":        vmr.vmId,
 		"name":        config.Name,
-		"onboot":      config.Onboot,
 		"startup":     config.Startup,
-		"tablet":      config.Tablet,
 		"agent":       config.Agent,
 		"ostype":      config.QemuOs,
 		"sockets":     config.QemuSockets,
 		"cores":       config.QemuCores,
 		"cpu":         config.QemuCpu,
-		"numa":        config.QemuNuma,
-		"kvm":         config.QemuKVM,
 		"hotplug":     config.Hotplug,
 		"memory":      config.Memory,
 		"boot":        config.Boot,
@@ -129,6 +125,22 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		"tags":        config.Tags,
 		"machine":     config.Machine,
 		"args":        config.Args,
+	}
+
+	if config.QemuNuma != nil {
+		params["numa"] = *config.QemuNuma
+	}
+
+	if config.QemuKVM != nil {
+		params["kvm"] = *config.QemuKVM
+	}
+
+	if config.Tablet != nil {
+		params["tablet"] = *config.Tablet
+	}
+
+	if config.Onboot != nil {
+		params["onboot"] = *config.Onboot
 	}
 
 	if config.QemuIso != "" {
@@ -421,6 +433,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		log.Printf("[ERROR] %q", err)
 	}
 
+	err = config.CreateQemuPCIsParams(vmr.vmId, configParams)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
 	// cloud-init options
 	if config.CIuser != "" {
 		configParams["ciuser"] = config.CIuser
@@ -533,6 +549,7 @@ var (
 	rxSerialName     = regexp.MustCompile(`serial\d+`)
 	rxUsbName        = regexp.MustCompile(`usb\d+`)
 	rxDiskPath       = regexp.MustCompile(`^\/dev\/.*`)
+	rxPCIName        = regexp.MustCompile(`hostpci\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
@@ -1017,6 +1034,34 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		// And device config to usbs map.
 		if len(usbConfMap) > 0 {
 			config.QemuUsbs[usbID] = usbConfMap
+		}
+	}
+
+	// hostpci
+	hostPCInames := []string{}
+
+	for k := range vmConfig {
+		if hostPCIname := rxPCIName.FindStringSubmatch(k); len(hostPCIname) > 0 {
+			hostPCInames = append(hostPCInames, hostPCIname[0])
+		}
+	}
+
+	for _, hostPCIname := range hostPCInames {
+		hostPCIConfStr := vmConfig[hostPCIname]
+		hostPCIConfList := strings.Split(hostPCIConfStr.(string), ",")
+		id := rxPCIName.FindStringSubmatch(hostPCIname)
+		hostPCIID, _ := strconv.Atoi(id[0])
+		hostPCIConfMap := QemuDevice{
+			"id": hostPCIID,
+		}
+		err = hostPCIConfMap.readDeviceConfig(hostPCIConfList)
+		if err != nil {
+			log.Printf("[ERROR] %q", err)
+		}
+
+		// And device config to usbs map.
+		if len(hostPCIConfMap) > 0 {
+			config.QemuPCIDevices[hostPCIID] = hostPCIConfMap
 		}
 	}
 
