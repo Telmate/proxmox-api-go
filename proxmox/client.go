@@ -1798,6 +1798,36 @@ func (c *Client) DeleteStorage(id string) error {
 	return c.DeleteUrl("/storage/" + id)
 }
 
+// Network
+
+type errorResp struct {
+	Errors map[string]interface{} `json:"errors"`
+}
+
+func (client *Client) CreateNetwork(node string, params map[string]interface{}) (exitStatus string, err error) {
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/network", node)
+	var resp *http.Response
+	resp, err = client.session.Post(url, nil, nil, &reqbody)
+	if err != nil {
+		var apiError errorResp
+		defer resp.Body.Close()
+
+		b, _ := io.ReadAll(resp.Body)
+		json.Unmarshal(b, &apiError)
+		s, _ := json.Marshal(apiError.Errors)
+		return string(s), err
+	}
+
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return "", err
+	}
+	exitStatus, err = client.WaitForCompletion(taskResponse)
+
+	return
+}
+
 // Shared
 func (c *Client) GetItemConfigMapStringInterface(url, text, message string) (map[string]interface{}, error) {
 	data, err := c.GetItemConfig(url, text, message)

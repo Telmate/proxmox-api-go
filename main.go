@@ -701,6 +701,13 @@ func main() {
 		failError(err)
 		fmt.Printf("Storage %s removed\n", storageid)
 
+	// Network
+	case "createNetwork":
+		config, err := proxmox.NewConfigNetworkFromJson(GetConfig(*fConfigFile))
+		failError(err)
+		failError(config.CreateNetwork(c))
+		log.Printf("Network %s has been created\n", config.Iface)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
