@@ -1804,17 +1804,43 @@ func (c *Client) DeleteStorage(id string) error {
 }
 
 // Network
-func (client *Client) CreateNetwork(node string, params map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) GetNetworkList(node string, typeFilter string) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/network", node)
-	return client.CreateItemReturnStatus(params, url)
+	if typeFilter != "" {
+		url += fmt.Sprintf("?type=%s", typeFilter)
+	}
+	resp, err := c.session.Get(url, nil, nil)
+	exitStatus = c.HandleTaskError(resp)
+	return
 }
 
-func (client Client) ApplyNetwork(node string) (exitStatus string, err error) {
-	paramMap := map[string]interface{}{
-		"node": node,
-	}
+func (c *Client) GetNetworkInterface(node string, iface string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
+	resp, err := c.session.Get(url, nil, nil)
+	exitStatus = c.HandleTaskError(resp)
+	return
+}
 
-	return client.UpdateItemWithTask(paramMap, "/nodes/"+node+"/network")
+func (c *Client) CreateNetwork(node string, params map[string]interface{}) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network", node)
+	return c.CreateItemReturnStatus(params, url)
+}
+
+func (c *Client) DeleteNetwork(node string, iface string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
+	resp, err := c.session.Delete(url, nil, nil)
+	exitStatus = c.HandleTaskError(resp)
+	return 
+}
+
+func (c Client) ApplyNetwork(node string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network", node)
+	return c.UpdateItemWithTask(nil, url)
+}
+
+func (c *Client) RevertNetwork(node string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network", node)
+	return c.DeleteUrlWithTask(url)
 }
 
 // Shared
