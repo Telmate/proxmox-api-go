@@ -88,6 +88,20 @@ export PM_HTTP_HEADERS=Key,Value,Key1,Value1 (only if required)
 ./proxmox-api-go updateStorage storageid < storage.json
 
 ./proxmox-api-go deleteStorage
+
+./proxmox-api-go getNetworkList node
+
+./proxmox-api-go getNetworkInterface node interfaceName
+
+./proxmox-api-go createNetwork < network.json
+
+./proxmox-api-go updateNetwork < network.json
+
+./proxmox-api-go deleteNetwork node iface
+
+./proxmox-api-go applyNetwork node
+
+./proxmox-api-go revertNetwork node
 ```
 
 ## Proxy server support
