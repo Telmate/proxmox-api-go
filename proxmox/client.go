@@ -1826,6 +1826,11 @@ func (c *Client) CreateNetwork(node string, params map[string]interface{}) (exit
 	return c.CreateItemReturnStatus(params, url)
 }
 
+func (c *Client) UpdateNetwork(node string, iface string, params map[string]interface{}) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
+	return c.UpdateItemReturnStatus(params, url)
+}
+
 func (c *Client) DeleteNetwork(node string, iface string) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
 	resp, err := c.session.Delete(url, nil, nil)
@@ -1906,6 +1911,13 @@ func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (
 func (c *Client) UpdateItem(Params map[string]interface{}, url string) (err error) {
 	reqbody := ParamsToBodyWithAllEmpty(Params)
 	_, err = c.session.Put(url, nil, nil, &reqbody)
+	return
+}
+
+func (c *Client) UpdateItemReturnStatus(params map[string]interface{}, url string) (exitStatus string, err error) {
+	reqbody := ParamsToBody(params)
+	resp, err := c.session.Put(url, nil, nil, &reqbody)
+	exitStatus = c.HandleTaskError(resp)
 	return
 }
 

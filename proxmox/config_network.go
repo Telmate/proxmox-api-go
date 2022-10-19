@@ -55,7 +55,18 @@ func (config ConfigNetwork) CreateNetwork(client *Client) (err error) {
 	exitStatus, err := client.CreateNetwork(config.Node, paramMap)
 	if err != nil {
 		params, _ := json.Marshal(&paramMap)
-		return fmt.Errorf("error creating network: %v\n\t\t API Error: %s\n\t\t Params: %v", err, exitStatus, string(params))
+		return fmt.Errorf("error creating network: %v\n\t\t api response: %s\n\t\t params: %v", err, exitStatus, string(params))
+	}
+	return
+}
+
+func (config ConfigNetwork) UpdateNetwork(client *Client) (err error) {
+	paramMap := config.MapToAPIParams()
+
+	exitStatus, err := client.UpdateNetwork(config.Node, config.Iface, paramMap)
+	if err != nil {
+		params, _ := json.Marshal(paramMap)
+		return fmt.Errorf("error creating network: %v\n\t\t api response: %s\n\t\t params: %v", err, exitStatus, string(params))
 	}
 	return
 }

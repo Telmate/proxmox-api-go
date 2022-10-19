@@ -735,6 +735,12 @@ func main() {
 		failError(config.CreateNetwork(c))
 		log.Printf("Network %s has been created\n", config.Iface)
 
+	case "updateNetwork":
+		config, err := proxmox.NewConfigNetworkFromJson(GetConfig(*fConfigFile))
+		failError(err)
+		failError(config.UpdateNetwork(c))
+		log.Printf("Network %s has been updated\n", config.Iface)
+
 	case "deleteNetwork":
 		if len(flag.Args()) < 3 {
 			failError(fmt.Errorf("error: Proxmox node name and network interface name required"))
