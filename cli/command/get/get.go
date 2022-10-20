@@ -15,7 +15,7 @@ func init() {
 	cli.RootCmd.AddCommand(GetCmd)
 }
 
-func GetConfig(args []string, IDtype string) (err error) {
+func getConfig(args []string, IDtype string) (err error) {
 	id := cli.ValidateIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
 	var config interface{}
@@ -24,6 +24,8 @@ func GetConfig(args []string, IDtype string) (err error) {
 		config, err = proxmox.NewConfigAcmeAccountFromApi(id, c)
 	case "MetricServer":
 		config, err = proxmox.NewConfigMetricsFromApi(id, c)
+	case "Pool":
+		config, err = c.GetPoolInfo(id)
 	case "Storage":
 		config, err = proxmox.NewConfigStorageFromApi(id, c)
 	case "User":

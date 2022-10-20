@@ -23,11 +23,11 @@ For config examples see "example acmeaccount"`,
 		if err != nil {
 			return
 		}
-		cli.PrintItemCreated(createCmd.OutOrStdout(), id, "AcmeAccount")
+		cli.PrintItemCreated(CreateCmd.OutOrStdout(), id, "AcmeAccount")
 		return
 	},
 }
 
 func init() {
-	createCmd.AddCommand(create_acmeaccountCmd)
+	CreateCmd.AddCommand(create_acmeaccountCmd)
 }

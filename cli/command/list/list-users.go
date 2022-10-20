@@ -8,7 +8,7 @@ var list_usersCmd = &cobra.Command{
 	Use:   "users",
 	Short: "Prints a list of Users in raw json format",
 	Run: func(cmd *cobra.Command, args []string) {
-		ListRaw("Users")
+		listRaw("Users")
 	},
 }
 

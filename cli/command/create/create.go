@@ -5,11 +5,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var createCmd = &cobra.Command{
+var CreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "With this command you can create new items in proxmox",
 }
 
 func init() {
-	cli.RootCmd.AddCommand(createCmd)
+	cli.RootCmd.AddCommand(CreateCmd)
 }

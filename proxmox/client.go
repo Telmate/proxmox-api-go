@@ -244,7 +244,7 @@ func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err err
 	if err != nil {
 		return nil, err
 	}
-	return c.GetItemConfigMapStringInterface(fmt.Sprintf("/nodes/%s/%s/%d/status/current", vmr.node, vmr.vmType, vmr.vmId), "vm", "STATE")
+	return c.GetItemConfigMapStringInterface("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/current", "vm", "STATE")
 }
 
 func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err error) {
@@ -252,17 +252,7 @@ func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err e
 	if err != nil {
 		return nil, err
 	}
-	var data map[string]interface{}
-	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
-	err = c.GetJsonRetryable(url, &data, 3)
-	if err != nil {
-		return nil, err
-	}
-	if data["data"] == nil {
-		return nil, fmt.Errorf("vm CONFIG not readable")
-	}
-	vmConfig = data["data"].(map[string]interface{})
-	return
+	return c.GetItemConfigMapStringInterface("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config", "vm", "CONFIG")
 }
 
 func (c *Client) GetStorageStatus(vmr *VmRef, storageName string) (storageStatus map[string]interface{}, err error) {
@@ -715,21 +705,8 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 }
 
 // SetVmConfig - send config options
-func (c *Client) SetVmConfig(vmr *VmRef, vmParams map[string]interface{}) (exitStatus interface{}, err error) {
-	reqbody := ParamsToBody(vmParams)
-	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Post(url, nil, nil, &reqbody)
-	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
-		if err != nil {
-			return nil, err
-		}
-		exitStatus, err = c.WaitForCompletion(taskResponse)
-		if err != nil {
-			return "", err
-		}
-	}
-	return
+func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+	return c.CreateItemWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 }
 
 // SetLxcConfig - send config options
@@ -1575,30 +1552,25 @@ func (c *Client) GetPoolList() (pools map[string]interface{}, err error) {
 }
 
 func (c *Client) GetPoolInfo(poolid string) (poolInfo map[string]interface{}, err error) {
-	url := fmt.Sprintf("/pools/%s", poolid)
-	return c.GetItemConfigMapStringInterface(url, "pool", "CONFIG")
+	return c.GetItemConfigMapStringInterface("/pools/"+poolid, "pool", "CONFIG")
 }
 
 func (c *Client) CreatePool(poolid string, comment string) error {
-	paramMap := map[string]interface{}{
+	return c.CreateItem(map[string]interface{}{
 		"poolid":  poolid,
 		"comment": comment,
-	}
-	return c.CreateItem(paramMap, "/pools")
+	}, "/pools")
 }
 
 func (c *Client) UpdatePoolComment(poolid string, comment string) error {
-	paramMap := map[string]interface{}{
+	return c.UpdateItem(map[string]interface{}{
 		"poolid":  poolid,
 		"comment": comment,
-	}
-	url := fmt.Sprintf("/pools/%s", poolid)
-	return c.UpdateItem(paramMap, url)
+	}, "/pools/"+poolid)
 }
 
 func (c *Client) DeletePool(poolid string) error {
-	url := fmt.Sprintf("/pools/%s", poolid)
-	return c.DeleteUrl(url)
+	return c.DeleteUrl("/pools/" + poolid)
 }
 
 // User
@@ -1607,7 +1579,7 @@ func (c *Client) GetUserConfig(id string) (config map[string]interface{}, err er
 }
 
 func (c *Client) GetUserList() (users map[string]interface{}, err error) {
-	return c.GetItemList("/access/users" + "?full=1")
+	return c.GetItemList("/access/users?full=1")
 }
 
 func (c *Client) UpdateUserPassword(userid string, password string) error {
@@ -1615,11 +1587,10 @@ func (c *Client) UpdateUserPassword(userid string, password string) error {
 	if err != nil {
 		return err
 	}
-	paramMap := map[string]interface{}{
+	return c.UpdateItem(map[string]interface{}{
 		"userid":   userid,
 		"password": password,
-	}
-	return c.UpdateItem(paramMap, "/access/password")
+	}, "/access/password")
 }
 
 func (c *Client) CreateUser(params map[string]interface{}) (err error) {
@@ -1711,8 +1682,7 @@ func (c *Client) UpdateAcmeAccountEmails(id, emails string) (exitStatus string, 
 }
 
 func (c *Client) DeleteAcmeAccount(id string) (exitStatus string, err error) {
-	exitStatus, err = c.DeleteUrlWithTask("/cluster/acme/account/" + id)
-	return
+	return c.DeleteUrlWithTask("/cluster/acme/account/" + id)
 }
 
 // ACME Plugin
@@ -1771,10 +1741,9 @@ func (c *Client) DeleteMetricServer(id string) error {
 
 // storage
 func (c *Client) EnableStorage(id string) error {
-	param := map[string]interface{}{
+	return c.UpdateItem(map[string]interface{}{
 		"disable": false,
-	}
-	return c.UpdateItem(param, "/storage/"+id)
+	}, "/storage/"+id)
 }
 
 func (c *Client) GetStorageList() (metricServers map[string]interface{}, err error) {
@@ -1785,7 +1754,7 @@ func (c *Client) GetStorageConfig(id string) (config map[string]interface{}, err
 	return c.GetItemConfigMapStringInterface("/storage/"+id, "storage", "CONFIG")
 }
 
-func (c *Client) CreateStorage(id string, params map[string]interface{}) error {
+func (c *Client) CreateStorage(params map[string]interface{}) error {
 	return c.CreateItem(params, "/storage")
 }
 
@@ -1958,8 +1927,7 @@ func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
 	// This might not work if we never got a body. We'll ignore errors in trying to read,
 	// but extract the body if possible to give any error information back in the exitStatus
 	b, _ := io.ReadAll(resp.Body)
-	exitStatus = string(b)
-	return
+	return string(b)
 }
 
 // Check if the proxmox task has been completed

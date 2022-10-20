@@ -16,7 +16,7 @@ func init() {
 	cli.RootCmd.AddCommand(deleteCmd)
 }
 
-func DeleteID(args []string, IDtype string) (err error) {
+func deleteID(args []string, IDtype string) (err error) {
 	var exitStatus string
 	id := cli.ValidateIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
