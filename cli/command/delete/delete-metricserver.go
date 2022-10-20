@@ -8,7 +8,7 @@ var delete_metricserverCmd = &cobra.Command{
 	Use:   "metricserver METRICSID",
 	Short: "Deletes the speciefied MetricServer",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return DeleteID(args, "MetricServer")
+		return deleteID(args, "MetricServer")
 	},
 }
 

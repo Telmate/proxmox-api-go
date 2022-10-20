@@ -23,11 +23,11 @@ For config examples see "example storage"`,
 		if err != nil {
 			return
 		}
-		cli.PrintItemCreated(createCmd.OutOrStdout(), id, "Storage")
+		cli.PrintItemCreated(CreateCmd.OutOrStdout(), id, "Storage")
 		return
 	},
 }
 
 func init() {
-	createCmd.AddCommand(create_storageCmd)
+	CreateCmd.AddCommand(create_storageCmd)
 }

@@ -955,7 +955,7 @@ func (config *ConfigStorage) Create(id string, errorSupression bool, client *Cli
 	}
 	config.ID = id
 	params := config.MapToApiValues(true)
-	err = client.CreateStorage(id, params)
+	err = client.CreateStorage(params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Storage Backend: %v, (params: %v)", err, string(params))
