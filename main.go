@@ -732,13 +732,13 @@ func main() {
 		log.Printf("Network interface %s configuration: %s", iface, exitStatus)
 
 	case "createNetwork":
-		config, err := proxmox.NewConfigNetworkFromJson(GetConfig(*fConfigFile))
+		config, err := proxmox.NewConfigNetworkFromJSON(GetConfig(*fConfigFile))
 		failError(err)
 		failError(config.CreateNetwork(c))
 		log.Printf("Network %s has been created\n", config.Iface)
 
 	case "updateNetwork":
-		config, err := proxmox.NewConfigNetworkFromJson(GetConfig(*fConfigFile))
+		config, err := proxmox.NewConfigNetworkFromJSON(GetConfig(*fConfigFile))
 		failError(err)
 		failError(config.UpdateNetwork(c))
 		log.Printf("Network %s has been updated\n", config.Iface)

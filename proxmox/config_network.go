@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// ConfigNetwork maps go variables to API parameters.
 type ConfigNetwork struct {
 	Iface              string `json:"iface,omitempty"`
 	Node               string `json:"node,omitempty"`
@@ -36,12 +37,18 @@ type ConfigNetwork struct {
 	VlanRawDevice      string `json:"vlan-raw-device,omitempty"`
 }
 
-func NewConfigNetworkFromJson(input []byte) (config *ConfigNetwork, err error) {
+// NewConfigNetworkFromJSON takes in a byte array from a json encoded network 
+// configuration and stores it in config.
+// It returns the newly created config with the passed in configuration stored
+// and an error if one occurs unmarshalling the input data.
+func NewConfigNetworkFromJSON(input []byte) (config *ConfigNetwork, err error) {
 	config = &ConfigNetwork{}
 	err = json.Unmarshal([]byte(input), config)
 	return
 }
 
+// MapToAPIParams converts the stored config into a parameter map to be
+// sent to the API.
 func (config ConfigNetwork) MapToAPIParams() map[string]interface{} {
 	params, _ := json.Marshal(&config)
 	var paramMap map[string]interface{}
@@ -49,6 +56,9 @@ func (config ConfigNetwork) MapToAPIParams() map[string]interface{} {
 	return paramMap
 }
 
+// CreateNetwork creates a network on the Proxmox host with the stored
+// config.
+// It returns an error if the creation of the network fails.
 func (config ConfigNetwork) CreateNetwork(client *Client) (err error) {
 	paramMap := config.MapToAPIParams()
 
@@ -60,6 +70,10 @@ func (config ConfigNetwork) CreateNetwork(client *Client) (err error) {
 	return
 }
 
+
+// UpdateNetwork updates a network on the Proxmox host with the stored
+// config.
+// It returns an error if updating the network fails.
 func (config ConfigNetwork) UpdateNetwork(client *Client) (err error) {
 	paramMap := config.MapToAPIParams()
 
