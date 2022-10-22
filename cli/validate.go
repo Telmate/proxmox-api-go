@@ -13,6 +13,15 @@ func ValidateIDset(args []string, indexPos int, text string) string {
 	return args[indexPos]
 }
 
+// Should be used for Optional IDs.
+// returns if the indexd arg if it is set. It returns an empty string when the indexed arg is not set.
+func OptionalIDset(args []string, indexPos uint) (out string) {
+	if int(indexPos+1) <= len(args) {
+		out = args[indexPos]
+	}
+	return
+}
+
 func ValidateIntIDset(args []string, text string) int {
 	id, err := strconv.Atoi(ValidateIDset(args, 0, text))
 	if err != nil && id <= 0 {
