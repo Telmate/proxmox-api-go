@@ -9,15 +9,25 @@ import (
 
 // Test the formatting logic to build the tree of snapshots
 func Test_FormatSnapshotsTree(t *testing.T) {
-	input := test_FormatSnapshotsTree_Input()
+	input := test_FormatSnapshots_Input()
 	output := test_FormatSnapshotsTree_Output()
 	for i, e := range input {
-		result, _ := json.Marshal(FormatSnapshotsTree(e))
+		result, _ := json.Marshal(FormatSnapshotsTree(FormatSnapshotsList(e)))
 		require.JSONEq(t, output[i], string(result))
 	}
 }
 
-func test_FormatSnapshotsTree_Input() [][]interface{} {
+// Test the formatting logic to build the list of snapshots
+func Test_FormatSnapshotsList(t *testing.T) {
+	input := test_FormatSnapshots_Input()
+	output := test_FormatSnapshotsList_Output()
+	for i, e := range input {
+		result, _ := json.Marshal(FormatSnapshotsList(e))
+		require.JSONEq(t, output[i], string(result))
+	}
+}
+
+func test_FormatSnapshots_Input() [][]interface{} {
 	return [][]interface{}{{map[string]interface{}{
 		"name":        "aa",
 		"snaptime":    float64(1666361849),
@@ -146,4 +156,26 @@ func test_FormatSnapshotsTree_Output() []string {
 					"name":"aacba","time":1666362021,"description":"QWERTY"}]},{
 				"name":"aacc","time":1666361904,"children":[{
 					"name":"aacca","time":1666361910}]}]}]}`}
+}
+
+func test_FormatSnapshotsList_Output() []string {
+	return []string{`[{
+		"name":"aa","time":1666361849},{
+		"name":"aaa","time":1666361866,"ram":true,"parent":"aa"},{
+		"name":"aaaa","time":1666362071,"description":"123456","parent":"aaa"},{
+		"name":"aaab","time":1666362062,"parent":"aaa"},{
+		"name":"aaac","time":1666361873,"parent":"aaa"},{
+		"name":"aaad","time":1666361937,"description":"abcdefg","ram":true,"parent":"aaa"},{
+		"name":"aaae","time":1666362084,"parent":"aaa"},{
+		"name":"current","description":"You are here!","parent":"aaae"},{
+		"name":"aab","time":1666361920,"parent":"aa"},{
+		"name":"aaba","time":1666361952,"parent":"aab"},{
+		"name":"aabaa","time":1666361960},{
+		"name":"aac","time":1666361896,"parent":"aa"},{
+		"name":"aaca","time":1666361988,"description":"!@#()\u0026","ram":true,"parent":"aac"},{
+		"name":"aacaa","time":1666362006,"ram":true,"parent":"aaca"},{
+		"name":"aacb","time":1666361977,"parent":"aac"},{
+		"name":"aacba","time":1666362021,"description":"QWERTY","parent":"aacb"},{
+		"name":"aacc","time":1666361904,"parent":"aac"},{
+		"name":"aacca","time":1666361910,"parent":"aacc"}]`}
 }
