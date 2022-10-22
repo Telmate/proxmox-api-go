@@ -14,7 +14,7 @@ Depending on the current state of the user, the user will be created or updated.
 The config can be set with the --file flag or piped from stdin.
 For config examples see "example user"`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		id := cli.ValidateIDset(args, 0, "UserID")
+		id := cli.RequiredIDset(args, 0, "UserID")
 		config, err := proxmox.NewConfigUserFromJson(cli.NewConfig())
 		if err != nil {
 			return
@@ -28,7 +28,7 @@ For config examples see "example user"`,
 		if err != nil {
 			return
 		}
-		cli.PrintItemSet(setCmd.OutOrStdout() ,id ,"User")
+		cli.PrintItemSet(setCmd.OutOrStdout(), id, "User")
 		return
 	},
 }

@@ -9,7 +9,7 @@ var shutdown_nodeCmd = &cobra.Command{
 	Use:   "shutdown NODE",
 	Short: "Shuts the specified node down",
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		node := cli.ValidateIDset(args, 0, "node")
+		node := cli.RequiredIDset(args, 0, "node")
 		c := cli.NewClient()
 		_, err = c.ShutdownNode(node)
 		if err != nil {

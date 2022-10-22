@@ -20,7 +20,7 @@ func init() {
 
 func createGuest(args []string, IDtype string) (err error) {
 	id := cli.ValidateIntIDset(args, IDtype+"ID")
-	node := cli.ValidateIDset(args, 1, "NodeID")
+	node := cli.RequiredIDset(args, 1, "NodeID")
 	vmr := proxmox.NewVmRef(id)
 	vmr.SetNode(node)
 	c := cli.NewClient()
