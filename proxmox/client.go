@@ -713,6 +713,15 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 	return c.RollbackSnapshot(vmr, snapshot)
 }
 
+// Can only be used to update the description of an already existing snapshot
+func (c *Client) UpdateSnapshotDescription(vmr *VmRef, snapshot, description string) (err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return
+	}
+	return c.UpdateItem(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/config")
+}
+
 // SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.CreateItemWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
