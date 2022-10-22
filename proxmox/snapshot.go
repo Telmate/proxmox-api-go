@@ -35,38 +35,45 @@ type snapshot struct {
 	Description string      `json:"description,omitempty"`
 	VmState     bool        `json:"ram,omitempty"`
 	Children    []*snapshot `json:"children,omitempty"`
-	Parent      string      `json:"-"`
+	Parent      string      `json:"parent,omitempty"`
 }
 
-func FormatSnapshotsTree(taskResponse []interface{}) (tree *snapshot) {
-	snapshotList := make([]*snapshot, len(taskResponse))
+// Formats the taskResponse as a list of snapshots
+func FormatSnapshotsList(taskResponse []interface{}) (list []*snapshot) {
+	list = make([]*snapshot, len(taskResponse))
 	for i, e := range taskResponse {
-		snapshotList[i] = &snapshot{}
+		list[i] = &snapshot{}
 		if _, isSet := e.(map[string]interface{})["description"]; isSet {
-			snapshotList[i].Description = e.(map[string]interface{})["description"].(string)
+			list[i].Description = e.(map[string]interface{})["description"].(string)
 		}
 		if _, isSet := e.(map[string]interface{})["name"]; isSet {
-			snapshotList[i].Name = e.(map[string]interface{})["name"].(string)
+			list[i].Name = e.(map[string]interface{})["name"].(string)
 		}
 		if _, isSet := e.(map[string]interface{})["parent"]; isSet {
-			snapshotList[i].Parent = e.(map[string]interface{})["parent"].(string)
+			list[i].Parent = e.(map[string]interface{})["parent"].(string)
 		}
 		if _, isSet := e.(map[string]interface{})["snaptime"]; isSet {
-			snapshotList[i].SnapTime = uint(e.(map[string]interface{})["snaptime"].(float64))
+			list[i].SnapTime = uint(e.(map[string]interface{})["snaptime"].(float64))
 		}
 		if _, isSet := e.(map[string]interface{})["vmstate"]; isSet {
-			snapshotList[i].VmState = Itob(int(e.(map[string]interface{})["vmstate"].(float64)))
+			list[i].VmState = Itob(int(e.(map[string]interface{})["vmstate"].(float64)))
 		}
 	}
-	for _, e := range snapshotList {
-		for _, ee := range snapshotList {
+	return
+}
+
+// Formats a list of snapshots as a tree of snapshots
+func FormatSnapshotsTree(list []*snapshot) (tree *snapshot) {
+	for _, e := range list {
+		for _, ee := range list {
 			if e.Parent == ee.Name {
+				e.Parent = ""
 				ee.Children = append(ee.Children, e)
 				break
 			}
 		}
 	}
-	for _, e := range snapshotList {
+	for _, e := range list {
 		if e.Parent == "" {
 			tree = e
 			break
