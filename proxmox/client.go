@@ -1790,6 +1790,71 @@ func (c *Client) DeleteStorage(id string) error {
 	return c.DeleteUrl("/storage/" + id)
 }
 
+// Network
+
+// GetNetworkList gets a json encoded list of currently configured network interfaces on the
+// passed in node. The typeFilter parameter can be used to filter by interface type. Pass in
+// the empty string "" for typeFilter to list all network interfaces on the node.
+// It returns the body from the API response and any HTTP error the API returns.
+func (c *Client) GetNetworkList(node string, typeFilter string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network", node)
+	if typeFilter != "" {
+		url += fmt.Sprintf("?type=%s", typeFilter)
+	}
+	resp, err := c.session.Get(url, nil, nil)
+	exitStatus = c.HandleTaskError(resp)
+	return
+}
+
+// GetNetworkInterface gets a json encoded object containing the configuration of the network
+// interface with the name passed in as iface from the passed in node.
+// It returns the body from the API response and any HTTP error the API returns.
+func (c *Client) GetNetworkInterface(node string, iface string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
+	resp, err := c.session.Get(url, nil, nil)
+	exitStatus = c.HandleTaskError(resp)
+	return
+}
+
+// CreateNetwork creates a network with the configuration of the passed in parameters 
+// on the passed in node.
+// It returns the body from the API response and any HTTP error the API returns.
+func (c *Client) CreateNetwork(node string, params map[string]interface{}) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network", node)
+	return c.CreateItemReturnStatus(params, url)
+}
+
+// UpdateNetwork updates the network corresponding to the passed in interface name on the passed 
+// in node with the configuration in the passed in parameters.
+// It returns the body from the API response and any HTTP error the API returns.
+func (c *Client) UpdateNetwork(node string, iface string, params map[string]interface{}) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
+	return c.UpdateItemReturnStatus(params, url)
+}
+
+// DeleteNetwork deletes the network with the passed in iface name on the passed in node.
+// It returns the body from the API response and any HTTP error the API returns.
+func (c *Client) DeleteNetwork(node string, iface string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
+	resp, err := c.session.Delete(url, nil, nil)
+	exitStatus = c.HandleTaskError(resp)
+	return 
+}
+
+// ApplyNetwork applies the pending network configuration on the passed in node.
+// It returns the body from the API response and any HTTP error the API returns.
+func (c Client) ApplyNetwork(node string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network", node)
+	return c.UpdateItemWithTask(nil, url)
+}
+
+// RevertNetwork reverts the pending network configuration on the passed in node.
+// It returns the body from the API response and any HTTP error the API returns.
+func (c *Client) RevertNetwork(node string) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/network", node)
+	return c.DeleteUrlWithTask(url)
+}
+
 // Shared
 func (c *Client) GetItemConfigMapStringInterface(url, text, message string) (map[string]interface{}, error) {
 	data, err := c.GetItemConfig(url, text, message)
@@ -1832,6 +1897,15 @@ func (c *Client) CreateItem(Params map[string]interface{}, url string) (err erro
 	return
 }
 
+// CreateItemReturnStatus creates an item on the Proxmox API.
+// It returns the body of the HTTP response and any HTTP error occurred during the request.
+func (c *Client) CreateItemReturnStatus(params map[string]interface{}, url string) (exitStatus string, err error) {
+	reqbody := ParamsToBody(params)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	exitStatus = c.HandleTaskError(resp)
+	return
+}
+
 // Create Item and wait on proxmox for the task to complete
 func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
 	reqbody := ParamsToBody(Params)
@@ -1846,6 +1920,15 @@ func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (
 func (c *Client) UpdateItem(Params map[string]interface{}, url string) (err error) {
 	reqbody := ParamsToBodyWithAllEmpty(Params)
 	_, err = c.session.Put(url, nil, nil, &reqbody)
+	return
+}
+
+// UpdateItemReturnStatus updates an item on the Proxmox API.
+// It returns the body of the HTTP response and any HTTP error occurred during the request.
+func (c *Client) UpdateItemReturnStatus(params map[string]interface{}, url string) (exitStatus string, err error) {
+	reqbody := ParamsToBody(params)
+	resp, err := c.session.Put(url, nil, nil, &reqbody)
+	exitStatus = c.HandleTaskError(resp)
 	return
 }
 
@@ -1880,7 +1963,8 @@ func (c *Client) GetItemList(url string) (list map[string]interface{}, err error
 	return
 }
 
-// Close task responce
+// HandleTaskError reads the body from the passed in HTTP response and closes it.
+// It returns the body of the passed in HTTP response.
 func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
 	defer resp.Body.Close()
 	// This might not work if we never got a body. We'll ignore errors in trying to read,
@@ -1889,7 +1973,8 @@ func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
 	return string(b)
 }
 
-// Check if the proxmox task has been completed
+// CheckTask polls the API to check if the Proxmox task has been completed.
+// It returns the body of the HTTP response and any HTTP error occurred during the request.
 func (c *Client) CheckTask(resp *http.Response) (exitStatus string, err error) {
 	taskResponse, err := ResponseJSON(resp)
 	if err != nil {

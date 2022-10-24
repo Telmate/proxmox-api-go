@@ -703,6 +703,80 @@ func main() {
 		failError(err)
 		fmt.Printf("Storage %s removed\n", storageid)
 
+	// Network
+	case "getNetworkList":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: Proxmox node name required"))
+		}
+		node := flag.Args()[1]
+		typeFilter := ""
+		if len(flag.Args()) == 3 {
+			typeFilter = flag.Args()[2]
+		}
+		exitStatus, err := c.GetNetworkList(node, typeFilter)
+		if err != nil {
+			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
+		}
+		log.Printf("List of current network configuration: %s", exitStatus)
+
+	case "getNetworkInterface":
+		if len(flag.Args()) < 3 {
+			failError(fmt.Errorf("error: Proxmox node name and network interface name required"))
+		}
+		node := flag.Args()[1]
+		iface := flag.Args()[2]
+		exitStatus, err := c.GetNetworkInterface(node, iface)
+		if err != nil {
+			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
+		}
+		log.Printf("Network interface %s configuration: %s", iface, exitStatus)
+
+	case "createNetwork":
+		config, err := proxmox.NewConfigNetworkFromJSON(GetConfig(*fConfigFile))
+		failError(err)
+		failError(config.CreateNetwork(c))
+		log.Printf("Network %s has been created\n", config.Iface)
+
+	case "updateNetwork":
+		config, err := proxmox.NewConfigNetworkFromJSON(GetConfig(*fConfigFile))
+		failError(err)
+		failError(config.UpdateNetwork(c))
+		log.Printf("Network %s has been updated\n", config.Iface)
+
+	case "deleteNetwork":
+		if len(flag.Args()) < 3 {
+			failError(fmt.Errorf("error: Proxmox node name and network interface name required"))
+		}
+		node := flag.Args()[1]
+		iface := flag.Args()[2]
+		exitStatus, err := c.DeleteNetwork(node, iface)
+		if err != nil {
+			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
+		}
+		log.Printf("Network interface %s deleted", iface)
+
+	case "applyNetwork":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: Proxmox node name required"))
+		}
+		node := flag.Args()[1]
+		exitStatus, err := c.ApplyNetwork(node)
+		if err != nil {
+			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
+		}
+		log.Printf("Network configuration on node %s has been applied\n", node)
+
+	case "revertNetwork":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: Proxmox node name required"))
+		}
+		node := flag.Args()[1]
+		exitStatus, err := c.RevertNetwork(node)
+		if err != nil {
+			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
+		}
+		log.Printf("Network configuration on node %s has been reverted\n", node)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
