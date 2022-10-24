@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -364,9 +365,23 @@ func (c *Client) CreateTemplate(vmr *VmRef) error {
 	}
 
 	url := fmt.Sprintf("/nodes/%s/%s/%d/template", vmr.node, vmr.vmType, vmr.vmId)
-	_, err = c.session.Post(url, nil, nil, nil)
+	resp, err := c.session.Post(url, nil, nil, nil)
 	if err != nil {
 		return err
+	}
+
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return err
+	}
+
+	exitStatus, err := c.WaitForCompletion(taskResponse)
+	if err != nil {
+		return err
+	}
+
+	if exitStatus != "OK" {
+		return errors.New("Can't convert Vm to template:" + exitStatus)
 	}
 
 	return nil
