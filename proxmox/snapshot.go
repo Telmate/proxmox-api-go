@@ -29,20 +29,21 @@ func (config *ConfigSnapshot) CreateSnapshot(guestId uint, c *Client) (err error
 	return
 }
 
-type snapshot struct {
+// Used for formatting the output when retrieving snapshots
+type Snapshot struct {
 	Name        string      `json:"name"`
 	SnapTime    uint        `json:"time,omitempty"`
 	Description string      `json:"description,omitempty"`
 	VmState     bool        `json:"ram,omitempty"`
-	Children    []*snapshot `json:"children,omitempty"`
+	Children    []*Snapshot `json:"children,omitempty"`
 	Parent      string      `json:"parent,omitempty"`
 }
 
 // Formats the taskResponse as a list of snapshots
-func FormatSnapshotsList(taskResponse []interface{}) (list []*snapshot) {
-	list = make([]*snapshot, len(taskResponse))
+func FormatSnapshotsList(taskResponse []interface{}) (list []*Snapshot) {
+	list = make([]*Snapshot, len(taskResponse))
 	for i, e := range taskResponse {
-		list[i] = &snapshot{}
+		list[i] = &Snapshot{}
 		if _, isSet := e.(map[string]interface{})["description"]; isSet {
 			list[i].Description = e.(map[string]interface{})["description"].(string)
 		}
@@ -63,11 +64,11 @@ func FormatSnapshotsList(taskResponse []interface{}) (list []*snapshot) {
 }
 
 // Formats a list of snapshots as a tree of snapshots
-func FormatSnapshotsTree(list []*snapshot) (tree *snapshot) {
+func FormatSnapshotsTree(taskResponse []interface{}) (tree []*Snapshot) {
+	list := FormatSnapshotsList(taskResponse)
 	for _, e := range list {
 		for _, ee := range list {
 			if e.Parent == ee.Name {
-				e.Parent = ""
 				ee.Children = append(ee.Children, e)
 				break
 			}
@@ -75,9 +76,9 @@ func FormatSnapshotsTree(list []*snapshot) (tree *snapshot) {
 	}
 	for _, e := range list {
 		if e.Parent == "" {
-			tree = e
-			break
+			tree = append(tree, e)
 		}
+		e.Parent = ""
 	}
 	return
 }

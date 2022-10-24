@@ -12,7 +12,7 @@ func Test_FormatSnapshotsTree(t *testing.T) {
 	input := test_FormatSnapshots_Input()
 	output := test_FormatSnapshotsTree_Output()
 	for i, e := range input {
-		result, _ := json.Marshal(FormatSnapshotsTree(FormatSnapshotsList(e)))
+		result, _ := json.Marshal(FormatSnapshotsTree(e))
 		require.JSONEq(t, output[i], string(result))
 	}
 }
@@ -90,7 +90,7 @@ func test_FormatSnapshots_Input() [][]interface{} {
 		"name":        "aabaa",
 		"snaptime":    float64(1666361960),
 		"description": "",
-		"parent":      "",
+		"parent":      "aaba",
 		"vmstate":     float64(0),
 	}, map[string]interface{}{
 		"name":        "aac",
@@ -134,11 +134,29 @@ func test_FormatSnapshots_Input() [][]interface{} {
 		"description": "",
 		"parent":      "aacc",
 		"vmstate":     float64(0),
+	}, map[string]interface{}{
+		"name":        "bb",
+		"snaptime":    float64(1666361866),
+		"description": "aA1!",
+		"parent":      "",
+		"vmstate":     float64(1),
+	}, map[string]interface{}{
+		"name":        "bba",
+		"snaptime":    float64(1666362071),
+		"description": "",
+		"parent":      "bb",
+		"vmstate":     float64(0),
+	}, map[string]interface{}{
+		"name":        "bbb",
+		"snaptime":    float64(1666362062),
+		"description": "",
+		"parent":      "bb",
+		"vmstate":     float64(0),
 	}}}
 }
 
 func test_FormatSnapshotsTree_Output() []string {
-	return []string{`{
+	return []string{`[{
 		"name":"aa","time":1666361849,"children":[{
 			"name":"aaa","time":1666361866,"ram":true,"children":[{
 				"name":"aaaa","time":1666362071,"description":"123456"},{
@@ -148,14 +166,18 @@ func test_FormatSnapshotsTree_Output() []string {
 				"name":"aaae","time":1666362084,"children":[{
 					"name":"current","description":"You are here!"}]}]},{
 			"name":"aab","time":1666361920,"children":[{
-				"name":"aaba","time":1666361952}]},{
+				"name":"aaba","time":1666361952,"children":[{
+					"name":"aabaa","time":1666361960}]}]},{
 			"name":"aac","time":1666361896,"children":[{
 				"name":"aaca","time":1666361988,"description":"!@#()\u0026","ram":true,"children":[{
 					"name":"aacaa","time":1666362006,"ram":true}]},{
 				"name":"aacb","time":1666361977,"children":[{
 					"name":"aacba","time":1666362021,"description":"QWERTY"}]},{
 				"name":"aacc","time":1666361904,"children":[{
-					"name":"aacca","time":1666361910}]}]}]}`}
+					"name":"aacca","time":1666361910}]}]}]},{
+		"name":"bb","time":1666361866,"description":"aA1!","ram":true,"children":[{
+			"name":"bba","time":1666362071},{
+			"name":"bbb","time":1666362062}]}]`}
 }
 
 func test_FormatSnapshotsList_Output() []string {
@@ -170,12 +192,15 @@ func test_FormatSnapshotsList_Output() []string {
 		"name":"current","description":"You are here!","parent":"aaae"},{
 		"name":"aab","time":1666361920,"parent":"aa"},{
 		"name":"aaba","time":1666361952,"parent":"aab"},{
-		"name":"aabaa","time":1666361960},{
+		"name":"aabaa","time":1666361960,"parent":"aaba"},{
 		"name":"aac","time":1666361896,"parent":"aa"},{
 		"name":"aaca","time":1666361988,"description":"!@#()\u0026","ram":true,"parent":"aac"},{
 		"name":"aacaa","time":1666362006,"ram":true,"parent":"aaca"},{
 		"name":"aacb","time":1666361977,"parent":"aac"},{
 		"name":"aacba","time":1666362021,"description":"QWERTY","parent":"aacb"},{
 		"name":"aacc","time":1666361904,"parent":"aac"},{
-		"name":"aacca","time":1666361910,"parent":"aacc"}]`}
+		"name":"aacca","time":1666361910,"parent":"aacc"},{
+		"name":"bb","time":1666361866,"description":"aA1!","ram":true},{
+		"name":"bba","time":1666362071,"parent":"bb"},{
+		"name":"bbb","time":1666362062,"parent":"bb"}]`}
 }
