@@ -25,6 +25,8 @@ type Test struct {
 	ReqErr      bool   //if an error is expected as output
 	ErrContains string //the string the error should contain
 
+	Return bool //if the output should be read and returned for more advanced prcessing
+
 	Args []string //cli arguments
 }
 
@@ -41,7 +43,7 @@ func ListTest(t *testing.T, args []string, expected string) {
 	assert.Contains(t, string(out), expected)
 }
 
-func (test *Test) StandardTest(t *testing.T) {
+func (test *Test) StandardTest(t *testing.T) (out []byte) {
 	SetEnvironmentVariables()
 	cli.RootCmd.SetArgs(test.Args)
 	buffer := new(bytes.Buffer)
@@ -58,7 +60,7 @@ func (test *Test) StandardTest(t *testing.T) {
 		require.NoError(t, err)
 	}
 	if test.Expected != "" {
-		out, _ := io.ReadAll(buffer)
+		out, _ = io.ReadAll(buffer)
 		if test.Contains {
 			assert.Contains(t, string(out), test.Expected)
 		} else {
@@ -66,7 +68,7 @@ func (test *Test) StandardTest(t *testing.T) {
 		}
 	}
 	if test.NotExpected != "" {
-		out, _ := io.ReadAll(buffer)
+		out, _ = io.ReadAll(buffer)
 		if test.NotContains {
 			assert.NotContains(t, string(out), test.NotExpected)
 		} else {
@@ -74,9 +76,13 @@ func (test *Test) StandardTest(t *testing.T) {
 		}
 	}
 	if test.OutputJson != "" {
-		out, _ := io.ReadAll(buffer)
+		out, _ = io.ReadAll(buffer)
 		require.JSONEq(t, test.OutputJson, string(out))
 	}
+	if test.Return && len(out) == 0 {
+		out, _ = io.ReadAll(buffer)
+	}
+	return
 }
 
 type LoginTest struct {
