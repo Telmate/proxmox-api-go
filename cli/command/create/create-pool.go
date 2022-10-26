@@ -9,7 +9,7 @@ var create_poolCmd = &cobra.Command{
 	Use:   "pool POOLID [COMMENT]",
 	Short: "Creates a new pool",
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		id := cli.ValidateIDset(args, 0, "PoolID")
+		id := cli.RequiredIDset(args, 0, "PoolID")
 		var comment string
 		if len(args) > 1 {
 			comment = args[1]

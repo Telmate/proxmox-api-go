@@ -18,7 +18,7 @@ func init() {
 
 func deleteID(args []string, IDtype string) (err error) {
 	var exitStatus string
-	id := cli.ValidateIDset(args, 0, IDtype+"ID")
+	id := cli.RequiredIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
 	switch IDtype {
 	case "AcmeAccount":

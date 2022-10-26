@@ -16,7 +16,7 @@ func init() {
 }
 
 func getConfig(args []string, IDtype string) (err error) {
-	id := cli.ValidateIDset(args, 0, IDtype+"ID")
+	id := cli.RequiredIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
 	var config interface{}
 	switch IDtype {

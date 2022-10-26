@@ -13,7 +13,7 @@ var create_acmeaccountCmd = &cobra.Command{
 The config can be set with the --file flag or piped from stdin.
 For config examples see "example acmeaccount"`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		id := cli.ValidateIDset(args, 0, "AcmeAccountID")
+		id := cli.RequiredIDset(args, 0, "AcmeAccountID")
 		config, err := proxmox.NewConfigAcmeAccountFromJson(cli.NewConfig())
 		if err != nil {
 			return

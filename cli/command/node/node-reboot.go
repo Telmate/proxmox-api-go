@@ -9,7 +9,7 @@ var reboot_nodeCmd = &cobra.Command{
 	Use:   "reboot NODE",
 	Short: "Reboots the specified node",
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		node := cli.ValidateIDset(args, 0, "node")
+		node := cli.RequiredIDset(args, 0, "node")
 		c := cli.NewClient()
 		_, err = c.RebootNode(node)
 		if err != nil {

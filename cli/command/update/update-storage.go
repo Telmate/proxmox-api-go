@@ -13,7 +13,7 @@ var update_storageCmd = &cobra.Command{
 The config can be set with the --file flag or piped from stdin.
 For config examples see "example storage"`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		id := cli.ValidateIDset(args, 0, "StorageID")
+		id := cli.RequiredIDset(args, 0, "StorageID")
 		config, err := proxmox.NewConfigStorageFromJson(cli.NewConfig())
 		if err != nil {
 			return

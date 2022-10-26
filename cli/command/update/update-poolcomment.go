@@ -8,9 +8,9 @@ import (
 var update_poolCmd = &cobra.Command{
 	Use:   "poolcomment POOLID [COMMENT]",
 	Short: "Updates the comment on the speciefied pool",
-	RunE: func(cmd *cobra.Command, args []string) (err error){
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		var comment string
-		id := cli.ValidateIDset(args, 0, "PoolID")
+		id := cli.RequiredIDset(args, 0, "PoolID")
 		if len(args) > 1 {
 			comment = args[1]
 		}
@@ -19,7 +19,7 @@ var update_poolCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		cli.PrintItemUpdated(updateCmd.OutOrStdout() ,id, "PoolComment")
+		cli.PrintItemUpdated(updateCmd.OutOrStdout(), id, "PoolComment")
 		return
 	},
 }

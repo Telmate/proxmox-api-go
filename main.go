@@ -235,13 +235,13 @@ func main() {
 		failError(config.CloneVm(sourceVmr, vmr, c))
 		failError(config.UpdateConfig(vmr, c))
 		log.Println("Complete")
-		// TODO make createQemuSnapshot in new cli
+
 	case "createQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
 		failError(err)
 		jbody, err = c.CreateQemuSnapshot(sourceVmr, flag.Args()[2])
 		failError(err)
-		// TODO make deleteQemuSnapshot in new cli
+
 	case "deleteQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
 		failError(err)
@@ -285,7 +285,7 @@ func main() {
 			}
 		}
 		failError(err)
-		// TODO make rollbackQemu in new cli
+
 	case "rollbackQemu":
 		sourceVmr, err := c.GetVmRefByName(flag.Args()[1])
 		failError(err)
