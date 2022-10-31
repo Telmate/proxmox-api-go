@@ -15,8 +15,7 @@ var guest_rollbackCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))
 		snapName := cli.RequiredIDset(args, 1, "SnapshotName")
-		c := cli.NewClient()
-		_, err = c.RollbackSnapshot(vmr, snapName)
+		_, err = proxmox.RollbackSnapshot(cli.NewClient(), vmr, snapName)
 		if err == nil {
 			fmt.Fprintf(GuestCmd.OutOrStdout(), "Guest with id (%d) has been rolled back to snapshot (%s)\n", vmr.VmId(), snapName)
 		}

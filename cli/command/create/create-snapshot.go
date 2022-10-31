@@ -23,7 +23,7 @@ var (
 				VmState:     memory,
 			}
 			memory = false
-			err = config.CreateSnapshot(uint(id), cli.NewClient())
+			err = config.CreateSnapshot(cli.NewClient(), uint(id))
 			if err != nil {
 				return
 			}

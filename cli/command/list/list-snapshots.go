@@ -16,7 +16,7 @@ var (
 		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			id := cli.ValidateExistinGuestID(args, 0)
-			jbody, err := cli.NewClient().ListSnapshots(proxmox.NewVmRef(id))
+			jbody, err := proxmox.ListSnapshots(cli.NewClient(), proxmox.NewVmRef(id))
 			if err != nil {
 				noTree = false
 				return

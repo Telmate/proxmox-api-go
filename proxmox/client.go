@@ -643,15 +643,7 @@ func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitS
 	return
 }
 
-func (c *Client) CreateSnapshot(vmr *VmRef, params map[string]interface{}) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	return c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
-}
-
-// DEPRECATED superceded by (c *Client) CreateSnapshot()
+// DEPRECATED superceded by CreateSnapshot()
 func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	snapshotParams := map[string]interface{}{
@@ -676,28 +668,12 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 	return
 }
 
-func (c *Client) DeleteSnapshot(vmr *VmRef, snapshot string) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + snapshot)
-}
-
-// DEPRECATED superceded by (c *Client) DeleteSnapshot()
+// DEPRECATED superceded by DeleteSnapshot()
 func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
-	return c.DeleteSnapshot(vmr, snapshotName)
+	return DeleteSnapshot(c, vmr, snapshotName)
 }
 
-func (c *Client) ListSnapshots(vmr *VmRef) (taskResponse []interface{}, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	return c.GetItemConfigInterfaceArray("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/", "Guest", "SNAPSHOTS")
-}
-
-// DEPRECATED superceded by (c *Client) ListSnapshots()
+// DEPRECATED superceded by ListSnapshots()
 func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface{}, exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
@@ -715,26 +691,9 @@ func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface
 	return
 }
 
-func (c *Client) RollbackSnapshot(vmr *VmRef, snapshot string) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	return c.PostWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/rollback")
-}
-
-// DEPRECATED superceded by (c *Client) RollbackSnapshot()
+// DEPRECATED superceded by RollbackSnapshot()
 func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string, err error) {
-	return c.RollbackSnapshot(vmr, snapshot)
-}
-
-// Can only be used to update the description of an already existing snapshot
-func (c *Client) UpdateSnapshotDescription(vmr *VmRef, snapshot, description string) (err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/config")
+	return RollbackSnapshot(c, vmr, snapshot)
 }
 
 // SetVmConfig - send config options
