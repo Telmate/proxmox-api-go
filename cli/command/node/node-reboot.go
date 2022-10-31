@@ -16,7 +16,7 @@ var reboot_nodeCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		cli.RootCmd.Printf("Node %s is shutting down", node)
+		cli.RootCmd.Printf("Node %s is rebooting", node)
 		return
 	},
 }
