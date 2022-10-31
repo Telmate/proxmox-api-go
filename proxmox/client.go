@@ -24,7 +24,7 @@ const TaskStatusCheckInterval = 2
 
 const exitStatusSuccess = "OK"
 
-// Client - URL, user and password to specifc Proxmox node
+// Client - URL, user and password to specific Proxmox node
 type Client struct {
 	session     *Session
 	ApiUrl      string
@@ -419,7 +419,7 @@ func (c *Client) Sendkey(vmr *VmRef, qmKey string) error {
 func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExitStatus string, err error) {
 	if taskResponse["errors"] != nil {
 		errJSON, _ := json.MarshalIndent(taskResponse["errors"], "", "  ")
-		return string(errJSON), fmt.Errorf("error reponse")
+		return string(errJSON), fmt.Errorf("error response")
 	}
 	if taskResponse["data"] == nil {
 		return "", nil
@@ -643,7 +643,7 @@ func (c *Client) CloneQemuVm(vmr *VmRef, vmParams map[string]interface{}) (exitS
 	return
 }
 
-// DEPRECATED superceded by CreateSnapshot()
+// DEPRECATED superseded by CreateSnapshot()
 func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	snapshotParams := map[string]interface{}{
@@ -668,12 +668,12 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 	return
 }
 
-// DEPRECATED superceded by DeleteSnapshot()
+// DEPRECATED superseded by DeleteSnapshot()
 func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
 	return DeleteSnapshot(c, vmr, snapshotName)
 }
 
-// DEPRECATED superceded by ListSnapshots()
+// DEPRECATED superseded by ListSnapshots()
 func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface{}, exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
@@ -691,7 +691,7 @@ func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface
 	return
 }
 
-// DEPRECATED superceded by RollbackSnapshot()
+// DEPRECATED superseded by RollbackSnapshot()
 func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string, err error) {
 	return RollbackSnapshot(c, vmr, snapshot)
 }
@@ -947,7 +947,7 @@ func (c *Client) CreateNewDisk(vmr *VmRef, disk string, volume string) (exitStat
 }
 
 // DeleteVMDisks - Delete VM disks from host node.
-// By default the VM disks are deteled when the VM is deleted,
+// By default the VM disks are deleted when the VM is deleted,
 // so mainly this is used to delete the disks in case VM creation didn't complete.
 func (c *Client) DeleteVMDisks(
 	node string,

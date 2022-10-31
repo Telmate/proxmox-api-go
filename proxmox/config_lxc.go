@@ -405,7 +405,7 @@ func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	paramMap := config.mapToAPIParams()
 
-	// delete parameters wich are not supported in updated operations
+	// delete parameters which are not supported in updated operations
 	delete(paramMap, "pool")
 	delete(paramMap, "storage")
 	delete(paramMap, "password")
@@ -456,7 +456,7 @@ func (config ConfigLxc) mapToAPIParams() map[string]interface{} {
 
 	// build list of features
 	// add features as parameter list to lxc parameters
-	// this overwrites the orginal formatting with a
+	// this overwrites the original formatting with a
 	// comma separated list of "key=value" pairs
 	paramMap["features"] = formatDeviceParam(config.Features)
 
