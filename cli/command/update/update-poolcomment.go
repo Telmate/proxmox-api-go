@@ -7,7 +7,7 @@ import (
 
 var update_poolCmd = &cobra.Command{
 	Use:   "poolcomment POOLID [COMMENT]",
-	Short: "Updates the comment on the speciefied pool",
+	Short: "Updates the comment on the specified pool",
 	Args:  cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		var comment string

@@ -8,8 +8,8 @@ import (
 
 var update_storageCmd = &cobra.Command{
 	Use:   "storage STORAGEID",
-	Short: "Updates the configuration of the speciefied Storage Backend.",
-	Long: `Updates the configuration of the speciefied Storage Backend.
+	Short: "Updates the configuration of the specified Storage Backend.",
+	Long: `Updates the configuration of the specified Storage Backend.
 The config can be set with the --file flag or piped from stdin.
 For config examples see "example storage"`,
 	Args: cobra.ExactArgs(1),

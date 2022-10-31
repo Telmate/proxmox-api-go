@@ -10,7 +10,7 @@ import (
 
 var guest_rollbackCmd = &cobra.Command{
 	Use:   "rollback GUESTID SNAPSHOT",
-	Short: "Shuts the speciefid guest down",
+	Short: "Shuts the specified guest down",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))

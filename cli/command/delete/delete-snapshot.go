@@ -9,7 +9,7 @@ import (
 var (
 	delete_snapshotCmd = &cobra.Command{
 		Use:   "snapshot GUESTID SNAPSHOTNAME",
-		Short: "Deletes the Speciefied snapshot",
+		Short: "Deletes the Specified snapshot",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			id := cli.ValidateIntIDset(args, "GuestID")

@@ -8,7 +8,7 @@ import (
 
 var qemu_pauseCmd = &cobra.Command{
 	Use:   "pause GUESTID",
-	Short: "Pauses the speciefid guest",
+	Short: "Pauses the specified guest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))

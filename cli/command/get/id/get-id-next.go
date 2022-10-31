@@ -9,7 +9,7 @@ import (
 
 var id_nextCmd = &cobra.Command{
 	Use:   "next",
-	Short: "Returns the lowes availible ID",
+	Short: "Returns the lowest available ID",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()

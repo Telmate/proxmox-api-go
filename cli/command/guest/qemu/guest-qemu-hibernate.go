@@ -8,7 +8,7 @@ import (
 
 var qemu_hibernateCmd = &cobra.Command{
 	Use:   "hibernate GUESTID",
-	Short: "Hibernates the speciefid guest",
+	Short: "Hibernates the specified guest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))

@@ -6,7 +6,7 @@ import (
 
 var delete_storageCmd = &cobra.Command{
 	Use:   "storage STORAGEID",
-	Short: "Deletes the speciefied Storage",
+	Short: "Deletes the specified Storage",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return deleteID(args, "Storage")
