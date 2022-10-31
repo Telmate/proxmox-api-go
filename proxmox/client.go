@@ -466,7 +466,7 @@ func (c *Client) StatusChangeVm(vmr *VmRef, params map[string]interface{}, setSt
 	}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/status/%s", vmr.node, vmr.vmType, vmr.vmId, setStatus)
 	for i := 0; i < 3; i++ {
-		exitStatus, err = c.CreateItemWithTask(params, url)
+		exitStatus, err = c.PostWithTask(params, url)
 		if err != nil {
 			time.Sleep(TaskStatusCheckInterval * time.Second)
 		} else {
@@ -648,7 +648,7 @@ func (c *Client) CreateSnapshot(vmr *VmRef, params map[string]interface{}) (exit
 	if err != nil {
 		return
 	}
-	return c.CreateItemWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
+	return c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
 }
 
 // DEPRECATED superceded by (c *Client) CreateSnapshot()
@@ -681,7 +681,7 @@ func (c *Client) DeleteSnapshot(vmr *VmRef, snapshot string) (exitStatus string,
 	if err != nil {
 		return
 	}
-	return c.DeleteUrlWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + snapshot)
+	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + snapshot)
 }
 
 // DEPRECATED superceded by (c *Client) DeleteSnapshot()
@@ -720,7 +720,7 @@ func (c *Client) RollbackSnapshot(vmr *VmRef, snapshot string) (exitStatus strin
 	if err != nil {
 		return
 	}
-	return c.CreateItemWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/rollback")
+	return c.PostWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/rollback")
 }
 
 // DEPRECATED superceded by (c *Client) RollbackSnapshot()
@@ -734,12 +734,12 @@ func (c *Client) UpdateSnapshotDescription(vmr *VmRef, snapshot, description str
 	if err != nil {
 		return
 	}
-	return c.UpdateItem(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/config")
+	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/config")
 }
 
 // SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
-	return c.CreateItemWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
+	return c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 }
 
 // SetLxcConfig - send config options
@@ -1589,21 +1589,21 @@ func (c *Client) GetPoolInfo(poolid string) (poolInfo map[string]interface{}, er
 }
 
 func (c *Client) CreatePool(poolid string, comment string) error {
-	return c.CreateItem(map[string]interface{}{
+	return c.Post(map[string]interface{}{
 		"poolid":  poolid,
 		"comment": comment,
 	}, "/pools")
 }
 
 func (c *Client) UpdatePoolComment(poolid string, comment string) error {
-	return c.UpdateItem(map[string]interface{}{
+	return c.Put(map[string]interface{}{
 		"poolid":  poolid,
 		"comment": comment,
 	}, "/pools/"+poolid)
 }
 
 func (c *Client) DeletePool(poolid string) error {
-	return c.DeleteUrl("/pools/" + poolid)
+	return c.Delete("/pools/" + poolid)
 }
 
 // User
@@ -1620,7 +1620,7 @@ func (c *Client) UpdateUserPassword(userid string, password string) error {
 	if err != nil {
 		return err
 	}
-	return c.UpdateItem(map[string]interface{}{
+	return c.Put(map[string]interface{}{
 		"userid":   userid,
 		"password": password,
 	}, "/access/password")
@@ -1631,11 +1631,11 @@ func (c *Client) CreateUser(params map[string]interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	return c.CreateItem(params, "/access/users")
+	return c.Post(params, "/access/users")
 }
 
 func (c *Client) UpdateUser(id string, params map[string]interface{}) error {
-	return c.UpdateItem(params, "/access/users/"+id)
+	return c.Put(params, "/access/users/"+id)
 }
 
 func (c *Client) CheckUserExistance(id string) (existance bool, err error) {
@@ -1653,7 +1653,7 @@ func (c *Client) DeleteUser(id string) (err error) {
 		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", id)
 	}
 	// Proxmox silently fails a user delete if the users does not exist
-	return c.DeleteUrl("/access/users/" + id)
+	return c.Delete("/access/users/" + id)
 }
 
 //permissions check
@@ -1704,18 +1704,18 @@ func (c *Client) GetAcmeAccountConfig(id string) (config map[string]interface{},
 }
 
 func (c *Client) CreateAcmeAccount(params map[string]interface{}) (exitStatus string, err error) {
-	return c.CreateItemWithTask(params, "/cluster/acme/account/")
+	return c.PostWithTask(params, "/cluster/acme/account/")
 }
 
 func (c *Client) UpdateAcmeAccountEmails(id, emails string) (exitStatus string, err error) {
 	params := map[string]interface{}{
 		"contact": emails,
 	}
-	return c.UpdateItemWithTask(params, "/cluster/acme/account/"+id)
+	return c.PutWithTask(params, "/cluster/acme/account/"+id)
 }
 
 func (c *Client) DeleteAcmeAccount(id string) (exitStatus string, err error) {
-	return c.DeleteUrlWithTask("/cluster/acme/account/" + id)
+	return c.DeleteWithTask("/cluster/acme/account/" + id)
 }
 
 // ACME Plugin
@@ -1728,11 +1728,11 @@ func (c *Client) GetAcmePluginConfig(id string) (config map[string]interface{}, 
 }
 
 func (c *Client) CreateAcmePlugin(params map[string]interface{}) error {
-	return c.CreateItem(params, "/cluster/acme/plugins/")
+	return c.Post(params, "/cluster/acme/plugins/")
 }
 
 func (c *Client) UpdateAcmePlugin(id string, params map[string]interface{}) error {
-	return c.UpdateItem(params, "/cluster/acme/plugins/"+id)
+	return c.Put(params, "/cluster/acme/plugins/"+id)
 }
 
 func (c *Client) CheckAcmePluginExistance(id string) (existance bool, err error) {
@@ -1742,7 +1742,7 @@ func (c *Client) CheckAcmePluginExistance(id string) (existance bool, err error)
 }
 
 func (c *Client) DeleteAcmePlugin(id string) (err error) {
-	return c.DeleteUrl("/cluster/acme/plugins/" + id)
+	return c.Delete("/cluster/acme/plugins/" + id)
 }
 
 // Metrics
@@ -1755,11 +1755,11 @@ func (c *Client) GetMetricsServerList() (metricServers map[string]interface{}, e
 }
 
 func (c *Client) CreateMetricServer(id string, params map[string]interface{}) error {
-	return c.CreateItem(params, "/cluster/metrics/server/"+id)
+	return c.Post(params, "/cluster/metrics/server/"+id)
 }
 
 func (c *Client) UpdateMetricServer(id string, params map[string]interface{}) error {
-	return c.UpdateItem(params, "/cluster/metrics/server/"+id)
+	return c.Put(params, "/cluster/metrics/server/"+id)
 }
 
 func (c *Client) CheckMetricServerExistance(id string) (existance bool, err error) {
@@ -1769,12 +1769,12 @@ func (c *Client) CheckMetricServerExistance(id string) (existance bool, err erro
 }
 
 func (c *Client) DeleteMetricServer(id string) error {
-	return c.DeleteUrl("/cluster/metrics/server/" + id)
+	return c.Delete("/cluster/metrics/server/" + id)
 }
 
 // storage
 func (c *Client) EnableStorage(id string) error {
-	return c.UpdateItem(map[string]interface{}{
+	return c.Put(map[string]interface{}{
 		"disable": false,
 	}, "/storage/"+id)
 }
@@ -1788,7 +1788,7 @@ func (c *Client) GetStorageConfig(id string) (config map[string]interface{}, err
 }
 
 func (c *Client) CreateStorage(params map[string]interface{}) error {
-	return c.CreateItem(params, "/storage")
+	return c.Post(params, "/storage")
 }
 
 func (c *Client) CheckStorageExistance(id string) (existance bool, err error) {
@@ -1798,11 +1798,11 @@ func (c *Client) CheckStorageExistance(id string) (existance bool, err error) {
 }
 
 func (c *Client) UpdateStorage(id string, params map[string]interface{}) error {
-	return c.UpdateItem(params, "/storage/"+id)
+	return c.Put(params, "/storage/"+id)
 }
 
 func (c *Client) DeleteStorage(id string) error {
-	return c.DeleteUrl("/storage/" + id)
+	return c.Delete("/storage/" + id)
 }
 
 // Network
@@ -1831,7 +1831,7 @@ func (c *Client) GetNetworkInterface(node string, iface string) (exitStatus stri
 	return
 }
 
-// CreateNetwork creates a network with the configuration of the passed in parameters 
+// CreateNetwork creates a network with the configuration of the passed in parameters
 // on the passed in node.
 // It returns the body from the API response and any HTTP error the API returns.
 func (c *Client) CreateNetwork(node string, params map[string]interface{}) (exitStatus string, err error) {
@@ -1839,7 +1839,7 @@ func (c *Client) CreateNetwork(node string, params map[string]interface{}) (exit
 	return c.CreateItemReturnStatus(params, url)
 }
 
-// UpdateNetwork updates the network corresponding to the passed in interface name on the passed 
+// UpdateNetwork updates the network corresponding to the passed in interface name on the passed
 // in node with the configuration in the passed in parameters.
 // It returns the body from the API response and any HTTP error the API returns.
 func (c *Client) UpdateNetwork(node string, iface string, params map[string]interface{}) (exitStatus string, err error) {
@@ -1853,21 +1853,21 @@ func (c *Client) DeleteNetwork(node string, iface string) (exitStatus string, er
 	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
 	resp, err := c.session.Delete(url, nil, nil)
 	exitStatus = c.HandleTaskError(resp)
-	return 
+	return
 }
 
 // ApplyNetwork applies the pending network configuration on the passed in node.
 // It returns the body from the API response and any HTTP error the API returns.
 func (c Client) ApplyNetwork(node string) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/network", node)
-	return c.UpdateItemWithTask(nil, url)
+	return c.PutWithTask(nil, url)
 }
 
 // RevertNetwork reverts the pending network configuration on the passed in node.
 // It returns the body from the API response and any HTTP error the API returns.
 func (c *Client) RevertNetwork(node string) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/network", node)
-	return c.DeleteUrlWithTask(url)
+	return c.DeleteWithTask(url)
 }
 
 // Shared
@@ -1906,7 +1906,9 @@ func (c *Client) GetItemConfig(url, text, message string) (config map[string]int
 	return
 }
 
-func (c *Client) CreateItem(Params map[string]interface{}, url string) (err error) {
+// Makes a POST request without waiting on proxmox for the task to complete.
+// It returns the HTTP error as 'err'.
+func (c *Client) Post(Params map[string]interface{}, url string) (err error) {
 	reqbody := ParamsToBody(Params)
 	_, err = c.session.Post(url, nil, nil, &reqbody)
 	return
@@ -1921,8 +1923,9 @@ func (c *Client) CreateItemReturnStatus(params map[string]interface{}, url strin
 	return
 }
 
-// Create Item and wait on proxmox for the task to complete
-func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
+// Makes a POST request and waits on proxmox for the task to complete.
+// It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
+func (c *Client) PostWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
 	reqbody := ParamsToBody(Params)
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
@@ -1932,7 +1935,9 @@ func (c *Client) CreateItemWithTask(Params map[string]interface{}, url string) (
 	return c.CheckTask(resp)
 }
 
-func (c *Client) UpdateItem(Params map[string]interface{}, url string) (err error) {
+// Makes a PUT request without waiting on proxmox for the task to complete.
+// It returns the HTTP error as 'err'.
+func (c *Client) Put(Params map[string]interface{}, url string) (err error) {
 	reqbody := ParamsToBodyWithAllEmpty(Params)
 	_, err = c.session.Put(url, nil, nil, &reqbody)
 	return
@@ -1947,8 +1952,9 @@ func (c *Client) UpdateItemReturnStatus(params map[string]interface{}, url strin
 	return
 }
 
-// Update Item and wait on proxmox for the task to complete
-func (c *Client) UpdateItemWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
+// Makes a PUT request and waits on proxmox for the task to complete.
+// It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
+func (c *Client) PutWithTask(Params map[string]interface{}, url string) (exitStatus string, err error) {
 	reqbody := ParamsToBodyWithAllEmpty(Params)
 	var resp *http.Response
 	resp, err = c.session.Put(url, nil, nil, &reqbody)
@@ -1958,13 +1964,16 @@ func (c *Client) UpdateItemWithTask(Params map[string]interface{}, url string) (
 	return c.CheckTask(resp)
 }
 
-func (c *Client) DeleteUrl(url string) (err error) {
+// Makes a DELETE request without waiting on proxmox for the task to complete.
+// It returns the HTTP error as 'err'.
+func (c *Client) Delete(url string) (err error) {
 	_, err = c.session.Delete(url, nil, nil)
 	return
 }
 
-// Delete Item and wait on proxmox for the task to complete
-func (c *Client) DeleteUrlWithTask(url string) (exitStatus string, err error) {
+// Makes a DELETE request and waits on proxmox for the task to complete.
+// It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
+func (c *Client) DeleteWithTask(url string) (exitStatus string, err error) {
 	var resp *http.Response
 	resp, err = c.session.Delete(url, nil, nil)
 	if err != nil {
