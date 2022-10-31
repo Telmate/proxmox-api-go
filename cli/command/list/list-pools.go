@@ -7,6 +7,7 @@ import (
 var list_poolsCmd = &cobra.Command{
 	Use:   "pools",
 	Short: "Prints a list of Pools in raw json format",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		listRaw("Pools")
 	},

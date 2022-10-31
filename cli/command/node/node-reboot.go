@@ -8,6 +8,7 @@ import (
 var reboot_nodeCmd = &cobra.Command{
 	Use:   "reboot NODE",
 	Short: "Reboots the specified node",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		node := cli.RequiredIDset(args, 0, "node")
 		c := cli.NewClient()

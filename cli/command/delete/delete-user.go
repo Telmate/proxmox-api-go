@@ -7,6 +7,7 @@ import (
 var delete_userCmd = &cobra.Command{
 	Use:   "user USERID",
 	Short: "Deletes the speciefied User",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return deleteID(args, "User")
 	},

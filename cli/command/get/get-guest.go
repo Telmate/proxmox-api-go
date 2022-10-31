@@ -9,6 +9,7 @@ import (
 var get_guestCmd = &cobra.Command{
 	Use:   "guest GUESTID",
 	Short: "Gets the configuration of the specified guest",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.ValidateIntIDset(args, "GuestID")
 		vmr := proxmox.NewVmRef(id)

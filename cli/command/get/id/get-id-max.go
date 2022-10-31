@@ -11,6 +11,7 @@ import (
 var id_maxCmd = &cobra.Command{
 	Use:   "max",
 	Short: "Returns the maximum in use ID number",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
 		id, err := proxmox.MaxVmId(c)

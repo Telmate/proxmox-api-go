@@ -7,6 +7,7 @@ import (
 var get_storageCmd = &cobra.Command{
 	Use:   "storage",
 	Short: "Gets the configuration of the specified Storage backend",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return getConfig(args, "Storage")
 	},

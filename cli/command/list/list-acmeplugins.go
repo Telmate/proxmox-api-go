@@ -7,6 +7,7 @@ import (
 var list_acmepluginsCmd = &cobra.Command{
 	Use:   "acmeplugins",
 	Short: "Prints a list of AcmePlugins in raw json format",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		listRaw("AcmePlugins")
 	},

@@ -11,6 +11,7 @@ import (
 var guest_uptimeCmd = &cobra.Command{
 	Use:   "uptime GUESTID",
 	Short: "Gets the uptime of the speciefid guest",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))
 		c := cli.NewClient()

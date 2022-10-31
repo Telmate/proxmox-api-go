@@ -10,6 +10,7 @@ import (
 var id_checkCmd = &cobra.Command{
 	Use:   "check ID",
 	Short: "Checks if a ID is availible",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.ValidateIntIDset(args, "ID")
 		c := cli.NewClient()
