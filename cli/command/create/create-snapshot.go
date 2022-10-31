@@ -11,7 +11,7 @@ var (
 	memory             bool
 	create_snapshotCmd = &cobra.Command{
 		Use:              "snapshot GUESTID SNAPSHOTNAME [DESCRIPTION]",
-		Short:            "Creates a new snapshot of the specefied guest",
+		Short:            "Creates a new snapshot of the specified guest",
 		TraverseChildren: true,
 		Args:             cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {

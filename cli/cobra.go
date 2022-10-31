@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Global else the nested folders dont work
+// Global else the nested folders don't work
 var RootCmd = &cobra.Command{
 	Use:   "proxmox-api-go",
 	Short: "Application to configure Proxmox from the Api",
