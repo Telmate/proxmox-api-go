@@ -10,7 +10,8 @@ import (
 
 var delete_guestCmd = &cobra.Command{
 	Use:   "guest GUESTID",
-	Short: "Deletes the Speciefied Guest",
+	Short: "Deletes the Specified Guest",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.ValidateIntIDset(args, "GuestID")
 		vmr := proxmox.NewVmRef(id)

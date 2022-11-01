@@ -8,7 +8,8 @@ import (
 
 var qemu_resumeCmd = &cobra.Command{
 	Use:   "resume GUESTID",
-	Short: "Resumes the speciefid guest",
+	Short: "Resumes the specified guest",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))
 		c := cli.NewClient()

@@ -67,7 +67,7 @@ func (c *ConfigStorageContent) Validate(storageType string) error {
 			list = AddToList(list, strorageContentTypesStruct[i])
 		}
 	}
-	return fmt.Errorf("error atleast one of the keys (content:{ %s }) must be true", list)
+	return fmt.Errorf("error at least one of the keys (content:{ %s }) must be true", list)
 }
 
 type ConfigStorageBackupRetention struct {

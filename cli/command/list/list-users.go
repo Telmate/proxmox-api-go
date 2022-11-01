@@ -7,6 +7,7 @@ import (
 var list_usersCmd = &cobra.Command{
 	Use:   "users",
 	Short: "Prints a list of Users in raw json format",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		listRaw("Users")
 	},

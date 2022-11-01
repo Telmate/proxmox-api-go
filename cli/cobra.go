@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Global else the nested folders dont work
+// Global else the nested folders don't work
 var RootCmd = &cobra.Command{
 	Use:   "proxmox-api-go",
 	Short: "Application to configure Proxmox from the Api",
@@ -43,9 +43,9 @@ func Client(apiUrl, userID, password, otp string, http_headers string) (c *proxm
 	timeout, _ := RootCmd.Flags().GetInt("timeout")
 	proxyUrl, _ := RootCmd.Flags().GetString("proxyurl")
 
-	tlsconf := &tls.Config{InsecureSkipVerify: true}
+	tlsConf := &tls.Config{InsecureSkipVerify: true}
 	if !insecure {
-		tlsconf = nil
+		tlsConf = nil
 	}
 	if apiUrl == "" {
 		apiUrl = os.Getenv("PM_API_URL")
@@ -62,7 +62,7 @@ func Client(apiUrl, userID, password, otp string, http_headers string) (c *proxm
 	if http_headers == "" {
 		http_headers = os.Getenv("PM_HTTP_HEADERS")
 	}
-	c, err = proxmox.NewClient(apiUrl, nil, http_headers, tlsconf, proxyUrl, timeout)
+	c, err = proxmox.NewClient(apiUrl, nil, http_headers, tlsConf, proxyUrl, timeout)
 	LogFatalError(err)
 	if userRequiresAPIToken(userID) {
 		c.SetAPIToken(userID, password)

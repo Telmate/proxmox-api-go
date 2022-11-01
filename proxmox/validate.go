@@ -44,7 +44,7 @@ func ValidateStringNotEmpty(value, text string) error {
 	return ErrorKeyEmpty(text)
 }
 
-// check if a key is allowd to be changed after creation.
+// check if a key is allowed to be changed after creation.
 func ValidateStringsEqual(value1, value2, text string) error {
 	if value1 == value2 {
 		return nil

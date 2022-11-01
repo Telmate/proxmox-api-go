@@ -8,13 +8,13 @@ import (
 
 var update_snapshotCmd = &cobra.Command{
 	Use:   "snapshot GUESTID SNAPSHOTNAME [DESCRIPTION]",
-	Short: "Updates the description on the speciefied snapshot",
+	Short: "Updates the description on the specified snapshot",
 	Args:  cobra.RangeArgs(2, 3),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.ValidateIntIDset(args, "GuestID")
 		snapName := cli.RequiredIDset(args, 1, "SnapshotName")
 		des := cli.OptionalIDset(args, 2)
-		err = cli.NewClient().UpdateSnapshotDescription(proxmox.NewVmRef(id), snapName, des)
+		err = proxmox.UpdateSnapshotDescription(cli.NewClient(), proxmox.NewVmRef(id), snapName, des)
 		if err != nil {
 			return
 		}

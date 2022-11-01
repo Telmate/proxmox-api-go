@@ -279,7 +279,7 @@ func (s *Session) Request(
 	return s.Do(req)
 }
 
-// Perform a simple get to an endpoint and unmarshall returned JSON
+// Perform a simple get to an endpoint and unmarshal returned JSON
 func (s *Session) RequestJSON(
 	method string,
 	url string,

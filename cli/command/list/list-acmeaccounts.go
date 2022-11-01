@@ -7,6 +7,7 @@ import (
 var list_acmeaccountsCmd = &cobra.Command{
 	Use:   "acmeaccounts",
 	Short: "Prints a list of AcmeAccounts in raw json format",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		listRaw("AcmeAccounts")
 	},

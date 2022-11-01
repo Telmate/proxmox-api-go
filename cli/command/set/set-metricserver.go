@@ -13,6 +13,7 @@ var set_metricserverCmd = &cobra.Command{
 Depending on the current state of the MetricServer, the MetricServer will be created or updated.
 The config can be set with the --file flag or piped from stdin.
 For config examples see "example metricserver"`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.RequiredIDset(args, 0, "MetricServerID")
 		config, err := proxmox.NewConfigMetricsFromJson(cli.NewConfig())

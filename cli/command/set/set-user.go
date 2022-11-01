@@ -13,6 +13,7 @@ var set_userCmd = &cobra.Command{
 Depending on the current state of the user, the user will be created or updated.
 The config can be set with the --file flag or piped from stdin.
 For config examples see "example user"`,
+	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.RequiredIDset(args, 0, "UserID")
 		config, err := proxmox.NewConfigUserFromJson(cli.NewConfig())

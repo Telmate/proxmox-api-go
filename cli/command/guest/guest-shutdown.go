@@ -8,7 +8,8 @@ import (
 
 var guest_shutdownCmd = &cobra.Command{
 	Use:   "shutdown GUESTID",
-	Short: "Shuts the speciefid guest down",
+	Short: "Shuts the specified guest down",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))
 		c := cli.NewClient()
