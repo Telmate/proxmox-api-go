@@ -190,7 +190,11 @@ cloneQemu cloud-init JSON Sample:
   "memory": 2048,
   "cores": 2,
   "sockets": 1,
-  "ipconfig0": "gw=10.0.2.2,ip=10.0.2.17/24",
+  "network": {
+    "0": {
+      "ipconfig": "gw=10.0.2.2,ip=10.0.2.17/24"
+    }
+  },
   "sshkeys": "...",
   "nameserver": "8.8.8.8"
 }
@@ -302,8 +306,8 @@ See: https://pve.proxmox.com/wiki/Cloud-Init_Support
 - searchdomain - Sets DNS search domains for a container.
 - nameserver - Sets DNS server IP address for a container.
 - sshkeys - public ssh keys, one per line
-- ipconfig0 - [gw=<GatewayIPv4>] [,gw6=<GatewayIPv6>] [,ip=<IPv4Format/CIDR>] [,ip6=<IPv6Format/CIDR>]
-- ipconfig1 - optional, same as ipconfig0 format
+For every Qemu network card:
+- ipconfig - [gw=<GatewayIPv4>] [,gw6=<GatewayIPv6>] [,ip=<IPv4Format/CIDR>] [,ip6=<IPv6Format/CIDR>]
 
 ### ISO requirements (non cloud-init)
 
