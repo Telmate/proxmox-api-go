@@ -23,6 +23,7 @@ type (
 	QemuDevices     map[int]map[string]interface{}
 	QemuDevice      map[string]interface{}
 	QemuDeviceParam []string
+	IpconfigMap     map[int]interface{}
 )
 
 type AgentNetworkInterface struct {
@@ -75,31 +76,14 @@ type ConfigQemu struct {
 	Args            string      `json:"args,omitempty"`
 
 	// cloud-init options
-	CIuser     string `json:"ciuser,omitempty"`
-	CIpassword string `json:"cipassword,omitempty"`
-	CIcustom   string `json:"cicustom,omitempty"`
+	CIuser     string      `json:"ciuser,omitempty"`
+	CIpassword string      `json:"cipassword,omitempty"`
+	CIcustom   string      `json:"cicustom,omitempty"`
+	Ipconfig   IpconfigMap `json:"ipconfig,omitempty"`
 
 	Searchdomain string `json:"searchdomain,omitempty"`
 	Nameserver   string `json:"nameserver,omitempty"`
 	Sshkeys      string `json:"sshkeys,omitempty"`
-
-	// arrays are hard, support 16 interfaces for now
-	Ipconfig0  string `json:"ipconfig0,omitempty"`
-	Ipconfig1  string `json:"ipconfig1,omitempty"`
-	Ipconfig2  string `json:"ipconfig2,omitempty"`
-	Ipconfig3  string `json:"ipconfig3,omitempty"`
-	Ipconfig4  string `json:"ipconfig4,omitempty"`
-	Ipconfig5  string `json:"ipconfig5,omitempty"`
-	Ipconfig6  string `json:"ipconfig6,omitempty"`
-	Ipconfig7  string `json:"ipconfig7,omitempty"`
-	Ipconfig8  string `json:"ipconfig8,omitempty"`
-	Ipconfig9  string `json:"ipconfig9,omitempty"`
-	Ipconfig10 string `json:"ipconfig10,omitempty"`
-	Ipconfig11 string `json:"ipconfig11,omitempty"`
-	Ipconfig12 string `json:"ipconfig12,omitempty"`
-	Ipconfig13 string `json:"ipconfig13,omitempty"`
-	Ipconfig14 string `json:"ipconfig14,omitempty"`
-	Ipconfig15 string `json:"ipconfig15,omitempty"`
 }
 
 // CreateVm - Tell Proxmox API to make the VM
@@ -203,6 +187,12 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		log.Printf("[ERROR] %q", err)
 	}
 
+	// Create ipconfig.
+	err = config.CreateIpconfigParams(vmr.vmId, params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
 	// Create serial interfaces
 	err = config.CreateQemuSerialsParams(vmr.vmId, params)
 	if err != nil {
@@ -235,27 +225,16 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 // HasCloudInit - are there cloud-init options?
 func (config ConfigQemu) HasCloudInit() bool {
+	for _, config := range config.Ipconfig {
+		if config != nil {
+			return true
+		}
+	}
 	return config.CIuser != "" ||
 		config.CIpassword != "" ||
 		config.Searchdomain != "" ||
 		config.Nameserver != "" ||
 		config.Sshkeys != "" ||
-		config.Ipconfig0 != "" ||
-		config.Ipconfig1 != "" ||
-		config.Ipconfig2 != "" ||
-		config.Ipconfig3 != "" ||
-		config.Ipconfig4 != "" ||
-		config.Ipconfig5 != "" ||
-		config.Ipconfig6 != "" ||
-		config.Ipconfig7 != "" ||
-		config.Ipconfig8 != "" ||
-		config.Ipconfig9 != "" ||
-		config.Ipconfig10 != "" ||
-		config.Ipconfig11 != "" ||
-		config.Ipconfig12 != "" ||
-		config.Ipconfig13 != "" ||
-		config.Ipconfig14 != "" ||
-		config.Ipconfig15 != "" ||
 		config.CIcustom != ""
 }
 
@@ -460,53 +439,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		sshkeyEnc = strings.Replace(sshkeyEnc, "=", "%3D", -1)
 		configParams["sshkeys"] = sshkeyEnc
 	}
-	if config.Ipconfig0 != "" {
-		configParams["ipconfig0"] = config.Ipconfig0
-	}
-	if config.Ipconfig1 != "" {
-		configParams["ipconfig1"] = config.Ipconfig1
-	}
-	if config.Ipconfig2 != "" {
-		configParams["ipconfig2"] = config.Ipconfig2
-	}
-	if config.Ipconfig3 != "" {
-		configParams["ipconfig3"] = config.Ipconfig3
-	}
-	if config.Ipconfig4 != "" {
-		configParams["ipconfig4"] = config.Ipconfig4
-	}
-	if config.Ipconfig5 != "" {
-		configParams["ipconfig5"] = config.Ipconfig5
-	}
-	if config.Ipconfig6 != "" {
-		configParams["ipconfig6"] = config.Ipconfig6
-	}
-	if config.Ipconfig7 != "" {
-		configParams["ipconfig7"] = config.Ipconfig7
-	}
-	if config.Ipconfig8 != "" {
-		configParams["ipconfig8"] = config.Ipconfig8
-	}
-	if config.Ipconfig9 != "" {
-		configParams["ipconfig9"] = config.Ipconfig9
-	}
-	if config.Ipconfig10 != "" {
-		configParams["ipconfig10"] = config.Ipconfig10
-	}
-	if config.Ipconfig11 != "" {
-		configParams["ipconfig11"] = config.Ipconfig11
-	}
-	if config.Ipconfig12 != "" {
-		configParams["ipconfig12"] = config.Ipconfig12
-	}
-	if config.Ipconfig13 != "" {
-		configParams["ipconfig13"] = config.Ipconfig13
-	}
-	if config.Ipconfig14 != "" {
-		configParams["ipconfig14"] = config.Ipconfig14
-	}
-	if config.Ipconfig15 != "" {
-		configParams["ipconfig15"] = config.Ipconfig15
+	err = config.CreateIpconfigParams(vmr.vmId, configParams)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
 	}
 
 	// if len(deleteParams) > 0 {
@@ -550,6 +485,7 @@ var (
 	rxUsbName        = regexp.MustCompile(`usb\d+`)
 	rxDiskPath       = regexp.MustCompile(`^\/dev\/.*`)
 	rxPCIName        = regexp.MustCompile(`hostpci\d+`)
+	rxIpconfigName   = regexp.MustCompile(`ipconfig\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
@@ -716,6 +652,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuSerials:     QemuDevices{},
 		QemuPCIDevices:  QemuDevices{},
 		QemuUsbs:        QemuDevices{},
+		Ipconfig:        IpconfigMap{},
 	}
 
 	if balloon >= 1 {
@@ -730,6 +667,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		config.QemuIso = isoMatch[1]
 	}
 
+	// Add Cloud-Init options
 	if _, isSet := vmConfig["ciuser"]; isSet {
 		config.CIuser = vmConfig["ciuser"].(string)
 	}
@@ -748,53 +686,20 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if _, isSet := vmConfig["sshkeys"]; isSet {
 		config.Sshkeys, _ = url.PathUnescape(vmConfig["sshkeys"].(string))
 	}
-	if _, isSet := vmConfig["ipconfig0"]; isSet {
-		config.Ipconfig0 = vmConfig["ipconfig0"].(string)
+
+	ipconfigNames := []string{}
+
+	for k := range vmConfig {
+		if ipconfigName := rxIpconfigName.FindStringSubmatch(k); len(ipconfigName) > 0 {
+			ipconfigNames = append(ipconfigNames, ipconfigName[0])
+		}
 	}
-	if _, isSet := vmConfig["ipconfig1"]; isSet {
-		config.Ipconfig1 = vmConfig["ipconfig1"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig2"]; isSet {
-		config.Ipconfig2 = vmConfig["ipconfig2"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig3"]; isSet {
-		config.Ipconfig3 = vmConfig["ipconfig3"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig4"]; isSet {
-		config.Ipconfig4 = vmConfig["ipconfig4"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig5"]; isSet {
-		config.Ipconfig5 = vmConfig["ipconfig5"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig6"]; isSet {
-		config.Ipconfig6 = vmConfig["ipconfig6"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig7"]; isSet {
-		config.Ipconfig7 = vmConfig["ipconfig7"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig8"]; isSet {
-		config.Ipconfig8 = vmConfig["ipconfig8"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig9"]; isSet {
-		config.Ipconfig9 = vmConfig["ipconfig9"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig10"]; isSet {
-		config.Ipconfig10 = vmConfig["ipconfig10"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig11"]; isSet {
-		config.Ipconfig11 = vmConfig["ipconfig11"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig12"]; isSet {
-		config.Ipconfig12 = vmConfig["ipconfig12"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig13"]; isSet {
-		config.Ipconfig13 = vmConfig["ipconfig13"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig14"]; isSet {
-		config.Ipconfig14 = vmConfig["ipconfig14"].(string)
-	}
-	if _, isSet := vmConfig["ipconfig15"]; isSet {
-		config.Ipconfig15 = vmConfig["ipconfig15"].(string)
+
+	for _, ipconfigName := range ipconfigNames {
+		ipConfStr := vmConfig[ipconfigName]
+		id := rxDeviceID.FindStringSubmatch(ipconfigName)
+		ipconfigID, _ := strconv.Atoi(id[0])
+		config.Ipconfig[ipconfigID] = ipConfStr
 	}
 
 	// Add disks.
@@ -1332,6 +1237,23 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 
 		// Add nic to Qemu prams.
 		params[qemuNicName] = strings.Join(nicConfParam, ",")
+	}
+
+	return nil
+}
+
+// Create parameters for each Cloud-Init ipconfig entry.
+func (c ConfigQemu) CreateIpconfigParams(vmID int, params map[string]interface{}) error {
+
+	for ID, config := range c.Ipconfig {
+		if ID > 15 {
+			return fmt.Errorf("only up to 16 Cloud-Init network configurations supported (ipconfig[0-15]), skipping ipconfig%d", ID)
+		}
+
+		if config != "" {
+			ipconfigName := "ipconfig" + strconv.Itoa(ID)
+			params[ipconfigName] = config
+		}
 	}
 
 	return nil
