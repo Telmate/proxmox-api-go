@@ -329,6 +329,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["startup"] = config.Startup
 	}
 
+	if config.QemuIso != "" {
+		configParams["ide2"] = config.QemuIso + ",media=cdrom"
+	}
+
 	if config.Bios != "" {
 		configParams["bios"] = config.Bios
 	}
