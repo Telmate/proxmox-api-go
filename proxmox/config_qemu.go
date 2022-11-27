@@ -287,6 +287,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	if config.Agent != 0 {
 		configParams["agent"] = config.Agent
 	}
+	if config.QemuOs != "" {
+		configParams["ostype"] = config.QemuOs
+	}
 	if config.QemuCores != 0 {
 		configParams["cores"] = config.QemuCores
 	}
