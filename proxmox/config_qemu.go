@@ -373,6 +373,11 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["scsihw"] = config.Scsihw
 	}
 
+	err = config.CreateQemuMachineParam(configParams)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
 	// Create disks config.
 	configParamsDisk := map[string]interface{}{
 		"vmid": vmr.vmId,
