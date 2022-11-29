@@ -1116,6 +1116,7 @@ func sshKeyUrlEncode(keys string) (encodedKeys string) {
 	encodedKeys = strings.Replace(encodedKeys, "+", "%2B", -1)
 	encodedKeys = strings.Replace(encodedKeys, "@", "%40", -1)
 	encodedKeys = strings.Replace(encodedKeys, "=", "%3D", -1)
+	encodedKeys = strings.Replace(encodedKeys, ":", "%3A", -1)
 	return
 }
 
