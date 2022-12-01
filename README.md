@@ -190,7 +190,9 @@ cloneQemu cloud-init JSON Sample:
   "memory": 2048,
   "cores": 2,
   "sockets": 1,
-  "ipconfig0": "gw=10.0.2.2,ip=10.0.2.17/24",
+  "ipconfig": {
+    "0": "gw=10.0.2.2,ip=10.0.2.17/24"
+  },
   "sshkeys": "...",
   "nameserver": "8.8.8.8"
 }
