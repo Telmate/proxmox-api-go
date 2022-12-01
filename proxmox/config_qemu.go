@@ -454,11 +454,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["nameserver"] = config.Nameserver
 	}
 	if config.Sshkeys != "" {
-		sshkeyEnc := url.PathEscape(config.Sshkeys + "\n")
-		sshkeyEnc = strings.Replace(sshkeyEnc, "+", "%2B", -1)
-		sshkeyEnc = strings.Replace(sshkeyEnc, "@", "%40", -1)
-		sshkeyEnc = strings.Replace(sshkeyEnc, "=", "%3D", -1)
-		configParams["sshkeys"] = sshkeyEnc
+		configParams["sshkeys"] = sshKeyUrlEncode(config.Sshkeys)
 	}
 	if config.Ipconfig0 != "" {
 		configParams["ipconfig0"] = config.Ipconfig0
@@ -1111,6 +1107,16 @@ func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
 	if err != nil {
 		return "", err
 	}
+	return
+}
+
+// URL encodes the ssh keys
+func sshKeyUrlEncode(keys string) (encodedKeys string) {
+	encodedKeys = url.PathEscape(keys + "\n")
+	encodedKeys = strings.Replace(encodedKeys, "+", "%2B", -1)
+	encodedKeys = strings.Replace(encodedKeys, "@", "%40", -1)
+	encodedKeys = strings.Replace(encodedKeys, "=", "%3D", -1)
+	encodedKeys = strings.Replace(encodedKeys, ":", "%3A", -1)
 	return
 }
 
