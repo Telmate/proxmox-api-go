@@ -15,10 +15,10 @@ type ConfigUser struct {
 	Email     string   `json:"email,omitempty"`
 	Enable    bool     `json:"enable"`
 	Expire    int      `json:"expire"`
-	Firstname string   `json:"firstname,omitempty"`
+	FirstName string   `json:"firstname,omitempty"`
 	Groups    []string `json:"groups,omitempty"`
 	Keys      string   `json:"keys,omitempty"`
-	Lastname  string   `json:"lastname,omitempty"`
+	LastName  string   `json:"lastname,omitempty"`
 }
 
 // Maps the struct to the API values proxmox understands
@@ -28,25 +28,25 @@ func (config ConfigUser) mapToAPI() (params map[string]interface{}) {
 		"email":     config.Email,
 		"enable":    config.Enable,
 		"expire":    config.Expire,
-		"firstname": config.Firstname,
+		"firstname": config.FirstName,
 		"groups":    ArrayToCSV(config.Groups),
 		"keys":      config.Keys,
-		"lastname":  config.Lastname,
+		"lastname":  config.LastName,
 	}
 	return
 }
 
-func (config *ConfigUser) SetUser(userid string, password string, client *Client) (err error) {
+func (config *ConfigUser) SetUser(userId string, password string, client *Client) (err error) {
 	err = ValidateUserPassword(password)
 	if err != nil {
 		return err
 	}
 
 	if config != nil {
-		config.UserID = userid
+		config.UserID = userId
 	}
 
-	userExists, err := client.CheckUserExistance(userid)
+	userExists, err := client.CheckUserExistance(userId)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (config *ConfigUser) SetUser(userid string, password string, client *Client
 			}
 		}
 		if password != "" {
-			err = client.UpdateUserPassword(userid, password)
+			err = client.UpdateUserPassword(userId, password)
 		}
 	} else {
 		err = config.CreateUser(password, client)
@@ -89,16 +89,16 @@ func (config *ConfigUser) UpdateUser(client *Client) (err error) {
 	return
 }
 
-func NewConfigUserFromApi(userid string, client *Client) (config *ConfigUser, err error) {
+func NewConfigUserFromApi(userId string, client *Client) (config *ConfigUser, err error) {
 	// prepare json map to receive the information from the api
 	var userConfig map[string]interface{}
-	userConfig, err = client.GetUserConfig(userid)
+	userConfig, err = client.GetUserConfig(userId)
 	if err != nil {
 		return nil, err
 	}
 	config = new(ConfigUser)
 
-	config.UserID = userid
+	config.UserID = userId
 
 	if _, isSet := userConfig["comment"]; isSet {
 		config.Comment = userConfig["comment"].(string)
@@ -113,13 +113,13 @@ func NewConfigUserFromApi(userid string, client *Client) (config *ConfigUser, er
 		config.Expire = int(userConfig["expire"].(float64))
 	}
 	if _, isSet := userConfig["firstname"]; isSet {
-		config.Firstname = userConfig["firstname"].(string)
+		config.FirstName = userConfig["firstname"].(string)
 	}
 	if _, isSet := userConfig["keys"]; isSet {
 		config.Keys = userConfig["keys"].(string)
 	}
 	if _, isSet := userConfig["lastname"]; isSet {
-		config.Lastname = userConfig["lastname"].(string)
+		config.LastName = userConfig["lastname"].(string)
 	}
 	if _, isSet := userConfig["groups"]; isSet {
 		config.Groups = ArrayToStringType(userConfig["groups"].([]interface{}))
