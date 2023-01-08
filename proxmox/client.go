@@ -1574,17 +1574,6 @@ func (c *Client) GetUserList() (users map[string]interface{}, err error) {
 	return c.GetItemList("/access/users?full=1")
 }
 
-func (c *Client) UpdateUserPassword(userid string, password string) error {
-	err := ValidateUserPassword(password)
-	if err != nil {
-		return err
-	}
-	return c.Put(map[string]interface{}{
-		"userid":   userid,
-		"password": password,
-	}, "/access/password")
-}
-
 func (c *Client) CreateUser(params map[string]interface{}) (err error) {
 	err = ValidateUserPassword(params["password"].(string))
 	if err != nil {

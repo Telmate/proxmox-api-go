@@ -489,7 +489,10 @@ func main() {
 			os.Exit(1)
 		}
 		userid := flag.Args()[1]
-		err := c.UpdateUserPassword(userid, flag.Args()[2])
+		err = proxmox.ConfigUser{
+			Password: flag.Args()[2],
+			UserID:   userid,
+		}.UpdateUserPassword(c)
 		failError(err)
 		fmt.Printf("Password of User %s updated\n", userid)
 
