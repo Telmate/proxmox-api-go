@@ -57,11 +57,50 @@ func (c ContentType) enumList() string {
 	return string(ContentType_Backup) + "," + string(ContentType_Container) + "," + string(ContentType_DiskImage) + "," + string(ContentType_Iso) + "," + string(ContentType_Snippets) + "," + string(ContentType_Template)
 }
 
+// Returns an error if the enum value is invalid.
+func (c ContentType) Validate() (err error) {
+	_, err = c.toApiValueAndValidate()
+	return
+}
+
+type Content_File struct {
+	Storage     string
+	ContentType ContentType
+	FilePath    string
+}
+
+func (c Content_File) format() (fullPath string) {
+	return "/" + c.Storage + ":" + string(c.ContentType) + "/" + strings.TrimPrefix(c.FilePath, "/")
+}
+
+func (c Content_File) Validate() (err error) {
+	err = c.ContentType.Validate()
+	if err != nil {
+		return
+	}
+	if c.Storage == "" {
+		return errors.New("storage may not be empty")
+	}
+	if c.FilePath == "" {
+		return errors.New("filepath may not be empty")
+	}
+	return
+}
+
 type Content_FileProperties struct {
 	Name         string    `json:"name"`
 	CreationTime time.Time `json:"time"`
 	Format       string    `json:"format"`
 	Size         uint      `json:"size"`
+}
+
+func CheckFileExistence(fileName string, files *[]Content_FileProperties) bool {
+	for _, e := range *files {
+		if e.Name == fileName {
+			return true
+		}
+	}
+	return false
 }
 
 func createFilesList(fileList []interface{}) *[]Content_FileProperties {
@@ -84,6 +123,15 @@ func createFilesList(fileList []interface{}) *[]Content_FileProperties {
 		files[i] = tmpFile
 	}
 	return &files
+}
+
+func DeleteFile(client *Client, node string, content Content_File) (err error) {
+	content.ContentType, err = content.ContentType.toApiValueAndValidate()
+	if err != nil {
+		return
+	}
+	_, err = client.DeleteWithTask("/nodes/" + node + "/storage/" + content.Storage + "/content" + content.format())
+	return
 }
 
 func ListFiles(client *Client, node, storage string, content ContentType) (files *[]Content_FileProperties, err error) {
