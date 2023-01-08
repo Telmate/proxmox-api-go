@@ -162,6 +162,15 @@ createQemu JSON Sample:
       "host": "0658:0200",
       "usb3": true
     }
+  },
+  "smbios1": {
+      "uuid": "1b1a791f-bf99-4dac-b404-708a811d00b3",
+      "manufacturer": "QEMU",
+      "product": "vm",
+      "version": "1",
+      "serial": "12345678",
+      "sku": "1234",
+      "family": "KVM"
   }
 }
 ```

@@ -20,10 +20,11 @@ import (
 const machineModels = `(pc|q35|pc-i440fx)`
 
 type (
-	QemuDevices     map[int]map[string]interface{}
-	QemuDevice      map[string]interface{}
-	QemuDeviceParam []string
-	IpconfigMap     map[int]interface{}
+	QemuDevices      map[int]map[string]interface{}
+	QemuDevice       map[string]interface{}
+	QemuDeviceParam  []string
+	IpconfigMap      map[int]interface{}
+	QemuSmbios1Param map[string]interface{}
 )
 
 type AgentNetworkInterface struct {
@@ -35,45 +36,46 @@ type AgentNetworkInterface struct {
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
-	VmID            int         `json:"vmid,omitempty"`
-	Name            string      `json:"name,omitempty"`
-	Description     string      `json:"description,omitempty"`
-	Pool            string      `json:"pool,omitempty"`
-	Bios            string      `json:"bios,omitempty"`
-	EFIDisk         QemuDevice  `json:"efidisk,omitempty"`
-	Machine         string      `json:"machine,omitempty"`
-	Onboot          *bool       `json:"onboot,omitempty"`
-	Startup         string      `json:"startup,omitempty"`
-	Tablet          *bool       `json:"tablet,omitempty"`
-	Agent           int         `json:"agent,omitempty"`
-	Memory          int         `json:"memory,omitempty"`
-	Balloon         int         `json:"balloon,omitempty"`
-	QemuOs          string      `json:"os,omitempty"`
-	QemuCores       int         `json:"cores,omitempty"`
-	QemuSockets     int         `json:"sockets,omitempty"`
-	QemuVcpus       int         `json:"vcpus,omitempty"`
-	QemuCpu         string      `json:"cpu,omitempty"`
-	QemuNuma        *bool       `json:"numa,omitempty"`
-	QemuKVM         *bool       `json:"kvm,omitempty"`
-	Hotplug         string      `json:"hotplug,omitempty"`
-	QemuIso         string      `json:"iso,omitempty"`
-	QemuPxe         bool        `json:"pxe,omitempty"`
-	FullClone       *int        `json:"fullclone,omitempty"`
-	Boot            string      `json:"boot,omitempty"`
-	BootDisk        string      `json:"bootdisk,omitempty"`
-	Scsihw          string      `json:"scsihw,omitempty"`
-	QemuDisks       QemuDevices `json:"disk,omitempty"`
-	QemuUnusedDisks QemuDevices `json:"unused,omitempty"`
-	QemuVga         QemuDevice  `json:"vga,omitempty"`
-	QemuNetworks    QemuDevices `json:"network,omitempty"`
-	QemuSerials     QemuDevices `json:"serial,omitempty"`
-	QemuUsbs        QemuDevices `json:"usb,omitempty"`
-	QemuPCIDevices  QemuDevices `json:"hostpci,omitempty"`
-	Hookscript      string      `json:"hookscript,omitempty"`
-	HaState         string      `json:"hastate,omitempty"`
-	HaGroup         string      `json:"hagroup,omitempty"`
-	Tags            string      `json:"tags,omitempty"`
-	Args            string      `json:"args,omitempty"`
+	VmID            int              `json:"vmid,omitempty"`
+	Name            string           `json:"name,omitempty"`
+	Description     string           `json:"description,omitempty"`
+	Pool            string           `json:"pool,omitempty"`
+	Bios            string           `json:"bios,omitempty"`
+	EFIDisk         QemuDevice       `json:"efidisk,omitempty"`
+	Machine         string           `json:"machine,omitempty"`
+	Onboot          *bool            `json:"onboot,omitempty"`
+	Startup         string           `json:"startup,omitempty"`
+	Tablet          *bool            `json:"tablet,omitempty"`
+	Agent           int              `json:"agent,omitempty"`
+	Memory          int              `json:"memory,omitempty"`
+	Balloon         int              `json:"balloon,omitempty"`
+	QemuOs          string           `json:"os,omitempty"`
+	QemuCores       int              `json:"cores,omitempty"`
+	QemuSockets     int              `json:"sockets,omitempty"`
+	QemuVcpus       int              `json:"vcpus,omitempty"`
+	QemuCpu         string           `json:"cpu,omitempty"`
+	QemuNuma        *bool            `json:"numa,omitempty"`
+	QemuKVM         *bool            `json:"kvm,omitempty"`
+	Hotplug         string           `json:"hotplug,omitempty"`
+	QemuIso         string           `json:"iso,omitempty"`
+	QemuPxe         bool             `json:"pxe,omitempty"`
+	FullClone       *int             `json:"fullclone,omitempty"`
+	Boot            string           `json:"boot,omitempty"`
+	BootDisk        string           `json:"bootdisk,omitempty"`
+	Scsihw          string           `json:"scsihw,omitempty"`
+	QemuDisks       QemuDevices      `json:"disk,omitempty"`
+	QemuUnusedDisks QemuDevices      `json:"unused,omitempty"`
+	QemuVga         QemuDevice       `json:"vga,omitempty"`
+	QemuNetworks    QemuDevices      `json:"network,omitempty"`
+	QemuSerials     QemuDevices      `json:"serial,omitempty"`
+	QemuUsbs        QemuDevices      `json:"usb,omitempty"`
+	QemuPCIDevices  QemuDevices      `json:"hostpci,omitempty"`
+	Hookscript      string           `json:"hookscript,omitempty"`
+	HaState         string           `json:"hastate,omitempty"`
+	HaGroup         string           `json:"hagroup,omitempty"`
+	Tags            string           `json:"tags,omitempty"`
+	Args            string           `json:"args,omitempty"`
+	QemuSmbios1     QemuSmbios1Param `json:"smbios1,omitempty"`
 
 	// cloud-init options
 	CIuser     string      `json:"ciuser,omitempty"`
@@ -206,6 +208,12 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 	// Create usb interfaces
 	err = config.CreateQemuUsbsParams(vmr.vmId, params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
+	// Create smbios1 params
+	err = config.CreateQemuSmbios1Param(params)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
 	}
@@ -661,6 +669,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		QemuPCIDevices:  QemuDevices{},
 		QemuUsbs:        QemuDevices{},
 		Ipconfig:        IpconfigMap{},
+		QemuSmbios1:     QemuSmbios1Param{},
 	}
 
 	if balloon >= 1 {
@@ -1398,6 +1407,22 @@ func (c ConfigQemu) CreateQemuMachineParam(
 		return nil
 	}
 	return fmt.Errorf("unsupported machine type, fall back to default")
+}
+
+// Create smbios1 params
+func (c ConfigQemu) CreateQemuSmbios1Param(
+	params map[string]interface{},
+) error {
+	var smbiosString bytes.Buffer
+	for k, v := range c.QemuSmbios1 {
+		smbiosString.WriteString(k)
+		smbiosString.WriteString("=")
+		smbiosString.WriteString(fmt.Sprintf("%s", v))
+		smbiosString.WriteString(",")
+	}
+	params["smbios1"] = strings.TrimSuffix(smbiosString.String(), ",")
+
+	return nil
 }
 
 func (p QemuDeviceParam) createDeviceParam(
