@@ -21,7 +21,8 @@ type ConfigUser struct {
 	Lastname  string   `json:"lastname,omitempty"`
 }
 
-func (config ConfigUser) MapUserValues() (params map[string]interface{}) {
+// Maps the struct to the API values proxmox understands
+func (config ConfigUser) mapToAPI() (params map[string]interface{}) {
 	params = map[string]interface{}{
 		"comment":   config.Comment,
 		"email":     config.Email,
@@ -67,7 +68,7 @@ func (config *ConfigUser) SetUser(userid string, password string, client *Client
 }
 
 func (config ConfigUser) CreateUser(password string, client *Client) (err error) {
-	params := config.MapUserValues()
+	params := config.mapToAPI()
 	params["userid"] = config.UserID
 	params["password"] = password
 	err = client.CreateUser(params)
@@ -79,7 +80,7 @@ func (config ConfigUser) CreateUser(password string, client *Client) (err error)
 }
 
 func (config *ConfigUser) UpdateUser(client *Client) (err error) {
-	params := config.MapUserValues()
+	params := config.mapToAPI()
 	err = client.UpdateUser(config.UserID, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
