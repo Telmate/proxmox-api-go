@@ -21,6 +21,7 @@ func (content ConfigContent_Template) mapToApiValues() map[string]interface{} {
 	}
 }
 
+// Return an error if the one of the values is empty.
 func (content ConfigContent_Template) Validate() (err error) {
 	if content.Node == "" {
 		return content.error("Node")
@@ -51,6 +52,7 @@ type TemplateItem struct {
 	Version        string
 }
 
+// Map values from the API to the TemplateItem struct.
 func createTemplateList(templateList []interface{}) *[]TemplateItem {
 	templates := make([]TemplateItem, len(templateList))
 	for i := range templateList {
@@ -103,11 +105,13 @@ func createTemplateList(templateList []interface{}) *[]TemplateItem {
 	return &templates
 }
 
+// Download an LXC template.
 func DownloadLxcTemplate(client *Client, content ConfigContent_Template) (err error) {
 	_, err = client.PostWithTask(content.mapToApiValues(), "/nodes/"+content.Node+"/aplinfo")
 	return
 }
 
+// List all LXC templates available for download.
 func ListTemplates(client *Client, node string) (templateList *[]TemplateItem, err error) {
 	tmpList, err := client.GetItemListInterfaceArray("/nodes/" + node + "/aplinfo")
 	if err != nil {

@@ -73,6 +73,7 @@ func (c Content_File) format() (fullPath string) {
 	return "/" + c.Storage + ":" + string(c.ContentType) + "/" + strings.TrimPrefix(c.FilePath, "/")
 }
 
+// Return an error if the required fields are empty
 func (c Content_File) Validate() (err error) {
 	err = c.ContentType.Validate()
 	if err != nil {
@@ -94,6 +95,7 @@ type Content_FileProperties struct {
 	Size         uint      `json:"size"`
 }
 
+// Check if a file with the specific name exists in the list of files.
 func CheckFileExistence(fileName string, files *[]Content_FileProperties) bool {
 	for _, e := range *files {
 		if e.Name == fileName {
@@ -125,6 +127,7 @@ func createFilesList(fileList []interface{}) *[]Content_FileProperties {
 	return &files
 }
 
+// Deletes te specified file from the specified storage.
 func DeleteFile(client *Client, node string, content Content_File) (err error) {
 	content.ContentType, err = content.ContentType.toApiValueAndValidate()
 	if err != nil {
@@ -134,6 +137,7 @@ func DeleteFile(client *Client, node string, content Content_File) (err error) {
 	return
 }
 
+// List all files of the given type in the the specified storage
 func ListFiles(client *Client, node, storage string, content ContentType) (files *[]Content_FileProperties, err error) {
 	content, err = content.toApiValueAndValidate()
 	if err != nil {
