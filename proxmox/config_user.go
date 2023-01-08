@@ -18,12 +18,11 @@ type ConfigUser struct {
 	Groups    []string `json:"groups,omitempty"`
 	Keys      string   `json:"keys,omitempty"`
 	LastName  string   `json:"lastname,omitempty"`
+	Password  string   `json:"-"`
 }
 
-func (config ConfigUser) CreateUser(password string, client *Client) (err error) {
-	params := config.mapToAPI()
-	params["userid"] = config.UserID
-	params["password"] = password
+func (config ConfigUser) CreateUser(client *Client) (err error) {
+	params := config.mapToAPI(true)
 	err = client.CreateUser(params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
@@ -33,7 +32,7 @@ func (config ConfigUser) CreateUser(password string, client *Client) (err error)
 }
 
 // Maps the struct to the API values proxmox understands
-func (config ConfigUser) mapToAPI() (params map[string]interface{}) {
+func (config ConfigUser) mapToAPI(create bool) (params map[string]interface{}) {
 	params = map[string]interface{}{
 		"comment":   config.Comment,
 		"email":     config.Email,
@@ -44,10 +43,16 @@ func (config ConfigUser) mapToAPI() (params map[string]interface{}) {
 		"keys":      config.Keys,
 		"lastname":  config.LastName,
 	}
+	if create {
+		params["password"] = config.Password
+		params["userid"] = config.UserID
+	}
 	return
 }
 
-func (config *ConfigUser) SetUser(userId string, password string, client *Client) (err error) {
+// Create or update the user depending on if the user already exists or not.
+// "userId" and "password" overwrite what is specified in "*ConfigUser".
+func (config *ConfigUser) SetUser(userId, password string, client *Client) (err error) {
 	err = ValidateUserPassword(password)
 	if err != nil {
 		return err
@@ -55,6 +60,7 @@ func (config *ConfigUser) SetUser(userId string, password string, client *Client
 
 	if config != nil {
 		config.UserID = userId
+		config.Password = password
 	}
 
 	userExists, err := client.CheckUserExistance(userId)
@@ -62,30 +68,53 @@ func (config *ConfigUser) SetUser(userId string, password string, client *Client
 		return err
 	}
 
-	if userExists {
-		if config != nil {
+	if config != nil {
+		if userExists {
 			err = config.UpdateUser(client)
 			if err != nil {
 				return err
 			}
-		}
-		if password != "" {
-			err = client.UpdateUserPassword(userId, password)
+		} else {
+			err = config.CreateUser(client)
 		}
 	} else {
-		err = config.CreateUser(password, client)
+		config = &ConfigUser{
+			Password: password,
+			UserID:   userId,
+		}
+		if userExists {
+			if config.Password != "" {
+				err = config.UpdateUserPassword(client)
+			}
+		} else {
+			err = config.CreateUser(client)
+		}
 	}
 	return
 }
 
 func (config *ConfigUser) UpdateUser(client *Client) (err error) {
-	params := config.mapToAPI()
+	params := config.mapToAPI(false)
 	err = client.UpdateUser(config.UserID, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating User: %v, (params: %v)", err, string(params))
 	}
+	if config.Password != "" {
+		err = config.UpdateUserPassword(client)
+	}
 	return
+}
+
+func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
+	err = ValidateUserPassword(config.Password)
+	if err != nil {
+		return err
+	}
+	return client.Put(map[string]interface{}{
+		"userid":   config.UserID,
+		"password": config.Password,
+	}, "/access/password")
 }
 
 func NewConfigUserFromApi(userId string, client *Client) (config *ConfigUser, err error) {
