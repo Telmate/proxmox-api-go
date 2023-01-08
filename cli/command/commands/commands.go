@@ -1,6 +1,8 @@
 package commands
 
 import (
+	_ "github.com/Telmate/proxmox-api-go/cli/command/content"
+	_ "github.com/Telmate/proxmox-api-go/cli/command/content/template"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/create"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/create/guest"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/delete"
