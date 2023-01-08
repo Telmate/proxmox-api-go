@@ -33,6 +33,15 @@ func Test_Content_ContentType_toApiValueAndValidate(t *testing.T) {
 	}
 }
 
+// test if the ContentType value is a valid enum
+func Test_Content_ContentType_Validate(t *testing.T) {
+	input := test_Content_ContentType_Input()
+	output := test_Content_ContentType_Output()
+	for i := range input {
+		require.Equal(t, output[i].err, input[i].Validate())
+	}
+}
+
 // input data for testing
 func test_Content_ContentType_Input() []ContentType {
 	return []ContentType{
@@ -87,6 +96,78 @@ func test_Content_ContentType_Output() []test_Content_ContentType {
 		},
 	}
 	return append(testArray, testArray...)
+}
+
+// test the formatting of the file object into a single string
+func Test_Content_File_format(t *testing.T) {
+	input := []Content_File{
+		{
+			Storage:     "Local",
+			ContentType: "vztmpl",
+			FilePath:    "debian-11-standard_11.0-1_amd64.tar.gz",
+		},
+		{
+			Storage:     "local",
+			ContentType: "vztmpl",
+			FilePath:    "/ubuntu-22.10-standard_22.10-1_amd64.tar.zst",
+		},
+	}
+	output := []string{"/Local:vztmpl/debian-11-standard_11.0-1_amd64.tar.gz",
+		"/local:vztmpl/ubuntu-22.10-standard_22.10-1_amd64.tar.zst"}
+	for i := range input {
+		require.Equal(t, output[i], input[i].format())
+	}
+}
+
+// test if the existence of the file wil be detected
+func Test_Content_CheckFileExistence(t *testing.T) {
+	fileList := func() []Content_FileProperties {
+		return []Content_FileProperties{
+			{
+				Name: "aaaC",
+			},
+			{
+				Name: "aaaB",
+			},
+			{
+				Name: "aaaA",
+			},
+		}
+	}
+	data := []struct {
+		FileName       string
+		Existence      bool
+		FileProperties []Content_FileProperties
+	}{
+		{
+			FileName:       "aaaA",
+			Existence:      true,
+			FileProperties: fileList(),
+		},
+		{
+			FileName:       "aaaB",
+			Existence:      true,
+			FileProperties: fileList(),
+		},
+		{
+			FileName:       "",
+			Existence:      false,
+			FileProperties: fileList(),
+		},
+		{
+			FileName:       "aaaA",
+			Existence:      false,
+			FileProperties: []Content_FileProperties{},
+		},
+		{
+			FileName:       "aaaX",
+			Existence:      false,
+			FileProperties: fileList(),
+		},
+	}
+	for _, e := range data {
+		require.Equal(t, e.Existence, CheckFileExistence(e.FileName, &e.FileProperties))
+	}
 }
 
 // test the conversion from a volumeID to a file path
