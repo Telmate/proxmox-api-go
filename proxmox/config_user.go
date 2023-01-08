@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"unicode/utf8"
 )
 
@@ -132,9 +131,6 @@ func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
 	if len(input) != 0 {
 		config = &ConfigUser{}
 		err = json.Unmarshal([]byte(input), config)
-		if err != nil {
-			log.Fatal(err)
-		}
 	}
 	return
 }
