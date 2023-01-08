@@ -1566,10 +1566,6 @@ func (c *Client) DeletePool(poolid string) error {
 }
 
 // User
-func (c *Client) GetUserConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/access/users/"+id, "user", "CONFIG")
-}
-
 func (c *Client) GetUserList() (users map[string]interface{}, err error) {
 	return c.GetItemList("/access/users?full=1")
 }

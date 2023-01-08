@@ -119,8 +119,7 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 
 func NewConfigUserFromApi(userId string, client *Client) (config *ConfigUser, err error) {
 	// prepare json map to receive the information from the api
-	var userConfig map[string]interface{}
-	userConfig, err = client.GetUserConfig(userId)
+	userConfig, err := client.GetItemConfigMapStringInterface("/access/users/"+userId, "user", "CONFIG")
 	if err != nil {
 		return nil, err
 	}
