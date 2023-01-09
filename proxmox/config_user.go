@@ -9,20 +9,20 @@ import (
 
 // User options for the Proxmox API
 type ConfigUser struct {
-	UserID    string   `json:"userid"`
-	Comment   string   `json:"comment,omitempty"`
-	Email     string   `json:"email,omitempty"`
-	Enable    bool     `json:"enable"`
-	Expire    int      `json:"expire"`
-	FirstName string   `json:"firstname,omitempty"`
-	Groups    []string `json:"groups,omitempty"`
-	Keys      string   `json:"keys,omitempty"`
-	LastName  string   `json:"lastname,omitempty"`
-	Password  string   `json:"-"`
+	UserID    string       `json:"userid"`
+	Comment   string       `json:"comment,omitempty"`
+	Email     string       `json:"email,omitempty"`
+	Enable    bool         `json:"enable"`
+	Expire    int          `json:"expire"`
+	FirstName string       `json:"firstname,omitempty"`
+	Groups    []string     `json:"groups,omitempty"`
+	Keys      string       `json:"keys,omitempty"`
+	LastName  string       `json:"lastname,omitempty"`
+	Password  UserPassword `json:"-"`
 }
 
 func (config ConfigUser) CreateUser(client *Client) (err error) {
-	err = ValidateUserPassword(config.Password)
+	err = config.Validate()
 	if err != nil {
 		return
 	}
@@ -68,12 +68,7 @@ func (config ConfigUser) mapToAPI(create bool) (params map[string]interface{}) {
 
 // Create or update the user depending on if the user already exists or not.
 // "userId" and "password" overwrite what is specified in "*ConfigUser".
-func (config *ConfigUser) SetUser(userId, password string, client *Client) (err error) {
-	err = ValidateUserPassword(password)
-	if err != nil {
-		return err
-	}
-
+func (config *ConfigUser) SetUser(userId string, password UserPassword, client *Client) (err error) {
 	if config != nil {
 		config.UserID = userId
 		config.Password = password
@@ -123,7 +118,7 @@ func (config *ConfigUser) UpdateUser(client *Client) (err error) {
 }
 
 func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
-	err = ValidateUserPassword(config.Password)
+	err = config.Password.Validate()
 	if err != nil {
 		return err
 	}
@@ -131,6 +126,19 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 		"userid":   config.UserID,
 		"password": config.Password,
 	}, "/access/password")
+}
+
+func (config ConfigUser) Validate() error {
+	return config.Password.Validate()
+}
+
+type UserPassword string
+
+func (password UserPassword) Validate() error {
+	if utf8.RuneCountInString(string(password)) >= 5 || password == "" {
+		return nil
+	}
+	return errors.New("error updating User: the minimum password length is 5")
 }
 
 // List all users that exist in proxmox
@@ -193,11 +201,4 @@ func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
 		err = json.Unmarshal([]byte(input), config)
 	}
 	return
-}
-
-func ValidateUserPassword(password string) error {
-	if utf8.RuneCountInString(password) >= 5 || password == "" {
-		return nil
-	}
-	return errors.New("error updating User: the minimum password length is 5")
 }

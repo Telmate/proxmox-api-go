@@ -490,19 +490,19 @@ func main() {
 		}
 		userid := flag.Args()[1]
 		err = proxmox.ConfigUser{
-			Password: flag.Args()[2],
+			Password: proxmox.UserPassword(flag.Args()[2]),
 			UserID:   userid,
 		}.UpdateUserPassword(c)
 		failError(err)
 		fmt.Printf("Password of User %s updated\n", userid)
 
 	case "setUser":
-		var password string
+		var password proxmox.UserPassword
 		config, err := proxmox.NewConfigUserFromJson(GetConfig(*fConfigFile))
 		failError(err)
 		userid := flag.Args()[1]
 		if len(flag.Args()) > 2 {
-			password = flag.Args()[2]
+			password = proxmox.UserPassword(flag.Args()[2])
 		}
 		failError(config.SetUser(userid, password, c))
 		log.Printf("User %s has been configured\n", userid)

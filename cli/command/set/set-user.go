@@ -20,9 +20,9 @@ For config examples see "example user"`,
 		if err != nil {
 			return
 		}
-		var password string
+		var password proxmox.UserPassword
 		if len(args) > 1 {
-			password = args[1]
+			password = proxmox.UserPassword(args[1])
 		}
 		c := cli.NewClient()
 		err = config.SetUser(id, password, c)
