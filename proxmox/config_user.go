@@ -67,7 +67,7 @@ func (config *ConfigUser) SetUser(userId, password string, client *Client) (err 
 		config.Password = password
 	}
 
-	userExists, err := client.CheckUserExistance(userId)
+	userExists, err := CheckUserExistence(userId, client)
 	if err != nil {
 		return err
 	}
@@ -119,6 +119,16 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 		"userid":   config.UserID,
 		"password": config.Password,
 	}, "/access/password")
+}
+
+// Check if the user already exists in proxmox.
+func CheckUserExistence(userId string, client *Client) (existence bool, err error) {
+	list, err := client.GetUserList()
+	if err != nil {
+		return
+	}
+	existence = ItemInKeyOfArray(list["data"].([]interface{}), "userid", userId)
+	return
 }
 
 // Maps the API values from proxmox to a struct

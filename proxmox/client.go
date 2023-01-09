@@ -1574,18 +1574,12 @@ func (c *Client) UpdateUser(id string, params map[string]interface{}) error {
 	return c.Put(params, "/access/users/"+id)
 }
 
-func (c *Client) CheckUserExistance(id string) (existance bool, err error) {
-	list, err := c.GetUserList()
-	existance = ItemInKeyOfArray(list["data"].([]interface{}), "userid", id)
-	return
-}
-
 func (c *Client) DeleteUser(id string) (err error) {
-	existance, err := c.CheckUserExistance(id)
+	existence, err := CheckUserExistence(id, c)
 	if err != nil {
 		return
 	}
-	if !existance {
+	if !existence {
 		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", id)
 	}
 	// Proxmox silently fails a user delete if the users does not exist
@@ -1595,11 +1589,11 @@ func (c *Client) DeleteUser(id string) (err error) {
 //permissions check
 
 func (c *Client) GetUserPermissions(id string, path string) (permissions []string, err error) {
-	existance, err := c.CheckUserExistance(id)
+	existence, err := CheckUserExistence(id, c)
 	if err != nil {
 		return nil, err
 	}
-	if !existance {
+	if !existence {
 		return nil, fmt.Errorf("cannot get user (%s) permissions, the user does not exist", id)
 	}
 	permlist, err := c.GetItemList("/access/permissions?userid=" + id + "&path=" + path)
