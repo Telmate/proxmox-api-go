@@ -22,8 +22,12 @@ type ConfigUser struct {
 }
 
 func (config ConfigUser) CreateUser(client *Client) (err error) {
+	err = ValidateUserPassword(config.Password)
+	if err != nil {
+		return
+	}
 	params := config.mapToAPI(true)
-	err = client.CreateUser(params)
+	err = client.Post(params, "/access/users")
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating User: %v, (params: %v)", err, string(params))

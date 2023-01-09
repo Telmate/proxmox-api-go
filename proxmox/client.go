@@ -1570,14 +1570,6 @@ func (c *Client) GetUserList() (users map[string]interface{}, err error) {
 	return c.GetItemList("/access/users?full=1")
 }
 
-func (c *Client) CreateUser(params map[string]interface{}) (err error) {
-	err = ValidateUserPassword(params["password"].(string))
-	if err != nil {
-		return err
-	}
-	return c.Post(params, "/access/users")
-}
-
 func (c *Client) UpdateUser(id string, params map[string]interface{}) error {
 	return c.Put(params, "/access/users/"+id)
 }
