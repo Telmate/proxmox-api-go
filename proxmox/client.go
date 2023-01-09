@@ -1570,10 +1570,6 @@ func (c *Client) GetUserList() (users map[string]interface{}, err error) {
 	return c.GetItemList("/access/users?full=1")
 }
 
-func (c *Client) UpdateUser(id string, params map[string]interface{}) error {
-	return c.Put(params, "/access/users/"+id)
-}
-
 func (c *Client) DeleteUser(id string) (err error) {
 	existence, err := CheckUserExistence(id, c)
 	if err != nil {

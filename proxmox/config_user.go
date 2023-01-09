@@ -99,7 +99,7 @@ func (config *ConfigUser) SetUser(userId, password string, client *Client) (err 
 
 func (config *ConfigUser) UpdateUser(client *Client) (err error) {
 	params := config.mapToAPI(false)
-	err = client.UpdateUser(config.UserID, params)
+	err = client.Put(params, "/access/users/"+config.UserID)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating User: %v, (params: %v)", err, string(params))
