@@ -17,7 +17,7 @@ func init() {
 
 func listRaw(IDtype string) {
 	c := cli.NewClient()
-	var list map[string]interface{}
+	var list interface{}
 	var err error
 	switch IDtype {
 	case "AcmeAccounts":
