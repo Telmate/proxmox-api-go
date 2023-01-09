@@ -117,41 +117,42 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 	}, "/access/password")
 }
 
+// Maps the API values from proxmox to a struct
+func mapToStruct(userId string, params map[string]interface{}) *ConfigUser {
+	config := ConfigUser{UserID: userId}
+	if _, isSet := params["comment"]; isSet {
+		config.Comment = params["comment"].(string)
+	}
+	if _, isSet := params["email"]; isSet {
+		config.Email = params["email"].(string)
+	}
+	if _, isSet := params["enable"]; isSet {
+		config.Enable = Itob(int(params["enable"].(float64)))
+	}
+	if _, isSet := params["expire"]; isSet {
+		config.Expire = int(params["expire"].(float64))
+	}
+	if _, isSet := params["firstname"]; isSet {
+		config.FirstName = params["firstname"].(string)
+	}
+	if _, isSet := params["keys"]; isSet {
+		config.Keys = params["keys"].(string)
+	}
+	if _, isSet := params["lastname"]; isSet {
+		config.LastName = params["lastname"].(string)
+	}
+	if _, isSet := params["groups"]; isSet {
+		config.Groups = ArrayToStringType(params["groups"].([]interface{}))
+	}
+	return &config
+}
+
 func NewConfigUserFromApi(userId string, client *Client) (config *ConfigUser, err error) {
-	// prepare json map to receive the information from the api
 	userConfig, err := client.GetItemConfigMapStringInterface("/access/users/"+userId, "user", "CONFIG")
 	if err != nil {
-		return nil, err
+		return
 	}
-	config = new(ConfigUser)
-
-	config.UserID = userId
-
-	if _, isSet := userConfig["comment"]; isSet {
-		config.Comment = userConfig["comment"].(string)
-	}
-	if _, isSet := userConfig["email"]; isSet {
-		config.Email = userConfig["email"].(string)
-	}
-	if _, isSet := userConfig["enable"]; isSet {
-		config.Enable = Itob(int(userConfig["enable"].(float64)))
-	}
-	if _, isSet := userConfig["expire"]; isSet {
-		config.Expire = int(userConfig["expire"].(float64))
-	}
-	if _, isSet := userConfig["firstname"]; isSet {
-		config.FirstName = userConfig["firstname"].(string)
-	}
-	if _, isSet := userConfig["keys"]; isSet {
-		config.Keys = userConfig["keys"].(string)
-	}
-	if _, isSet := userConfig["lastname"]; isSet {
-		config.LastName = userConfig["lastname"].(string)
-	}
-	if _, isSet := userConfig["groups"]; isSet {
-		config.Groups = ArrayToStringType(userConfig["groups"].([]interface{}))
-	}
-
+	config = mapToStruct(userId, userConfig)
 	return
 }
 
