@@ -133,9 +133,14 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 	}, "/access/password")
 }
 
+// List all users that exist in proxmox
+func ListUsers(client *Client) (users map[string]interface{}, err error) {
+	return client.GetItemList("/access/users?full=1")
+}
+
 // Check if the user already exists in proxmox.
 func CheckUserExistence(userId string, client *Client) (existence bool, err error) {
-	list, err := client.GetUserList()
+	list, err := ListUsers(client)
 	if err != nil {
 		return
 	}

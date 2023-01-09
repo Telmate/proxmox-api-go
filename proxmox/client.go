@@ -1565,11 +1565,6 @@ func (c *Client) DeletePool(poolid string) error {
 	return c.Delete("/pools/" + poolid)
 }
 
-// User
-func (c *Client) GetUserList() (users map[string]interface{}, err error) {
-	return c.GetItemList("/access/users?full=1")
-}
-
 //permissions check
 
 func (c *Client) GetUserPermissions(id string, path string) (permissions []string, err error) {
