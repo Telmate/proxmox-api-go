@@ -1896,6 +1896,14 @@ func (c *Client) DeleteWithTask(url string) (exitStatus string, err error) {
 	return c.CheckTask(resp)
 }
 
+func (c *Client) GetItemListInterfaceArray(url string) ([]interface{}, error) {
+	list, err := c.GetItemList(url)
+	if err != nil {
+		return nil, err
+	}
+	return list["data"].([]interface{}), nil
+}
+
 func (c *Client) GetItemList(url string) (list map[string]interface{}, err error) {
 	err = c.GetJsonRetryable(url, &list, 3)
 	return
