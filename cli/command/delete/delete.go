@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Telmate/proxmox-api-go/cli"
+	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +31,7 @@ func deleteID(args []string, IDtype string) (err error) {
 	case "Storage":
 		err = c.DeleteStorage(id)
 	case "User":
-		err = c.DeleteUser(id)
+		err = proxmox.ConfigUser{UserID: id}.DeleteUser(c)
 	}
 	if err != nil {
 		if exitStatus != "" {

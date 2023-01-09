@@ -513,7 +513,7 @@ func main() {
 			os.Exit(1)
 		}
 		userid := flag.Args()[1]
-		err := c.DeleteUser(userid)
+		err := proxmox.ConfigUser{UserID: userid}.DeleteUser(c)
 		failError(err)
 		fmt.Printf("User %s removed\n", userid)
 

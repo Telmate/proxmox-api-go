@@ -1570,18 +1570,6 @@ func (c *Client) GetUserList() (users map[string]interface{}, err error) {
 	return c.GetItemList("/access/users?full=1")
 }
 
-func (c *Client) DeleteUser(id string) (err error) {
-	existence, err := CheckUserExistence(id, c)
-	if err != nil {
-		return
-	}
-	if !existence {
-		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", id)
-	}
-	// Proxmox silently fails a user delete if the users does not exist
-	return c.Delete("/access/users/" + id)
-}
-
 //permissions check
 
 func (c *Client) GetUserPermissions(id string, path string) (permissions []string, err error) {

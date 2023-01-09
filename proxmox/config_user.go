@@ -35,6 +35,18 @@ func (config ConfigUser) CreateUser(client *Client) (err error) {
 	return
 }
 
+func (config ConfigUser) DeleteUser(client *Client) (err error) {
+	existence, err := CheckUserExistence(config.UserID, client)
+	if err != nil {
+		return
+	}
+	if !existence {
+		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", config.UserID)
+	}
+	// Proxmox silently fails a user delete if the users does not exist
+	return client.Delete("/access/users/" + config.UserID)
+}
+
 // Maps the struct to the API values proxmox understands
 func (config ConfigUser) mapToAPI(create bool) (params map[string]interface{}) {
 	params = map[string]interface{}{
