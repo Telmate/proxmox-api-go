@@ -134,7 +134,13 @@ func (config ConfigUser) Validate() error {
 }
 
 type UserID struct {
-	Name  string `json:"name"`
+	// TODO create custom type for Name.
+	// the name only seems to allows some characters, and using the string type would imply that all characters are allowed.
+	// https://bugzilla.proxmox.com/show_bug.cgi?id=4461
+	Name string `json:"name"`
+	// TODO create custom type for Realm.
+	// the realm only allows some characters, and using the string type would imply that all characters are allowed.
+	// https://bugzilla.proxmox.com/show_bug.cgi?id=4462
 	Realm string `json:"realm"`
 }
 
