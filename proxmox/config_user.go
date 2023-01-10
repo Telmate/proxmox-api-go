@@ -14,7 +14,7 @@ type ConfigUser struct {
 	Comment   string       `json:"comment,omitempty"`
 	Email     string       `json:"email,omitempty"`
 	Enable    bool         `json:"enable"`
-	Expire    int          `json:"expire"`
+	Expire    uint         `json:"expire"`
 	FirstName string       `json:"firstname,omitempty"`
 	Groups    []string     `json:"groups,omitempty"`
 	Keys      string       `json:"keys,omitempty"`
@@ -181,7 +181,7 @@ func mapToStruct(userId UserID, params map[string]interface{}) *ConfigUser {
 		config.Enable = Itob(int(params["enable"].(float64)))
 	}
 	if _, isSet := params["expire"]; isSet {
-		config.Expire = int(params["expire"].(float64))
+		config.Expire = uint(params["expire"].(float64))
 	}
 	if _, isSet := params["firstname"]; isSet {
 		config.FirstName = params["firstname"].(string)
