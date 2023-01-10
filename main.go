@@ -77,18 +77,19 @@ func main() {
 		// testuserpermission [user] [path]
 		// ex: testuserpermission root@pam(default) /(default)
 		var testpath string
-		var testuser string
+		var testUser proxmox.UserID
 		if len(flag.Args()) < 2 {
-			testuser = os.Getenv("PM_USER")
+			testUser, err = proxmox.NewUserID(os.Getenv("PM_USER"))
 		} else {
-			testuser = flag.Args()[1]
+			testUser, err = proxmox.NewUserID(flag.Args()[1])
 		}
+		failError(err)
 		if len(flag.Args()) < 3 {
 			testpath = ""
 		} else {
 			testpath = flag.Args()[2]
 		}
-		permissions, err := c.GetUserPermissions(testuser, testpath)
+		permissions, err := c.GetUserPermissions(testUser, testpath)
 		failError(err)
 		sort.Strings(permissions)
 		log.Println(permissions)
@@ -466,8 +467,9 @@ func main() {
 	//Users
 	case "getUser":
 		var config interface{}
-		userid := flag.Args()[1]
-		config, err := proxmox.NewConfigUserFromApi(userid, c)
+		userId, err := proxmox.NewUserID(flag.Args()[1])
+		failError(err)
+		config, err = proxmox.NewConfigUserFromApi(userId, c)
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
 		failError(err)
@@ -488,34 +490,37 @@ func main() {
 			log.Printf("Error: Userid and Password required")
 			os.Exit(1)
 		}
-		userid := flag.Args()[1]
+		userId, err := proxmox.NewUserID(flag.Args()[1])
+		failError(err)
 		err = proxmox.ConfigUser{
 			Password: proxmox.UserPassword(flag.Args()[2]),
-			UserID:   userid,
+			User:     userId,
 		}.UpdateUserPassword(c)
 		failError(err)
-		fmt.Printf("Password of User %s updated\n", userid)
+		fmt.Printf("Password of User %s updated\n", userId.ToString())
 
 	case "setUser":
 		var password proxmox.UserPassword
 		config, err := proxmox.NewConfigUserFromJson(GetConfig(*fConfigFile))
 		failError(err)
-		userid := flag.Args()[1]
+		userId, err := proxmox.NewUserID(flag.Args()[1])
+		failError(err)
 		if len(flag.Args()) > 2 {
 			password = proxmox.UserPassword(flag.Args()[2])
 		}
-		failError(config.SetUser(userid, password, c))
-		log.Printf("User %s has been configured\n", userid)
+		failError(config.SetUser(userId, password, c))
+		log.Printf("User %s has been configured\n", userId.ToString())
 
 	case "deleteUser":
 		if len(flag.Args()) < 2 {
-			log.Printf("Error: userid required")
+			log.Printf("Error: userId required")
 			os.Exit(1)
 		}
-		userid := flag.Args()[1]
-		err := proxmox.ConfigUser{UserID: userid}.DeleteUser(c)
+		userId, err := proxmox.NewUserID(flag.Args()[1])
 		failError(err)
-		fmt.Printf("User %s removed\n", userid)
+		err = proxmox.ConfigUser{User: userId}.DeleteUser(c)
+		failError(err)
+		fmt.Printf("User %s removed\n", userId.ToString())
 
 	//ACME Account
 	case "getAcmeAccountList":

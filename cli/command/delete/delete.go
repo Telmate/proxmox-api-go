@@ -31,7 +31,12 @@ func deleteID(args []string, IDtype string) (err error) {
 	case "Storage":
 		err = c.DeleteStorage(id)
 	case "User":
-		err = proxmox.ConfigUser{UserID: id}.DeleteUser(c)
+		var userId proxmox.UserID
+		userId, err = proxmox.NewUserID(id)
+		if err != nil {
+			return
+		}
+		err = proxmox.ConfigUser{User: userId}.DeleteUser(c)
 	}
 	if err != nil {
 		if exitStatus != "" {

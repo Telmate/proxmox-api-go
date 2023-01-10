@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"unicode/utf8"
 )
 
 // User options for the Proxmox API
 type ConfigUser struct {
-	UserID    string       `json:"userid"`
+	User      UserID       `json:"user"`
 	Comment   string       `json:"comment,omitempty"`
 	Email     string       `json:"email,omitempty"`
 	Enable    bool         `json:"enable"`
@@ -36,15 +37,15 @@ func (config ConfigUser) CreateUser(client *Client) (err error) {
 }
 
 func (config ConfigUser) DeleteUser(client *Client) (err error) {
-	existence, err := CheckUserExistence(config.UserID, client)
+	existence, err := CheckUserExistence(config.User, client)
 	if err != nil {
 		return
 	}
 	if !existence {
-		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", config.UserID)
+		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", config.User.ToString())
 	}
 	// Proxmox silently fails a user delete if the users does not exist
-	return client.Delete("/access/users/" + config.UserID)
+	return client.Delete("/access/users/" + config.User.ToString())
 }
 
 // Maps the struct to the API values proxmox understands
@@ -61,16 +62,16 @@ func (config ConfigUser) mapToAPI(create bool) (params map[string]interface{}) {
 	}
 	if create {
 		params["password"] = config.Password
-		params["userid"] = config.UserID
+		params["userid"] = config.User.ToString()
 	}
 	return
 }
 
 // Create or update the user depending on if the user already exists or not.
 // "userId" and "password" overwrite what is specified in "*ConfigUser".
-func (config *ConfigUser) SetUser(userId string, password UserPassword, client *Client) (err error) {
+func (config *ConfigUser) SetUser(userId UserID, password UserPassword, client *Client) (err error) {
 	if config != nil {
-		config.UserID = userId
+		config.User = userId
 		config.Password = password
 	}
 
@@ -91,7 +92,7 @@ func (config *ConfigUser) SetUser(userId string, password UserPassword, client *
 	} else {
 		config = &ConfigUser{
 			Password: password,
-			UserID:   userId,
+			User:     userId,
 		}
 		if userExists {
 			if config.Password != "" {
@@ -106,7 +107,7 @@ func (config *ConfigUser) SetUser(userId string, password UserPassword, client *
 
 func (config *ConfigUser) UpdateUser(client *Client) (err error) {
 	params := config.mapToAPI(false)
-	err = client.Put(params, "/access/users/"+config.UserID)
+	err = client.Put(params, "/access/users/"+config.User.ToString())
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating User: %v, (params: %v)", err, string(params))
@@ -123,7 +124,7 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 		return err
 	}
 	return client.Put(map[string]interface{}{
-		"userid":   config.UserID,
+		"userid":   config.User.ToString(),
 		"password": config.Password,
 	}, "/access/password")
 }
@@ -132,6 +133,17 @@ func (config ConfigUser) Validate() error {
 	return config.Password.Validate()
 }
 
+type UserID struct {
+	Name  string `json:"name"`
+	Realm string `json:"realm"`
+}
+
+// Converts the userID to "username@realm"
+func (id UserID) ToString() string {
+	return id.Name + "@" + id.Realm
+}
+
+// May be empty or should be at least be 5 characters long.
 type UserPassword string
 
 func (password UserPassword) Validate() error {
@@ -147,18 +159,18 @@ func ListUsers(client *Client) (users []interface{}, err error) {
 }
 
 // Check if the user already exists in proxmox.
-func CheckUserExistence(userId string, client *Client) (existence bool, err error) {
+func CheckUserExistence(userId UserID, client *Client) (existence bool, err error) {
 	list, err := ListUsers(client)
 	if err != nil {
 		return
 	}
-	existence = ItemInKeyOfArray(list, "userid", userId)
+	existence = ItemInKeyOfArray(list, "userid", userId.ToString())
 	return
 }
 
 // Maps the API values from proxmox to a struct
-func mapToStruct(userId string, params map[string]interface{}) *ConfigUser {
-	config := ConfigUser{UserID: userId}
+func mapToStruct(userId UserID, params map[string]interface{}) *ConfigUser {
+	config := ConfigUser{User: userId}
 	if _, isSet := params["comment"]; isSet {
 		config.Comment = params["comment"].(string)
 	}
@@ -186,8 +198,8 @@ func mapToStruct(userId string, params map[string]interface{}) *ConfigUser {
 	return &config
 }
 
-func NewConfigUserFromApi(userId string, client *Client) (config *ConfigUser, err error) {
-	userConfig, err := client.GetItemConfigMapStringInterface("/access/users/"+userId, "user", "CONFIG")
+func NewConfigUserFromApi(userId UserID, client *Client) (config *ConfigUser, err error) {
+	userConfig, err := client.GetItemConfigMapStringInterface("/access/users/"+userId.ToString(), "user", "CONFIG")
 	if err != nil {
 		return
 	}
@@ -201,4 +213,16 @@ func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
 		err = json.Unmarshal([]byte(input), config)
 	}
 	return
+}
+
+// Converts "username@realm" to a UserID object
+func NewUserID(userId string) (id UserID, err error) {
+	tmpList := strings.Split(userId, "@")
+	if len(tmpList) <= 2 {
+		return UserID{
+			Name:  tmpList[0],
+			Realm: tmpList[1],
+		}, nil
+	}
+	return UserID{}, errors.New("no realm specified, syntax is \"username@realm\"")
 }

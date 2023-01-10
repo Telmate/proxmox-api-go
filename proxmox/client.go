@@ -1567,7 +1567,7 @@ func (c *Client) DeletePool(poolid string) error {
 
 //permissions check
 
-func (c *Client) GetUserPermissions(id string, path string) (permissions []string, err error) {
+func (c *Client) GetUserPermissions(id UserID, path string) (permissions []string, err error) {
 	existence, err := CheckUserExistence(id, c)
 	if err != nil {
 		return nil, err
@@ -1575,7 +1575,7 @@ func (c *Client) GetUserPermissions(id string, path string) (permissions []strin
 	if !existence {
 		return nil, fmt.Errorf("cannot get user (%s) permissions, the user does not exist", id)
 	}
-	permlist, err := c.GetItemList("/access/permissions?userid=" + id + "&path=" + path)
+	permlist, err := c.GetItemList("/access/permissions?userid=" + id.ToString() + "&path=" + path)
 	failError(err)
 	data := permlist["data"].(map[string]interface{})
 	for pth, prm := range data {

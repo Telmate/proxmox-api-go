@@ -16,6 +16,10 @@ For config examples see "example user"`,
 	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.RequiredIDset(args, 0, "UserID")
+		userId, err := proxmox.NewUserID(id)
+		if err != nil {
+			return
+		}
 		config, err := proxmox.NewConfigUserFromJson(cli.NewConfig())
 		if err != nil {
 			return
@@ -25,7 +29,7 @@ For config examples see "example user"`,
 			password = proxmox.UserPassword(args[1])
 		}
 		c := cli.NewClient()
-		err = config.SetUser(id, password, c)
+		err = config.SetUser(userId, password, c)
 		if err != nil {
 			return
 		}
