@@ -155,6 +155,8 @@ func (id UserID) ToString() string {
 	return id.Name + "@" + id.Realm
 }
 
+// TODO add func (id UserID) Validate()
+
 // May be empty or should be at least be 5 characters long.
 type UserPassword string
 

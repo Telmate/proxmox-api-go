@@ -113,6 +113,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 	}
 }
 
+// TODO improve test when a validation function for the UserID exists
 func Test_ConfigUser_Validate(t *testing.T) {
 	testData := []struct {
 		input ConfigUser
@@ -141,6 +142,7 @@ func Test_ConfigUser_Validate(t *testing.T) {
 	}
 }
 
+// TODO improve test when a validation function for the UserID exists
 func Test_UserID_ToString(t *testing.T) {
 	testData := []struct {
 		input  UserID
