@@ -181,7 +181,7 @@ func CheckUserExistence(userId UserID, client *Client) (existence bool, err erro
 }
 
 // Maps the API values from proxmox to a struct
-func mapToStruct(userId UserID, params map[string]interface{}) *ConfigUser {
+func mapToStructConfigUser(userId UserID, params map[string]interface{}) *ConfigUser {
 	config := ConfigUser{User: userId}
 	if _, isSet := params["comment"]; isSet {
 		config.Comment = params["comment"].(string)
@@ -215,7 +215,7 @@ func NewConfigUserFromApi(userId UserID, client *Client) (config *ConfigUser, er
 	if err != nil {
 		return
 	}
-	config = mapToStruct(userId, userConfig)
+	config = mapToStructConfigUser(userId, userConfig)
 	return
 }
 
