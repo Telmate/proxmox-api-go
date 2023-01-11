@@ -8,6 +8,8 @@ import (
 	"unicode/utf8"
 )
 
+const Error_NewUserID string = "no username or realm specified, syntax is \"username@realm\""
+
 // User options for the Proxmox API
 type ConfigUser struct {
 	User      UserID       `json:"user"`
@@ -224,11 +226,13 @@ func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
 // Converts "username@realm" to a UserID object
 func NewUserID(userId string) (id UserID, err error) {
 	tmpList := strings.Split(userId, "@")
-	if len(tmpList) <= 2 {
-		return UserID{
-			Name:  tmpList[0],
-			Realm: tmpList[1],
-		}, nil
+	if len(tmpList) == 2 {
+		if tmpList[0] != "" && tmpList[1] != "" {
+			return UserID{
+				Name:  tmpList[0],
+				Realm: tmpList[1],
+			}, nil
+		}
 	}
-	return UserID{}, errors.New("no realm specified, syntax is \"username@realm\"")
+	return UserID{}, errors.New(Error_NewUserID)
 }
