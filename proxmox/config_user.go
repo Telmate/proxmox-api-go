@@ -147,7 +147,11 @@ type UserID struct {
 }
 
 // Converts the userID to "username@realm"
+// Returns an empty string when either the Name or Realm is empty
 func (id UserID) ToString() string {
+	if id.Name == "" || id.Realm == "" {
+		return ""
+	}
 	return id.Name + "@" + id.Realm
 }
 
