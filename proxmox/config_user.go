@@ -158,7 +158,7 @@ func (password UserPassword) Validate() error {
 	if utf8.RuneCountInString(string(password)) >= 5 || password == "" {
 		return nil
 	}
-	return errors.New("error updating User: the minimum password length is 5")
+	return errors.New("the minimum password length is 5")
 }
 
 // List all users that exist in proxmox
