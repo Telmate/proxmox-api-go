@@ -746,7 +746,7 @@ func (newConfig *ConfigStorage) Validate(id string, create bool, client *Client)
 	return newConfig.BackupRetention.Validate()
 }
 
-func (config *ConfigStorage) MapToApiValues(create bool) (params map[string]interface{}) {
+func (config *ConfigStorage) mapToApiValues(create bool) (params map[string]interface{}) {
 	var deletions string
 	params = map[string]interface{}{
 		"storage": config.ID,
@@ -954,7 +954,7 @@ func (config *ConfigStorage) Create(id string, errorSupression bool, client *Cli
 		enableStorage = true
 	}
 	config.ID = id
-	params := config.MapToApiValues(true)
+	params := config.mapToApiValues(true)
 	err = client.CreateStorage(params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
@@ -977,7 +977,7 @@ func (config *ConfigStorage) UpdateWithValidate(id string, client *Client) (err 
 
 func (config *ConfigStorage) Update(id string, client *Client) (err error) {
 	config.ID = id
-	params := config.MapToApiValues(false)
+	params := config.mapToApiValues(false)
 	err = client.UpdateStorage(id, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)

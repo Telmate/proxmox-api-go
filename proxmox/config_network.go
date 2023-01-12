@@ -37,7 +37,7 @@ type ConfigNetwork struct {
 	VlanRawDevice      string `json:"vlan-raw-device,omitempty"`
 }
 
-// NewConfigNetworkFromJSON takes in a byte array from a json encoded network 
+// NewConfigNetworkFromJSON takes in a byte array from a json encoded network
 // configuration and stores it in config.
 // It returns the newly created config with the passed in configuration stored
 // and an error if one occurs unmarshalling the input data.
@@ -47,9 +47,9 @@ func NewConfigNetworkFromJSON(input []byte) (config *ConfigNetwork, err error) {
 	return
 }
 
-// MapToAPIParams converts the stored config into a parameter map to be
+// mapToApiValues converts the stored config into a parameter map to be
 // sent to the API.
-func (config ConfigNetwork) MapToAPIParams() map[string]interface{} {
+func (config ConfigNetwork) mapToApiValues() map[string]interface{} {
 	params, _ := json.Marshal(&config)
 	var paramMap map[string]interface{}
 	json.Unmarshal(params, &paramMap)
@@ -60,7 +60,7 @@ func (config ConfigNetwork) MapToAPIParams() map[string]interface{} {
 // config.
 // It returns an error if the creation of the network fails.
 func (config ConfigNetwork) CreateNetwork(client *Client) (err error) {
-	paramMap := config.MapToAPIParams()
+	paramMap := config.mapToApiValues()
 
 	exitStatus, err := client.CreateNetwork(config.Node, paramMap)
 	if err != nil {
@@ -70,12 +70,11 @@ func (config ConfigNetwork) CreateNetwork(client *Client) (err error) {
 	return
 }
 
-
 // UpdateNetwork updates a network on the Proxmox host with the stored
 // config.
 // It returns an error if updating the network fails.
 func (config ConfigNetwork) UpdateNetwork(client *Client) (err error) {
-	paramMap := config.MapToAPIParams()
+	paramMap := config.mapToApiValues()
 
 	exitStatus, err := client.UpdateNetwork(config.Node, config.Iface, paramMap)
 	if err != nil {
