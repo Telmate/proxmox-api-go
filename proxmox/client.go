@@ -1565,67 +1565,17 @@ func (c *Client) DeletePool(poolid string) error {
 	return c.Delete("/pools/" + poolid)
 }
 
-// User
-func (c *Client) GetUserConfig(id string) (config map[string]interface{}, err error) {
-	return c.GetItemConfigMapStringInterface("/access/users/"+id, "user", "CONFIG")
-}
-
-func (c *Client) GetUserList() (users map[string]interface{}, err error) {
-	return c.GetItemList("/access/users?full=1")
-}
-
-func (c *Client) UpdateUserPassword(userid string, password string) error {
-	err := ValidateUserPassword(password)
-	if err != nil {
-		return err
-	}
-	return c.Put(map[string]interface{}{
-		"userid":   userid,
-		"password": password,
-	}, "/access/password")
-}
-
-func (c *Client) CreateUser(params map[string]interface{}) (err error) {
-	err = ValidateUserPassword(params["password"].(string))
-	if err != nil {
-		return err
-	}
-	return c.Post(params, "/access/users")
-}
-
-func (c *Client) UpdateUser(id string, params map[string]interface{}) error {
-	return c.Put(params, "/access/users/"+id)
-}
-
-func (c *Client) CheckUserExistance(id string) (existance bool, err error) {
-	list, err := c.GetUserList()
-	existance = ItemInKeyOfArray(list["data"].([]interface{}), "userid", id)
-	return
-}
-
-func (c *Client) DeleteUser(id string) (err error) {
-	existance, err := c.CheckUserExistance(id)
-	if err != nil {
-		return
-	}
-	if !existance {
-		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", id)
-	}
-	// Proxmox silently fails a user delete if the users does not exist
-	return c.Delete("/access/users/" + id)
-}
-
 //permissions check
 
-func (c *Client) GetUserPermissions(id string, path string) (permissions []string, err error) {
-	existance, err := c.CheckUserExistance(id)
+func (c *Client) GetUserPermissions(id UserID, path string) (permissions []string, err error) {
+	existence, err := CheckUserExistence(id, c)
 	if err != nil {
 		return nil, err
 	}
-	if !existance {
+	if !existence {
 		return nil, fmt.Errorf("cannot get user (%s) permissions, the user does not exist", id)
 	}
-	permlist, err := c.GetItemList("/access/permissions?userid=" + id + "&path=" + path)
+	permlist, err := c.GetItemList("/access/permissions?userid=" + id.ToString() + "&path=" + path)
 	failError(err)
 	data := permlist["data"].(map[string]interface{})
 	for pth, prm := range data {

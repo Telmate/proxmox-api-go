@@ -73,8 +73,11 @@ func Test_User_0_Get_Full(t *testing.T) {
 	Test := cliTest.Test{
 		OutputJson: `
 {
+	"user": {
+		"name": "test-user0",
+		"realm": "pve"
+	},
 	"comment": "this is a comment",
-	"userid": "test-user0@pve",
 	"email": "b.wayne@proxmox.com",
 	"enable": true,
 	"expire": 253370811600,
@@ -113,7 +116,10 @@ func Test_User_0_Get_Empty(t *testing.T) {
 	Test := cliTest.Test{
 		OutputJson: `
 {
-	"userid": "test-user0@pve",
+	"user": {
+		"name": "test-user0",
+		"realm": "pve"
+	},
 	"enable": false,
 	"expire": 0
 }`,

@@ -29,7 +29,12 @@ func getConfig(args []string, IDtype string) (err error) {
 	case "Storage":
 		config, err = proxmox.NewConfigStorageFromApi(id, c)
 	case "User":
-		config, err = proxmox.NewConfigUserFromApi(id, c)
+		var userId proxmox.UserID
+		userId, err = proxmox.NewUserID(id)
+		if err != nil {
+			return
+		}
+		config, err = proxmox.NewConfigUserFromApi(userId, c)
 	}
 	if err != nil {
 		return
