@@ -29,7 +29,7 @@ func (config ConfigUser) CreateUser(client *Client) (err error) {
 	if err != nil {
 		return
 	}
-	params := config.mapToAPI(true)
+	params := config.mapToApiValues(true)
 	err = client.Post(params, "/access/users")
 	if err != nil {
 		params, _ := json.Marshal(&params)
@@ -51,7 +51,7 @@ func (config ConfigUser) DeleteUser(client *Client) (err error) {
 }
 
 // Maps the struct to the API values proxmox understands
-func (config ConfigUser) mapToAPI(create bool) (params map[string]interface{}) {
+func (config ConfigUser) mapToApiValues(create bool) (params map[string]interface{}) {
 	params = map[string]interface{}{
 		"comment":   config.Comment,
 		"email":     config.Email,
@@ -108,7 +108,7 @@ func (config *ConfigUser) SetUser(userId UserID, password UserPassword, client *
 }
 
 func (config *ConfigUser) UpdateUser(client *Client) (err error) {
-	params := config.mapToAPI(false)
+	params := config.mapToApiValues(false)
 	err = client.Put(params, "/access/users/"+config.User.ToString())
 	if err != nil {
 		params, _ := json.Marshal(&params)

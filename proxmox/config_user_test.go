@@ -102,13 +102,13 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 	for _, e := range testData {
 		switch e.create {
 		case TrueAndFalse:
-			require.Equal(t, e.output, e.input.mapToAPI(false))
+			require.Equal(t, e.output, e.input.mapToApiValues(false))
 			// for create add a empty "password" and "userid" keys
-			require.Equal(t, setKeys([]string{"password", "userid"}, []any{UserPassword(""), ""}, e.output), e.input.mapToAPI(true))
+			require.Equal(t, setKeys([]string{"password", "userid"}, []any{UserPassword(""), ""}, e.output), e.input.mapToApiValues(true))
 		case True:
-			require.Equal(t, e.output, e.input.mapToAPI(true))
+			require.Equal(t, e.output, e.input.mapToApiValues(true))
 		case False:
-			require.Equal(t, e.output, e.input.mapToAPI(false))
+			require.Equal(t, e.output, e.input.mapToApiValues(false))
 		}
 	}
 }
