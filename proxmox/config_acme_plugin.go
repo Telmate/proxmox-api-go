@@ -17,7 +17,7 @@ type ConfigAcmePlugin struct {
 	ValidationDelay int      `json:"validation-delay"`
 }
 
-func (config ConfigAcmePlugin) MapAcmePluginValues() (params map[string]interface{}) {
+func (config ConfigAcmePlugin) mapToApiValues() (params map[string]interface{}) {
 	params = map[string]interface{}{
 		"api":              config.API,
 		"data":             base64.StdEncoding.EncodeToString([]byte(config.Data)),
@@ -28,15 +28,15 @@ func (config ConfigAcmePlugin) MapAcmePluginValues() (params map[string]interfac
 	return
 }
 
-func (config ConfigAcmePlugin) SetAcmePlugin(pluginid string, client *Client) (err error) {
+func (config ConfigAcmePlugin) SetAcmePlugin(pluginId string, client *Client) (err error) {
 	err = ValidateIntInRange(0, 172800, config.ValidationDelay, "validation-delay")
 	if err != nil {
 		return
 	}
 
-	config.ID = pluginid
+	config.ID = pluginId
 
-	pluginExists, err := client.CheckAcmePluginExistance(pluginid)
+	pluginExists, err := client.CheckAcmePluginExistence(pluginId)
 	if err != nil {
 		return
 	}
@@ -50,7 +50,7 @@ func (config ConfigAcmePlugin) SetAcmePlugin(pluginid string, client *Client) (e
 }
 
 func (config ConfigAcmePlugin) CreateAcmePlugin(client *Client) (err error) {
-	params := config.MapAcmePluginValues()
+	params := config.mapToApiValues()
 	params["id"] = config.ID
 	params["type"] = "dns"
 	err = client.CreateAcmePlugin(params)
@@ -62,7 +62,7 @@ func (config ConfigAcmePlugin) CreateAcmePlugin(client *Client) (err error) {
 }
 
 func (config ConfigAcmePlugin) UpdateAcmePlugin(client *Client) (err error) {
-	params := config.MapAcmePluginValues()
+	params := config.mapToApiValues()
 	err = client.UpdateAcmePlugin(config.ID, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)

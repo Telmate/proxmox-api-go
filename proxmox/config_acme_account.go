@@ -16,9 +16,9 @@ type ConfigAcmeAccount struct {
 	Tos       bool     `json:"tos,omitempty"`
 }
 
-func (config ConfigAcmeAccount) CreateAcmeAccount(acmeid string, client *Client) (err error) {
+func (config ConfigAcmeAccount) CreateAcmeAccount(acmeId string, client *Client) (err error) {
 	params := map[string]interface{}{
-		"name":    acmeid,
+		"name":    acmeId,
 		"contact": ArrayToCSV(config.Contact),
 	}
 	if !config.Tos {

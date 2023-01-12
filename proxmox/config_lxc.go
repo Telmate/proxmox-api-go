@@ -333,7 +333,7 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 // create LXC container using the Proxmox API
 func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("lxc")
-	paramMap := config.mapToAPIParams()
+	paramMap := config.mapToApiValues()
 
 	// amend vmid
 	paramMap["vmid"] = vmr.vmId
@@ -403,7 +403,7 @@ func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 }
 
 func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
-	paramMap := config.mapToAPIParams()
+	paramMap := config.mapToApiValues()
 
 	// delete parameters which are not supported in updated operations
 	delete(paramMap, "pool")
@@ -448,7 +448,7 @@ func ParseLxcDisk(diskStr string) QemuDevice {
 	return disk
 }
 
-func (config ConfigLxc) mapToAPIParams() map[string]interface{} {
+func (config ConfigLxc) mapToApiValues() map[string]interface{} {
 	// convert config to map
 	params, _ := json.Marshal(&config)
 	var paramMap map[string]interface{}
