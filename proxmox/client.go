@@ -1694,7 +1694,7 @@ func (c *Client) UpdateAcmePlugin(id string, params map[string]interface{}) erro
 	return c.Put(params, "/cluster/acme/plugins/"+id)
 }
 
-func (c *Client) CheckAcmePluginExistance(id string) (existance bool, err error) {
+func (c *Client) CheckAcmePluginExistence(id string) (existance bool, err error) {
 	list, err := c.GetAcmePluginList()
 	existance = ItemInKeyOfArray(list["data"].([]interface{}), "plugin", id)
 	return
@@ -1721,7 +1721,7 @@ func (c *Client) UpdateMetricServer(id string, params map[string]interface{}) er
 	return c.Put(params, "/cluster/metrics/server/"+id)
 }
 
-func (c *Client) CheckMetricServerExistance(id string) (existance bool, err error) {
+func (c *Client) CheckMetricServerExistence(id string) (existance bool, err error) {
 	list, err := c.GetMetricsServerList()
 	existance = ItemInKeyOfArray(list["data"].([]interface{}), "id", id)
 	return
