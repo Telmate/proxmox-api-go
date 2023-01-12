@@ -28,15 +28,15 @@ func (config ConfigAcmePlugin) mapToApiValues() (params map[string]interface{}) 
 	return
 }
 
-func (config ConfigAcmePlugin) SetAcmePlugin(pluginid string, client *Client) (err error) {
+func (config ConfigAcmePlugin) SetAcmePlugin(pluginId string, client *Client) (err error) {
 	err = ValidateIntInRange(0, 172800, config.ValidationDelay, "validation-delay")
 	if err != nil {
 		return
 	}
 
-	config.ID = pluginid
+	config.ID = pluginId
 
-	pluginExists, err := client.CheckAcmePluginExistance(pluginid)
+	pluginExists, err := client.CheckAcmePluginExistance(pluginId)
 	if err != nil {
 		return
 	}
