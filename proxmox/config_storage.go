@@ -9,8 +9,8 @@ import (
 )
 
 // matrix of storage types and which content types they support.
-var strorageContentTypesAPI = []string{"backup", "rootdir", "images", "iso", "snippets", "vztmpl"}
-var strorageContentTypesStruct = []string{"backup", "container", "diskimage", "iso", "snippets", "template"}
+var storageContentTypesAPI = []string{"backup", "rootdir", "images", "iso", "snippets", "vztmpl"}
+var storageContentTypesStruct = []string{"backup", "container", "diskimage", "iso", "snippets", "template"}
 var storageContentTypes = map[string]interface{}{
 	"directory":      []bool{true, true, true, true, true, true},
 	"lvm":            []bool{false, true, true, false, false, false},
@@ -40,7 +40,7 @@ func (c *ConfigStorageContent) MapStorageContent(array []bool) (list string) {
 		for i, e := range []interface{}{c.Backup, c.Container, c.DiskImage, c.Iso, c.Snippets, c.Template} {
 			if e.(*bool) != nil {
 				if *e.(*bool) && array[i] {
-					list = AddToList(list, strorageContentTypesAPI[i])
+					list = AddToList(list, storageContentTypesAPI[i])
 				}
 			}
 		}
@@ -64,7 +64,7 @@ func (c *ConfigStorageContent) Validate(storageType string) error {
 	var list string
 	for i, e := range array {
 		if e {
-			list = AddToList(list, strorageContentTypesStruct[i])
+			list = AddToList(list, storageContentTypesStruct[i])
 		}
 	}
 	return fmt.Errorf("error at least one of the keys (content:{ %s }) must be true", list)
@@ -1152,22 +1152,22 @@ func NewConfigStorageFromApi(storageid string, client *Client) (config *ConfigSt
 			contentArray := CSVtoArray(content)
 			config.Content = new(ConfigStorageContent)
 			if storageContentTypes[config.Type].([]bool)[0] {
-				config.Content.Backup = PointerBool(inArray(contentArray, strorageContentTypesAPI[0]))
+				config.Content.Backup = PointerBool(inArray(contentArray, storageContentTypesAPI[0]))
 			}
 			if storageContentTypes[config.Type].([]bool)[1] {
-				config.Content.Container = PointerBool(inArray(contentArray, strorageContentTypesAPI[1]))
+				config.Content.Container = PointerBool(inArray(contentArray, storageContentTypesAPI[1]))
 			}
 			if storageContentTypes[config.Type].([]bool)[2] {
-				config.Content.DiskImage = PointerBool(inArray(contentArray, strorageContentTypesAPI[2]))
+				config.Content.DiskImage = PointerBool(inArray(contentArray, storageContentTypesAPI[2]))
 			}
 			if storageContentTypes[config.Type].([]bool)[3] {
-				config.Content.Iso = PointerBool(inArray(contentArray, strorageContentTypesAPI[3]))
+				config.Content.Iso = PointerBool(inArray(contentArray, storageContentTypesAPI[3]))
 			}
 			if storageContentTypes[config.Type].([]bool)[4] {
-				config.Content.Snippets = PointerBool(inArray(contentArray, strorageContentTypesAPI[4]))
+				config.Content.Snippets = PointerBool(inArray(contentArray, storageContentTypesAPI[4]))
 			}
 			if storageContentTypes[config.Type].([]bool)[5] {
-				config.Content.Template = PointerBool(inArray(contentArray, strorageContentTypesAPI[5]))
+				config.Content.Template = PointerBool(inArray(contentArray, storageContentTypesAPI[5]))
 			}
 		} else {
 			// Edge cases

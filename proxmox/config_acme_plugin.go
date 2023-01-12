@@ -36,7 +36,7 @@ func (config ConfigAcmePlugin) SetAcmePlugin(pluginId string, client *Client) (e
 
 	config.ID = pluginId
 
-	pluginExists, err := client.CheckAcmePluginExistance(pluginId)
+	pluginExists, err := client.CheckAcmePluginExistence(pluginId)
 	if err != nil {
 		return
 	}

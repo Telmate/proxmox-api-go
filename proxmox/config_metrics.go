@@ -113,15 +113,15 @@ func (config *ConfigMetrics) ValidateMetrics() (err error) {
 	return
 }
 
-func (config *ConfigMetrics) SetMetrics(metricsid string, client *Client) (err error) {
+func (config *ConfigMetrics) SetMetrics(metricsId string, client *Client) (err error) {
 	err = config.ValidateMetrics()
 	if err != nil {
 		return
 	}
 
-	config.Name = metricsid
+	config.Name = metricsId
 
-	metricsExists, err := client.CheckMetricServerExistance(metricsid)
+	metricsExists, err := client.CheckMetricServerExistence(metricsId)
 	if err != nil {
 		return err
 	}
@@ -177,16 +177,16 @@ func InstantiateConfigMetrics() *ConfigMetrics {
 	}
 }
 
-func NewConfigMetricsFromApi(metricsid string, client *Client) (config *ConfigMetrics, err error) {
+func NewConfigMetricsFromApi(metricsId string, client *Client) (config *ConfigMetrics, err error) {
 	// prepare json map to receive the information from the api
 	var rawConfig map[string]interface{}
-	rawConfig, err = client.GetMetricServerConfig(metricsid)
+	rawConfig, err = client.GetMetricServerConfig(metricsId)
 	if err != nil {
 		return nil, err
 	}
 	config = InstantiateConfigMetrics()
 
-	config.Name = metricsid
+	config.Name = metricsId
 	config.Port = int(rawConfig["port"].(float64))
 	config.Server = rawConfig["server"].(string)
 	config.Type = rawConfig["type"].(string)
