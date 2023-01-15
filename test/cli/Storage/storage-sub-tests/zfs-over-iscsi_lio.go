@@ -1,7 +1,7 @@
 package storagesubtests
 
 import (
-	"github.com/Telmate/proxmox-api-go/proxmox"
+	"github.com/perimeter-81/proxmox-api-go/proxmox"
 )
 
 var ZFSoverISCSI_LioFull = proxmox.ConfigStorage{

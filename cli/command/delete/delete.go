@@ -3,8 +3,8 @@ package delete
 import (
 	"fmt"
 
-	"github.com/Telmate/proxmox-api-go/cli"
-	"github.com/Telmate/proxmox-api-go/proxmox"
+	"github.com/perimeter-81/proxmox-api-go/cli"
+	"github.com/perimeter-81/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
