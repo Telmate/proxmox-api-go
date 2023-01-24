@@ -1175,8 +1175,17 @@ func FormatDiskParam(disk QemuDevice) string {
 		diskConfParam = append(diskConfParam, diskMountOpts)
 	}
 
+	// Backup
+	if backup, ok := disk["backup"].(bool); ok {
+		// Backups are enabled by default (backup=1)
+		// Only set the parameter if backups are explicitly disabled
+		if backup == false {
+			diskConfParam = append(diskConfParam, "backup=0")
+		}
+	}
+
 	// Keys that are not used as real/direct conf.
-	ignoredKeys := []string{"key", "slot", "type", "storage", "file", "size", "cache", "volume", "container", "vm", "mountoptions", "storage_type"}
+	ignoredKeys := []string{"backup", "key", "slot", "type", "storage", "file", "size", "cache", "volume", "container", "vm", "mountoptions", "storage_type"}
 
 	// Rest of config.
 	diskConfParam = diskConfParam.createDeviceParam(disk, ignoredKeys)
