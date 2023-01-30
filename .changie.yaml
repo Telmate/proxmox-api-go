@@ -1,0 +1,23 @@
+changesDir: changes
+unreleasedDir: unreleased
+headerPath: header.tpl.md
+changelogPath: CHANGELOG.md
+versionExt: md
+versionFormat: '## {{.Version}} - {{.Time.Format "2006-01-02"}}'
+kindFormat: '### {{.Kind}}'
+changeFormat: '* [PR: #{{.Custom.PR}}](https://github.com/perimeter-81/proxmox-api-go/pull/{{.Custom.PR}}) || [Jira P81-{{.Custom.JiraID}}](https://perimeter81.atlassian.net/browse/p81-{{.Custom.JiraID}}) || {{.Body}}'
+kinds:
+  - label: New features
+  - label: Improvments
+  - label: Bug fix
+  - label: Removed
+  - label: Deprecated
+  - label: Security
+  - label: CI / CD
+custom:
+  - key: PR
+    type: int
+    minInt: 1
+  - key: JiraID
+    type: int
+    minInt: 1
