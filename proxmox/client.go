@@ -1,6 +1,6 @@
 package proxmox
 
-// inspired by https://github.com/Telmate/vagrant-proxmox/blob/master/lib/vagrant-proxmox/proxmox/connection.rb
+// inspired by https://github.com/perimeter-81/vagrant-proxmox/blob/master/lib/vagrant-proxmox/proxmox/connection.rb
 
 import (
 	"bytes"

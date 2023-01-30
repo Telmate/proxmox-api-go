@@ -1,7 +1,7 @@
 package qemu
 
 import (
-	"github.com/Telmate/proxmox-api-go/cli/command/guest"
+	"github.com/perimeter-81/proxmox-api-go/cli/command/guest"
 	"github.com/spf13/cobra"
 )
 

@@ -1,20 +1,20 @@
 package cli_metricservers_test
 
 import (
+	_ "github.com/perimeter-81/proxmox-api-go/cli/command/commands"
+	cliTest "github.com/perimeter-81/proxmox-api-go/test/cli"
 	"testing"
-	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
-func Test_MetricServer_Graphite_0_Cleanup(t *testing.T){
+func Test_MetricServer_Graphite_0_Cleanup(t *testing.T) {
 	Test := cliTest.Test{
 		ReqErr: true,
-		Args: []string{"-i","delete","metricserver","test-metricserver-g0"},
+		Args:   []string{"-i", "delete", "metricserver", "test-metricserver-g0"},
 	}
 	Test.StandardTest(t)
 }
 
-func Test_MetricServer_Graphite_0_Set_Full(t *testing.T){
+func Test_MetricServer_Graphite_0_Set_Full(t *testing.T) {
 	Test := cliTest.Test{
 		InputJson: `
 {
@@ -31,7 +31,7 @@ func Test_MetricServer_Graphite_0_Set_Full(t *testing.T){
 }`,
 		Expected: "(test-metricserver-g0)",
 		Contains: true,
-		Args: []string{"-i","set","metricserver","test-metricserver-g0"},
+		Args:     []string{"-i", "set", "metricserver", "test-metricserver-g0"},
 	}
 	Test.StandardTest(t)
 }
@@ -53,12 +53,12 @@ func Test_MetricServer_Graphite_0_Get_Full(t *testing.T) {
 		"path": "test-path"
 	}
 }`,
-		Args: []string{"-i","get","metricserver","test-metricserver-g0"},
+		Args: []string{"-i", "get", "metricserver", "test-metricserver-g0"},
 	}
 	Test.StandardTest(t)
 }
 
-func Test_MetricServer_Graphite_0_Set_Empty(t *testing.T){
+func Test_MetricServer_Graphite_0_Set_Empty(t *testing.T) {
 	Test := cliTest.Test{
 		InputJson: `
 {
@@ -71,7 +71,7 @@ func Test_MetricServer_Graphite_0_Set_Empty(t *testing.T){
 }`,
 		Expected: "(test-metricserver-g0)",
 		Contains: true,
-		Args: []string{"-i","set","metricserver","test-metricserver-g0"},
+		Args:     []string{"-i", "set", "metricserver", "test-metricserver-g0"},
 	}
 	Test.StandardTest(t)
 }
@@ -93,15 +93,15 @@ func Test_MetricServer_Graphite_0_Get_Empty(t *testing.T) {
 		"path": "proxmox"
 	}
 }`,
-		Args: []string{"-i","get","metricserver","test-metricserver-g0"},
+		Args: []string{"-i", "get", "metricserver", "test-metricserver-g0"},
 	}
 	Test.StandardTest(t)
 }
 
-func Test_MetricServer_Graphite_0_Delete(t *testing.T){
+func Test_MetricServer_Graphite_0_Delete(t *testing.T) {
 	Test := cliTest.Test{
 		ReqErr: false,
-		Args: []string{"-i","delete","metricserver","test-metricserver-g0"},
+		Args:   []string{"-i", "delete", "metricserver", "test-metricserver-g0"},
 	}
 	Test.StandardTest(t)
 }

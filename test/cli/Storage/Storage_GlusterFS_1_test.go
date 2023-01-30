@@ -3,9 +3,9 @@ package cli_storage_test
 import (
 	"testing"
 
-	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
-	"github.com/Telmate/proxmox-api-go/proxmox"
-	storagesubtests "github.com/Telmate/proxmox-api-go/test/cli/Storage/storage-sub-tests"
+	_ "github.com/perimeter-81/proxmox-api-go/cli/command/commands"
+	"github.com/perimeter-81/proxmox-api-go/proxmox"
+	storagesubtests "github.com/perimeter-81/proxmox-api-go/test/cli/Storage/storage-sub-tests"
 )
 
 func Test_Storage_GlusterFS_1_Cleanup(t *testing.T) {

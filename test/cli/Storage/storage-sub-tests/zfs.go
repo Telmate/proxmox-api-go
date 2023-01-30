@@ -3,7 +3,7 @@ package storagesubtests
 import (
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/proxmox"
+	"github.com/perimeter-81/proxmox-api-go/proxmox"
 )
 
 var ZFSFull = proxmox.ConfigStorage{
