@@ -1294,12 +1294,13 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 	}
 
 	url := fmt.Sprintf("%s/nodes/%s/storage/%s/upload", c.session.ApiUrl, node, storage)
-	req, err := c.session.NewRequest(http.MethodPost, url, &c.session.Headers, body)
+	headers := c.session.Headers.Clone()
+	headers.Add("Content-Type", mimetype)
+	headers.Add("Accept", "application/json")
+	req, err := c.session.NewRequest(http.MethodPost, url, &headers, body)
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Content-Type", mimetype)
-	req.Header.Add("Accept", "application/json")
 
 	if doStreamingIO {
 		req.ContentLength = contentLength
