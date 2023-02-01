@@ -1179,7 +1179,7 @@ func FormatDiskParam(disk QemuDevice) string {
 	if backup, ok := disk["backup"].(bool); ok {
 		// Backups are enabled by default (backup=1)
 		// Only set the parameter if backups are explicitly disabled
-		if backup == false {
+		if !backup {
 			diskConfParam = append(diskConfParam, "backup=0")
 		}
 	}
