@@ -48,7 +48,7 @@ type ConfigQemu struct {
 	Agent           int         `json:"agent,omitempty"`
 	Memory          int         `json:"memory,omitempty"`
 	Balloon         int         `json:"balloon,omitempty"`
-	QemuOs          string      `json:"os,omitempty"`
+	QemuOs          string      `json:"ostype,omitempty"`
 	QemuCores       int         `json:"cores,omitempty"`
 	QemuSockets     int         `json:"sockets,omitempty"`
 	QemuVcpus       int         `json:"vcpus,omitempty"`
