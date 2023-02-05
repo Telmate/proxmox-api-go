@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"strings"
 	"testing"
@@ -14,7 +15,7 @@ import (
 
 type Test struct {
 	InputJson  string //the inputted json
-	OutputJson string //the outputted json
+	OutputJson any    //the outputted json
 
 	Expected string //the output that is expected
 	Contains bool   //if the output contains (expected) or qeuals it
@@ -75,9 +76,19 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 			assert.NotEqual(t, string(out), test.NotExpected)
 		}
 	}
-	if test.OutputJson != "" {
-		out, _ = io.ReadAll(buffer)
-		require.JSONEq(t, test.OutputJson, string(out))
+	switch outputJson := test.OutputJson.(type) {
+	case string:
+		if outputJson != "" {
+			out, _ = io.ReadAll(buffer)
+			require.JSONEq(t, outputJson, string(out))
+		}
+	default:
+		if outputJson != nil {
+			tmpJson, err := json.Marshal(outputJson)
+			require.NoError(t, err)
+			out, _ = io.ReadAll(buffer)
+			require.JSONEq(t, string(tmpJson), string(out))
+		}
 	}
 	if test.Return && len(out) == 0 {
 		out, _ = io.ReadAll(buffer)
