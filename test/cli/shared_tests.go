@@ -18,15 +18,15 @@ type Test struct {
 	OutputJson any    //the outputted json
 
 	Expected string //the output that is expected
-	Contains bool   //if the output contains (expected) or qeuals it
+	Contains bool   //if the output contains (expected) or equals it
 
-	NotExpected string //the output that is notexpected
-	NotContains bool   //if the output contains (notexpected) or qeuals it
+	NotExpected string //the output that is not expected
+	NotContains bool   //if the output contains (not expected) or equals it
 
 	ReqErr      bool   //if an error is expected as output
 	ErrContains string //the string the error should contain
 
-	Return bool //if the output should be read and returned for more advanced prcessing
+	Return bool //if the output should be read and returned for more advanced processing
 
 	Args []string //cli arguments
 }
