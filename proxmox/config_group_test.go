@@ -69,7 +69,7 @@ func Test_ConfigGroup_mapToStruct(t *testing.T) {
 		},
 	}
 	for _, e := range testData {
-		require.Equal(t, e.output, ConfigGroup{}.mapToStruct(e.input))
+		require.Equal(t, e.output, e.base.mapToStruct(e.input))
 	}
 }
 
