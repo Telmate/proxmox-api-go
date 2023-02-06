@@ -142,6 +142,63 @@ func Test_ConfigUser_Validate(t *testing.T) {
 	}
 }
 
+func Test_UserID_mapToArray(t *testing.T) {
+	testData := []struct {
+		input  []interface{}
+		Output *[]UserID
+	}{
+		{
+			input:  []interface{}{},
+			Output: &[]UserID{},
+		},
+		{
+			input:  []interface{}{"user1realm"},
+			Output: &[]UserID{{}},
+		},
+		{
+			input: []interface{}{"user1realm", "", "user3@pve"},
+			Output: &[]UserID{
+				{},
+				{},
+				{Name: "user3", Realm: "pve"},
+			},
+		},
+		{
+			input:  []interface{}{"user1@realm"},
+			Output: &[]UserID{{Name: "user1", Realm: "realm"}},
+		},
+		{
+			input: []interface{}{"user1@realm", "user2@pam", "user3@pve"},
+			Output: &[]UserID{
+				{Name: "user1", Realm: "realm"},
+				{Name: "user2", Realm: "pam"},
+				{Name: "user3", Realm: "pve"},
+			},
+		},
+	}
+	for _, e := range testData {
+		require.Equal(t, e.Output, UserID{}.mapToArray(e.input))
+	}
+}
+
+func Test_UserID_mapToStruct(t *testing.T) {
+	testData := []struct {
+		input  string
+		output UserID
+	}{
+		{},
+		{input: "user"},
+		{input: "@realm"},
+		{
+			input:  "user@realm",
+			output: UserID{Name: "user", Realm: "realm"},
+		},
+	}
+	for _, e := range testData {
+		require.Equal(t, e.output, UserID{}.mapToStruct(e.input))
+	}
+}
+
 // TODO improve test when a validation function for the UserID exists
 func Test_UserID_ToString(t *testing.T) {
 	testData := []struct {

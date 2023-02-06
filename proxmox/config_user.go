@@ -146,6 +146,22 @@ type UserID struct {
 	Realm string `json:"realm"`
 }
 
+// Map the params to an array of UserID objects
+func (UserID) mapToArray(params []interface{}) *[]UserID {
+	members := ArrayToStringType(params)
+	UserList := make([]UserID, len(members))
+	for i := range members {
+		UserList[i] = UserID{}.mapToStruct(members[i])
+	}
+	return &UserList
+}
+
+// transforms the  username@realm to a UserID object
+func (UserID) mapToStruct(userId string) UserID {
+	user, _ := NewUserID(userId)
+	return user
+}
+
 // Converts the userID to "username@realm"
 // Returns an empty string when either the Name or Realm is empty
 func (id UserID) ToString() string {
