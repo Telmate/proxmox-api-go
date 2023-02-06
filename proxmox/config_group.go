@@ -7,8 +7,7 @@ type ConfigGroup struct {
 	Members *[]UserID `json:"members,omitempty"`
 }
 
-func (ConfigGroup) mapToStruct(params map[string]interface{}) *ConfigGroup {
-	config := ConfigGroup{}
+func (config ConfigGroup) mapToStruct(params map[string]interface{}) *ConfigGroup {
 	if _, isSet := params["groupid"]; isSet {
 		config.Name = GroupName(params["groupid"].(string))
 	}
