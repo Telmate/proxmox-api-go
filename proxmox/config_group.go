@@ -28,6 +28,15 @@ func (config ConfigGroup) mapToStruct(params map[string]interface{}) *ConfigGrou
 // GroupName may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
 type GroupName string
 
+// Deletes the specified group
+func (group GroupName) Delete(client *Client) (err error) {
+	err = group.Validate()
+	if err != nil {
+		return
+	}
+	return client.Delete("/access/groups/" + string(group))
+}
+
 // Check if a groupname is valid.
 func (group GroupName) Validate() error {
 	if group == "" {
