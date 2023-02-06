@@ -1,5 +1,10 @@
 package proxmox
 
+import (
+	"errors"
+	"regexp"
+)
+
 type ConfigGroup struct {
 	Name    GroupName `json:"name"`
 	Comment string    `json:"comment,omitempty"`
@@ -23,6 +28,22 @@ func (config ConfigGroup) mapToStruct(params map[string]interface{}) *ConfigGrou
 // GroupName may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
 type GroupName string
 
+// Check if a groupname is valid.
+func (group GroupName) Validate() error {
+	if group == "" {
+		return errors.New("variable of type (GroupName) may not be empty")
+	}
+	// proxmox does not seem to enforce any limit on the length of a group name. When going over thousands of charters the ui kinda breaks.
+	if len([]rune(group)) > 1000 {
+		return errors.New("variable of type (GroupName) may not be more tha 1000 characters long")
+	}
+	regex, _ := regexp.Compile(`^([a-z]|[A-Z]|[0-9]|_|-)*$`)
+	if regex.Match([]byte(group)) {
+		return nil
+	}
+	return errors.New("")
+}
+
 // Returns a list of all existing groups
 func ListGroups(client *Client) (*[]ConfigGroup, error) {
 	paramArray, err := listGroups(client)
@@ -39,4 +60,16 @@ func ListGroups(client *Client) (*[]ConfigGroup, error) {
 // list all groups directly from the api without any extra formatting
 func listGroups(client *Client) ([]interface{}, error) {
 	return client.GetItemListInterfaceArray("/access/groups")
+}
+
+func NewConfigGroupFromApi(groupId GroupName, client *Client) (*ConfigGroup, error) {
+	err := groupId.Validate()
+	if err != nil {
+		return nil, err
+	}
+	config, err := client.GetItemConfigMapStringInterface("/access/groups/"+string(groupId), "group", "CONFIG")
+	if err != nil {
+		return nil, err
+	}
+	return ConfigGroup{Name: groupId}.mapToStruct(config), nil
 }

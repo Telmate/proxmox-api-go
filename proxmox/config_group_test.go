@@ -3,6 +3,7 @@ package proxmox
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_group"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,5 +70,21 @@ func Test_ConfigGroup_mapToStruct(t *testing.T) {
 	}
 	for _, e := range testData {
 		require.Equal(t, e.output, ConfigGroup{}.mapToStruct(e.input))
+	}
+}
+
+func Test_GroupName_Validate(t *testing.T) {
+	testRunes := struct {
+		legal   []string
+		illegal []string
+	}{
+		legal:   test_data_group.GroupName_Legal(),
+		illegal: test_data_group.GroupName_Illegal(),
+	}
+	for _, e := range testRunes.legal {
+		require.NoError(t, GroupName(e).Validate())
+	}
+	for _, e := range testRunes.illegal {
+		require.Error(t, GroupName(e).Validate())
 	}
 }
