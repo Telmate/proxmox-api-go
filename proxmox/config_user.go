@@ -98,7 +98,7 @@ func (config ConfigUser) mapToApiValues(create bool) (params map[string]interfac
 		"enable":    config.Enable,
 		"expire":    config.Expire,
 		"firstname": config.FirstName,
-		"groups":    ArrayToCSV(config.Groups),
+		"groups":    GroupName("").arrayToCsv(config.Groups),
 		"keys":      config.Keys,
 		"lastname":  config.LastName,
 	}
