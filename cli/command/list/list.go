@@ -2,7 +2,6 @@ package list
 
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
-	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
@@ -34,8 +33,6 @@ func listRaw(IDtype string) {
 		list, err = c.GetPoolList()
 	case "Storages":
 		list, err = c.GetStorageList()
-	case "Users":
-		list, err = proxmox.ListUsers(c)
 	}
 	cli.LogFatalListing(IDtype, err)
 	cli.PrintRawJson(listCmd.OutOrStdout(), list)

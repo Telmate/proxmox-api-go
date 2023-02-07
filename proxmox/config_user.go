@@ -266,21 +266,35 @@ func (password UserPassword) Validate() error {
 }
 
 // List all users that exist in proxmox
-func ListUsers(client *Client) (*[]ConfigUser, error) {
-	userList, err := listUsers(client)
+// Setting full to TRUE the output wil include group information.
+// Depending on the number of existing groups it take substantially longer to parse
+func ListUsers(client *Client, full bool) (*[]ConfigUser, error) {
+	var err error
+	var userList []interface{}
+	if full {
+		userList, err = listUsersFull(client)
+	} else {
+		userList, err = listUsersPartial(client)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return ConfigUser{}.mapToArray(userList), nil
 }
 
-func listUsers(client *Client) ([]interface{}, error) {
+// Returns users without group information
+func listUsersPartial(client *Client) ([]interface{}, error) {
+	return client.GetItemListInterfaceArray("/access/users")
+}
+
+// Returns users with group information
+func listUsersFull(client *Client) ([]interface{}, error) {
 	return client.GetItemListInterfaceArray("/access/users?full=1")
 }
 
 // Check if the user already exists in proxmox.
 func CheckUserExistence(userId UserID, client *Client) (existence bool, err error) {
-	list, err := listUsers(client)
+	list, err := listUsersPartial(client)
 	if err != nil {
 		return
 	}

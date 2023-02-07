@@ -203,7 +203,7 @@ func (group GroupName) setMembers(members *[]UserID, client *Client) (err error)
 	if members == nil {
 		return
 	}
-	users, err := listUsers(client)
+	users, err := listUsersFull(client)
 	if err != nil {
 		return
 	}
