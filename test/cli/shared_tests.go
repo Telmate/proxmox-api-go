@@ -26,6 +26,7 @@ type Test struct {
 	ReqErr      bool   //if an error is expected as output
 	ErrContains string //the string the error should contain
 
+	// TODO remove is obsolete
 	Return bool //if the output should be read and returned for more advanced processing
 
 	Args []string //cli arguments
@@ -52,6 +53,8 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 	cli.RootCmd.SetIn(strings.NewReader(test.InputJson))
 	err := cli.RootCmd.Execute()
 
+	out, _ = io.ReadAll(buffer)
+
 	if test.ReqErr {
 		require.Error(t, err)
 		if test.ErrContains != "" {
@@ -61,7 +64,6 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 		require.NoError(t, err)
 	}
 	if test.Expected != "" {
-		out, _ = io.ReadAll(buffer)
 		if test.Contains {
 			assert.Contains(t, string(out), test.Expected)
 		} else {
@@ -69,7 +71,6 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 		}
 	}
 	if test.NotExpected != "" {
-		out, _ = io.ReadAll(buffer)
 		if test.NotContains {
 			assert.NotContains(t, string(out), test.NotExpected)
 		} else {
@@ -79,19 +80,14 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 	switch outputJson := test.OutputJson.(type) {
 	case string:
 		if outputJson != "" {
-			out, _ = io.ReadAll(buffer)
 			require.JSONEq(t, outputJson, string(out))
 		}
 	default:
 		if outputJson != nil {
 			tmpJson, err := json.Marshal(outputJson)
 			require.NoError(t, err)
-			out, _ = io.ReadAll(buffer)
 			require.JSONEq(t, string(tmpJson), string(out))
 		}
-	}
-	if test.Return && len(out) == 0 {
-		out, _ = io.ReadAll(buffer)
 	}
 	return
 }
