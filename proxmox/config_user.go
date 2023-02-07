@@ -18,7 +18,7 @@ type ConfigUser struct {
 	Enable    bool         `json:"enable"`
 	Expire    uint         `json:"expire"`
 	FirstName string       `json:"firstname,omitempty"`
-	Groups    []string     `json:"groups,omitempty"`
+	Groups    *[]GroupName `json:"groups,omitempty"`
 	Keys      string       `json:"keys,omitempty"`
 	LastName  string       `json:"lastname,omitempty"`
 	Password  UserPassword `json:"-"`
@@ -48,6 +48,46 @@ func (config ConfigUser) DeleteUser(client *Client) (err error) {
 	}
 	// Proxmox silently fails a user delete if the users does not exist
 	return client.Delete("/access/users/" + config.User.ToString())
+}
+
+func (ConfigUser) mapToArray(params []interface{}) *[]ConfigUser {
+	users := make([]ConfigUser, len(params))
+	for i, e := range params {
+		users[i] = *ConfigUser{}.mapToStruct(e.(map[string]interface{}))
+	}
+	return &users
+}
+
+// Maps the API values from proxmox to a struct
+func (config ConfigUser) mapToStruct(params map[string]interface{}) *ConfigUser {
+	if _, isSet := params["userid"]; isSet {
+		config.User = UserID{}.mapToStruct(params["userid"].(string))
+	}
+	if _, isSet := params["comment"]; isSet {
+		config.Comment = params["comment"].(string)
+	}
+	if _, isSet := params["email"]; isSet {
+		config.Email = params["email"].(string)
+	}
+	if _, isSet := params["enable"]; isSet {
+		config.Enable = Itob(int(params["enable"].(float64)))
+	}
+	if _, isSet := params["expire"]; isSet {
+		config.Expire = uint(params["expire"].(float64))
+	}
+	if _, isSet := params["firstname"]; isSet {
+		config.FirstName = params["firstname"].(string)
+	}
+	if _, isSet := params["keys"]; isSet {
+		config.Keys = params["keys"].(string)
+	}
+	if _, isSet := params["lastname"]; isSet {
+		config.LastName = params["lastname"].(string)
+	}
+	if _, isSet := params["groups"]; isSet {
+		config.Groups = GroupName("").mapToArray(params["groups"])
+	}
+	return &config
 }
 
 // Maps the struct to the API values proxmox understands
@@ -135,6 +175,39 @@ func (config ConfigUser) Validate() error {
 	return config.Password.Validate()
 }
 
+// user config used when only the group group membership needs updating.
+type configUserShort struct {
+	User   UserID
+	Groups *[]GroupName
+}
+
+func (config configUserShort) mapToApiValues() map[string]interface{} {
+	return map[string]interface{}{
+		"groups": GroupName("").arrayToCsv(config.Groups),
+	}
+}
+
+func (config configUserShort) updateUserMembership(client *Client) (err error) {
+	err = updateUser(config.User, config.mapToApiValues(), client)
+	if err != nil {
+		return fmt.Errorf("error updating User: %v", err)
+	}
+	return
+}
+
+func (configUserShort) updateUsersMembership(users *[]configUserShort, client *Client) (err error) {
+	if users == nil {
+		return
+	}
+	for _, e := range *users {
+		err = e.updateUserMembership(client)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 type UserID struct {
 	// TODO create custom type for Name.
 	// the name only seems to allows some characters, and using the string type would imply that all characters are allowed.
@@ -171,7 +244,16 @@ func (id UserID) ToString() string {
 	return id.Name + "@" + id.Realm
 }
 
-// TODO add func (id UserID) Validate()
+// TODO improve when Name and Realm have their own types
+func (id UserID) Validate() error {
+	if id.Name == "" {
+		return errors.New("no username is specified")
+	}
+	if id.Realm == "" {
+		return errors.New("no realm is specified")
+	}
+	return nil
+}
 
 // May be empty or should be at least be 5 characters long.
 type UserPassword string
@@ -184,13 +266,21 @@ func (password UserPassword) Validate() error {
 }
 
 // List all users that exist in proxmox
-func ListUsers(client *Client) (users []interface{}, err error) {
+func ListUsers(client *Client) (*[]ConfigUser, error) {
+	userList, err := listUsers(client)
+	if err != nil {
+		return nil, err
+	}
+	return ConfigUser{}.mapToArray(userList), nil
+}
+
+func listUsers(client *Client) ([]interface{}, error) {
 	return client.GetItemListInterfaceArray("/access/users?full=1")
 }
 
 // Check if the user already exists in proxmox.
 func CheckUserExistence(userId UserID, client *Client) (existence bool, err error) {
-	list, err := ListUsers(client)
+	list, err := listUsers(client)
 	if err != nil {
 		return
 	}
@@ -198,43 +288,12 @@ func CheckUserExistence(userId UserID, client *Client) (existence bool, err erro
 	return
 }
 
-// Maps the API values from proxmox to a struct
-func mapToStructConfigUser(userId UserID, params map[string]interface{}) *ConfigUser {
-	config := ConfigUser{User: userId}
-	if _, isSet := params["comment"]; isSet {
-		config.Comment = params["comment"].(string)
-	}
-	if _, isSet := params["email"]; isSet {
-		config.Email = params["email"].(string)
-	}
-	if _, isSet := params["enable"]; isSet {
-		config.Enable = Itob(int(params["enable"].(float64)))
-	}
-	if _, isSet := params["expire"]; isSet {
-		config.Expire = uint(params["expire"].(float64))
-	}
-	if _, isSet := params["firstname"]; isSet {
-		config.FirstName = params["firstname"].(string)
-	}
-	if _, isSet := params["keys"]; isSet {
-		config.Keys = params["keys"].(string)
-	}
-	if _, isSet := params["lastname"]; isSet {
-		config.LastName = params["lastname"].(string)
-	}
-	if _, isSet := params["groups"]; isSet {
-		config.Groups = ArrayToStringType(params["groups"].([]interface{}))
-	}
-	return &config
-}
-
-func NewConfigUserFromApi(userId UserID, client *Client) (config *ConfigUser, err error) {
+func NewConfigUserFromApi(userId UserID, client *Client) (*ConfigUser, error) {
 	userConfig, err := client.GetItemConfigMapStringInterface("/access/users/"+userId.ToString(), "user", "CONFIG")
 	if err != nil {
-		return
+		return nil, err
 	}
-	config = mapToStructConfigUser(userId, userConfig)
-	return
+	return ConfigUser{User: userId}.mapToStruct(userConfig), nil
 }
 
 func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
@@ -257,4 +316,26 @@ func NewUserID(userId string) (id UserID, err error) {
 		}
 	}
 	return UserID{}, errors.New(Error_NewUserID)
+}
+
+// Converts an comma separated list of "username@realm" to a array of UserID objects
+func NewUserIDs(userIds string) (*[]UserID, error) {
+	if userIds == "" {
+		return &[]UserID{}, nil
+	}
+	tmpUserIds := strings.Split(userIds, ",")
+	users := make([]UserID, len(tmpUserIds))
+	for i, e := range tmpUserIds {
+		var err error
+		users[i], err = NewUserID(e)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &users, nil
+}
+
+// URL for updating users
+func updateUser(user UserID, params map[string]interface{}, client *Client) error {
+	return client.Put(params, "/access/users/"+user.ToString())
 }

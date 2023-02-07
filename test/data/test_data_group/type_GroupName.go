@@ -33,3 +33,17 @@ func GroupName_Illegal() []string {
 	}
 	return append(illegalRunes, illegalSrings[:]...)
 }
+
+// map of user mappings
+func UserMap() []interface{} {
+	return []interface{}{
+		map[string]interface{}{"userid": "user1@pve", "groups": ""},
+		map[string]interface{}{"userid": "user2@pve", "groups": "group1"},
+		map[string]interface{}{"userid": "user3@pve", "groups": "group1"},
+		map[string]interface{}{"userid": "user4@pve", "groups": "group1,group2"},
+		map[string]interface{}{"userid": "user5@pve", "groups": "group1,group2,group3"},
+		map[string]interface{}{"userid": "user6@pve", "groups": "group2,group3"},
+		map[string]interface{}{"userid": "user7@pve"},
+		map[string]interface{}{"groups": "group1,group2,group3"},
+	}
+}
