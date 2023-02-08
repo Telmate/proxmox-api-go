@@ -14,8 +14,8 @@ import (
 )
 
 type Test struct {
-	InputJson  string //the inputted json
-	OutputJson any    //the outputted json
+	InputJson  any //the inputted json
+	OutputJson any //the outputted json
 
 	Expected string   //matches the output exactly
 	Contains []string //the output contains all of the strings
@@ -50,7 +50,20 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 	cli.RootCmd.SetArgs(test.Args)
 	buffer := new(bytes.Buffer)
 	cli.RootCmd.SetOut(buffer)
-	cli.RootCmd.SetIn(strings.NewReader(test.InputJson))
+
+	switch InputJson := test.InputJson.(type) {
+	case string:
+		if InputJson != "" {
+			cli.RootCmd.SetIn(strings.NewReader(InputJson))
+		}
+	default:
+		if InputJson != nil {
+			tmpJson, err := json.Marshal(InputJson)
+			require.NoError(t, err)
+			cli.RootCmd.SetIn(strings.NewReader(string(tmpJson)))
+		}
+	}
+
 	err := cli.RootCmd.Execute()
 
 	out, _ = io.ReadAll(buffer)
