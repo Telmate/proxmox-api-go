@@ -35,9 +35,7 @@ func Test_Pool_0_List(t *testing.T) {
 
 func Test_Pool_0_Get_Without_Comment(t *testing.T) {
 	Test := cliTest.Test{
-		NotExpected: `"comment"`,
-		ReqErr:      false,
-		NotContains: true,
+		NotContains: []string{`"comment"`},
 		Args:        []string{"-i", "get", "pool", "test-pool0"},
 	}
 	Test.StandardTest(t)
@@ -70,9 +68,7 @@ func Test_Pool_0_Delete(t *testing.T) {
 
 func Test_Pool_0_Removed(t *testing.T) {
 	Test := cliTest.Test{
-		NotExpected: `"test-pool0"`,
-		ReqErr:      false,
-		NotContains: true,
+		NotContains: []string{`"test-pool0"`},
 		Args:        []string{"-i", "list", "pools"},
 	}
 	Test.StandardTest(t)
@@ -115,9 +111,7 @@ func Test_Pool_1_Update_Comment(t *testing.T) {
 
 func Test_Pool_1_Get_Without_Comment(t *testing.T) {
 	Test := cliTest.Test{
-		NotExpected: `"comment"`,
-		ReqErr:      false,
-		NotContains: true,
+		NotContains: []string{`"comment"`},
 		Args:        []string{"-i", "get", "pool", "test-pool1"},
 	}
 	Test.StandardTest(t)
@@ -134,9 +128,7 @@ func Test_Pool_1_Delete(t *testing.T) {
 
 func Test_Pool_1_Removed(t *testing.T) {
 	Test := cliTest.Test{
-		NotExpected: `"test-pool1"`,
-		ReqErr:      false,
-		NotContains: true,
+		NotContains: []string{`"test-pool1"`},
 		Args:        []string{"-i", "list", "pools"},
 	}
 	Test.StandardTest(t)

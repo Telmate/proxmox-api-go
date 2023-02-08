@@ -20,8 +20,8 @@ type Test struct {
 	Expected string   //matches the output exactly
 	Contains []string //the output contains all of the strings
 
-	NotExpected string //the output that is not expected
-	NotContains bool   //if the output contains (not expected) or equals it
+	NotExpected string   //the output that is not expected
+	NotContains []string //the output may not contain any of these strings
 
 	ReqErr      bool   //if an error is expected as output
 	ErrContains string //the string the error should contain
@@ -72,10 +72,11 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 		}
 	}
 	if test.NotExpected != "" {
-		if test.NotContains {
-			assert.NotContains(t, string(out), test.NotExpected)
-		} else {
-			assert.NotEqual(t, string(out), test.NotExpected)
+		assert.NotEqual(t, string(out), test.NotExpected)
+	}
+	if len(test.NotContains) != 0 {
+		for _, e := range test.NotContains {
+			assert.NotContains(t, string(out), e)
 		}
 	}
 	switch outputJson := test.OutputJson.(type) {

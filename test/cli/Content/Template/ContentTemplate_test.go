@@ -16,8 +16,7 @@ const storage string = "local"
 
 func checkIfTemplateDoesNotExist(t *testing.T, template, node, storage string) {
 	Test := cliTest.Test{
-		NotExpected: template,
-		NotContains: true,
+		NotContains: []string{template},
 		Args:        []string{"-i", "list", "files", cliTest.FirstNode, storage, string(proxmox.ContentType_Template)},
 	}
 	Test.StandardTest(t)

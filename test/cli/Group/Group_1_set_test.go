@@ -84,8 +84,7 @@ func Test_Group_1_Set_Full_Update(t *testing.T) {
 
 func Test_Group_1_Get_Full(t *testing.T) {
 	Test := &cliTest.Test{
-		NotExpected: "group1-user11",
-		NotContains: true,
+		NotContains: []string{"group1-user11"},
 		Args:        []string{"-i", "get", "group", "group1"},
 	}
 	out := Test.StandardTest(t)
@@ -110,8 +109,7 @@ func Test_Group_1_Delete_User(t *testing.T) {
 
 func Test_Group_1_List_Group_NotExistent(t *testing.T) {
 	Test := &cliTest.Test{
-		NotExpected: "group1",
-		NotContains: true,
+		NotContains: []string{"group1"},
 		Args:        []string{"-i", "list", "groups"},
 	}
 	Test.StandardTest(t)
@@ -119,8 +117,7 @@ func Test_Group_1_List_Group_NotExistent(t *testing.T) {
 
 func Test_Group_1_List_User_NotExistent(t *testing.T) {
 	Test := &cliTest.Test{
-		NotExpected: "group1-user10@pve",
-		NotContains: true,
+		NotContains: []string{"group1-user10@pve"},
 		Args:        []string{"-i", "list", "users"},
 	}
 	Test.StandardTest(t)

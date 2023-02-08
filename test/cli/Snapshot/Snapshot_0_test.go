@@ -76,8 +76,7 @@ func Test_Snapshot_0_Update_Description_Empty(t *testing.T) {
 // Check if description is removed and the right json structure is returned (no tree)
 func Test_Snapshot_0_Get_Description_Empty(t *testing.T) {
 	Test := cliTest.Test{
-		NotExpected: "description00",
-		NotContains: true,
+		NotContains: []string{"description00"},
 		Return:      true,
 		Args:        []string{"-i", "list", "snapshots", "300", "--no-tree"},
 	}
@@ -171,8 +170,7 @@ func Test_Snapshot_0_Delete(t *testing.T) {
 // Check if the snapshot was deleted
 func Test_Snapshot_0_Get_Delete(t *testing.T) {
 	Test := cliTest.Test{
-		NotExpected: "snap00",
-		NotContains: true,
+		NotContains: []string{"snap00"},
 		Args:        []string{"-i", "list", "snapshots", "300"},
 	}
 	Test.StandardTest(t)
