@@ -5,6 +5,7 @@ import (
 
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_cli"
 )
 
 func Test_User_0_Cleanup(t *testing.T) {
@@ -20,19 +21,9 @@ func Test_User_0_Cleanup(t *testing.T) {
 
 func Test_User_0_Set_Full_With_Password_Set(t *testing.T) {
 	Test := cliTest.Test{
-		InputJson: `
-{
-	"comment": "this is a comment",
-	"email": "b.wayne@proxmox.com",
-	"enable": true,
-	"expire": 253370811600,
-	"firstname": "Bruce",
-	"lastname": "Wayne",
-	"groups": [],
-	"keys": "2fa key"
-}`,
-		Contains: []string{"(test-user0@pve)"},
-		Args:     []string{"-i", "set", "user", "test-user0@pve", "Enter123!"},
+		InputJson: test_data_cli.User_Full_testData(0),
+		Contains:  []string{"(test-user0@pve)"},
+		Args:      []string{"-i", "set", "user", "test-user0@pve", "Enter123!"},
 	}
 	Test.StandardTest(t)
 }
@@ -68,41 +59,17 @@ func Test_User_0_Login_Password_Changed(t *testing.T) {
 func Test_User_0_Get_Full(t *testing.T) {
 	cliTest.SetEnvironmentVariables()
 	Test := cliTest.Test{
-		OutputJson: `
-{
-	"user": {
-		"name": "test-user0",
-		"realm": "pve"
-	},
-	"comment": "this is a comment",
-	"email": "b.wayne@proxmox.com",
-	"enable": true,
-	"expire": 253370811600,
-	"firstname": "Bruce",
-	"groups": [],
-	"keys": "2fa key",
-	"lastname": "Wayne"
-}`,
-		Args: []string{"-i", "get", "user", "test-user0@pve"},
+		OutputJson: test_data_cli.User_Full_testData(0),
+		Args:       []string{"-i", "get", "user", "test-user0@pve"},
 	}
 	Test.StandardTest(t)
 }
 
 func Test_User_0_Set_Empty(t *testing.T) {
 	Test := cliTest.Test{
-		InputJson: `
-{
-	"comment": "",
-	"email": "",
-	"enable": false,
-	"expire": 0,
-	"firstname": "",
-	"lastname": "",
-	"groups": [],
-	"keys": ""
-}`,
-		Contains: []string{"(test-user0@pve)"},
-		Args:     []string{"-i", "set", "user", "test-user0@pve"},
+		InputJson: test_data_cli.User_Empty_testData(0),
+		Contains:  []string{"(test-user0@pve)"},
+		Args:      []string{"-i", "set", "user", "test-user0@pve"},
 	}
 	Test.StandardTest(t)
 }
@@ -110,17 +77,8 @@ func Test_User_0_Set_Empty(t *testing.T) {
 func Test_User_0_Get_Empty(t *testing.T) {
 	cliTest.SetEnvironmentVariables()
 	Test := cliTest.Test{
-		OutputJson: `
-{
-	"user": {
-		"name": "test-user0",
-		"realm": "pve"
-	},
-	"enable": false,
-	"expire": 0,
-	"groups": []
-}`,
-		Args: []string{"-i", "get", "user", "test-user0@pve"},
+		OutputJson: test_data_cli.User_Empty_testData(0),
+		Args:       []string{"-i", "get", "user", "test-user0@pve"},
 	}
 	Test.StandardTest(t)
 }
