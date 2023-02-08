@@ -36,8 +36,7 @@ func Test_ContentTemplate_Existence_Removed_0(t *testing.T) {
 
 func Test_ContentTemplate_Download(t *testing.T) {
 	Test := cliTest.Test{
-		Expected: "(" + cliTest.DownloadedLXCTemplate + ")",
-		Contains: true,
+		Contains: []string{"(" + cliTest.DownloadedLXCTemplate + ")"},
 		Args:     []string{"-i", "content", "template", "download", cliTest.FirstNode, storage, cliTest.DownloadedLXCTemplate},
 	}
 	Test.StandardTest(t)
@@ -58,8 +57,7 @@ func Test_ContentTemplate_List(t *testing.T) {
 
 func Test_ContentTemplate_Download_Delete(t *testing.T) {
 	Test := cliTest.Test{
-		Expected: cliTest.DownloadedLXCTemplate,
-		Contains: true,
+		Contains: []string{cliTest.DownloadedLXCTemplate},
 		Args:     []string{"-i", "delete", "file", cliTest.FirstNode, storage, string(proxmox.ContentType_Template), cliTest.DownloadedLXCTemplate},
 	}
 	Test.StandardTest(t)

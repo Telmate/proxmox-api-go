@@ -2,19 +2,20 @@ package cli_metricservers_test
 
 import (
 	"testing"
+
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
-func Test_MetricServer_InfluxDB_1_Cleanup(t *testing.T){
+func Test_MetricServer_InfluxDB_1_Cleanup(t *testing.T) {
 	Test := cliTest.Test{
 		ReqErr: true,
-		Args: []string{"-i","delete","metricserver","test-metricserver1"},
+		Args:   []string{"-i", "delete", "metricserver", "test-metricserver1"},
 	}
 	Test.StandardTest(t)
 }
 
-func Test_MetricServer_InfluxDB_1_Set_Empty(t *testing.T){
+func Test_MetricServer_InfluxDB_1_Set_Empty(t *testing.T) {
 	Test := cliTest.Test{
 		InputJson: `
 {
@@ -27,9 +28,8 @@ func Test_MetricServer_InfluxDB_1_Set_Empty(t *testing.T){
 		"verify-certificate": false
 	}
 }`,
-		Expected: "(test-metricserver1)",
-		Contains: true,
-		Args: []string{"-i","set","metricserver","test-metricserver1"},
+		Contains: []string{"(test-metricserver1)"},
+		Args:     []string{"-i", "set", "metricserver", "test-metricserver1"},
 	}
 	Test.StandardTest(t)
 }
@@ -54,12 +54,12 @@ func Test_MetricServer_InfluxDB_1_Get_Empty(t *testing.T) {
 		"verify-certificate": false
 	}
 }`,
-		Args: []string{"-i","get","metricserver","test-metricserver1"},
+		Args: []string{"-i", "get", "metricserver", "test-metricserver1"},
 	}
 	Test.StandardTest(t)
 }
 
-func Test_MetricServer_InfluxDB_1_Set_Full(t *testing.T){
+func Test_MetricServer_InfluxDB_1_Set_Full(t *testing.T) {
 	Test := cliTest.Test{
 		InputJson: `
 {
@@ -78,9 +78,8 @@ func Test_MetricServer_InfluxDB_1_Set_Full(t *testing.T){
 		"verify-certificate": false
 	}
 }`,
-		Expected: "(test-metricserver1)",
-		Contains: true,
-		Args: []string{"-i","set","metricserver","test-metricserver1"},
+		Contains: []string{"(test-metricserver1)"},
+		Args:     []string{"-i", "set", "metricserver", "test-metricserver1"},
 	}
 	Test.StandardTest(t)
 }
@@ -106,17 +105,15 @@ func Test_MetricServer_InfluxDB_1_Get_Full(t *testing.T) {
 		"verify-certificate": false
 	}
 }`,
-		Args: []string{"-i","get","metricserver","test-metricserver1"},
+		Args: []string{"-i", "get", "metricserver", "test-metricserver1"},
 	}
 	Test.StandardTest(t)
 }
 
-
-
-func Test_MetricServer_InfluxDB_1_Delete(t *testing.T){
+func Test_MetricServer_InfluxDB_1_Delete(t *testing.T) {
 	Test := cliTest.Test{
 		ReqErr: false,
-		Args: []string{"-i","delete","metricserver","test-metricserver1"},
+		Args:   []string{"-i", "delete", "metricserver", "test-metricserver1"},
 	}
 	Test.StandardTest(t)
 }

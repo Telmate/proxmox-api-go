@@ -28,12 +28,10 @@ func Test_User_0_Set_Full_With_Password_Set(t *testing.T) {
 	"expire": 253370811600,
 	"firstname": "Bruce",
 	"lastname": "Wayne",
-	"groups": [
-	],
+	"groups": [],
 	"keys": "2fa key"
 }`,
-		Expected: "(test-user0@pve)",
-		Contains: true,
+		Contains: []string{"(test-user0@pve)"},
 		Args:     []string{"-i", "set", "user", "test-user0@pve", "Enter123!"},
 	}
 	Test.StandardTest(t)
@@ -51,8 +49,7 @@ func Test_User_0_Login_Password_Set(t *testing.T) {
 
 func Test_User_0_Change_Password(t *testing.T) {
 	Test := cliTest.Test{
-		Expected: "(test-user0@pve)",
-		Contains: true,
+		Contains: []string{"(test-user0@pve)"},
 		Args:     []string{"-i", "set", "user", "test-user0@pve", "aBc123!"},
 	}
 	Test.StandardTest(t)
@@ -82,6 +79,7 @@ func Test_User_0_Get_Full(t *testing.T) {
 	"enable": true,
 	"expire": 253370811600,
 	"firstname": "Bruce",
+	"groups": [],
 	"keys": "2fa key",
 	"lastname": "Wayne"
 }`,
@@ -100,12 +98,10 @@ func Test_User_0_Set_Empty(t *testing.T) {
 	"expire": 0,
 	"firstname": "",
 	"lastname": "",
-	"groups": [
-	],
+	"groups": [],
 	"keys": ""
 }`,
-		Expected: "(test-user0@pve)",
-		Contains: true,
+		Contains: []string{"(test-user0@pve)"},
 		Args:     []string{"-i", "set", "user", "test-user0@pve"},
 	}
 	Test.StandardTest(t)
@@ -121,7 +117,8 @@ func Test_User_0_Get_Empty(t *testing.T) {
 		"realm": "pve"
 	},
 	"enable": false,
-	"expire": 0
+	"expire": 0,
+	"groups": []
 }`,
 		Args: []string{"-i", "get", "user", "test-user0@pve"},
 	}

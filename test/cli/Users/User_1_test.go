@@ -23,8 +23,7 @@ func Test_User_1_Set_Empty_Without_Password(t *testing.T) {
 	"enable": false,
 	"expire": 0
 }`,
-		Expected: "(test-user1@pve)",
-		Contains: true,
+		Contains: []string{"(test-user1@pve)"},
 		Args:     []string{"-i", "set", "user", "test-user1@pve"},
 	}
 	Test.StandardTest(t)
@@ -50,7 +49,8 @@ func Test_User_1_Get_Empty(t *testing.T) {
 		"realm": "pve"
 	},
 	"enable": false,
-	"expire": 0
+	"expire": 0,
+	"groups": []
 }`,
 		Args: []string{"-i", "get", "user", "test-user1@pve"},
 	}
@@ -67,12 +67,10 @@ func Test_User_1_Set_Full_With_Password(t *testing.T) {
 	"expire": 253370811600,
 	"firstname": "Bruce",
 	"lastname": "Wayne",
-	"groups": [
-	],
+	"groups": [],
 	"keys": "2fa key"
 }`,
-		Expected: "(test-user1@pve)",
-		Contains: true,
+		Contains: []string{"(test-user1@pve)"},
 		Args:     []string{"-i", "set", "user", "test-user1@pve", "Enter123!"},
 	}
 	Test.StandardTest(t)
@@ -103,6 +101,7 @@ func Test_User_1_Get_Full(t *testing.T) {
 	"expire": 253370811600,
 	"firstname": "Bruce",
 	"lastname": "Wayne",
+	"groups": [],
 	"keys": "2fa key"
 }`,
 		Args: []string{"-i", "get", "user", "test-user1@pve"},

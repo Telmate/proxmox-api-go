@@ -36,8 +36,7 @@ func Test_Group_1_Cleanup(t *testing.T) {
 
 func Test_Group_1_Create_User(t *testing.T) {
 	Test := &cliTest.Test{
-		Expected: "group1-user10@pve",
-		Contains: true,
+		Contains: []string{"group1-user10@pve"},
 		Args:     []string{"-i", "set", "user", "group1-user10@pve"},
 	}
 	Test.StandardTest(t)
@@ -45,8 +44,7 @@ func Test_Group_1_Create_User(t *testing.T) {
 
 func Test_Group_1_Set_Empty_Create(t *testing.T) {
 	Test := &cliTest.Test{
-		Expected: "(group1)",
-		Contains: true,
+		Contains: []string{"(group1)"},
 		Args:     []string{"-i", "set", "group", "group1"},
 	}
 	Test.StandardTest(t)
@@ -62,8 +60,7 @@ func Test_Group_1_Get_Empty_0(t *testing.T) {
 
 func Test_Group_1_Set_MembersNotDefined_Update(t *testing.T) {
 	Test := &cliTest.Test{
-		Expected: "(group1)",
-		Contains: true,
+		Contains: []string{"(group1)"},
 		Args:     []string{"-i", "set", "group", "group1"},
 	}
 	Test.StandardTest(t)
@@ -79,8 +76,7 @@ func Test_Group_1_Get_Empty_1(t *testing.T) {
 
 func Test_Group_1_Set_Full_Update(t *testing.T) {
 	Test := &cliTest.Test{
-		Expected: "(group1)",
-		Contains: true,
+		Contains: []string{"(group1)"},
 		Args:     []string{"-i", "set", "group", "group1", "comment", "--members=root@pam,group1-user10@pve,group1-user11@pve"},
 	}
 	Test.StandardTest(t)
@@ -98,8 +94,7 @@ func Test_Group_1_Get_Full(t *testing.T) {
 
 func Test_Group_1_Delete_Group(t *testing.T) {
 	Test := &cliTest.Test{
-		Expected: "group1",
-		Contains: true,
+		Contains: []string{"group1"},
 		Args:     []string{"-i", "delete", "group", "group1"},
 	}
 	Test.StandardTest(t)
@@ -107,8 +102,7 @@ func Test_Group_1_Delete_Group(t *testing.T) {
 
 func Test_Group_1_Delete_User(t *testing.T) {
 	Test := &cliTest.Test{
-		Expected: "group1-user10@pve",
-		Contains: true,
+		Contains: []string{"group1-user10@pve"},
 		Args:     []string{"-i", "delete", "user", "group1-user10@pve"},
 	}
 	Test.StandardTest(t)

@@ -28,8 +28,7 @@ func Test_Snapshot_0_GuestQemu_300_Create(t *testing.T) {
 	"cores": 1,
 	"sockets": 1
 }`,
-		Expected: "(300)",
-		Contains: true,
+		Contains: []string{"(300)"},
 		Args:     []string{"-i", "create", "guest", "qemu", "300", "pve"},
 	}
 	Test.StandardTest(t)
@@ -37,8 +36,7 @@ func Test_Snapshot_0_GuestQemu_300_Create(t *testing.T) {
 
 func Test_Snapshot_0_GuestQemu_300_Start(t *testing.T) {
 	Test := cliTest.Test{
-		Expected: "(300)",
-		Contains: true,
+		Contains: []string{"(300)"},
 		Args:     []string{"-i", "guest", "start", "300"},
 	}
 	Test.StandardTest(t)
@@ -47,8 +45,7 @@ func Test_Snapshot_0_GuestQemu_300_Start(t *testing.T) {
 // Create a snapshot with all settings populated
 func Test_Snapshot_0_Create_Full(t *testing.T) {
 	Test := cliTest.Test{
-		Expected: "(snap00)",
-		Contains: true,
+		Contains: []string{"(snap00)"},
 		Args:     []string{"-i", "create", "snapshot", "300", "snap00", "description00", "--memory"},
 	}
 	Test.StandardTest(t)
@@ -93,8 +90,7 @@ func Test_Snapshot_0_Create_Empty(t *testing.T) {
 	// t.(time.Second*120, true)
 	// time.Sleep(time.Second * 20)
 	Test := cliTest.Test{
-		Expected: "(snap01)",
-		Contains: true,
+		Contains: []string{"(snap01)"},
 		Args:     []string{"-i", "create", "snapshot", "300", "snap01"},
 	}
 	Test.StandardTest(t)
@@ -126,8 +122,7 @@ func Test_Snapshot_0_Update_Description_Full(t *testing.T) {
 // Check if description is added
 func Test_Snapshot_0_Get_Description_Full(t *testing.T) {
 	Test := cliTest.Test{
-		Expected: "description01",
-		Contains: true,
+		Contains: []string{"description01"},
 		Return:   true,
 		Args:     []string{"-i", "list", "snapshots", "300"},
 	}
@@ -138,8 +133,7 @@ func Test_Snapshot_0_Get_Description_Full(t *testing.T) {
 // rollback snapshot
 func Test_Snapshot_0_Set_Rollback(t *testing.T) {
 	Test := cliTest.Test{
-		Expected: "(snap00)",
-		Contains: true,
+		Contains: []string{"(snap00)"},
 		Args:     []string{"-i", "guest", "rollback", "300", "snap00"},
 	}
 	Test.StandardTest(t)
@@ -168,8 +162,7 @@ func Test_Snapshot_0_Get_Rollback(t *testing.T) {
 // delete snapshot
 func Test_Snapshot_0_Delete(t *testing.T) {
 	Test := cliTest.Test{
-		Expected: "(snap00)",
-		Contains: true,
+		Contains: []string{"(snap00)"},
 		Args:     []string{"-i", "delete", "snapshot", "300", "snap00"},
 	}
 	Test.StandardTest(t)

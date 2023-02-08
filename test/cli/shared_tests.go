@@ -17,8 +17,8 @@ type Test struct {
 	InputJson  string //the inputted json
 	OutputJson any    //the outputted json
 
-	Expected string //the output that is expected
-	Contains bool   //if the output contains (expected) or equals it
+	Expected string   //matches the output exactly
+	Contains []string //the output contains all of the strings
 
 	NotExpected string //the output that is not expected
 	NotContains bool   //if the output contains (not expected) or equals it
@@ -64,10 +64,11 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 		require.NoError(t, err)
 	}
 	if test.Expected != "" {
-		if test.Contains {
-			assert.Contains(t, string(out), test.Expected)
-		} else {
-			assert.Equal(t, string(out), test.Expected)
+		assert.Equal(t, string(out), test.Expected)
+	}
+	if len(test.Contains) != 0 {
+		for _, e := range test.Contains {
+			assert.Contains(t, string(out), e)
 		}
 	}
 	if test.NotExpected != "" {
