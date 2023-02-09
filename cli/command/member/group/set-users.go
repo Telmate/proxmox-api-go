@@ -9,7 +9,7 @@ import (
 var group_setCmd = &cobra.Command{
 	Use:   "set GROUP [ USERIDS ]",
 	Short: "Set the members of the specified group",
-	Long: `Add and remove users, so tho only the specified users will be members of the group.
+	Long: `Adds and removes users, so the only the specified users will be members of the group.
 	When no users are provided all users will be removed from the group.`,
 	Example: "clear myGroup admin@pve,root@pam",
 	Args:    cobra.RangeArgs(1, 2),
