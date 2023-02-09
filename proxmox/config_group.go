@@ -213,19 +213,6 @@ func (GroupName) mapToArray(params any) *[]GroupName {
 	return &groupList
 }
 
-// Recursively add and remove users from the specified group so only the the specified users will be members of the group
-func (group GroupName) SetMembers(members *[]UserID, client *Client) (err error) {
-	users, err := listUsersFull(client)
-	if err != nil {
-		return
-	}
-	err = configUserShort{}.updateUsersMembership(group.removeAllUsersFromGroupExcept(users, members), client)
-	if err != nil {
-		return
-	}
-	return configUserShort{}.updateUsersMembership(group.usersToAddToGroup(users, members), client)
-}
-
 // Recursively remove all users from the specified group
 func (group GroupName) RemoveAllUsersFromGroup(client *Client) (err error) {
 	users, err := listUsersFull(client)
@@ -311,6 +298,19 @@ func (group GroupName) RemoveUsersFromGroup(members *[]UserID, client *Client) (
 		return err
 	}
 	return configUserShort{}.updateUsersMembership(group.usersToRemoveFromGroup(users, members), client)
+}
+
+// Recursively add and remove users from the specified group so only the the specified users will be members of the group
+func (group GroupName) SetMembers(members *[]UserID, client *Client) (err error) {
+	users, err := listUsersFull(client)
+	if err != nil {
+		return
+	}
+	err = configUserShort{}.updateUsersMembership(group.removeAllUsersFromGroupExcept(users, members), client)
+	if err != nil {
+		return
+	}
+	return configUserShort{}.updateUsersMembership(group.usersToAddToGroup(users, members), client)
 }
 
 func (group GroupName) usersToAddToGroup(allUsers []interface{}, members *[]UserID) *[]configUserShort {
