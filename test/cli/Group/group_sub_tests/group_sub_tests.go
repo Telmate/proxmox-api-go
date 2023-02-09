@@ -36,7 +36,7 @@ func Get(t *testing.T, group proxmox.ConfigGroup) {
 	Get_Test(t, group, Test.StandardTest(t))
 }
 
-// Custom test as require.JSONEq() wont work here
+// Custom test as require.JSONEq() wont work here due to *[]UserID being an unordered list
 func Get_Test(t *testing.T, expected proxmox.ConfigGroup, actualRaw []byte) {
 	actual := proxmox.ConfigGroup{}
 	require.NoError(t, json.Unmarshal(actualRaw, &actual))
