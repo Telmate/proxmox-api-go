@@ -45,8 +45,7 @@ func Test_GuestQemu_100_Create(t *testing.T) {
 		}
 	}
 }`,
-		Expected: "(100)",
-		Contains: true,
+		Contains: []string{"(100)"},
 		Args:     []string{"-i", "create", "guest", "qemu", "100", "pve"},
 	}
 	Test.StandardTest(t)

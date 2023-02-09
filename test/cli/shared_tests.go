@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"strings"
 	"testing"
@@ -13,19 +14,20 @@ import (
 )
 
 type Test struct {
-	InputJson  string //the inputted json
-	OutputJson string //the outputted json
+	InputJson  any //the inputted json
+	OutputJson any //the outputted json
 
-	Expected string //the output that is expected
-	Contains bool   //if the output contains (expected) or qeuals it
+	Expected string   //matches the output exactly
+	Contains []string //the output contains all of the strings
 
-	NotExpected string //the output that is notexpected
-	NotContains bool   //if the output contains (notexpected) or qeuals it
+	NotExpected string   //the output that is not expected
+	NotContains []string //the output may not contain any of these strings
 
 	ReqErr      bool   //if an error is expected as output
 	ErrContains string //the string the error should contain
 
-	Return bool //if the output should be read and returned for more advanced prcessing
+	// TODO remove is obsolete
+	Return bool //if the output should be read and returned for more advanced processing
 
 	Args []string //cli arguments
 }
@@ -48,8 +50,23 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 	cli.RootCmd.SetArgs(test.Args)
 	buffer := new(bytes.Buffer)
 	cli.RootCmd.SetOut(buffer)
-	cli.RootCmd.SetIn(strings.NewReader(test.InputJson))
+
+	switch InputJson := test.InputJson.(type) {
+	case string:
+		if InputJson != "" {
+			cli.RootCmd.SetIn(strings.NewReader(InputJson))
+		}
+	default:
+		if InputJson != nil {
+			tmpJson, err := json.Marshal(InputJson)
+			require.NoError(t, err)
+			cli.RootCmd.SetIn(strings.NewReader(string(tmpJson)))
+		}
+	}
+
 	err := cli.RootCmd.Execute()
+
+	out, _ = io.ReadAll(buffer)
 
 	if test.ReqErr {
 		require.Error(t, err)
@@ -60,27 +77,32 @@ func (test *Test) StandardTest(t *testing.T) (out []byte) {
 		require.NoError(t, err)
 	}
 	if test.Expected != "" {
-		out, _ = io.ReadAll(buffer)
-		if test.Contains {
-			assert.Contains(t, string(out), test.Expected)
-		} else {
-			assert.Equal(t, string(out), test.Expected)
+		assert.Equal(t, string(out), test.Expected)
+	}
+	if len(test.Contains) != 0 {
+		for _, e := range test.Contains {
+			assert.Contains(t, string(out), e)
 		}
 	}
 	if test.NotExpected != "" {
-		out, _ = io.ReadAll(buffer)
-		if test.NotContains {
-			assert.NotContains(t, string(out), test.NotExpected)
-		} else {
-			assert.NotEqual(t, string(out), test.NotExpected)
+		assert.NotEqual(t, string(out), test.NotExpected)
+	}
+	if len(test.NotContains) != 0 {
+		for _, e := range test.NotContains {
+			assert.NotContains(t, string(out), e)
 		}
 	}
-	if test.OutputJson != "" {
-		out, _ = io.ReadAll(buffer)
-		require.JSONEq(t, test.OutputJson, string(out))
-	}
-	if test.Return && len(out) == 0 {
-		out, _ = io.ReadAll(buffer)
+	switch outputJson := test.OutputJson.(type) {
+	case string:
+		if outputJson != "" {
+			require.JSONEq(t, outputJson, string(out))
+		}
+	default:
+		if outputJson != nil {
+			tmpJson, err := json.Marshal(outputJson)
+			require.NoError(t, err)
+			require.JSONEq(t, string(tmpJson), string(out))
+		}
 	}
 	return
 }
