@@ -172,7 +172,22 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 	}, "/access/password")
 }
 
-func (config ConfigUser) Validate() error {
+// Validates all items and sub items in the ConfigUser struct
+func (config ConfigUser) Validate() (err error) {
+	err = config.User.Validate()
+	if err != nil {
+		return
+	}
+	if config.Groups != nil {
+		if len(*config.Groups) != 0 {
+			for _, e := range *config.Groups {
+				err = e.Validate()
+				if err != nil {
+					return
+				}
+			}
+		}
+	}
 	return config.Password.Validate()
 }
 

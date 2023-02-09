@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_group"
 	"github.com/stretchr/testify/require"
 )
 
@@ -352,31 +353,50 @@ func Test_ConfigUser_mapToStruct(t *testing.T) {
 	}
 }
 
-// TODO improve test when a validation function for the UserID exists
+// TODO improve when Name and Realm have their own types
 func Test_ConfigUser_Validate(t *testing.T) {
+	userId := UserID{Name: "user", Realm: "pam"}
 	testData := []struct {
 		input ConfigUser
 		err   bool
 	}{
+		// Empty
 		{
 			input: ConfigUser{},
+			err:   true,
+		},
+		// UserID
+		{
+			input: ConfigUser{User: UserID{Name: "user"}},
+			err:   true,
+		},
+		// Groups
+		{
+			input: ConfigUser{
+				User:   userId,
+				Groups: &[]GroupName{"group1", "group2", "group3"},
+			},
 		},
 		{
 			input: ConfigUser{
-				Password: "aaa",
+				User:   userId,
+				Groups: &[]GroupName{GroupName(test_data_group.GroupName_Max_Illegal())},
 			},
 			err: true,
 		},
+		// Password
 		{
-			input: ConfigUser{
-				Password: "aaaaa",
-			},
+			input: ConfigUser{User: userId, Password: "aaa"},
+			err:   true,
 		},
+		{input: ConfigUser{User: userId, Password: "aaaaa"}},
 	}
 	for _, e := range testData {
 		err := e.input.Validate()
 		if e.err {
 			require.Error(t, err)
+		} else {
+			require.NoError(t, err)
 		}
 	}
 }
