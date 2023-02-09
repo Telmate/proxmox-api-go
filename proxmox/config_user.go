@@ -21,7 +21,8 @@ type ConfigUser struct {
 	Groups    *[]GroupName `json:"groups,omitempty"`
 	Keys      string       `json:"keys,omitempty"`
 	LastName  string       `json:"lastname,omitempty"`
-	Password  UserPassword `json:"-"`
+	// Password is always empty when getting information from Proxmox
+	Password UserPassword `json:"-"`
 }
 
 func (config ConfigUser) CreateUser(client *Client) (err error) {
