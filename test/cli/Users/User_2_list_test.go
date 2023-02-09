@@ -10,16 +10,11 @@ import (
 
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
+	"github.com/Telmate/proxmox-api-go/test/cli/Group/group_sub_tests"
 )
 
 func Test_User_2_Cleanup(t *testing.T) {
-	// remove group
-	Test := &cliTest.Test{
-		ReqErr:      true,
-		ErrContains: "user2-group",
-		Args:        []string{"-i", "delete", "group", "user2-group"},
-	}
-	Test.StandardTest(t)
+	group_sub_tests.Cleanup(t, "user2-group")
 }
 
 func Test_User_2_Set_Group(t *testing.T) {
@@ -48,8 +43,5 @@ func Test_User_2_List_With_Group(t *testing.T) {
 }
 
 func Test_User_2_Group_Delete(t *testing.T) {
-	Test := &cliTest.Test{
-		Args: []string{"-i", "delete", "group", "user2-group"},
-	}
-	Test.StandardTest(t)
+	group_sub_tests.Delete(t, "user2-group")
 }

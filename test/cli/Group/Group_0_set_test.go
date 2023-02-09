@@ -3,8 +3,10 @@ package group_test
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/proxmox"
 	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 	"github.com/Telmate/proxmox-api-go/test/cli/Group/group_sub_tests"
+	"github.com/Telmate/proxmox-api-go/test/cli/Users/user_sub_tests"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_cli"
 )
 
@@ -18,20 +20,8 @@ import (
 // Check items deleted
 
 func Test_Group_0_Cleanup(t *testing.T) {
-	// remove group
-	Test := &cliTest.Test{
-		ReqErr:      true,
-		ErrContains: "group0",
-		Args:        []string{"-i", "delete", "group", "group0"},
-	}
-	Test.StandardTest(t)
-	// remove user 00
-	Test = &cliTest.Test{
-		ReqErr:      true,
-		ErrContains: "group0-user00@pve",
-		Args:        []string{"-i", "delete", "user", "group0-user00@pve"},
-	}
-	Test.StandardTest(t)
+	group_sub_tests.Cleanup(t, "group0")
+	user_sub_tests.Cleanup(t, proxmox.UserID{Name: "group0-user00", Realm: "pve"})
 }
 
 func Test_Group_0_Create_User(t *testing.T) {
@@ -68,11 +58,7 @@ func Test_Group_0_Set_MembersNotDefined_Update(t *testing.T) {
 }
 
 func Test_Group_0_Get_Full_1(t *testing.T) {
-	Test := &cliTest.Test{
-		Args: []string{"-i", "get", "group", "group0"},
-	}
-	out := Test.StandardTest(t)
-	group_sub_tests.Get_Test(t, test_data_cli.Group_Get_Full_testData(0), out)
+	group_sub_tests.Get(t, test_data_cli.Group_Get_Full_testData(0))
 }
 
 func Test_Group_0_Set_Empty_Create(t *testing.T) {
@@ -84,27 +70,15 @@ func Test_Group_0_Set_Empty_Create(t *testing.T) {
 }
 
 func Test_Group_0_Get_Empty(t *testing.T) {
-	Test := &cliTest.Test{
-		Args: []string{"-i", "get", "group", "group0"},
-	}
-	out := Test.StandardTest(t)
-	group_sub_tests.Get_Test(t, test_data_cli.Group_Get_Empty_testData(0), out)
+	group_sub_tests.Get(t, test_data_cli.Group_Get_Empty_testData(0))
 }
 
 func Test_Group_0_Delete_Group(t *testing.T) {
-	Test := &cliTest.Test{
-		Contains: []string{"group0"},
-		Args:     []string{"-i", "delete", "group", "group0"},
-	}
-	Test.StandardTest(t)
+	group_sub_tests.Delete(t, "group0")
 }
 
 func Test_Group_0_Delete_User(t *testing.T) {
-	Test := &cliTest.Test{
-		Contains: []string{"group0-user00@pve"},
-		Args:     []string{"-i", "delete", "user", "group0-user00@pve"},
-	}
-	Test.StandardTest(t)
+	user_sub_tests.Delete(t, proxmox.UserID{Name: "group0-user00", Realm: "pve"})
 }
 
 func Test_Group_0_List_Group_NotExistent(t *testing.T) {

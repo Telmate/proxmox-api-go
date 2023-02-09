@@ -4,17 +4,14 @@ import (
 	"testing"
 
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	"github.com/Telmate/proxmox-api-go/proxmox"
 	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
+	"github.com/Telmate/proxmox-api-go/test/cli/Users/user_sub_tests"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_cli"
 )
 
 func Test_User_0_Cleanup(t *testing.T) {
-	Test := cliTest.Test{
-		ReqErr:      true,
-		ErrContains: "test-user0@pve",
-		Args:        []string{"-i", "delete", "user", "test-user0@pve"},
-	}
-	Test.StandardTest(t)
+	user_sub_tests.Cleanup(t, proxmox.UserID{Name: "test-user0", Realm: "pve"})
 }
 
 // Set groups
@@ -66,12 +63,7 @@ func Test_User_0_Get_Full(t *testing.T) {
 }
 
 func Test_User_0_Set_Empty(t *testing.T) {
-	Test := cliTest.Test{
-		InputJson: test_data_cli.User_Empty_testData(0),
-		Contains:  []string{"(test-user0@pve)"},
-		Args:      []string{"-i", "set", "user", "test-user0@pve"},
-	}
-	Test.StandardTest(t)
+	user_sub_tests.Set(t, test_data_cli.User_Empty_testData(0))
 }
 
 func Test_User_0_Get_Empty(t *testing.T) {
@@ -84,10 +76,5 @@ func Test_User_0_Get_Empty(t *testing.T) {
 }
 
 func Test_User_0_Delete(t *testing.T) {
-	Test := cliTest.Test{
-		Expected: "",
-		ReqErr:   false,
-		Args:     []string{"-i", "delete", "user", "test-user0@pve"},
-	}
-	Test.StandardTest(t)
+	user_sub_tests.Delete(t, proxmox.UserID{Name: "test-user0", Realm: "pve"})
 }
