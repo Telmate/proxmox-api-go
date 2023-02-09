@@ -50,6 +50,25 @@ func (config ConfigUser) DeleteUser(client *Client) (err error) {
 	return client.Delete("/access/users/" + config.User.ToString())
 }
 
+// Maps the struct to the API values proxmox understands
+func (config ConfigUser) mapToApiValues(create bool) (params map[string]interface{}) {
+	params = map[string]interface{}{
+		"comment":   config.Comment,
+		"email":     config.Email,
+		"enable":    config.Enable,
+		"expire":    config.Expire,
+		"firstname": config.FirstName,
+		"groups":    GroupName("").arrayToCsv(config.Groups),
+		"keys":      config.Keys,
+		"lastname":  config.LastName,
+	}
+	if create {
+		params["password"] = config.Password
+		params["userid"] = config.User.ToString()
+	}
+	return
+}
+
 func (ConfigUser) mapToArray(params []interface{}) *[]ConfigUser {
 	users := make([]ConfigUser, len(params))
 	for i, e := range params {
@@ -88,25 +107,6 @@ func (config ConfigUser) mapToStruct(params map[string]interface{}) *ConfigUser 
 		config.Groups = GroupName("").mapToArray(params["groups"])
 	}
 	return &config
-}
-
-// Maps the struct to the API values proxmox understands
-func (config ConfigUser) mapToApiValues(create bool) (params map[string]interface{}) {
-	params = map[string]interface{}{
-		"comment":   config.Comment,
-		"email":     config.Email,
-		"enable":    config.Enable,
-		"expire":    config.Expire,
-		"firstname": config.FirstName,
-		"groups":    GroupName("").arrayToCsv(config.Groups),
-		"keys":      config.Keys,
-		"lastname":  config.LastName,
-	}
-	if create {
-		params["password"] = config.Password
-		params["userid"] = config.User.ToString()
-	}
-	return
 }
 
 // Create or update the user depending on if the user already exists or not.
@@ -265,6 +265,16 @@ func (password UserPassword) Validate() error {
 	return errors.New("the minimum password length is 5")
 }
 
+// Check if the user already exists in proxmox.
+func CheckUserExistence(userId UserID, client *Client) (existence bool, err error) {
+	list, err := listUsersPartial(client)
+	if err != nil {
+		return
+	}
+	existence = ItemInKeyOfArray(list, "userid", userId.ToString())
+	return
+}
+
 // List all users that exist in proxmox
 // Setting full to TRUE the output wil include group information.
 // Depending on the number of existing groups it take substantially longer to parse
@@ -290,16 +300,6 @@ func listUsersPartial(client *Client) ([]interface{}, error) {
 // Returns users with group information
 func listUsersFull(client *Client) ([]interface{}, error) {
 	return client.GetItemListInterfaceArray("/access/users?full=1")
-}
-
-// Check if the user already exists in proxmox.
-func CheckUserExistence(userId UserID, client *Client) (existence bool, err error) {
-	list, err := listUsersPartial(client)
-	if err != nil {
-		return
-	}
-	existence = ItemInKeyOfArray(list, "userid", userId.ToString())
-	return
 }
 
 func NewConfigUserFromApi(userId UserID, client *Client) (*ConfigUser, error) {
