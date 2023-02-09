@@ -24,7 +24,10 @@ func (config *ConfigGroup) Create(client *Client) error {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Group: %v, (params: %v)", err, string(params))
 	}
-	return config.Name.setMembers(config.Members, client)
+	if config.Members != nil {
+		return config.Name.SetMembers(config.Members, client)
+	}
+	return nil
 }
 
 // Maps the struct to the API values proxmox understands
@@ -84,7 +87,10 @@ func (config *ConfigGroup) Update(client *Client) error {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating Group: %v, (params: %v)", err, string(params))
 	}
-	return config.Name.setMembers(config.Members, client)
+	if config.Members != nil {
+		return config.Name.SetMembers(config.Members, client)
+	}
+	return nil
 }
 
 // Validates all items and sub items of the ConfigGroup
@@ -199,10 +205,7 @@ func (GroupName) mapToArray(params any) *[]GroupName {
 }
 
 // Recursively add and remove users from the specified group so only the the specified users will be members of the group
-func (group GroupName) setMembers(members *[]UserID, client *Client) (err error) {
-	if members == nil {
-		return
-	}
+func (group GroupName) SetMembers(members *[]UserID, client *Client) (err error) {
 	users, err := listUsersFull(client)
 	if err != nil {
 		return
