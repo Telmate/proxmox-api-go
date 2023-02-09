@@ -116,6 +116,15 @@ func (config *ConfigGroup) Validate(create bool) (err error) {
 // GroupName may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
 type GroupName string
 
+// Add users to the specified group
+func (group GroupName) AddUsersToGroup(members *[]UserID, client *Client) error {
+	users, err := listUsersFull(client)
+	if err != nil {
+		return err
+	}
+	return configUserShort{}.updateUsersMembership(group.usersToAddToGroup(users, members), client)
+}
+
 // Convert a array of GroupName to a comma separated string
 func (GroupName) arrayToCsv(groupList *[]GroupName) (groups string) {
 	if groupList == nil {
