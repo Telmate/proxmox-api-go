@@ -540,6 +540,63 @@ func Test_GroupName_usersToAddToGroup(t *testing.T) {
 	}
 }
 
+func Test_GroupName_usersToRemoveFromGroup(t *testing.T) {
+	testData := []struct {
+		group   GroupName
+		members *[]UserID
+		users   []interface{}
+		output  *[]configUserShort
+	}{
+		// group empty
+		{
+			members: &[]UserID{{Name: "user1", Realm: "pve"}},
+			users:   test_data_group.UserMap(),
+		},
+		// members nil
+		{
+			group: "group1",
+			users: test_data_group.UserMap(),
+		},
+		// members empty
+		{
+			group:   "group1",
+			members: &[]UserID{},
+			users:   test_data_group.UserMap(),
+			output:  &[]configUserShort{},
+		},
+		// users empty
+		{
+			group:   "group1",
+			members: &[]UserID{{Name: "user1", Realm: "pve"}},
+			output:  &[]configUserShort{},
+		},
+		// good result
+		{
+			group: "group1",
+			members: &[]UserID{
+				{Name: "user1", Realm: "pve"},
+				{Name: "user2", Realm: "pve"},
+				{Name: "user5", Realm: "pve"},
+				{Name: "user6", Realm: "pve"},
+			},
+			users: test_data_group.UserMap(),
+			output: &[]configUserShort{
+				{
+					User:   UserID{Name: "user2", Realm: "pve"},
+					Groups: &[]GroupName{},
+				},
+				{
+					User:   UserID{Name: "user5", Realm: "pve"},
+					Groups: &[]GroupName{"group2", "group3"},
+				},
+			},
+		},
+	}
+	for _, e := range testData {
+		require.Equal(t, e.output, e.group.usersToRemoveFromGroup(e.users, e.members))
+	}
+}
+
 func Test_GroupName_Validate(t *testing.T) {
 	testRunes := struct {
 		legal   []string

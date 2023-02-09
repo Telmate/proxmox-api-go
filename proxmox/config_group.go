@@ -304,6 +304,15 @@ func (group GroupName) removeFromArray(groups []GroupName) []GroupName {
 	return newGroups
 }
 
+// Remove users from the specified group
+func (group GroupName) RemoveUsersFromGroup(members *[]UserID, client *Client) (err error) {
+	users, err := listUsersFull(client)
+	if err != nil {
+		return err
+	}
+	return configUserShort{}.updateUsersMembership(group.usersToRemoveFromGroup(users, members), client)
+}
+
 func (group GroupName) usersToAddToGroup(allUsers []interface{}, members *[]UserID) *[]configUserShort {
 	if group == "" || members == nil {
 		return nil
@@ -322,6 +331,32 @@ func (group GroupName) usersToAddToGroup(allUsers []interface{}, members *[]User
 				}
 				if !group.inArray(groups) {
 					groups = append(groups, group)
+					usersToUpdate = append(usersToUpdate, configUserShort{User: (*members)[ii], Groups: &groups})
+				}
+			}
+		}
+	}
+	return &usersToUpdate
+}
+
+func (group GroupName) usersToRemoveFromGroup(allUsers []interface{}, members *[]UserID) *[]configUserShort {
+	if group == "" || members == nil {
+		return nil
+	}
+	usersToUpdate := []configUserShort{}
+	for _, e := range allUsers {
+		params := e.(map[string]interface{})
+		if _, isSet := params["userid"]; !isSet {
+			continue
+		}
+		for ii, ee := range *members {
+			if params["userid"] == ee.ToString() {
+				var groups []GroupName
+				if _, isSet := params["groups"]; isSet {
+					groups = GroupName("").csvToArray(params["groups"].(string))
+				}
+				if group.inArray(groups) {
+					groups = group.removeFromArray(groups)
 					usersToUpdate = append(usersToUpdate, configUserShort{User: (*members)[ii], Groups: &groups})
 				}
 			}
