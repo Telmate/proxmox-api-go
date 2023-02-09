@@ -23,7 +23,7 @@ func User_Full_testData(testNumber uint) proxmox.ConfigUser {
 		Enable:    true,
 		Expire:    253370811600,
 		FirstName: "Bruce",
-		Groups:    &[]proxmox.GroupName{},
+		Groups:    &[]proxmox.GroupName{proxmox.GroupName(fmt.Sprintf("user%d-group%d", testNumber, testNumber))},
 		Keys:      "2fa key",
 		LastName:  "Wayne",
 	}

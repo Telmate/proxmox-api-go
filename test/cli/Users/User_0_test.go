@@ -6,15 +6,23 @@ import (
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
+	"github.com/Telmate/proxmox-api-go/test/cli/Group/group_sub_tests"
 	"github.com/Telmate/proxmox-api-go/test/cli/Users/user_sub_tests"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_cli"
 )
 
 func Test_User_0_Cleanup(t *testing.T) {
 	user_sub_tests.Cleanup(t, proxmox.UserID{Name: "test-user0", Realm: "pve"})
+	group_sub_tests.Cleanup(t, proxmox.GroupName("user0-group0"))
 }
 
-// Set groups
+func Test_User_0_Set_Group(t *testing.T) {
+	Test := cliTest.Test{
+		Contains: []string{"(user0-group0)"},
+		Args:     []string{"-i", "set", "group", "user0-group0"},
+	}
+	Test.StandardTest(t)
+}
 
 func Test_User_0_Set_Full_With_Password_Set(t *testing.T) {
 	Test := cliTest.Test{
@@ -77,4 +85,5 @@ func Test_User_0_Get_Empty(t *testing.T) {
 
 func Test_User_0_Delete(t *testing.T) {
 	user_sub_tests.Delete(t, proxmox.UserID{Name: "test-user0", Realm: "pve"})
+	group_sub_tests.Delete(t, proxmox.GroupName("user0-group0"))
 }
