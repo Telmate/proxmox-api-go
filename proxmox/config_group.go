@@ -214,6 +214,17 @@ func (group GroupName) setMembers(members *[]UserID, client *Client) (err error)
 	return configUserShort{}.updateUsersMembership(group.usersToAddToGroup(users, members), client)
 }
 
+// Recursively remove all users from the specified group
+func (group GroupName) RemoveAllUsersFromGroup(client *Client) (err error) {
+	users, err := listUsersFull(client)
+	if err != nil {
+		return
+	}
+	return configUserShort{}.updateUsersMembership(group.removeAllUsersFromGroup(users), client)
+}
+
+// Generate a array of users with their updated group memberships.
+// This list only includes users who where a member of the specified GroupName.
 func (group GroupName) removeAllUsersFromGroup(allUsers []interface{}) *[]configUserShort {
 	usersToUpdate := []configUserShort{}
 	for _, e := range allUsers {
