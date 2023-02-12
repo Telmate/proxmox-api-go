@@ -283,7 +283,7 @@ func (password UserPassword) Validate() error {
 
 // Check if the user already exists in proxmox.
 func CheckUserExistence(userId UserID, client *Client) (existence bool, err error) {
-	list, err := listUsersPartial(client)
+	list, err := listUsersFull(client)
 	if err != nil {
 		return
 	}
