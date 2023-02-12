@@ -226,7 +226,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 // HasCloudInit - are there cloud-init options?
 func (config ConfigQemu) HasCloudInit() bool {
 	for _, config := range config.Ipconfig {
-		if config != nil {
+		if config != nil && config != "" {
 			return true
 		}
 	}
