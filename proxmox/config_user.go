@@ -287,6 +287,8 @@ func CheckUserExistence(userId UserID, client *Client) (existence bool, err erro
 	if err != nil {
 		return
 	}
+	// TODO: This should be refactored
+	// https://github.com/Telmate/proxmox-api-go/issues/236
 	existence = ItemInKeyOfArray(list, "userid", userId.ToString())
 	return
 }
