@@ -1,0 +1,6 @@
+kind: New features
+body: add 'get storage' API endpoint
+time: 2023-02-15T10:25:46.093067+02:00
+custom:
+  JiraID: "21463"
+  PR: "5"
