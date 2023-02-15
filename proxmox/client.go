@@ -24,6 +24,12 @@ const TaskStatusCheckInterval = 2
 
 const exitStatusSuccess = "OK"
 
+const (
+	requestNumberRetries = 3
+	nodes                = "nodes"
+	storage              = "storage"
+)
+
 // Client - URL, user and password to specific Proxmox node
 type Client struct {
 	session     *Session
@@ -254,6 +260,29 @@ func (c *Client) GetVmConfig(vmr *VmRef) (vmConfig map[string]interface{}, err e
 		return nil, err
 	}
 	return c.GetItemConfigMapStringInterface("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config", "vm", "CONFIG")
+}
+
+// GetStorage Get status for all datastores
+func (c *Client) GetStorage(nodeName string) (storageStatus []interface{}, err error) {
+	var data map[string]interface{}
+	url := fmt.Sprintf("/%s/%s/%s/", nodes, nodeName, storage)
+
+	err = c.GetJsonRetryable(url, &data, requestNumberRetries)
+	if err != nil {
+		return nil, err
+	}
+	if data["data"] == nil {
+		return nil, fmt.Errorf("storage STATUS not readable")
+	}
+
+	dataSlice, ok := data["data"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("data conversion failed to []interface{}")
+	}
+
+	storageStatus = dataSlice
+
+	return
 }
 
 func (c *Client) GetStorageStatus(vmr *VmRef, storageName string) (storageStatus map[string]interface{}, err error) {
