@@ -204,3 +204,12 @@ func createHeaderList(header_string string, sess *Session) (*Session, error) {
 	}
 	return sess, nil
 }
+
+func splitStringOfSettings(settings string) (settingArray [][]string) {
+	settingValuePairs := strings.Split(settings, ",")
+	settingArray = make([][]string, len(settingValuePairs))
+	for i, e := range settingValuePairs {
+		settingArray[i] = strings.SplitN(e, "=", 2)
+	}
+	return
+}
