@@ -1,17 +1,34 @@
 package proxmox
 
 type QemuScsiDisk struct {
-	AsyncIO    QemuDiskAsyncIO
-	Backup     bool
-	Bandwidth  QemuDiskBandwidth
-	Cache      QemuDiskCache
-	Discard    bool
-	EmulateSSD bool
-	IOThread   bool
-	ReadOnly   bool
-	Replicate  bool
-	Size       uint
-	Storage    string
+	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup     bool              `json:"backup,omitempty"`
+	Bandwidth  QemuDiskBandwidth `json:"bandwith,omitempty"`
+	Cache      QemuDiskCache     `json:"cache,omitempty"`
+	Discard    bool              `json:"discard,omitempty"`
+	EmulateSSD bool              `json:"emulatessd,omitempty"`
+	IOThread   bool              `json:"iothread,omitempty"`
+	ReadOnly   bool              `json:"readonly,omitempty"`
+	Replicate  bool              `json:"replicate,omitempty"`
+	Size       uint              `json:"size,omitempty"`
+	Storage    string            `json:"storage,omitempty"`
+}
+
+func (disk QemuScsiDisk) mapToApiValues(create bool) string {
+	return qemuDisk{
+		AsyncIO:    disk.AsyncIO,
+		Backup:     disk.Backup,
+		Bandwidth:  disk.Bandwidth,
+		Cache:      disk.Cache,
+		Discard:    disk.Discard,
+		EmulateSSD: disk.EmulateSSD,
+		IOThread:   disk.IOThread,
+		ReadOnly:   disk.ReadOnly,
+		Replicate:  disk.Replicate,
+		Size:       disk.Size,
+		Storage:    disk.Storage,
+		Type:       scsi,
+	}.mapToApiValues(create)
 }
 
 type QemuScsiDisks struct {
@@ -46,6 +63,102 @@ type QemuScsiDisks struct {
 	Disk_28 *QemuScsiStorage
 	Disk_29 *QemuScsiStorage
 	Disk_30 *QemuScsiStorage
+}
+
+func (disks QemuScsiDisks) mapToApiValues(create bool, params map[string]interface{}) {
+	if disks.Disk_0 != nil {
+		params["scsi0"] = disks.Disk_0.mapToApiValues(create)
+	}
+	if disks.Disk_1 != nil {
+		params["scsi1"] = disks.Disk_1.mapToApiValues(create)
+	}
+	if disks.Disk_2 != nil {
+		params["scsi2"] = disks.Disk_2.mapToApiValues(create)
+	}
+	if disks.Disk_3 != nil {
+		params["scsi3"] = disks.Disk_3.mapToApiValues(create)
+	}
+	if disks.Disk_4 != nil {
+		params["scsi4"] = disks.Disk_4.mapToApiValues(create)
+	}
+	if disks.Disk_5 != nil {
+		params["scsi5"] = disks.Disk_5.mapToApiValues(create)
+	}
+	if disks.Disk_6 != nil {
+		params["scsi6"] = disks.Disk_6.mapToApiValues(create)
+	}
+	if disks.Disk_7 != nil {
+		params["scsi7"] = disks.Disk_7.mapToApiValues(create)
+	}
+	if disks.Disk_8 != nil {
+		params["scsi8"] = disks.Disk_8.mapToApiValues(create)
+	}
+	if disks.Disk_9 != nil {
+		params["scsi9"] = disks.Disk_9.mapToApiValues(create)
+	}
+	if disks.Disk_10 != nil {
+		params["scsi10"] = disks.Disk_10.mapToApiValues(create)
+	}
+	if disks.Disk_11 != nil {
+		params["scsi11"] = disks.Disk_11.mapToApiValues(create)
+	}
+	if disks.Disk_12 != nil {
+		params["scsi12"] = disks.Disk_12.mapToApiValues(create)
+	}
+	if disks.Disk_13 != nil {
+		params["scsi13"] = disks.Disk_13.mapToApiValues(create)
+	}
+	if disks.Disk_14 != nil {
+		params["scsi14"] = disks.Disk_14.mapToApiValues(create)
+	}
+	if disks.Disk_15 != nil {
+		params["scsi15"] = disks.Disk_15.mapToApiValues(create)
+	}
+	if disks.Disk_16 != nil {
+		params["scsi16"] = disks.Disk_16.mapToApiValues(create)
+	}
+	if disks.Disk_17 != nil {
+		params["scsi17"] = disks.Disk_17.mapToApiValues(create)
+	}
+	if disks.Disk_18 != nil {
+		params["scsi18"] = disks.Disk_18.mapToApiValues(create)
+	}
+	if disks.Disk_19 != nil {
+		params["scsi19"] = disks.Disk_19.mapToApiValues(create)
+	}
+	if disks.Disk_20 != nil {
+		params["scsi20"] = disks.Disk_20.mapToApiValues(create)
+	}
+	if disks.Disk_21 != nil {
+		params["scsi21"] = disks.Disk_21.mapToApiValues(create)
+	}
+	if disks.Disk_22 != nil {
+		params["scsi22"] = disks.Disk_22.mapToApiValues(create)
+	}
+	if disks.Disk_23 != nil {
+		params["scsi23"] = disks.Disk_23.mapToApiValues(create)
+	}
+	if disks.Disk_24 != nil {
+		params["scsi24"] = disks.Disk_24.mapToApiValues(create)
+	}
+	if disks.Disk_25 != nil {
+		params["scsi25"] = disks.Disk_25.mapToApiValues(create)
+	}
+	if disks.Disk_26 != nil {
+		params["scsi26"] = disks.Disk_26.mapToApiValues(create)
+	}
+	if disks.Disk_27 != nil {
+		params["scsi27"] = disks.Disk_27.mapToApiValues(create)
+	}
+	if disks.Disk_28 != nil {
+		params["scsi28"] = disks.Disk_28.mapToApiValues(create)
+	}
+	if disks.Disk_29 != nil {
+		params["scsi29"] = disks.Disk_29.mapToApiValues(create)
+	}
+	if disks.Disk_30 != nil {
+		params["scsi30"] = disks.Disk_30.mapToApiValues(create)
+	}
 }
 
 func (QemuScsiDisks) mapToStruct(params map[string]interface{}) *QemuScsiDisks {
@@ -195,11 +308,32 @@ type QemuScsiPassthrough struct {
 	Size       uint
 }
 
+// TODO write function
+func (passthrough QemuScsiPassthrough) mapToApiValues() string {
+	return ""
+}
+
 type QemuScsiStorage struct {
 	CdRom       *QemuCdRom
 	CloudInit   *QemuCloudInitDisk
 	Disk        *QemuScsiDisk
 	Passthrough *QemuScsiPassthrough
+}
+
+func (storage QemuScsiStorage) mapToApiValues(create bool) string {
+	if storage.Disk != nil {
+		return storage.Disk.mapToApiValues(create)
+	}
+	if storage.CdRom != nil {
+		return storage.CdRom.mapToApiValues()
+	}
+	if storage.CloudInit != nil {
+		return storage.CloudInit.mapToApiValues()
+	}
+	if storage.Passthrough != nil {
+		return storage.Passthrough.mapToApiValues()
+	}
+	return ""
 }
 
 func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {

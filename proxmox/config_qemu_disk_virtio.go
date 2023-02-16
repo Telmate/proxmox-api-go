@@ -1,15 +1,31 @@
 package proxmox
 
 type QemuVirtIODisk struct {
-	AsyncIO   QemuDiskAsyncIO
-	Backup    bool
-	Bandwidth QemuDiskBandwidth
-	Cache     QemuDiskCache
-	Discard   bool
-	IOThread  bool
-	ReadOnly  bool
-	Size      uint
-	Storage   string
+	AsyncIO   QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup    bool              `json:"backup,omitempty"`
+	Bandwidth QemuDiskBandwidth `json:"bandwith,omitempty"`
+	Cache     QemuDiskCache     `json:"cache,omitempty"`
+	Discard   bool              `json:"discard,omitempty"`
+	IOThread  bool              `json:"iothread,omitempty"`
+	ReadOnly  bool              `json:"readonly,omitempty"`
+	Replicate bool              `json:"replicate,omitempty"`
+	Size      uint              `json:"size,omitempty"`
+	Storage   string            `json:"storage,omitempty"`
+}
+
+func (disk QemuVirtIODisk) mapToApiValues(create bool) string {
+	return qemuDisk{
+		AsyncIO:   disk.AsyncIO,
+		Backup:    disk.Backup,
+		Bandwidth: disk.Bandwidth,
+		Cache:     disk.Cache,
+		Discard:   disk.Discard,
+		IOThread:  disk.IOThread,
+		ReadOnly:  disk.ReadOnly,
+		Size:      disk.Size,
+		Storage:   disk.Storage,
+		Type:      virtIO,
+	}.mapToApiValues(create)
 }
 
 type QemuVirtIODisks struct {
@@ -29,6 +45,57 @@ type QemuVirtIODisks struct {
 	Disk_13 *QemuVirtIOStorage
 	Disk_14 *QemuVirtIOStorage
 	Disk_15 *QemuVirtIOStorage
+}
+
+func (disks QemuVirtIODisks) mapToApiValues(create bool, params map[string]interface{}) {
+	if disks.Disk_0 != nil {
+		params["virtio0"] = disks.Disk_0.mapToApiValues(create)
+	}
+	if disks.Disk_1 != nil {
+		params["virtio1"] = disks.Disk_1.mapToApiValues(create)
+	}
+	if disks.Disk_2 != nil {
+		params["virtio2"] = disks.Disk_2.mapToApiValues(create)
+	}
+	if disks.Disk_3 != nil {
+		params["virtio3"] = disks.Disk_3.mapToApiValues(create)
+	}
+	if disks.Disk_4 != nil {
+		params["virtio4"] = disks.Disk_4.mapToApiValues(create)
+	}
+	if disks.Disk_5 != nil {
+		params["virtio5"] = disks.Disk_5.mapToApiValues(create)
+	}
+	if disks.Disk_6 != nil {
+		params["virtio6"] = disks.Disk_6.mapToApiValues(create)
+	}
+	if disks.Disk_7 != nil {
+		params["virtio7"] = disks.Disk_7.mapToApiValues(create)
+	}
+	if disks.Disk_8 != nil {
+		params["virtio8"] = disks.Disk_8.mapToApiValues(create)
+	}
+	if disks.Disk_9 != nil {
+		params["virtio9"] = disks.Disk_9.mapToApiValues(create)
+	}
+	if disks.Disk_10 != nil {
+		params["virtio10"] = disks.Disk_10.mapToApiValues(create)
+	}
+	if disks.Disk_11 != nil {
+		params["virtio11"] = disks.Disk_11.mapToApiValues(create)
+	}
+	if disks.Disk_12 != nil {
+		params["virtio12"] = disks.Disk_12.mapToApiValues(create)
+	}
+	if disks.Disk_13 != nil {
+		params["virtio13"] = disks.Disk_13.mapToApiValues(create)
+	}
+	if disks.Disk_14 != nil {
+		params["virtio14"] = disks.Disk_14.mapToApiValues(create)
+	}
+	if disks.Disk_15 != nil {
+		params["virtio15"] = disks.Disk_15.mapToApiValues(create)
+	}
 }
 
 func (QemuVirtIODisks) mapToStruct(params map[string]interface{}) *QemuVirtIODisks {
@@ -116,11 +183,32 @@ type QemuVirtIOPassthrough struct {
 	Size      uint
 }
 
+// TODO write function
+func (passthrough QemuVirtIOPassthrough) mapToApiValues() string {
+	return ""
+}
+
 type QemuVirtIOStorage struct {
 	CdRom       *QemuCdRom
 	CloudInit   *QemuCloudInitDisk
 	Disk        *QemuVirtIODisk
 	Passthrough *QemuVirtIOPassthrough
+}
+
+func (storage QemuVirtIOStorage) mapToApiValues(create bool) string {
+	if storage.Disk != nil {
+		return storage.Disk.mapToApiValues(create)
+	}
+	if storage.CdRom != nil {
+		return storage.CdRom.mapToApiValues()
+	}
+	if storage.CloudInit != nil {
+		return storage.CloudInit.mapToApiValues()
+	}
+	if storage.Passthrough != nil {
+		return storage.Passthrough.mapToApiValues()
+	}
+	return ""
 }
 
 func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
@@ -147,6 +235,7 @@ func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
 			Discard:   tmpDisk.Discard,
 			IOThread:  tmpDisk.IOThread,
 			ReadOnly:  tmpDisk.ReadOnly,
+			Replicate: tmpDisk.Replicate,
 			Size:      tmpDisk.Size,
 			Storage:   tmpDisk.Storage,
 		}}

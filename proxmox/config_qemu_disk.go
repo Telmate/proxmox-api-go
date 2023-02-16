@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -17,6 +18,11 @@ type QemuCdRom struct {
 	Iso *IsoFile
 	// Passthrough and File are mutually exclusive
 	Passthrough bool
+}
+
+// TODO write function
+func (cdRom QemuCdRom) mapToApiValues() string {
+	return ""
 }
 
 func (QemuCdRom) mapToStruct(settings qemuCdRom) *QemuCdRom {
@@ -96,6 +102,11 @@ type QemuCloudInitDisk struct {
 	FileType string
 }
 
+// TODO write function
+func (cloudInit QemuCloudInitDisk) mapToApiValues() string {
+	return ""
+}
+
 func (QemuCloudInitDisk) mapToStruct(settings qemuCdRom) *QemuCloudInitDisk {
 	return &QemuCloudInitDisk{
 		Storage:  settings.Storage,
@@ -129,32 +140,91 @@ type QemuDiskCache string
 // TODO add enum
 type QemuDiskFormat string
 
-func (QemuDiskFormat) mapToStruct(setting string) QemuDiskFormat {
-	settings := strings.Split(setting, ".")
-	if len(settings) < 2 {
-		return ""
-	}
-	return QemuDiskFormat(settings[len(settings)-1])
-}
-
 type qemuDisk struct {
 	AsyncIO    QemuDiskAsyncIO
 	Backup     bool
 	Bandwidth  QemuDiskBandwidth
 	Cache      QemuDiskCache
 	Discard    bool
-	EmulateSSD bool
+	EmulateSSD bool // Only set for ide,sata,scsi
 	// TODO custom type
-	// File is only set for Passthrough.
-	File      string
+	File      string // Only set for Passthrough.
 	Format    QemuDiskFormat
-	IOThread  bool
-	ReadOnly  bool
+	IOThread  bool // Only set for scsi,virtio
+	Number    uint // Only set for Disk
+	ReadOnly  bool // Only set for scsi,virtio
 	Replicate bool
 	Size      uint
 	// TODO custom type
-	// Storage is only set for Disk
-	Storage string
+	Storage string // Only set for Disk
+	Type    qemuDiskType
+}
+
+func (disk qemuDisk) mapToApiValues(create bool) (settings string) {
+	if create {
+		if disk.Storage != "" {
+			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
+		}
+	}
+
+	// Set File
+
+	if disk.AsyncIO != "" {
+		settings = settings + ",aio=" + string(disk.AsyncIO)
+	}
+	if !disk.Backup {
+		settings = settings + ",backup=0"
+	}
+	if disk.Cache != "" {
+		settings = settings + ",cache=" + string(disk.Cache)
+	}
+	if disk.Discard {
+		settings = settings + ",discard=on"
+	}
+	// format
+	// media
+
+	if disk.Bandwidth.ReadLimit_Iops.Concurrent >= 10 {
+		settings = settings + ",iops_rd=" + strconv.Itoa(int(disk.Bandwidth.ReadLimit_Iops.Concurrent))
+	}
+	if disk.Bandwidth.ReadLimit_Iops.Burst >= 10 {
+		settings = settings + ",iops_rd_max=" + strconv.Itoa(int(disk.Bandwidth.ReadLimit_Iops.Burst))
+	}
+	if disk.Bandwidth.WriteLimit_Iops.Concurrent >= 10 {
+		settings = settings + ",iops_wr=" + strconv.Itoa(int(disk.Bandwidth.WriteLimit_Iops.Concurrent))
+	}
+	if disk.Bandwidth.WriteLimit_Iops.Burst >= 10 {
+		settings = settings + ",iops_wr_max=" + strconv.Itoa(int(disk.Bandwidth.WriteLimit_Iops.Burst))
+	}
+
+	if (disk.Type == scsi || disk.Type == virtIO) && disk.IOThread {
+		settings = settings + ",iothread=1"
+	}
+
+	if disk.Bandwidth.ReadLimit_Data.Concurrent >= float32(1) {
+		settings = settings + fmt.Sprintf(",mbps_rd=%.2f", disk.Bandwidth.ReadLimit_Data.Concurrent)
+	}
+	if disk.Bandwidth.ReadLimit_Data.Burst >= float32(1) {
+		settings = settings + fmt.Sprintf(",mbps_rd_max=%.2f", disk.Bandwidth.ReadLimit_Data.Burst)
+	}
+	if disk.Bandwidth.WriteLimit_Data.Concurrent >= float32(1) {
+		settings = settings + fmt.Sprintf(",mbps_wr=%.2f", disk.Bandwidth.WriteLimit_Data.Concurrent)
+	}
+	if disk.Bandwidth.WriteLimit_Data.Burst >= float32(1) {
+		settings = settings + fmt.Sprintf(",mbps_wr_max=%.2f", disk.Bandwidth.WriteLimit_Data.Burst)
+	}
+
+	if !disk.Replicate {
+		settings = settings + ",replicate=0"
+	}
+	if (disk.Type == scsi || disk.Type == virtIO) && disk.ReadOnly {
+		settings = settings + ",ro=1"
+	}
+	if disk.Type != virtIO && disk.EmulateSSD {
+		settings = settings + ",ssd=1"
+	}
+
+	return
 }
 
 // Maps all the disk related settings
@@ -168,8 +238,19 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		disk.File = settings[0][0]
 	} else {
 		// "test2:105/vm-105-disk-53.qcow2,
-		disk.Storage = strings.Split(settings[0][0], ":")[0]
-		disk.Format = QemuDiskFormat("").mapToStruct(settings[0][0])
+		diskAndNumberAndFormat := strings.Split(settings[0][0], ":")
+		disk.Storage = diskAndNumberAndFormat[0]
+		if len(diskAndNumberAndFormat) == 2 {
+			numberAndFormat := strings.Split(diskAndNumberAndFormat[1], "-")
+			if len(numberAndFormat) == 2 {
+				tmp := strings.Split(numberAndFormat[1], ".")
+				tmpNumber, _ := strconv.Atoi(tmp[0])
+				disk.Number = uint(tmpNumber)
+				if len(tmp) == 2 {
+					disk.Format = QemuDiskFormat(tmp[1])
+				}
+			}
+		}
 	}
 
 	for _, e := range settings {
@@ -245,11 +326,35 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 	return &disk
 }
 
+type qemuDiskType int
+
+const (
+	ide    qemuDiskType = 0
+	sata   qemuDiskType = 1
+	scsi   qemuDiskType = 2
+	virtIO qemuDiskType = 3
+)
+
 type QemuStorages struct {
-	Ide    *QemuIdeDisks
-	Sata   *QemuSataDisks
-	Scsi   *QemuScsiDisks
-	VirtIO *QemuVirtIODisks
+	Ide    *QemuIdeDisks    `json:"ide,omitempty"`
+	Sata   *QemuSataDisks   `json:"sata,omitempty"`
+	Scsi   *QemuScsiDisks   `json:"scsi,omitempty"`
+	VirtIO *QemuVirtIODisks `json:"virtio,omitempty"`
+}
+
+func (storages QemuStorages) mapToApiValues(create bool, params map[string]interface{}) {
+	if storages.Ide != nil {
+		storages.Ide.mapToApiValues(create, params)
+	}
+	if storages.Sata != nil {
+		storages.Sata.mapToApiValues(create, params)
+	}
+	if storages.Scsi != nil {
+		storages.Scsi.mapToApiValues(create, params)
+	}
+	if storages.VirtIO != nil {
+		storages.VirtIO.mapToApiValues(create, params)
+	}
 }
 
 func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {

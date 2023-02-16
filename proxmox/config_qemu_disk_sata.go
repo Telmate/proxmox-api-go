@@ -1,15 +1,30 @@
 package proxmox
 
 type QemuSataDisk struct {
-	AsyncIO    QemuDiskAsyncIO
-	Backup     bool
-	Bandwidth  QemuDiskBandwidth
-	Cache      QemuDiskCache
-	Discard    bool
-	EmulateSSD bool
-	Replicate  bool
-	Size       uint
-	Storage    string
+	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup     bool              `json:"backup,omitempty"`
+	Bandwidth  QemuDiskBandwidth `json:"bandwith,omitempty"`
+	Cache      QemuDiskCache     `json:"cache,omitempty"`
+	Discard    bool              `json:"discard,omitempty"`
+	EmulateSSD bool              `json:"emulatessd,omitempty"`
+	Replicate  bool              `json:"replicate,omitempty"`
+	Size       uint              `json:"size,omitempty"`
+	Storage    string            `json:"storage,omitempty"`
+}
+
+func (disk QemuSataDisk) mapToApiValues(create bool) string {
+	return qemuDisk{
+		AsyncIO:    disk.AsyncIO,
+		Backup:     disk.Backup,
+		Bandwidth:  disk.Bandwidth,
+		Cache:      disk.Cache,
+		Discard:    disk.Discard,
+		EmulateSSD: disk.EmulateSSD,
+		Replicate:  disk.Replicate,
+		Size:       disk.Size,
+		Storage:    disk.Storage,
+		Type:       sata,
+	}.mapToApiValues(create)
 }
 
 type QemuSataDisks struct {
@@ -19,6 +34,27 @@ type QemuSataDisks struct {
 	Disk_3 *QemuSataStorage
 	Disk_4 *QemuSataStorage
 	Disk_5 *QemuSataStorage
+}
+
+func (disks QemuSataDisks) mapToApiValues(create bool, params map[string]interface{}) {
+	if disks.Disk_0 != nil {
+		params["sata0"] = disks.Disk_0.mapToApiValues(create)
+	}
+	if disks.Disk_1 != nil {
+		params["sata1"] = disks.Disk_1.mapToApiValues(create)
+	}
+	if disks.Disk_2 != nil {
+		params["sata2"] = disks.Disk_2.mapToApiValues(create)
+	}
+	if disks.Disk_3 != nil {
+		params["sata3"] = disks.Disk_3.mapToApiValues(create)
+	}
+	if disks.Disk_4 != nil {
+		params["sata4"] = disks.Disk_4.mapToApiValues(create)
+	}
+	if disks.Disk_5 != nil {
+		params["sata5"] = disks.Disk_5.mapToApiValues(create)
+	}
 }
 
 func (QemuSataDisks) mapToStruct(params map[string]interface{}) *QemuSataDisks {
@@ -66,11 +102,32 @@ type QemuSataPassthrough struct {
 	Size       uint
 }
 
+// TODO write function
+func (passthrough QemuSataPassthrough) mapToApiValues() string {
+	return ""
+}
+
 type QemuSataStorage struct {
 	CdRom       *QemuCdRom
 	CloudInit   *QemuCloudInitDisk
 	Disk        *QemuSataDisk
 	Passthrough *QemuSataPassthrough
+}
+
+func (storage QemuSataStorage) mapToApiValues(create bool) string {
+	if storage.Disk != nil {
+		return storage.Disk.mapToApiValues(create)
+	}
+	if storage.CdRom != nil {
+		return storage.CdRom.mapToApiValues()
+	}
+	if storage.CloudInit != nil {
+		return storage.CloudInit.mapToApiValues()
+	}
+	if storage.Passthrough != nil {
+		return storage.Passthrough.mapToApiValues()
+	}
+	return ""
 }
 
 func (QemuSataStorage) mapToStruct(param string) *QemuSataStorage {
