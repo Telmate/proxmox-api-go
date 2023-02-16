@@ -342,7 +342,6 @@ type QemuDiskSerial string
 
 // QemuDiskSerial may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
 // And has a max length of 60 characters
-// TODO create test
 func (serial QemuDiskSerial) Validate() error {
 	regex, _ := regexp.Compile(`^([a-z]|[A-Z]|[0-9]|_|-)*$`)
 	if !regex.Match([]byte(serial)) {
