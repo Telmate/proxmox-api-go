@@ -10,21 +10,27 @@ import (
 )
 
 type IsoFile struct {
-	Storage string
-	File    string
+	Storage string `json:"storage"`
+	File    string `json:"file"`
 	// Size can only be retrieved, setting it has no effect
-	Size string
+	Size string `json:"size"`
 }
 
 type QemuCdRom struct {
-	Iso *IsoFile
+	Iso *IsoFile `json:"iso,omitempty"`
 	// Passthrough and File are mutually exclusive
-	Passthrough bool
+	Passthrough bool `json:"passthrough,omitempty"`
 }
 
-// TODO write function
+// TODO write test
 func (cdRom QemuCdRom) mapToApiValues() string {
-	return ""
+	if cdRom.Passthrough {
+		return "cdrom,media=cdrom"
+	}
+	if cdRom.Iso != nil {
+		return cdRom.Iso.Storage + ":iso/" + cdRom.Iso.File + ",media=cdrom"
+	}
+	return "none,media=cdrom"
 }
 
 func (QemuCdRom) mapToStruct(settings qemuCdRom) *QemuCdRom {
