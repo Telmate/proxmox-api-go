@@ -114,32 +114,6 @@ func (QemuCloudInitDisk) mapToStruct(settings qemuCdRom) *QemuCloudInitDisk {
 	}
 }
 
-// TODO add enum
-type QemuDiskAsyncIO string
-
-type QemuDiskBandwidth struct {
-	ReadLimit_Data  QemuDisk_Bandwidth_Data
-	WriteLimit_Data QemuDisk_Bandwidth_Data
-	ReadLimit_Iops  QemuDisk_Bandwidth_Iops
-	WriteLimit_Iops QemuDisk_Bandwidth_Iops
-}
-
-type QemuDisk_Bandwidth_Data struct {
-	Concurrent float32
-	Burst      float32
-}
-
-type QemuDisk_Bandwidth_Iops struct {
-	Concurrent uint
-	Burst      uint
-}
-
-// TODO add enum
-type QemuDiskCache string
-
-// TODO add enum
-type QemuDiskFormat string
-
 type qemuDisk struct {
 	AsyncIO    QemuDiskAsyncIO
 	Backup     bool
@@ -325,6 +299,32 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 	}
 	return &disk
 }
+
+// TODO add enum
+type QemuDiskAsyncIO string
+
+type QemuDiskBandwidth struct {
+	ReadLimit_Data  QemuDisk_Bandwidth_Data
+	WriteLimit_Data QemuDisk_Bandwidth_Data
+	ReadLimit_Iops  QemuDisk_Bandwidth_Iops
+	WriteLimit_Iops QemuDisk_Bandwidth_Iops
+}
+
+type QemuDisk_Bandwidth_Data struct {
+	Concurrent float32
+	Burst      float32
+}
+
+type QemuDisk_Bandwidth_Iops struct {
+	Concurrent uint
+	Burst      uint
+}
+
+// TODO add enum
+type QemuDiskCache string
+
+// TODO add enum
+type QemuDiskFormat string
 
 type qemuDiskType int
 
