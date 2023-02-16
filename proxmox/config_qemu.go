@@ -35,45 +35,46 @@ type AgentNetworkInterface struct {
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
-	VmID            int         `json:"vmid,omitempty"`
-	Name            string      `json:"name,omitempty"`
-	Description     string      `json:"description,omitempty"`
-	Pool            string      `json:"pool,omitempty"`
-	Bios            string      `json:"bios,omitempty"`
-	EFIDisk         QemuDevice  `json:"efidisk,omitempty"`
-	Machine         string      `json:"machine,omitempty"`
-	Onboot          *bool       `json:"onboot,omitempty"`
-	Startup         string      `json:"startup,omitempty"`
-	Tablet          *bool       `json:"tablet,omitempty"`
-	Agent           int         `json:"agent,omitempty"`
-	Memory          int         `json:"memory,omitempty"`
-	Balloon         int         `json:"balloon,omitempty"`
-	QemuOs          string      `json:"ostype,omitempty"`
-	QemuCores       int         `json:"cores,omitempty"`
-	QemuSockets     int         `json:"sockets,omitempty"`
-	QemuVcpus       int         `json:"vcpus,omitempty"`
-	QemuCpu         string      `json:"cpu,omitempty"`
-	QemuNuma        *bool       `json:"numa,omitempty"`
-	QemuKVM         *bool       `json:"kvm,omitempty"`
-	Hotplug         string      `json:"hotplug,omitempty"`
-	QemuIso         string      `json:"iso,omitempty"`
-	QemuPxe         bool        `json:"pxe,omitempty"`
-	FullClone       *int        `json:"fullclone,omitempty"`
-	Boot            string      `json:"boot,omitempty"`
-	BootDisk        string      `json:"bootdisk,omitempty"`
-	Scsihw          string      `json:"scsihw,omitempty"`
-	QemuDisks       QemuDevices `json:"disk,omitempty"`
-	QemuUnusedDisks QemuDevices `json:"unused,omitempty"`
-	QemuVga         QemuDevice  `json:"vga,omitempty"`
-	QemuNetworks    QemuDevices `json:"network,omitempty"`
-	QemuSerials     QemuDevices `json:"serial,omitempty"`
-	QemuUsbs        QemuDevices `json:"usb,omitempty"`
-	QemuPCIDevices  QemuDevices `json:"hostpci,omitempty"`
-	Hookscript      string      `json:"hookscript,omitempty"`
-	HaState         string      `json:"hastate,omitempty"`
-	HaGroup         string      `json:"hagroup,omitempty"`
-	Tags            string      `json:"tags,omitempty"`
-	Args            string      `json:"args,omitempty"`
+	VmID            int           `json:"vmid,omitempty"`
+	Name            string        `json:"name,omitempty"`
+	Description     string        `json:"description,omitempty"`
+	Pool            string        `json:"pool,omitempty"`
+	Bios            string        `json:"bios,omitempty"`
+	EFIDisk         QemuDevice    `json:"efidisk,omitempty"`
+	Machine         string        `json:"machine,omitempty"`
+	Onboot          *bool         `json:"onboot,omitempty"`
+	Startup         string        `json:"startup,omitempty"`
+	Tablet          *bool         `json:"tablet,omitempty"`
+	Agent           int           `json:"agent,omitempty"`
+	Memory          int           `json:"memory,omitempty"`
+	Balloon         int           `json:"balloon,omitempty"`
+	QemuOs          string        `json:"ostype,omitempty"`
+	QemuCores       int           `json:"cores,omitempty"`
+	QemuSockets     int           `json:"sockets,omitempty"`
+	QemuVcpus       int           `json:"vcpus,omitempty"`
+	QemuCpu         string        `json:"cpu,omitempty"`
+	QemuNuma        *bool         `json:"numa,omitempty"`
+	QemuKVM         *bool         `json:"kvm,omitempty"`
+	Hotplug         string        `json:"hotplug,omitempty"`
+	QemuIso         string        `json:"iso,omitempty"`
+	QemuPxe         bool          `json:"pxe,omitempty"`
+	FullClone       *int          `json:"fullclone,omitempty"`
+	Boot            string        `json:"boot,omitempty"`
+	BootDisk        string        `json:"bootdisk,omitempty"`
+	Scsihw          string        `json:"scsihw,omitempty"`
+	Disks           *QemuStorages `json:"disks,omitempty"`
+	QemuDisks       QemuDevices   `json:"disk,omitempty"`
+	QemuUnusedDisks QemuDevices   `json:"unused,omitempty"`
+	QemuVga         QemuDevice    `json:"vga,omitempty"`
+	QemuNetworks    QemuDevices   `json:"network,omitempty"`
+	QemuSerials     QemuDevices   `json:"serial,omitempty"`
+	QemuUsbs        QemuDevices   `json:"usb,omitempty"`
+	QemuPCIDevices  QemuDevices   `json:"hostpci,omitempty"`
+	Hookscript      string        `json:"hookscript,omitempty"`
+	HaState         string        `json:"hastate,omitempty"`
+	HaGroup         string        `json:"hagroup,omitempty"`
+	Tags            string        `json:"tags,omitempty"`
+	Args            string        `json:"args,omitempty"`
 
 	// cloud-init options
 	CIuser     string      `json:"ciuser,omitempty"`
@@ -127,6 +128,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		params["onboot"] = *config.Onboot
 	}
 
+	// TODO conflicts with new mapping
 	if config.QemuIso != "" {
 		params["ide2"] = config.QemuIso + ",media=cdrom"
 	}
