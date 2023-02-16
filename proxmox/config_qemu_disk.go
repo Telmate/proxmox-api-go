@@ -350,8 +350,25 @@ func (cache QemuDiskCache) Validate() error {
 	return fmt.Errorf("cache can only be one of the following values: %s,%s,%s,%s,%s", QemuDiskCache_None, QemuDiskCache_WriteThrough, QemuDiskCache_WriteBack, QemuDiskCache_Unsafe, QemuDiskCache_DirectSync)
 }
 
-// TODO add enum
 type QemuDiskFormat string
+
+const (
+	QemuDiskFormat_Cow   QemuDiskFormat = "cow"
+	QemuDiskFormat_Cloop QemuDiskFormat = "cloop"
+	QemuDiskFormat_Qcow  QemuDiskFormat = "qcow"
+	QemuDiskFormat_Qcow2 QemuDiskFormat = "qcow2"
+	QemuDiskFormat_Qed   QemuDiskFormat = "qed"
+	QemuDiskFormat_Vmdk  QemuDiskFormat = "vmdk"
+	QemuDiskFormat_Raw   QemuDiskFormat = "raw"
+)
+
+func (format QemuDiskFormat) Validate() error {
+	switch format {
+	case QemuDiskFormat_Cow, QemuDiskFormat_Cloop, QemuDiskFormat_Qcow, QemuDiskFormat_Qcow2, QemuDiskFormat_Qed, QemuDiskFormat_Vmdk, QemuDiskFormat_Raw:
+		return nil
+	}
+	return fmt.Errorf("cache can only be one of the following values: %s,%s,%s,%s,%s,%s,%s", QemuDiskFormat_Cow, QemuDiskFormat_Cloop, QemuDiskFormat_Qcow, QemuDiskFormat_Qcow2, QemuDiskFormat_Qed, QemuDiskFormat_Vmdk, QemuDiskFormat_Raw)
+}
 
 type QemuDiskSerial string
 
