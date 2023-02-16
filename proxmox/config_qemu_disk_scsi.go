@@ -34,37 +34,37 @@ func (disk QemuScsiDisk) mapToApiValues(create bool) string {
 }
 
 type QemuScsiDisks struct {
-	Disk_0  *QemuScsiStorage
-	Disk_1  *QemuScsiStorage
-	Disk_2  *QemuScsiStorage
-	Disk_3  *QemuScsiStorage
-	Disk_4  *QemuScsiStorage
-	Disk_5  *QemuScsiStorage
-	Disk_6  *QemuScsiStorage
-	Disk_7  *QemuScsiStorage
-	Disk_8  *QemuScsiStorage
-	Disk_9  *QemuScsiStorage
-	Disk_10 *QemuScsiStorage
-	Disk_11 *QemuScsiStorage
-	Disk_12 *QemuScsiStorage
-	Disk_13 *QemuScsiStorage
-	Disk_14 *QemuScsiStorage
-	Disk_15 *QemuScsiStorage
-	Disk_16 *QemuScsiStorage
-	Disk_17 *QemuScsiStorage
-	Disk_18 *QemuScsiStorage
-	Disk_19 *QemuScsiStorage
-	Disk_20 *QemuScsiStorage
-	Disk_21 *QemuScsiStorage
-	Disk_22 *QemuScsiStorage
-	Disk_23 *QemuScsiStorage
-	Disk_24 *QemuScsiStorage
-	Disk_25 *QemuScsiStorage
-	Disk_26 *QemuScsiStorage
-	Disk_27 *QemuScsiStorage
-	Disk_28 *QemuScsiStorage
-	Disk_29 *QemuScsiStorage
-	Disk_30 *QemuScsiStorage
+	Disk_0  *QemuScsiStorage `json:"0,omitempty"`
+	Disk_1  *QemuScsiStorage `json:"1,omitempty"`
+	Disk_2  *QemuScsiStorage `json:"2,omitempty"`
+	Disk_3  *QemuScsiStorage `json:"3,omitempty"`
+	Disk_4  *QemuScsiStorage `json:"4,omitempty"`
+	Disk_5  *QemuScsiStorage `json:"5,omitempty"`
+	Disk_6  *QemuScsiStorage `json:"6,omitempty"`
+	Disk_7  *QemuScsiStorage `json:"7,omitempty"`
+	Disk_8  *QemuScsiStorage `json:"8,omitempty"`
+	Disk_9  *QemuScsiStorage `json:"9,omitempty"`
+	Disk_10 *QemuScsiStorage `json:"10,omitempty"`
+	Disk_11 *QemuScsiStorage `json:"11,omitempty"`
+	Disk_12 *QemuScsiStorage `json:"12,omitempty"`
+	Disk_13 *QemuScsiStorage `json:"13,omitempty"`
+	Disk_14 *QemuScsiStorage `json:"14,omitempty"`
+	Disk_15 *QemuScsiStorage `json:"15,omitempty"`
+	Disk_16 *QemuScsiStorage `json:"16,omitempty"`
+	Disk_17 *QemuScsiStorage `json:"17,omitempty"`
+	Disk_18 *QemuScsiStorage `json:"18,omitempty"`
+	Disk_19 *QemuScsiStorage `json:"19,omitempty"`
+	Disk_20 *QemuScsiStorage `json:"20,omitempty"`
+	Disk_21 *QemuScsiStorage `json:"21,omitempty"`
+	Disk_22 *QemuScsiStorage `json:"22,omitempty"`
+	Disk_23 *QemuScsiStorage `json:"23,omitempty"`
+	Disk_24 *QemuScsiStorage `json:"24,omitempty"`
+	Disk_25 *QemuScsiStorage `json:"25,omitempty"`
+	Disk_26 *QemuScsiStorage `json:"26,omitempty"`
+	Disk_27 *QemuScsiStorage `json:"27,omitempty"`
+	Disk_28 *QemuScsiStorage `json:"28,omitempty"`
+	Disk_29 *QemuScsiStorage `json:"29,omitempty"`
+	Disk_30 *QemuScsiStorage `json:"30,omitempty"`
 }
 
 func (disks QemuScsiDisks) mapToApiValues(create bool, params map[string]interface{}) {

@@ -31,22 +31,22 @@ func (disk QemuVirtIODisk) mapToApiValues(create bool) string {
 }
 
 type QemuVirtIODisks struct {
-	Disk_0  *QemuVirtIOStorage
-	Disk_1  *QemuVirtIOStorage
-	Disk_2  *QemuVirtIOStorage
-	Disk_3  *QemuVirtIOStorage
-	Disk_4  *QemuVirtIOStorage
-	Disk_5  *QemuVirtIOStorage
-	Disk_6  *QemuVirtIOStorage
-	Disk_7  *QemuVirtIOStorage
-	Disk_8  *QemuVirtIOStorage
-	Disk_9  *QemuVirtIOStorage
-	Disk_10 *QemuVirtIOStorage
-	Disk_11 *QemuVirtIOStorage
-	Disk_12 *QemuVirtIOStorage
-	Disk_13 *QemuVirtIOStorage
-	Disk_14 *QemuVirtIOStorage
-	Disk_15 *QemuVirtIOStorage
+	Disk_0  *QemuVirtIOStorage `json:"0,omitempty"`
+	Disk_1  *QemuVirtIOStorage `json:"1,omitempty"`
+	Disk_2  *QemuVirtIOStorage `json:"2,omitempty"`
+	Disk_3  *QemuVirtIOStorage `json:"3,omitempty"`
+	Disk_4  *QemuVirtIOStorage `json:"4,omitempty"`
+	Disk_5  *QemuVirtIOStorage `json:"5,omitempty"`
+	Disk_6  *QemuVirtIOStorage `json:"6,omitempty"`
+	Disk_7  *QemuVirtIOStorage `json:"7,omitempty"`
+	Disk_8  *QemuVirtIOStorage `json:"8,omitempty"`
+	Disk_9  *QemuVirtIOStorage `json:"9,omitempty"`
+	Disk_10 *QemuVirtIOStorage `json:"10,omitempty"`
+	Disk_11 *QemuVirtIOStorage `json:"11,omitempty"`
+	Disk_12 *QemuVirtIOStorage `json:"12,omitempty"`
+	Disk_13 *QemuVirtIOStorage `json:"13,omitempty"`
+	Disk_14 *QemuVirtIOStorage `json:"14,omitempty"`
+	Disk_15 *QemuVirtIOStorage `json:"15,omitempty"`
 }
 
 func (disks QemuVirtIODisks) mapToApiValues(create bool, params map[string]interface{}) {

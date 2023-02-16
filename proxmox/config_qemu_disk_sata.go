@@ -30,12 +30,12 @@ func (disk QemuSataDisk) mapToApiValues(create bool) string {
 }
 
 type QemuSataDisks struct {
-	Disk_0 *QemuSataStorage
-	Disk_1 *QemuSataStorage
-	Disk_2 *QemuSataStorage
-	Disk_3 *QemuSataStorage
-	Disk_4 *QemuSataStorage
-	Disk_5 *QemuSataStorage
+	Disk_0 *QemuSataStorage `json:"0,omitempty"`
+	Disk_1 *QemuSataStorage `json:"1,omitempty"`
+	Disk_2 *QemuSataStorage `json:"2,omitempty"`
+	Disk_3 *QemuSataStorage `json:"3,omitempty"`
+	Disk_4 *QemuSataStorage `json:"4,omitempty"`
+	Disk_5 *QemuSataStorage `json:"5,omitempty"`
 }
 
 func (disks QemuSataDisks) mapToApiValues(create bool, params map[string]interface{}) {
