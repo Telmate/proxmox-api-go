@@ -332,8 +332,23 @@ type QemuDisk_Bandwidth_Iops struct {
 	Burst      uint
 }
 
-// TODO add enum
 type QemuDiskCache string
+
+const (
+	QemuDiskCache_None         QemuDiskCache = "none"
+	QemuDiskCache_WriteThrough QemuDiskCache = "writethrough"
+	QemuDiskCache_WriteBack    QemuDiskCache = "writeback"
+	QemuDiskCache_Unsafe       QemuDiskCache = "unsafe"
+	QemuDiskCache_DirectSync   QemuDiskCache = "directsync"
+)
+
+func (cache QemuDiskCache) Validate() error {
+	switch cache {
+	case QemuDiskCache_None, QemuDiskCache_WriteThrough, QemuDiskCache_WriteBack, QemuDiskCache_Unsafe, QemuDiskCache_DirectSync:
+		return nil
+	}
+	return fmt.Errorf("cache can only be one of the following values: %s,%s,%s,%s,%s,", QemuDiskCache_None, QemuDiskCache_WriteThrough, QemuDiskCache_WriteBack, QemuDiskCache_Unsafe, QemuDiskCache_DirectSync)
+}
 
 // TODO add enum
 type QemuDiskFormat string

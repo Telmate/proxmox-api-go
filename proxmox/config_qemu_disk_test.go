@@ -7,6 +7,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_QemuDiskCache_Validate(t *testing.T) {
+	testData := []struct {
+		input QemuDiskCache
+		err   bool
+	}{
+		// Valid
+		{input: QemuDiskCache_None},
+		{input: QemuDiskCache_WriteThrough},
+		{input: QemuDiskCache_WriteBack},
+		{input: QemuDiskCache_Unsafe},
+		{input: QemuDiskCache_DirectSync},
+		// Invalid
+		{input: "bla", err: true},
+		{input: "invalid value", err: true},
+		{input: "!@#$", err: true},
+	}
+	for _, e := range testData {
+		if e.err {
+			require.Error(t, e.input.Validate())
+		} else {
+			require.NoError(t, e.input.Validate())
+		}
+	}
+}
+
 func Test_QemuDiskSerial_Validate(t *testing.T) {
 	testRunes := struct {
 		legal   []string
