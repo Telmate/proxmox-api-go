@@ -137,6 +137,7 @@ type qemuDisk struct {
 	Type    qemuDiskType
 }
 
+// TODO write test
 func (disk qemuDisk) mapToApiValues(create bool) (settings string) {
 	if create {
 		if disk.Storage != "" {
@@ -208,6 +209,7 @@ func (disk qemuDisk) mapToApiValues(create bool) (settings string) {
 }
 
 // Maps all the disk related settings
+// TODO write test
 func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 	if len(settings) == 0 {
 		return nil
