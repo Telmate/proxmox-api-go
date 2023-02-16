@@ -312,8 +312,21 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 	return &disk
 }
 
-// TODO add enum
 type QemuDiskAsyncIO string
+
+const (
+	QemuDiskAsyncIO_Native  QemuDiskAsyncIO = "native"
+	QemuDiskAsyncIO_Threads QemuDiskAsyncIO = "threads"
+	QemuDiskAsyncIO_IOuring QemuDiskAsyncIO = "io_uring"
+)
+
+func (asyncIO QemuDiskAsyncIO) Validate() error {
+	switch asyncIO {
+	case QemuDiskAsyncIO_Native, QemuDiskAsyncIO_Threads, QemuDiskAsyncIO_IOuring:
+		return nil
+	}
+	return fmt.Errorf("asyncio can only be one of the following values: %s,%s,%s", QemuDiskAsyncIO_Native, QemuDiskAsyncIO_Threads, QemuDiskAsyncIO_IOuring)
+}
 
 type QemuDiskBandwidth struct {
 	ReadLimit_Data  QemuDisk_Bandwidth_Data
