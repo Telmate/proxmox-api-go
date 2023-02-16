@@ -9,6 +9,7 @@ type QemuVirtIODisk struct {
 	IOThread  bool              `json:"iothread,omitempty"`
 	ReadOnly  bool              `json:"readonly,omitempty"`
 	Replicate bool              `json:"replicate,omitempty"`
+	Serial    QemuDiskSerial    `json:"serial,omitempty"`
 	Size      uint              `json:"size,omitempty"`
 	Storage   string            `json:"storage,omitempty"`
 }
@@ -22,6 +23,7 @@ func (disk QemuVirtIODisk) mapToApiValues(create bool) string {
 		Discard:   disk.Discard,
 		IOThread:  disk.IOThread,
 		ReadOnly:  disk.ReadOnly,
+		Serial:    disk.Serial,
 		Size:      disk.Size,
 		Storage:   disk.Storage,
 		Type:      virtIO,
@@ -180,6 +182,7 @@ type QemuVirtIOPassthrough struct {
 	File      string
 	IOThread  bool
 	ReadOnly  bool
+	Serial    QemuDiskSerial `json:"serial,omitempty"`
 	Size      uint
 }
 
@@ -236,6 +239,7 @@ func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
 			IOThread:  tmpDisk.IOThread,
 			ReadOnly:  tmpDisk.ReadOnly,
 			Replicate: tmpDisk.Replicate,
+			Serial:    tmpDisk.Serial,
 			Size:      tmpDisk.Size,
 			Storage:   tmpDisk.Storage,
 		}}
@@ -249,6 +253,7 @@ func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
 		File:      tmpDisk.File,
 		IOThread:  tmpDisk.IOThread,
 		ReadOnly:  tmpDisk.ReadOnly,
+		Serial:    tmpDisk.Serial,
 		Size:      tmpDisk.Size,
 	}}
 }

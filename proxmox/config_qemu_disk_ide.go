@@ -8,6 +8,7 @@ type QemuIdeDisk struct {
 	Discard    bool              `json:"discard,omitempty"`
 	EmulateSSD bool              `json:"emulatessd,omitempty"`
 	Replicate  bool              `json:"replicate,omitempty"`
+	Serial     QemuDiskSerial    `json:"serial,omitempty"`
 	Size       uint              `json:"size,omitempty"`
 	Storage    string            `json:"storage,omitempty"`
 }
@@ -21,6 +22,7 @@ func (disk QemuIdeDisk) mapToApiValues(create bool) string {
 		Discard:    disk.Discard,
 		EmulateSSD: disk.EmulateSSD,
 		Replicate:  disk.Replicate,
+		Serial:     disk.Serial,
 		Size:       disk.Size,
 		Storage:    disk.Storage,
 		Type:       ide,
@@ -83,6 +85,7 @@ type QemuIdePassthrough struct {
 	EmulateSSD bool
 	File       string
 	Replicate  bool
+	Serial     QemuDiskSerial `json:"serial,omitempty"`
 	Size       uint
 }
 
@@ -138,6 +141,7 @@ func (QemuIdeStorage) mapToStruct(param string) *QemuIdeStorage {
 			Discard:    tmpDisk.Discard,
 			EmulateSSD: tmpDisk.EmulateSSD,
 			Replicate:  tmpDisk.Replicate,
+			Serial:     tmpDisk.Serial,
 			Size:       tmpDisk.Size,
 			Storage:    tmpDisk.Storage,
 		}}
@@ -151,6 +155,7 @@ func (QemuIdeStorage) mapToStruct(param string) *QemuIdeStorage {
 		EmulateSSD: tmpDisk.EmulateSSD,
 		File:       tmpDisk.File,
 		Replicate:  tmpDisk.Replicate,
+		Serial:     tmpDisk.Serial,
 		Size:       tmpDisk.Size,
 	}}
 }

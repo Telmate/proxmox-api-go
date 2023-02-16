@@ -10,6 +10,7 @@ type QemuScsiDisk struct {
 	IOThread   bool              `json:"iothread,omitempty"`
 	ReadOnly   bool              `json:"readonly,omitempty"`
 	Replicate  bool              `json:"replicate,omitempty"`
+	Serial     QemuDiskSerial    `json:"serial,omitempty"`
 	Size       uint              `json:"size,omitempty"`
 	Storage    string            `json:"storage,omitempty"`
 }
@@ -25,6 +26,7 @@ func (disk QemuScsiDisk) mapToApiValues(create bool) string {
 		IOThread:   disk.IOThread,
 		ReadOnly:   disk.ReadOnly,
 		Replicate:  disk.Replicate,
+		Serial:     disk.Serial,
 		Size:       disk.Size,
 		Storage:    disk.Storage,
 		Type:       scsi,
@@ -305,6 +307,7 @@ type QemuScsiPassthrough struct {
 	IOThread   bool
 	ReadOnly   bool
 	Replicate  bool
+	Serial     QemuDiskSerial `json:"serial,omitempty"`
 	Size       uint
 }
 
@@ -362,6 +365,7 @@ func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 			IOThread:   tmpDisk.IOThread,
 			ReadOnly:   tmpDisk.ReadOnly,
 			Replicate:  tmpDisk.Replicate,
+			Serial:     tmpDisk.Serial,
 			Size:       tmpDisk.Size,
 			Storage:    tmpDisk.Storage,
 		}}
@@ -377,6 +381,7 @@ func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 		IOThread:   tmpDisk.IOThread,
 		ReadOnly:   tmpDisk.ReadOnly,
 		Replicate:  tmpDisk.Replicate,
+		Serial:     tmpDisk.Serial,
 		Size:       tmpDisk.Size,
 	}}
 

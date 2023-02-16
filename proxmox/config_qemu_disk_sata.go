@@ -8,6 +8,7 @@ type QemuSataDisk struct {
 	Discard    bool              `json:"discard,omitempty"`
 	EmulateSSD bool              `json:"emulatessd,omitempty"`
 	Replicate  bool              `json:"replicate,omitempty"`
+	Serial     QemuDiskSerial    `json:"serial,omitempty"`
 	Size       uint              `json:"size,omitempty"`
 	Storage    string            `json:"storage,omitempty"`
 }
@@ -21,6 +22,7 @@ func (disk QemuSataDisk) mapToApiValues(create bool) string {
 		Discard:    disk.Discard,
 		EmulateSSD: disk.EmulateSSD,
 		Replicate:  disk.Replicate,
+		Serial:     disk.Serial,
 		Size:       disk.Size,
 		Storage:    disk.Storage,
 		Type:       sata,
@@ -99,6 +101,7 @@ type QemuSataPassthrough struct {
 	EmulateSSD bool
 	File       string
 	Replicate  bool
+	Serial     QemuDiskSerial `json:"serial,omitempty"`
 	Size       uint
 }
 
@@ -154,6 +157,7 @@ func (QemuSataStorage) mapToStruct(param string) *QemuSataStorage {
 			Discard:    tmpDisk.Discard,
 			EmulateSSD: tmpDisk.EmulateSSD,
 			Replicate:  tmpDisk.Replicate,
+			Serial:     tmpDisk.Serial,
 			Size:       tmpDisk.Size,
 			Storage:    tmpDisk.Storage,
 		}}
@@ -167,6 +171,7 @@ func (QemuSataStorage) mapToStruct(param string) *QemuSataStorage {
 		EmulateSSD: tmpDisk.EmulateSSD,
 		File:       tmpDisk.File,
 		Replicate:  tmpDisk.Replicate,
+		Serial:     tmpDisk.Serial,
 		Size:       tmpDisk.Size,
 	}}
 }

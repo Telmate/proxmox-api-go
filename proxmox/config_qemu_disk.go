@@ -1,8 +1,10 @@
 package proxmox
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -128,6 +130,7 @@ type qemuDisk struct {
 	Number    uint // Only set for Disk
 	ReadOnly  bool // Only set for scsi,virtio
 	Replicate bool
+	Serial    QemuDiskSerial
 	Size      uint
 	// TODO custom type
 	Storage string // Only set for Disk
@@ -193,6 +196,9 @@ func (disk qemuDisk) mapToApiValues(create bool) (settings string) {
 	}
 	if (disk.Type == scsi || disk.Type == virtIO) && disk.ReadOnly {
 		settings = settings + ",ro=1"
+	}
+	if disk.Serial != "" {
+		settings = settings + ",serial=" + string(disk.Serial)
 	}
 	if disk.Type != virtIO && disk.EmulateSSD {
 		settings = settings + ",ssd=1"
@@ -288,6 +294,10 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 			disk.ReadOnly, _ = strconv.ParseBool(e[1])
 			continue
 		}
+		if e[0] == "serial" {
+			disk.Serial = QemuDiskSerial(e[1])
+			continue
+		}
 		if e[0] == "size" {
 			diskSize, _ := strconv.Atoi(strings.TrimSuffix(e[1], "G"))
 			disk.Size = uint(diskSize)
@@ -325,6 +335,22 @@ type QemuDiskCache string
 
 // TODO add enum
 type QemuDiskFormat string
+
+type QemuDiskSerial string
+
+// QemuDiskSerial may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
+// And has a max length of 60 characters
+// TODO create test
+func (serial QemuDiskSerial) Validate() error {
+	regex, _ := regexp.Compile(`^([a-z]|[A-Z]|[0-9]|_|-)*$`)
+	if !regex.Match([]byte(serial)) {
+		return errors.New("serial may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_")
+	}
+	if len(serial) > 60 {
+		return errors.New("serial may only be 60 characters long")
+	}
+	return nil
+}
 
 type qemuDiskType int
 
