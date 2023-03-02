@@ -60,7 +60,7 @@ type ConfigQemu struct {
 	QemuPxe         bool          `json:"pxe,omitempty"`
 	FullClone       *int          `json:"fullclone,omitempty"`
 	Boot            string        `json:"boot,omitempty"`
-	BootDisk        string        `json:"bootdisk,omitempty"`
+	BootDisk        string        `json:"bootdisk,omitempty"` // Only returned as it's deprecated in the proxmox api
 	Scsihw          string        `json:"scsihw,omitempty"`
 	Disks           *QemuStorages `json:"disks,omitempty"`
 	QemuDisks       QemuDevices   `json:"disk,omitempty"` // DEPRECATED use Disks *QemuStorages instead
@@ -131,9 +131,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu, vmr *VmRef) (p
 	}
 	if config.Boot != "" {
 		params["boot"] = config.Boot
-	}
-	if config.BootDisk != "" {
-		params["bootdisk"] = config.BootDisk
 	}
 	if config.CIcustom != "" {
 		params["cicustom"] = config.CIcustom
