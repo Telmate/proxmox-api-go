@@ -253,7 +253,15 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu, vmr *VmRef) (p
 	return
 }
 
-func (newConfig ConfigQemu) Update(currentConfig *ConfigQemu, vmr *VmRef, client *Client) (err error) {
+func (newConfig ConfigQemu) Update(vmr *VmRef, client *Client) (err error) {
+	currentConfig, err := NewConfigQemuFromApi(vmr, client)
+	if err != nil {
+		return
+	}
+	return newConfig.UpdateAdvanced(currentConfig, vmr, client)
+}
+
+func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef, client *Client) (err error) {
 	params, markedDisks, err := newConfig.mapToApiValues(*currentConfig, vmr)
 	if err != nil {
 		return
