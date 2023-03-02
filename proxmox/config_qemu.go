@@ -338,6 +338,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	return err
 }
 
+// DEPRECATED use ConfigQemu.Update instead
 func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParams := map[string]interface{}{}
 
