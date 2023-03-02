@@ -283,10 +283,12 @@ func (password UserPassword) Validate() error {
 
 // Check if the user already exists in proxmox.
 func CheckUserExistence(userId UserID, client *Client) (existence bool, err error) {
-	list, err := listUsersPartial(client)
+	list, err := listUsersFull(client)
 	if err != nil {
 		return
 	}
+	// TODO: This should be refactored
+	// https://github.com/Telmate/proxmox-api-go/issues/236
 	existence = ItemInKeyOfArray(list, "userid", userId.ToString())
 	return
 }
