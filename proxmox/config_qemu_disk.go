@@ -473,6 +473,6 @@ func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {
 
 type qemuUpdateChanges struct {
 	Move                []qemuDiskShort
-	Delete              []string
+	Delete              string
 	MigrationImpossible bool
 }

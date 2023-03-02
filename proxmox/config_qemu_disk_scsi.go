@@ -290,7 +290,7 @@ func (storage QemuScsiStorage) mapToApiValues(create bool) string {
 func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
 	if storage == nil {
 		if currentStorage != nil {
-			changes.Delete = append(changes.Delete, id)
+			changes.Delete = AddToList(changes.Delete, id)
 		}
 		return
 	}
@@ -301,7 +301,7 @@ func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage,
 		return
 	} else if currentStorage != nil && currentStorage.CdRom != nil {
 		// Delete
-		changes.Delete = append(changes.Delete, id)
+		changes.Delete = AddToList(changes.Delete, id)
 		return
 	}
 	// CloudInit
@@ -311,7 +311,7 @@ func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage,
 		return
 	} else if currentStorage != nil && currentStorage.CloudInit != nil {
 		// Delete
-		changes.Delete = append(changes.Delete, id)
+		changes.Delete = AddToList(changes.Delete, id)
 		return
 	}
 	// Disk
@@ -331,14 +331,14 @@ func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage,
 				params[id] = storage.Disk.mapToApiValues(false)
 			} else {
 				// Delete and Create
-				changes.Delete = append(changes.Delete, id)
+				changes.Delete = AddToList(changes.Delete, id)
 				params[id] = storage.Disk.mapToApiValues(true)
 			}
 		}
 		return
 	} else if currentStorage != nil && currentStorage.Disk != nil {
 		// Delete
-		changes.Delete = append(changes.Delete, id)
+		changes.Delete = AddToList(changes.Delete, id)
 		return
 	}
 	// Passthrough
@@ -349,7 +349,7 @@ func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage,
 		return
 	} else if currentStorage != nil && currentStorage.Passthrough != nil {
 		// Delete
-		changes.Delete = append(changes.Delete, id)
+		changes.Delete = AddToList(changes.Delete, id)
 		return
 	}
 }
