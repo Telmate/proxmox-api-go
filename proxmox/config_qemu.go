@@ -89,110 +89,10 @@ type ConfigQemu struct {
 
 // CreateVm - Tell Proxmox API to make the VM
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
-	if config.HasCloudInit() {
-		return fmt.Errorf("cloud-init parameters only supported on clones or updates")
-	}
-	vmr.SetVmType("qemu")
-
-	params := map[string]interface{}{
-		"vmid":        vmr.vmId,
-		"name":        config.Name,
-		"startup":     config.Startup,
-		"agent":       config.Agent,
-		"ostype":      config.QemuOs,
-		"sockets":     config.QemuSockets,
-		"cores":       config.QemuCores,
-		"cpu":         config.QemuCpu,
-		"hotplug":     config.Hotplug,
-		"memory":      config.Memory,
-		"boot":        config.Boot,
-		"description": config.Description,
-		"tags":        config.Tags,
-		"machine":     config.Machine,
-		"args":        config.Args,
-	}
-
-	if config.QemuNuma != nil {
-		params["numa"] = *config.QemuNuma
-	}
-
-	if config.QemuKVM != nil {
-		params["kvm"] = *config.QemuKVM
-	}
-
-	if config.Tablet != nil {
-		params["tablet"] = *config.Tablet
-	}
-
-	if config.Onboot != nil {
-		params["onboot"] = *config.Onboot
-	}
-
-	// TODO conflicts with new mapping
-	if config.QemuIso != "" {
-		params["ide2"] = config.QemuIso + ",media=cdrom"
-	}
-
-	if config.Bios != "" {
-		params["bios"] = config.Bios
-	}
-
-	if config.Balloon >= 1 {
-		params["balloon"] = config.Balloon
-	}
-
-	if config.QemuVcpus >= 1 {
-		params["vcpus"] = config.QemuVcpus
-	}
-
-	if vmr.pool != "" {
-		params["pool"] = vmr.pool
-	}
-	if config.Boot != "" {
-		params["boot"] = config.Boot
-	}
-	if config.BootDisk != "" {
-		params["bootdisk"] = config.BootDisk
-	}
-
-	if config.Scsihw != "" {
-		params["scsihw"] = config.Scsihw
-	}
-
-	err = config.CreateQemuMachineParam(params)
+	params, _, err := config.mapToApiValues(ConfigQemu{}, vmr)
 	if err != nil {
-		log.Printf("[ERROR] %q", err)
+		return
 	}
-
-	// Create disks config.
-	config.CreateQemuDisksParams(params, false)
-
-	// Create EFI disk
-	config.CreateQemuEfiParams(params)
-
-	// Create vga config.
-	vgaParam := QemuDeviceParam{}
-	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
-	if len(vgaParam) > 0 {
-		params["vga"] = strings.Join(vgaParam, ",")
-	}
-
-	// Create networks config.
-	config.CreateQemuNetworksParams(vmr.vmId, params)
-
-	// Create ipconfig.
-	err = config.CreateIpconfigParams(params)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
-
-	// Create serial interfaces
-	config.CreateQemuSerialsParams(params)
-
-	config.CreateQemuPCIsParams(params)
-
-	// Create usb interfaces
-	config.CreateQemuUsbsParams(params)
 
 	exitStatus, err := client.CreateQemuVm(vmr.node, params)
 	if err != nil {
@@ -201,9 +101,188 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 
 	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
 	if err != nil {
+		return fmt.Errorf("[ERROR] %q", err)
+	}
+
+	return
+}
+
+func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu, vmr *VmRef) (params map[string]interface{}, markedDisks *qemuUpdateChanges, err error) {
+
+	vmr.SetVmType("qemu")
+
+	var itemsToDelete string
+
+	params = map[string]interface{}{
+		"vmid": vmr.vmId,
+	}
+
+	if config.Args != "" {
+		params["args"] = config.Args
+	}
+	if config.Agent != 0 {
+		params["agent"] = config.Agent
+	}
+	if config.Balloon >= 1 {
+		params["balloon"] = config.Balloon
+	}
+	if config.Bios != "" {
+		params["bios"] = config.Bios
+	}
+	if config.Boot != "" {
+		params["boot"] = config.Boot
+	}
+	if config.BootDisk != "" {
+		params["bootdisk"] = config.BootDisk
+	}
+	if config.CIcustom != "" {
+		params["cicustom"] = config.CIcustom
+	}
+	if config.CIpassword != "" {
+		params["cipassword"] = config.CIpassword
+	}
+	if config.CIuser != "" {
+		params["ciuser"] = config.CIuser
+	}
+	if config.QemuCores != 0 {
+		params["cores"] = config.QemuCores
+	}
+	if config.QemuCpu != "" {
+		params["cpu"] = config.QemuCpu
+	}
+	if config.Description != "" {
+		params["description"] = config.Description
+	}
+	if config.Hookscript != "" {
+		params["hookscript"] = config.Hookscript
+	}
+	if config.Hotplug != "" {
+		params["hotplug"] = config.Hotplug
+	}
+	if config.QemuKVM != nil {
+		params["kvm"] = *config.QemuKVM
+	}
+	if config.Machine != "" {
+		params["machine"] = config.Machine
+	}
+	if config.Memory != 0 {
+		params["memory"] = config.Memory
+	}
+	if config.Name != "" {
+		params["name"] = config.Name
+	}
+	if config.Nameserver != "" {
+		params["nameserver"] = config.Nameserver
+	}
+	if config.QemuNuma != nil {
+		params["numa"] = *config.QemuNuma
+	}
+	if config.Onboot != nil {
+		params["onboot"] = *config.Onboot
+	}
+	if config.QemuOs != "" {
+		params["ostype"] = config.QemuOs
+	}
+	if vmr.pool != "" {
+		params["pool"] = vmr.pool
+	}
+	if config.Scsihw != "" {
+		params["scsihw"] = config.Scsihw
+	}
+	if config.Searchdomain != "" {
+		params["searchdomain"] = config.Searchdomain
+	}
+	if config.QemuSockets != 0 {
+		params["sockets"] = config.QemuSockets
+	}
+	if config.Sshkeys != "" {
+		params["sshkeys"] = sshKeyUrlEncode(config.Sshkeys)
+	}
+	if config.Startup != "" {
+		params["startup"] = config.Startup
+	}
+	if config.Tablet != nil {
+		params["tablet"] = *config.Tablet
+	}
+	if config.Tags != "" {
+		params["tags"] = config.Tags
+	}
+	if config.QemuVcpus >= 1 {
+		params["vcpus"] = config.QemuVcpus
+	}
+
+	// Disks
+	if currentConfig.Disks != nil {
+		if config.Disks != nil {
+			markedDisks = config.Disks.markDiskChanges(*currentConfig.Disks, params)
+		}
+		if markedDisks.Delete != "" {
+			itemsToDelete = AddToList(itemsToDelete, markedDisks.Delete)
+		}
+	} else {
+		if config.Disks != nil {
+			config.Disks.mapToApiValues(params)
+		}
+	}
+
+	// Create EFI disk
+	config.CreateQemuEfiParams(params)
+
+	// Create networks config.
+	config.CreateQemuNetworksParams(vmr.vmId, params)
+
+	// Create vga config.
+	vgaParam := QemuDeviceParam{}
+	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
+	if len(vgaParam) > 0 {
+		params["vga"] = strings.Join(vgaParam, ",")
+	}
+	// Create serial interfaces
+	config.CreateQemuSerialsParams(params)
+
+	// Create usb interfaces
+	config.CreateQemuUsbsParams(params)
+
+	config.CreateQemuPCIsParams(params)
+
+	err = config.CreateIpconfigParams(params)
+	if err != nil {
 		log.Printf("[ERROR] %q", err)
 	}
 
+	if itemsToDelete != "" {
+		params["delete"] = itemsToDelete
+	}
+	return
+}
+
+func (newConfig ConfigQemu) Update(currentConfig *ConfigQemu, vmr *VmRef, client *Client) (err error) {
+	params, markedDisks, err := newConfig.mapToApiValues(*currentConfig, vmr)
+	if err != nil {
+		return
+	}
+
+	for _, e := range markedDisks.Move {
+		_, err = client.MoveQemuDisk(vmr, e.Id, e.Storage)
+		if err != nil {
+			return
+		}
+	}
+
+	// TODO Migrate VM
+
+	_, err = client.SetVmConfig(vmr, params)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
+	_, err = client.UpdateVMPool(vmr, newConfig.Pool)
 	return
 }
 
@@ -679,6 +758,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		ipconfigID, _ := strconv.Atoi(id[0])
 		config.Ipconfig[ipconfigID] = ipConfStr
 	}
+
+	config.Disks = QemuStorages{}.mapToStruct(vmConfig)
 
 	// Add disks.
 	diskNames := []string{}
