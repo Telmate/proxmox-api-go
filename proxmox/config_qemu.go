@@ -275,7 +275,7 @@ func (newConfig ConfigQemu) Update(currentConfig *ConfigQemu, vmr *VmRef, client
 
 	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)
 	if err != nil {
-		log.Printf("[ERROR] %q", err)
+		return
 	}
 
 	_, err = client.UpdateVMPool(vmr, newConfig.Pool)
