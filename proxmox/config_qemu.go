@@ -165,16 +165,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create disks config.
-	err = config.CreateQemuDisksParams(vmr.vmId, params, false)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuDisksParams(params, false)
 
 	// Create EFI disk
-	err = config.CreateQemuEfiParams(params)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuEfiParams(params)
 
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
@@ -184,33 +178,21 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create networks config.
-	err = config.CreateQemuNetworksParams(vmr.vmId, params)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuNetworksParams(vmr.vmId, params)
 
 	// Create ipconfig.
-	err = config.CreateIpconfigParams(vmr.vmId, params)
+	err = config.CreateIpconfigParams(params)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
 	}
 
 	// Create serial interfaces
-	err = config.CreateQemuSerialsParams(vmr.vmId, params)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuSerialsParams(params)
 
-	err = config.CreateQemuPCIsParams(vmr.vmId, params)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuPCIsParams(params)
 
 	// Create usb interfaces
-	err = config.CreateQemuUsbsParams(vmr.vmId, params)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuUsbsParams(params)
 
 	exitStatus, err := client.CreateQemuVm(vmr.node, params)
 	if err != nil {
@@ -385,10 +367,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		"vmid": vmr.vmId,
 	}
 	// TODO keep going if error=
-	err = config.CreateQemuDisksParams(vmr.vmId, configParamsDisk, false)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuDisksParams(configParamsDisk, false)
 	// TODO keep going if error=
 	_, err = client.createVMDisks(vmr.node, configParamsDisk)
 	if err != nil {
@@ -403,10 +382,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create networks config.
-	err = config.CreateQemuNetworksParams(vmr.vmId, configParams)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuNetworksParams(vmr.vmId, configParams)
 
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
@@ -415,21 +391,13 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["vga"] = strings.Join(vgaParam, ",")
 	}
 	// Create serial interfaces
-	err = config.CreateQemuSerialsParams(vmr.vmId, configParams)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuSerialsParams(configParams)
 
 	// Create usb interfaces
-	err = config.CreateQemuUsbsParams(vmr.vmId, configParams)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuUsbsParams(configParams)
 
-	err = config.CreateQemuPCIsParams(vmr.vmId, configParams)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
+	config.CreateQemuPCIsParams(configParams)
+
 	// cloud-init options
 	if config.CIuser != "" {
 		configParams["ciuser"] = config.CIuser
@@ -449,7 +417,7 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	if config.Sshkeys != "" {
 		configParams["sshkeys"] = sshKeyUrlEncode(config.Sshkeys)
 	}
-	err = config.CreateIpconfigParams(vmr.vmId, configParams)
+	err = config.CreateIpconfigParams(configParams)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
 	}
@@ -835,11 +803,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		vgaList := strings.Split(vga.(string), ",")
 		vgaMap := QemuDevice{}
 
-		// TODO: keep going if error?
-		err = vgaMap.readDeviceConfig(vgaList)
-		if err != nil {
-			log.Printf("[ERROR] %q", err)
-		}
+		vgaMap.readDeviceConfig(vgaList)
 		if len(vgaMap) > 0 {
 			config.QemuVga = vgaMap
 		}
@@ -870,10 +834,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		}
 
 		// Add rest of device config.
-		err = nicConfMap.readDeviceConfig(nicConfList[1:])
-		if err != nil {
-			log.Printf("[ERROR] %q", err)
-		}
+		nicConfMap.readDeviceConfig(nicConfList[1:])
 		switch nicConfMap["firewall"] {
 		case 1:
 			nicConfMap["firewall"] = true
@@ -938,10 +899,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 			"host": host,
 		}
 
-		err = usbConfMap.readDeviceConfig(usbConfList[1:])
-		if err != nil {
-			log.Printf("[ERROR] %q", err)
-		}
+		usbConfMap.readDeviceConfig(usbConfList[1:])
 		if usbConfMap["usb3"] == 1 {
 			usbConfMap["usb3"] = true
 		}
@@ -969,11 +927,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		hostPCIConfMap := QemuDevice{
 			"id": hostPCIID,
 		}
-		err = hostPCIConfMap.readDeviceConfig(hostPCIConfList)
-		if err != nil {
-			log.Printf("[ERROR] %q", err)
-		}
-
+		hostPCIConfMap.readDeviceConfig(hostPCIConfList)
 		// And device config to usbs map.
 		if len(hostPCIConfMap) > 0 {
 			config.QemuPCIDevices[hostPCIID] = hostPCIConfMap
@@ -989,7 +943,6 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		//log.Printf("[DEBUG] VM %d(%s) has no HA config", vmr.vmId, vmConfig["hostname"])
 		return config, nil
 	}
-
 	return
 }
 
@@ -1205,8 +1158,7 @@ func FormatUsbParam(usb QemuDevice) string {
 }
 
 // Create parameters for each Nic device.
-func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interface{}) error {
-
+func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interface{}) {
 	// For new style with multi net device.
 	for nicID, nicConfMap := range c.QemuNetworks {
 
@@ -1267,12 +1219,10 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 		// Add nic to Qemu prams.
 		params[qemuNicName] = strings.Join(nicConfParam, ",")
 	}
-
-	return nil
 }
 
 // Create parameters for each Cloud-Init ipconfig entry.
-func (c ConfigQemu) CreateIpconfigParams(vmID int, params map[string]interface{}) error {
+func (c ConfigQemu) CreateIpconfigParams(params map[string]interface{}) error {
 
 	for ID, config := range c.Ipconfig {
 		if ID > 15 {
@@ -1289,9 +1239,7 @@ func (c ConfigQemu) CreateIpconfigParams(vmID int, params map[string]interface{}
 }
 
 // Create efi parameter.
-func (c ConfigQemu) CreateQemuEfiParams(
-	params map[string]interface{},
-) error {
+func (c ConfigQemu) CreateQemuEfiParams(params map[string]interface{}) {
 	efiParam := QemuDeviceParam{}
 	efiParam = efiParam.createDeviceParam(c.EFIDisk, nil)
 
@@ -1312,16 +1260,10 @@ func (c ConfigQemu) CreateQemuEfiParams(
 		}
 		params["efidisk0"] = storage
 	}
-	return nil
 }
 
 // Create parameters for each disk.
-func (c ConfigQemu) CreateQemuDisksParams(
-	vmID int,
-	params map[string]interface{},
-	cloned bool,
-) error {
-
+func (c ConfigQemu) CreateQemuDisksParams(params map[string]interface{}, cloned bool) {
 	// For new style with multi disk device.
 	for diskID, diskConfMap := range c.QemuDisks {
 		// skip the first disk for clones (may not always be right, but a template probably has at least 1 disk)
@@ -1336,16 +1278,10 @@ func (c ConfigQemu) CreateQemuDisksParams(
 		// Add back to Qemu prams.
 		params[qemuDiskName] = FormatDiskParam(diskConfMap)
 	}
-
-	return nil
 }
 
 // Create parameters for each PCI Device
-func (c ConfigQemu) CreateQemuPCIsParams(
-	vmID int,
-	params map[string]interface{},
-) error {
-
+func (c ConfigQemu) CreateQemuPCIsParams(params map[string]interface{}) {
 	// For new style with multi pci device.
 	for pciConfID, pciConfMap := range c.QemuPCIDevices {
 		qemuPCIName := "hostpci" + strconv.Itoa(pciConfID)
@@ -1360,15 +1296,10 @@ func (c ConfigQemu) CreateQemuPCIsParams(
 		// Add back to Qemu prams.
 		params[qemuPCIName] = strings.TrimSuffix(pcistring.String(), ",")
 	}
-	return nil
 }
 
 // Create parameters for serial interface
-func (c ConfigQemu) CreateQemuSerialsParams(
-	vmID int,
-	params map[string]interface{},
-) error {
-
+func (c ConfigQemu) CreateQemuSerialsParams(params map[string]interface{}) {
 	// For new style with multi disk device.
 	for serialID, serialConfMap := range c.QemuSerials {
 		// Device name.
@@ -1378,23 +1309,16 @@ func (c ConfigQemu) CreateQemuSerialsParams(
 		// Add back to Qemu prams.
 		params[qemuSerialName] = deviceType
 	}
-
-	return nil
 }
 
 // Create parameters for usb interface
-func (c ConfigQemu) CreateQemuUsbsParams(
-	vmID int,
-	params map[string]interface{},
-) error {
+func (c ConfigQemu) CreateQemuUsbsParams(params map[string]interface{}) {
 	for usbID, usbConfMap := range c.QemuUsbs {
 		qemuUsbName := "usb" + strconv.Itoa(usbID)
 
 		// Add back to Qemu prams.
 		params[qemuUsbName] = FormatUsbParam(usbConfMap)
 	}
-
-	return nil
 }
 
 // Create parameters for serial interface
@@ -1437,13 +1361,12 @@ func (p QemuDeviceParam) createDeviceParam(
 }
 
 // readDeviceConfig - get standard sub-conf strings where `key=value` and update conf map.
-func (confMap QemuDevice) readDeviceConfig(confList []string) error {
+func (confMap QemuDevice) readDeviceConfig(confList []string) {
 	// Add device config.
 	for _, conf := range confList {
 		key, value := ParseSubConf(conf, "=")
 		confMap[key] = value
 	}
-	return nil
 }
 
 func (c ConfigQemu) String() string {
