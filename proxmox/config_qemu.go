@@ -63,7 +63,7 @@ type ConfigQemu struct {
 	BootDisk        string        `json:"bootdisk,omitempty"`
 	Scsihw          string        `json:"scsihw,omitempty"`
 	Disks           *QemuStorages `json:"disks,omitempty"`
-	QemuDisks       QemuDevices   `json:"disk,omitempty"`
+	QemuDisks       QemuDevices   `json:"disk,omitempty"` // DEPRECATED use Disks *QemuStorages instead
 	QemuUnusedDisks QemuDevices   `json:"unused,omitempty"`
 	QemuVga         QemuDevice    `json:"vga,omitempty"`
 	QemuNetworks    QemuDevices   `json:"network,omitempty"`
@@ -760,89 +760,6 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 
 	config.Disks = QemuStorages{}.mapToStruct(vmConfig)
-
-	// Add disks.
-	diskNames := []string{}
-
-	for k := range vmConfig {
-		if diskName := rxDiskName.FindStringSubmatch(k); len(diskName) > 0 {
-			diskNames = append(diskNames, diskName[0])
-		}
-	}
-
-	for _, diskName := range diskNames {
-		var isDiskByID bool = false
-		diskConfStr := vmConfig[diskName].(string)
-
-		id := rxDeviceID.FindStringSubmatch(diskName)
-		diskID, _ := strconv.Atoi(id[0])
-		diskType := rxDiskType.FindStringSubmatch(diskName)[0]
-
-		diskConfMap := ParsePMConf(diskConfStr, "volume")
-		diskByID := rxDiskPath.FindStringSubmatch(diskConfMap["volume"].(string))
-		if len(diskByID) > 0 && diskByID[0] != "" {
-			isDiskByID = true
-		}
-
-		if diskConfMap["volume"].(string) == "none" {
-			continue
-		}
-
-		diskConfMap["slot"] = diskID
-		diskConfMap["type"] = diskType
-
-		storageName, fileName := ParseSubConf(diskConfMap["volume"].(string), ":")
-		diskConfMap["storage"] = storageName
-		diskConfMap["file"] = fileName
-
-		filePath := diskConfMap["volume"]
-
-		// Get disk format
-		storageContent, err := client.GetStorageContent(vmr, storageName)
-		if err != nil {
-			log.Fatal(err)
-			return nil, err
-		}
-		var storageFormat string
-		contents := storageContent["data"].([]interface{})
-		for content := range contents {
-			storageContentMap := contents[content].(map[string]interface{})
-			if storageContentMap["volid"] == filePath {
-				storageFormat = storageContentMap["format"].(string)
-				break
-			}
-		}
-		diskConfMap["format"] = storageFormat
-
-		// Get storage type for disk
-		var storageStatus map[string]interface{}
-		if !isDiskByID {
-			storageStatus, err = client.GetStorageStatus(vmr, storageName)
-			if err != nil {
-				log.Fatal(err)
-				return nil, err
-			}
-			storageType := storageStatus["type"]
-
-			diskConfMap["storage_type"] = storageType
-		}
-		// cloud-init disks not always have the size sent by the API, which results in a crash
-		if diskConfMap["size"] == nil && strings.Contains(fileName.(string), "cloudinit") {
-			diskConfMap["size"] = "4M" // default cloud-init disk size
-		}
-
-		var sizeInTerabytes = regexp.MustCompile(`[0-9]+T`)
-		// Convert to gigabytes if disk size was received in terabytes
-		matched := sizeInTerabytes.MatchString(diskConfMap["size"].(string))
-		if matched {
-			diskConfMap["size"] = fmt.Sprintf("%.0fG", DiskSizeGB(diskConfMap["size"]))
-		}
-
-		// And device config to disks map.
-		if len(diskConfMap) > 0 {
-			config.QemuDisks[diskID] = diskConfMap
-		}
-	}
 
 	// Add unused disks
 	// unused0:local:100/vm-100-disk-1.qcow2
