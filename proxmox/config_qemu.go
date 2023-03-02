@@ -357,6 +357,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["vcpus"] = config.QemuVcpus
 	}
 
+	if config.Boot != "" {
+		configParams["boot"] = config.Boot
+	}
+
 	if config.BootDisk != "" {
 		configParams["bootdisk"] = config.BootDisk
 	}
