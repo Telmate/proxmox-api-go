@@ -237,9 +237,9 @@ storage:xxx
 func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
 	var storage string
-	fullclone := "1"
+	fullClone := "1"
 	if config.FullClone != nil {
-		fullclone = strconv.Itoa(*config.FullClone)
+		fullClone = strconv.Itoa(*config.FullClone)
 	}
 	if disk0Storage, ok := config.QemuDisks[0]["storage"].(string); ok && len(disk0Storage) > 0 {
 		storage = disk0Storage
@@ -248,13 +248,13 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		"newid":  vmr.vmId,
 		"target": vmr.node,
 		"name":   config.Name,
-		"full":   fullclone,
+		"full":   fullClone,
 	}
 	if vmr.pool != "" {
 		params["pool"] = vmr.pool
 	}
 
-	if fullclone == "1" && storage != "" {
+	if fullClone == "1" && storage != "" {
 		params["storage"] = storage
 	}
 
