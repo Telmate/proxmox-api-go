@@ -268,10 +268,9 @@ func (newConfig ConfigQemu) Update(currentConfig *ConfigQemu, vmr *VmRef, client
 
 	// TODO Migrate VM
 
-	_, err = client.SetVmConfig(vmr, params)
+	_, err = client.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 	if err != nil {
-		log.Print(err)
-		return err
+		return
 	}
 
 	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)
