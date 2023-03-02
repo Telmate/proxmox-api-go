@@ -14,6 +14,7 @@ type QemuVirtIODisk struct {
 	Storage   string            `json:"storage,omitempty"`
 }
 
+// TODO write test
 func (disk QemuVirtIODisk) mapToApiValues(create bool) string {
 	return qemuDisk{
 		AsyncIO:   disk.AsyncIO,
@@ -49,57 +50,31 @@ type QemuVirtIODisks struct {
 	Disk_15 *QemuVirtIOStorage `json:"15,omitempty"`
 }
 
-func (disks QemuVirtIODisks) mapToApiValues(create bool, params map[string]interface{}) {
-	if disks.Disk_0 != nil {
-		params["virtio0"] = disks.Disk_0.mapToApiValues(create)
+// TODO write test
+func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, params map[string]interface{}, changes *qemuUpdateChanges) {
+	tmpCurrentDisks := QemuVirtIODisks{}
+	if currentDisks != nil {
+		tmpCurrentDisks = *currentDisks
 	}
-	if disks.Disk_1 != nil {
-		params["virtio1"] = disks.Disk_1.mapToApiValues(create)
-	}
-	if disks.Disk_2 != nil {
-		params["virtio2"] = disks.Disk_2.mapToApiValues(create)
-	}
-	if disks.Disk_3 != nil {
-		params["virtio3"] = disks.Disk_3.mapToApiValues(create)
-	}
-	if disks.Disk_4 != nil {
-		params["virtio4"] = disks.Disk_4.mapToApiValues(create)
-	}
-	if disks.Disk_5 != nil {
-		params["virtio5"] = disks.Disk_5.mapToApiValues(create)
-	}
-	if disks.Disk_6 != nil {
-		params["virtio6"] = disks.Disk_6.mapToApiValues(create)
-	}
-	if disks.Disk_7 != nil {
-		params["virtio7"] = disks.Disk_7.mapToApiValues(create)
-	}
-	if disks.Disk_8 != nil {
-		params["virtio8"] = disks.Disk_8.mapToApiValues(create)
-	}
-	if disks.Disk_9 != nil {
-		params["virtio9"] = disks.Disk_9.mapToApiValues(create)
-	}
-	if disks.Disk_10 != nil {
-		params["virtio10"] = disks.Disk_10.mapToApiValues(create)
-	}
-	if disks.Disk_11 != nil {
-		params["virtio11"] = disks.Disk_11.mapToApiValues(create)
-	}
-	if disks.Disk_12 != nil {
-		params["virtio12"] = disks.Disk_12.mapToApiValues(create)
-	}
-	if disks.Disk_13 != nil {
-		params["virtio13"] = disks.Disk_13.mapToApiValues(create)
-	}
-	if disks.Disk_14 != nil {
-		params["virtio14"] = disks.Disk_14.mapToApiValues(create)
-	}
-	if disks.Disk_15 != nil {
-		params["virtio15"] = disks.Disk_15.mapToApiValues(create)
-	}
+	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, "virtio0", params, changes)
+	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, "virtio1", params, changes)
+	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, "virtio2", params, changes)
+	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, "virtio3", params, changes)
+	disks.Disk_4.markDiskChanges(tmpCurrentDisks.Disk_4, "virtio4", params, changes)
+	disks.Disk_5.markDiskChanges(tmpCurrentDisks.Disk_5, "virtio5", params, changes)
+	disks.Disk_6.markDiskChanges(tmpCurrentDisks.Disk_6, "virtio6", params, changes)
+	disks.Disk_7.markDiskChanges(tmpCurrentDisks.Disk_7, "virtio7", params, changes)
+	disks.Disk_8.markDiskChanges(tmpCurrentDisks.Disk_8, "virtio8", params, changes)
+	disks.Disk_9.markDiskChanges(tmpCurrentDisks.Disk_9, "virtio9", params, changes)
+	disks.Disk_10.markDiskChanges(tmpCurrentDisks.Disk_10, "virtio10", params, changes)
+	disks.Disk_11.markDiskChanges(tmpCurrentDisks.Disk_11, "virtio11", params, changes)
+	disks.Disk_12.markDiskChanges(tmpCurrentDisks.Disk_12, "virtio12", params, changes)
+	disks.Disk_13.markDiskChanges(tmpCurrentDisks.Disk_13, "virtio13", params, changes)
+	disks.Disk_14.markDiskChanges(tmpCurrentDisks.Disk_14, "virtio14", params, changes)
+	disks.Disk_15.markDiskChanges(tmpCurrentDisks.Disk_15, "virtio15", params, changes)
 }
 
+// TODO write test
 func (QemuVirtIODisks) mapToStruct(params map[string]interface{}) *QemuVirtIODisks {
 	disks := QemuVirtIODisks{}
 	var structPopulated bool
@@ -187,6 +162,7 @@ type QemuVirtIOPassthrough struct {
 }
 
 // TODO write function
+// TODO write test
 func (passthrough QemuVirtIOPassthrough) mapToApiValues() string {
 	return ""
 }
@@ -198,6 +174,7 @@ type QemuVirtIOStorage struct {
 	Passthrough *QemuVirtIOPassthrough
 }
 
+// TODO write test
 func (storage QemuVirtIOStorage) mapToApiValues(create bool) string {
 	if storage.Disk != nil {
 		return storage.Disk.mapToApiValues(create)
@@ -214,6 +191,75 @@ func (storage QemuVirtIOStorage) mapToApiValues(create bool) string {
 	return ""
 }
 
+// TODO write test
+func (storage *QemuVirtIOStorage) markDiskChanges(currentStorage *QemuVirtIOStorage, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
+	if storage == nil {
+		if currentStorage != nil {
+			changes.Delete = append(changes.Delete, id)
+		}
+		return
+	}
+	// CDROM
+	if storage.CdRom != nil {
+		// Create or Update
+		params[id] = storage.CdRom.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.CdRom != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// CloudInit
+	if storage.CloudInit != nil {
+		// Create or Update
+		params[id] = storage.CloudInit.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.CloudInit != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// Disk
+	if storage.Disk != nil {
+		if currentStorage == nil || currentStorage.Disk == nil {
+			// Create
+			params[id] = storage.Disk.mapToApiValues(true)
+		} else {
+			if storage.Disk.Size >= currentStorage.Disk.Size {
+				// Update
+				if storage.Disk.Storage != currentStorage.Disk.Storage {
+					changes.Move = append(changes.Move, qemuDiskShort{
+						Id:      id,
+						Storage: storage.Disk.Storage,
+					})
+				}
+				params[id] = storage.Disk.mapToApiValues(false)
+			} else {
+				// Delete and Create
+				changes.Delete = append(changes.Delete, id)
+				params[id] = storage.Disk.mapToApiValues(true)
+			}
+		}
+		return
+	} else if currentStorage != nil && currentStorage.Disk != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// Passthrough
+	if storage.Passthrough != nil {
+		// Create or Update
+		changes.MigrationImpossible = true
+		params[id] = storage.Passthrough.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.Passthrough != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+}
+
+// TODO write test
 func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(settings)

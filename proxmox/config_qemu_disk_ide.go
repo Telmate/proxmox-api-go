@@ -13,6 +13,7 @@ type QemuIdeDisk struct {
 	Storage    string            `json:"storage,omitempty"`
 }
 
+// TODO write test
 func (disk QemuIdeDisk) mapToApiValues(create bool) string {
 	return qemuDisk{
 		AsyncIO:    disk.AsyncIO,
@@ -36,21 +37,19 @@ type QemuIdeDisks struct {
 	Disk_3 *QemuIdeStorage `json:"3,omitempty"`
 }
 
-func (disks QemuIdeDisks) mapToApiValues(create bool, params map[string]interface{}) {
-	if disks.Disk_0 != nil {
-		params["ide0"] = disks.Disk_0.mapToApiValues(create)
+// TODO write test
+func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, params map[string]interface{}, changes *qemuUpdateChanges) {
+	tmpCurrentDisks := QemuIdeDisks{}
+	if currentDisks != nil {
+		tmpCurrentDisks = *currentDisks
 	}
-	if disks.Disk_1 != nil {
-		params["ide1"] = disks.Disk_0.mapToApiValues(create)
-	}
-	if disks.Disk_2 != nil {
-		params["ide2"] = disks.Disk_0.mapToApiValues(create)
-	}
-	if disks.Disk_3 != nil {
-		params["ide3"] = disks.Disk_0.mapToApiValues(create)
-	}
+	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, "ide0", params, changes)
+	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, "ide1", params, changes)
+	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, "ide2", params, changes)
+	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, "ide3", params, changes)
 }
 
+// TODO write test
 func (QemuIdeDisks) mapToStruct(params map[string]interface{}) *QemuIdeDisks {
 	disks := QemuIdeDisks{}
 	var structPopulated bool
@@ -90,6 +89,7 @@ type QemuIdePassthrough struct {
 }
 
 // TODO write function
+// TODO write test
 func (passthrough QemuIdePassthrough) mapToApiValues() string {
 	return ""
 }
@@ -101,6 +101,7 @@ type QemuIdeStorage struct {
 	Passthrough *QemuIdePassthrough `json:"passthrough,omitempty"`
 }
 
+// TODO write test
 func (storage QemuIdeStorage) mapToApiValues(create bool) string {
 	if storage.Disk != nil {
 		return storage.Disk.mapToApiValues(create)
@@ -117,6 +118,75 @@ func (storage QemuIdeStorage) mapToApiValues(create bool) string {
 	return ""
 }
 
+// TODO write test
+func (storage *QemuIdeStorage) markDiskChanges(currentStorage *QemuIdeStorage, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
+	if storage == nil {
+		if currentStorage != nil {
+			changes.Delete = append(changes.Delete, id)
+		}
+		return
+	}
+	// CDROM
+	if storage.CdRom != nil {
+		// Create or Update
+		params[id] = storage.CdRom.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.CdRom != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// CloudInit
+	if storage.CloudInit != nil {
+		// Create or Update
+		params[id] = storage.CloudInit.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.CloudInit != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// Disk
+	if storage.Disk != nil {
+		if currentStorage == nil || currentStorage.Disk == nil {
+			// Create
+			params[id] = storage.Disk.mapToApiValues(true)
+		} else {
+			if storage.Disk.Size >= currentStorage.Disk.Size {
+				// Update
+				if storage.Disk.Storage != currentStorage.Disk.Storage {
+					changes.Move = append(changes.Move, qemuDiskShort{
+						Id:      id,
+						Storage: storage.Disk.Storage,
+					})
+				}
+				params[id] = storage.Disk.mapToApiValues(false)
+			} else {
+				// Delete and Create
+				changes.Delete = append(changes.Delete, id)
+				params[id] = storage.Disk.mapToApiValues(true)
+			}
+		}
+		return
+	} else if currentStorage != nil && currentStorage.Disk != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// Passthrough
+	if storage.Passthrough != nil {
+		// Create or Update
+		changes.MigrationImpossible = true
+		params[id] = storage.Passthrough.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.Passthrough != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+}
+
+// TODO write test
 func (QemuIdeStorage) mapToStruct(param string) *QemuIdeStorage {
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(settings)

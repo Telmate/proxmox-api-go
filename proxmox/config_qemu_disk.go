@@ -132,8 +132,9 @@ type qemuDisk struct {
 	// TODO custom type
 	File      string // Only set for Passthrough.
 	Format    QemuDiskFormat
+	ID        uint // Only set for Disk
 	IOThread  bool // Only set for scsi,virtio
-	Number    uint // Only set for Disk
+	Number    uint
 	ReadOnly  bool // Only set for scsi,virtio
 	Replicate bool
 	Serial    QemuDiskSerial
@@ -229,11 +230,11 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		diskAndNumberAndFormat := strings.Split(settings[0][0], ":")
 		disk.Storage = diskAndNumberAndFormat[0]
 		if len(diskAndNumberAndFormat) == 2 {
-			numberAndFormat := strings.Split(diskAndNumberAndFormat[1], "-")
-			if len(numberAndFormat) == 2 {
-				tmp := strings.Split(numberAndFormat[1], ".")
-				tmpNumber, _ := strconv.Atoi(tmp[0])
-				disk.Number = uint(tmpNumber)
+			idAndFormat := strings.Split(diskAndNumberAndFormat[1], "-")
+			if len(idAndFormat) == 2 {
+				tmp := strings.Split(idAndFormat[1], ".")
+				tmpId, _ := strconv.Atoi(tmp[0])
+				disk.ID = uint(tmpId)
 				if len(tmp) == 2 {
 					disk.Format = QemuDiskFormat(tmp[1])
 				}
@@ -404,6 +405,11 @@ func (serial QemuDiskSerial) Validate() error {
 	return nil
 }
 
+type qemuDiskShort struct {
+	Storage string
+	Id      string
+}
+
 type qemuDiskType int
 
 const (
@@ -420,18 +426,35 @@ type QemuStorages struct {
 	VirtIO *QemuVirtIODisks `json:"virtio,omitempty"`
 }
 
-func (storages QemuStorages) mapToApiValues(create bool, params map[string]interface{}) {
+func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, params map[string]interface{}) *qemuUpdateChanges {
+	changes := &qemuUpdateChanges{}
+	if currentStorages.Ide != nil {
+		storages.Ide.mapToApiValues(currentStorages.Ide, params, changes)
+	}
+	if currentStorages.Sata != nil {
+		storages.Sata.mapToApiValues(currentStorages.Sata, params, changes)
+	}
+	if currentStorages.Scsi != nil {
+		storages.Scsi.mapToApiValues(currentStorages.Scsi, params, changes)
+	}
+	if currentStorages.VirtIO != nil {
+		storages.VirtIO.mapToApiValues(currentStorages.VirtIO, params, changes)
+	}
+	return changes
+}
+
+func (storages QemuStorages) mapToApiValues(params map[string]interface{}) {
 	if storages.Ide != nil {
-		storages.Ide.mapToApiValues(create, params)
+		storages.Ide.mapToApiValues(nil, params, nil)
 	}
 	if storages.Sata != nil {
-		storages.Sata.mapToApiValues(create, params)
+		storages.Sata.mapToApiValues(nil, params, nil)
 	}
 	if storages.Scsi != nil {
-		storages.Scsi.mapToApiValues(create, params)
+		storages.Scsi.mapToApiValues(nil, params, nil)
 	}
 	if storages.VirtIO != nil {
-		storages.VirtIO.mapToApiValues(create, params)
+		storages.VirtIO.mapToApiValues(nil, params, nil)
 	}
 }
 
@@ -446,4 +469,10 @@ func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {
 		return &storage
 	}
 	return nil
+}
+
+type qemuUpdateChanges struct {
+	Move                []qemuDiskShort
+	Delete              []string
+	MigrationImpossible bool
 }

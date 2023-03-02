@@ -15,6 +15,7 @@ type QemuScsiDisk struct {
 	Storage    string            `json:"storage,omitempty"`
 }
 
+// TODO write test
 func (disk QemuScsiDisk) mapToApiValues(create bool) string {
 	return qemuDisk{
 		AsyncIO:    disk.AsyncIO,
@@ -67,102 +68,46 @@ type QemuScsiDisks struct {
 	Disk_30 *QemuScsiStorage `json:"30,omitempty"`
 }
 
-func (disks QemuScsiDisks) mapToApiValues(create bool, params map[string]interface{}) {
-	if disks.Disk_0 != nil {
-		params["scsi0"] = disks.Disk_0.mapToApiValues(create)
+// TODO write test
+func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, params map[string]interface{}, changes *qemuUpdateChanges) {
+	tmpCurrentDisks := QemuScsiDisks{}
+	if currentDisks != nil {
+		tmpCurrentDisks = *currentDisks
 	}
-	if disks.Disk_1 != nil {
-		params["scsi1"] = disks.Disk_1.mapToApiValues(create)
-	}
-	if disks.Disk_2 != nil {
-		params["scsi2"] = disks.Disk_2.mapToApiValues(create)
-	}
-	if disks.Disk_3 != nil {
-		params["scsi3"] = disks.Disk_3.mapToApiValues(create)
-	}
-	if disks.Disk_4 != nil {
-		params["scsi4"] = disks.Disk_4.mapToApiValues(create)
-	}
-	if disks.Disk_5 != nil {
-		params["scsi5"] = disks.Disk_5.mapToApiValues(create)
-	}
-	if disks.Disk_6 != nil {
-		params["scsi6"] = disks.Disk_6.mapToApiValues(create)
-	}
-	if disks.Disk_7 != nil {
-		params["scsi7"] = disks.Disk_7.mapToApiValues(create)
-	}
-	if disks.Disk_8 != nil {
-		params["scsi8"] = disks.Disk_8.mapToApiValues(create)
-	}
-	if disks.Disk_9 != nil {
-		params["scsi9"] = disks.Disk_9.mapToApiValues(create)
-	}
-	if disks.Disk_10 != nil {
-		params["scsi10"] = disks.Disk_10.mapToApiValues(create)
-	}
-	if disks.Disk_11 != nil {
-		params["scsi11"] = disks.Disk_11.mapToApiValues(create)
-	}
-	if disks.Disk_12 != nil {
-		params["scsi12"] = disks.Disk_12.mapToApiValues(create)
-	}
-	if disks.Disk_13 != nil {
-		params["scsi13"] = disks.Disk_13.mapToApiValues(create)
-	}
-	if disks.Disk_14 != nil {
-		params["scsi14"] = disks.Disk_14.mapToApiValues(create)
-	}
-	if disks.Disk_15 != nil {
-		params["scsi15"] = disks.Disk_15.mapToApiValues(create)
-	}
-	if disks.Disk_16 != nil {
-		params["scsi16"] = disks.Disk_16.mapToApiValues(create)
-	}
-	if disks.Disk_17 != nil {
-		params["scsi17"] = disks.Disk_17.mapToApiValues(create)
-	}
-	if disks.Disk_18 != nil {
-		params["scsi18"] = disks.Disk_18.mapToApiValues(create)
-	}
-	if disks.Disk_19 != nil {
-		params["scsi19"] = disks.Disk_19.mapToApiValues(create)
-	}
-	if disks.Disk_20 != nil {
-		params["scsi20"] = disks.Disk_20.mapToApiValues(create)
-	}
-	if disks.Disk_21 != nil {
-		params["scsi21"] = disks.Disk_21.mapToApiValues(create)
-	}
-	if disks.Disk_22 != nil {
-		params["scsi22"] = disks.Disk_22.mapToApiValues(create)
-	}
-	if disks.Disk_23 != nil {
-		params["scsi23"] = disks.Disk_23.mapToApiValues(create)
-	}
-	if disks.Disk_24 != nil {
-		params["scsi24"] = disks.Disk_24.mapToApiValues(create)
-	}
-	if disks.Disk_25 != nil {
-		params["scsi25"] = disks.Disk_25.mapToApiValues(create)
-	}
-	if disks.Disk_26 != nil {
-		params["scsi26"] = disks.Disk_26.mapToApiValues(create)
-	}
-	if disks.Disk_27 != nil {
-		params["scsi27"] = disks.Disk_27.mapToApiValues(create)
-	}
-	if disks.Disk_28 != nil {
-		params["scsi28"] = disks.Disk_28.mapToApiValues(create)
-	}
-	if disks.Disk_29 != nil {
-		params["scsi29"] = disks.Disk_29.mapToApiValues(create)
-	}
-	if disks.Disk_30 != nil {
-		params["scsi30"] = disks.Disk_30.mapToApiValues(create)
-	}
+	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, "scsi0", params, changes)
+	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, "scsi1", params, changes)
+	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, "scsi2", params, changes)
+	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, "scsi3", params, changes)
+	disks.Disk_4.markDiskChanges(tmpCurrentDisks.Disk_4, "scsi4", params, changes)
+	disks.Disk_5.markDiskChanges(tmpCurrentDisks.Disk_5, "scsi5", params, changes)
+	disks.Disk_6.markDiskChanges(tmpCurrentDisks.Disk_6, "scsi6", params, changes)
+	disks.Disk_7.markDiskChanges(tmpCurrentDisks.Disk_7, "scsi7", params, changes)
+	disks.Disk_8.markDiskChanges(tmpCurrentDisks.Disk_8, "scsi8", params, changes)
+	disks.Disk_9.markDiskChanges(tmpCurrentDisks.Disk_9, "scsi9", params, changes)
+	disks.Disk_10.markDiskChanges(tmpCurrentDisks.Disk_10, "scsi10", params, changes)
+	disks.Disk_11.markDiskChanges(tmpCurrentDisks.Disk_11, "scsi11", params, changes)
+	disks.Disk_12.markDiskChanges(tmpCurrentDisks.Disk_12, "scsi12", params, changes)
+	disks.Disk_13.markDiskChanges(tmpCurrentDisks.Disk_13, "scsi13", params, changes)
+	disks.Disk_14.markDiskChanges(tmpCurrentDisks.Disk_14, "scsi14", params, changes)
+	disks.Disk_15.markDiskChanges(tmpCurrentDisks.Disk_15, "scsi15", params, changes)
+	disks.Disk_16.markDiskChanges(tmpCurrentDisks.Disk_16, "scsi16", params, changes)
+	disks.Disk_17.markDiskChanges(tmpCurrentDisks.Disk_17, "scsi17", params, changes)
+	disks.Disk_18.markDiskChanges(tmpCurrentDisks.Disk_18, "scsi18", params, changes)
+	disks.Disk_19.markDiskChanges(tmpCurrentDisks.Disk_19, "scsi19", params, changes)
+	disks.Disk_20.markDiskChanges(tmpCurrentDisks.Disk_20, "scsi20", params, changes)
+	disks.Disk_21.markDiskChanges(tmpCurrentDisks.Disk_21, "scsi21", params, changes)
+	disks.Disk_22.markDiskChanges(tmpCurrentDisks.Disk_22, "scsi22", params, changes)
+	disks.Disk_23.markDiskChanges(tmpCurrentDisks.Disk_23, "scsi23", params, changes)
+	disks.Disk_24.markDiskChanges(tmpCurrentDisks.Disk_24, "scsi24", params, changes)
+	disks.Disk_25.markDiskChanges(tmpCurrentDisks.Disk_25, "scsi25", params, changes)
+	disks.Disk_26.markDiskChanges(tmpCurrentDisks.Disk_26, "scsi26", params, changes)
+	disks.Disk_27.markDiskChanges(tmpCurrentDisks.Disk_27, "scsi27", params, changes)
+	disks.Disk_28.markDiskChanges(tmpCurrentDisks.Disk_28, "scsi28", params, changes)
+	disks.Disk_29.markDiskChanges(tmpCurrentDisks.Disk_29, "scsi29", params, changes)
+	disks.Disk_30.markDiskChanges(tmpCurrentDisks.Disk_30, "scsi30", params, changes)
 }
 
+// TODO write test
 func (QemuScsiDisks) mapToStruct(params map[string]interface{}) *QemuScsiDisks {
 	disks := QemuScsiDisks{}
 	var structPopulated bool
@@ -312,6 +257,7 @@ type QemuScsiPassthrough struct {
 }
 
 // TODO write function
+// TODO write test
 func (passthrough QemuScsiPassthrough) mapToApiValues() string {
 	return ""
 }
@@ -323,6 +269,7 @@ type QemuScsiStorage struct {
 	Passthrough *QemuScsiPassthrough
 }
 
+// TODO write test
 func (storage QemuScsiStorage) mapToApiValues(create bool) string {
 	if storage.Disk != nil {
 		return storage.Disk.mapToApiValues(create)
@@ -339,6 +286,75 @@ func (storage QemuScsiStorage) mapToApiValues(create bool) string {
 	return ""
 }
 
+// TODO write test
+func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
+	if storage == nil {
+		if currentStorage != nil {
+			changes.Delete = append(changes.Delete, id)
+		}
+		return
+	}
+	// CDROM
+	if storage.CdRom != nil {
+		// Create or Update
+		params[id] = storage.CdRom.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.CdRom != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// CloudInit
+	if storage.CloudInit != nil {
+		// Create or Update
+		params[id] = storage.CloudInit.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.CloudInit != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// Disk
+	if storage.Disk != nil {
+		if currentStorage == nil || currentStorage.Disk == nil {
+			// Create
+			params[id] = storage.Disk.mapToApiValues(true)
+		} else {
+			if storage.Disk.Size >= currentStorage.Disk.Size {
+				// Update
+				if storage.Disk.Storage != currentStorage.Disk.Storage {
+					changes.Move = append(changes.Move, qemuDiskShort{
+						Id:      id,
+						Storage: storage.Disk.Storage,
+					})
+				}
+				params[id] = storage.Disk.mapToApiValues(false)
+			} else {
+				// Delete and Create
+				changes.Delete = append(changes.Delete, id)
+				params[id] = storage.Disk.mapToApiValues(true)
+			}
+		}
+		return
+	} else if currentStorage != nil && currentStorage.Disk != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+	// Passthrough
+	if storage.Passthrough != nil {
+		// Create or Update
+		changes.MigrationImpossible = true
+		params[id] = storage.Passthrough.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.Passthrough != nil {
+		// Delete
+		changes.Delete = append(changes.Delete, id)
+		return
+	}
+}
+
+// TODO write test
 func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(settings)
