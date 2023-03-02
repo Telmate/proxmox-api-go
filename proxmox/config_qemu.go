@@ -934,7 +934,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		}
 	}
 
-	// hastate is return by the api for a vm resource type but not the hagroup
+	// HAstate is return by the api for a vm resource type but not the HAgroup
 	err = client.ReadVMHA(vmr)
 	if err == nil {
 		config.HaState = vmr.HaState()
@@ -1100,7 +1100,7 @@ func formatDeviceParam(device QemuDevice) string {
 	return strings.Join(deviceConfParams, ",")
 }
 
-// Given a QemuDevice (represesting a disk), return a param string to give to ProxMox
+// Given a QemuDevice (representing a disk), return a param string to give to ProxMox
 func FormatDiskParam(disk QemuDevice) string {
 	diskConfParam := QemuDeviceParam{}
 
@@ -1148,7 +1148,7 @@ func FormatDiskParam(disk QemuDevice) string {
 	return strings.Join(diskConfParam, ",")
 }
 
-// Given a QemuDevice (represesting a usb), return a param string to give to ProxMox
+// Given a QemuDevice (representing a usb), return a param string to give to ProxMox
 func FormatUsbParam(usb QemuDevice) string {
 	usbConfParam := QemuDeviceParam{}
 
@@ -1201,7 +1201,7 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 			macAddr = nicConfMap["macaddr"].(string)
 		}
 
-		// use model=mac format for older proxmox compatability as the parameters which will be sent to Proxmox API.
+		// use model=mac format for older proxmox compatibility as the parameters which will be sent to Proxmox API.
 		nicConfParam = append(nicConfParam, fmt.Sprintf("%v=%v", nicConfMap["model"], macAddr))
 
 		// Set bridge if not nat.
