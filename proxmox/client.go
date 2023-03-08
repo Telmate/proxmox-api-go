@@ -1914,10 +1914,16 @@ func (c *Client) GetItemList(url string) (list map[string]interface{}, err error
 // HandleTaskError reads the body from the passed in HTTP response and closes it.
 // It returns the body of the passed in HTTP response.
 func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
+	// Only attempt to read the body if it is available.
+	if resp == nil || resp.Body == nil {
+		return "no body available for HTTP response"
+	}
+
 	defer resp.Body.Close()
 	// This might not work if we never got a body. We'll ignore errors in trying to read,
 	// but extract the body if possible to give any error information back in the exitStatus
 	b, _ := io.ReadAll(resp.Body)
+
 	return string(b)
 }
 
