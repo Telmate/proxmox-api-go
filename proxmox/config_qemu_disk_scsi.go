@@ -256,10 +256,23 @@ type QemuScsiPassthrough struct {
 	Size       uint
 }
 
-// TODO write function
 // TODO write test
 func (passthrough QemuScsiPassthrough) mapToApiValues() string {
-	return ""
+	return qemuDisk{
+		AsyncIO:    passthrough.AsyncIO,
+		Backup:     passthrough.Backup,
+		Bandwidth:  passthrough.Bandwidth,
+		Cache:      passthrough.Cache,
+		Discard:    passthrough.Discard,
+		EmulateSSD: passthrough.EmulateSSD,
+		File:       passthrough.File,
+		IOThread:   passthrough.IOThread,
+		ReadOnly:   passthrough.ReadOnly,
+		Replicate:  passthrough.Replicate,
+		Serial:     passthrough.Serial,
+		Size:       passthrough.Size,
+		Type:       scsi,
+	}.mapToApiValues(false)
 }
 
 type QemuScsiStorage struct {

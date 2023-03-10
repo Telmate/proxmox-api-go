@@ -100,10 +100,21 @@ type QemuSataPassthrough struct {
 	Size       uint
 }
 
-// TODO write function
 // TODO write test
 func (passthrough QemuSataPassthrough) mapToApiValues() string {
-	return ""
+	return qemuDisk{
+		AsyncIO:    passthrough.AsyncIO,
+		Backup:     passthrough.Backup,
+		Bandwidth:  passthrough.Bandwidth,
+		Cache:      passthrough.Cache,
+		Discard:    passthrough.Discard,
+		EmulateSSD: passthrough.EmulateSSD,
+		File:       passthrough.File,
+		Replicate:  passthrough.Replicate,
+		Serial:     passthrough.Serial,
+		Size:       passthrough.Size,
+		Type:       sata,
+	}.mapToApiValues(false)
 }
 
 type QemuSataStorage struct {

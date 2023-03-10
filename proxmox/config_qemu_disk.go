@@ -152,6 +152,9 @@ func (disk qemuDisk) mapToApiValues(create bool) (settings string) {
 		}
 	}
 
+	if disk.File != "" {
+		settings = disk.File
+	}
 	// Set File
 
 	if disk.AsyncIO != "" {

@@ -88,10 +88,21 @@ type QemuIdePassthrough struct {
 	Size       uint
 }
 
-// TODO write function
 // TODO write test
 func (passthrough QemuIdePassthrough) mapToApiValues() string {
-	return ""
+	return qemuDisk{
+		AsyncIO:    passthrough.AsyncIO,
+		Backup:     passthrough.Backup,
+		Bandwidth:  passthrough.Bandwidth,
+		Cache:      passthrough.Cache,
+		Discard:    passthrough.Discard,
+		EmulateSSD: passthrough.EmulateSSD,
+		File:       passthrough.File,
+		Replicate:  passthrough.Replicate,
+		Serial:     passthrough.Serial,
+		Size:       passthrough.Size,
+		Type:       ide,
+	}.mapToApiValues(false)
 }
 
 type QemuIdeStorage struct {
