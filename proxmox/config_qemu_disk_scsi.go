@@ -302,9 +302,6 @@ func (storage QemuScsiStorage) mapToApiValues(create bool) string {
 // TODO write test
 func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
 	if storage == nil {
-		if currentStorage != nil {
-			changes.Delete = AddToList(changes.Delete, id)
-		}
 		return
 	}
 	// CDROM
@@ -357,13 +354,16 @@ func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage,
 	// Passthrough
 	if storage.Passthrough != nil {
 		// Create or Update
-		changes.MigrationImpossible = true
 		params[id] = storage.Passthrough.mapToApiValues()
 		return
 	} else if currentStorage != nil && currentStorage.Passthrough != nil {
 		// Delete
 		changes.Delete = AddToList(changes.Delete, id)
 		return
+	}
+	// Delete if no subtype was specified
+	if currentStorage != nil {
+		changes.Delete = AddToList(changes.Delete, id)
 	}
 }
 
