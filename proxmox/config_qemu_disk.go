@@ -110,9 +110,9 @@ type QemuCloudInitDisk struct {
 	FileType string
 }
 
-// TODO write function
+// TODO write test
 func (cloudInit QemuCloudInitDisk) mapToApiValues() string {
-	return ""
+	return cloudInit.Storage + ":cloudinit,format=" + cloudInit.FileType
 }
 
 func (QemuCloudInitDisk) mapToStruct(settings qemuCdRom) *QemuCloudInitDisk {
