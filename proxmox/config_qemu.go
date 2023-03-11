@@ -35,56 +35,53 @@ type AgentNetworkInterface struct {
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
-	VmID            int           `json:"vmid,omitempty"`
-	Name            string        `json:"name,omitempty"`
-	Description     string        `json:"description,omitempty"`
-	Pool            string        `json:"pool,omitempty"`
+	Agent           int           `json:"agent,omitempty"`
+	Args            string        `json:"args,omitempty"`
+	Balloon         int           `json:"balloon,omitempty"`
 	Bios            string        `json:"bios,omitempty"`
+	Boot            string        `json:"boot,omitempty"`
+	BootDisk        string        `json:"bootdisk,omitempty"`   // Only returned as it's deprecated in the proxmox api
+	CIcustom        string        `json:"cicustom,omitempty"`   // cloud-init option
+	CIpassword      string        `json:"cipassword,omitempty"` // cloud-init option
+	CIuser          string        `json:"ciuser,omitempty"`     // cloud-init option
+	Description     string        `json:"description,omitempty"`
+	Disks           *QemuStorages `json:"disks,omitempty"`
 	EFIDisk         QemuDevice    `json:"efidisk,omitempty"`
+	FullClone       *int          `json:"fullclone,omitempty"`
+	HaGroup         string        `json:"hagroup,omitempty"`
+	HaState         string        `json:"hastate,omitempty"`
+	Hookscript      string        `json:"hookscript,omitempty"`
+	Hotplug         string        `json:"hotplug,omitempty"`
+	Ipconfig        IpconfigMap   `json:"ipconfig,omitempty"` // cloud-init option
 	Machine         string        `json:"machine,omitempty"`
+	Memory          int           `json:"memory,omitempty"`
+	Name            string        `json:"name,omitempty"`
+	Nameserver      string        `json:"nameserver,omitempty"` // cloud-init option
 	Onboot          *bool         `json:"onboot,omitempty"`
+	Pool            string        `json:"pool,omitempty"`
+	QemuCores       int           `json:"cores,omitempty"`
+	QemuCpu         string        `json:"cpu,omitempty"`
+	QemuDisks       QemuDevices   `json:"disk,omitempty"` // DEPRECATED use Disks *QemuStorages instead
+	QemuIso         string        `json:"iso,omitempty"`
+	QemuKVM         *bool         `json:"kvm,omitempty"`
+	QemuNetworks    QemuDevices   `json:"network,omitempty"`
+	QemuNuma        *bool         `json:"numa,omitempty"`
+	QemuOs          string        `json:"ostype,omitempty"`
+	QemuPCIDevices  QemuDevices   `json:"hostpci,omitempty"`
+	QemuPxe         bool          `json:"pxe,omitempty"`
+	QemuSerials     QemuDevices   `json:"serial,omitempty"`
+	QemuSockets     int           `json:"sockets,omitempty"`
+	QemuUnusedDisks QemuDevices   `json:"unused,omitempty"`
+	QemuUsbs        QemuDevices   `json:"usb,omitempty"`
+	QemuVcpus       int           `json:"vcpus,omitempty"`
+	QemuVga         QemuDevice    `json:"vga,omitempty"`
+	Scsihw          string        `json:"scsihw,omitempty"`
+	Searchdomain    string        `json:"searchdomain,omitempty"` // cloud-init option
+	Sshkeys         string        `json:"sshkeys,omitempty"`
 	Startup         string        `json:"startup,omitempty"`
 	Tablet          *bool         `json:"tablet,omitempty"`
-	Agent           int           `json:"agent,omitempty"`
-	Memory          int           `json:"memory,omitempty"`
-	Balloon         int           `json:"balloon,omitempty"`
-	QemuOs          string        `json:"ostype,omitempty"`
-	QemuCores       int           `json:"cores,omitempty"`
-	QemuSockets     int           `json:"sockets,omitempty"`
-	QemuVcpus       int           `json:"vcpus,omitempty"`
-	QemuCpu         string        `json:"cpu,omitempty"`
-	QemuNuma        *bool         `json:"numa,omitempty"`
-	QemuKVM         *bool         `json:"kvm,omitempty"`
-	Hotplug         string        `json:"hotplug,omitempty"`
-	QemuIso         string        `json:"iso,omitempty"`
-	QemuPxe         bool          `json:"pxe,omitempty"`
-	FullClone       *int          `json:"fullclone,omitempty"`
-	Boot            string        `json:"boot,omitempty"`
-	BootDisk        string        `json:"bootdisk,omitempty"` // Only returned as it's deprecated in the proxmox api
-	Scsihw          string        `json:"scsihw,omitempty"`
-	Disks           *QemuStorages `json:"disks,omitempty"`
-	QemuDisks       QemuDevices   `json:"disk,omitempty"` // DEPRECATED use Disks *QemuStorages instead
-	QemuUnusedDisks QemuDevices   `json:"unused,omitempty"`
-	QemuVga         QemuDevice    `json:"vga,omitempty"`
-	QemuNetworks    QemuDevices   `json:"network,omitempty"`
-	QemuSerials     QemuDevices   `json:"serial,omitempty"`
-	QemuUsbs        QemuDevices   `json:"usb,omitempty"`
-	QemuPCIDevices  QemuDevices   `json:"hostpci,omitempty"`
-	Hookscript      string        `json:"hookscript,omitempty"`
-	HaState         string        `json:"hastate,omitempty"`
-	HaGroup         string        `json:"hagroup,omitempty"`
 	Tags            string        `json:"tags,omitempty"`
-	Args            string        `json:"args,omitempty"`
-
-	// cloud-init options
-	CIuser     string      `json:"ciuser,omitempty"`
-	CIpassword string      `json:"cipassword,omitempty"`
-	CIcustom   string      `json:"cicustom,omitempty"`
-	Ipconfig   IpconfigMap `json:"ipconfig,omitempty"`
-
-	Searchdomain string `json:"searchdomain,omitempty"`
-	Nameserver   string `json:"nameserver,omitempty"`
-	Sshkeys      string `json:"sshkeys,omitempty"`
+	VmID            int           `json:"vmid,omitempty"`
 }
 
 // CreateVm - Tell Proxmox API to make the VM
