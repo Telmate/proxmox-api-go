@@ -158,7 +158,7 @@ type QemuVirtIOPassthrough struct {
 	IOThread  bool
 	ReadOnly  bool
 	Serial    QemuDiskSerial `json:"serial,omitempty"`
-	Size      uint
+	Size      uint           //size is only returned and setting it has no effect
 }
 
 // TODO write test
@@ -173,7 +173,6 @@ func (passthrough QemuVirtIOPassthrough) mapToApiValues() string {
 		IOThread:  passthrough.IOThread,
 		ReadOnly:  passthrough.ReadOnly,
 		Serial:    passthrough.Serial,
-		Size:      passthrough.Size,
 		Type:      scsi,
 	}.mapToApiValues(false)
 }

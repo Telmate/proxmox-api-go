@@ -253,7 +253,7 @@ type QemuScsiPassthrough struct {
 	ReadOnly   bool
 	Replicate  bool
 	Serial     QemuDiskSerial `json:"serial,omitempty"`
-	Size       uint
+	Size       uint           //size is only returned and setting it has no effect
 }
 
 // TODO write test
@@ -270,7 +270,6 @@ func (passthrough QemuScsiPassthrough) mapToApiValues() string {
 		ReadOnly:   passthrough.ReadOnly,
 		Replicate:  passthrough.Replicate,
 		Serial:     passthrough.Serial,
-		Size:       passthrough.Size,
 		Type:       scsi,
 	}.mapToApiValues(false)
 }

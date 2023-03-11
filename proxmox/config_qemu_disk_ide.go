@@ -85,7 +85,7 @@ type QemuIdePassthrough struct {
 	File       string
 	Replicate  bool
 	Serial     QemuDiskSerial `json:"serial,omitempty"`
-	Size       uint
+	Size       uint           //size is only returned and setting it has no effect
 }
 
 // TODO write test
@@ -100,7 +100,6 @@ func (passthrough QemuIdePassthrough) mapToApiValues() string {
 		File:       passthrough.File,
 		Replicate:  passthrough.Replicate,
 		Serial:     passthrough.Serial,
-		Size:       passthrough.Size,
 		Type:       ide,
 	}.mapToApiValues(false)
 }
