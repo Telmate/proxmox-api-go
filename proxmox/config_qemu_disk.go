@@ -541,23 +541,6 @@ type QemuStorages struct {
 	VirtIO *QemuVirtIODisks `json:"virtio,omitempty"`
 }
 
-func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, vmID uint, params map[string]interface{}) *qemuUpdateChanges {
-	changes := &qemuUpdateChanges{}
-	if storages.Ide != nil {
-		storages.Ide.mapToApiValues(currentStorages.Ide, vmID, params, changes)
-	}
-	if storages.Sata != nil {
-		storages.Sata.mapToApiValues(currentStorages.Sata, vmID, params, changes)
-	}
-	if storages.Scsi != nil {
-		storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, params, changes)
-	}
-	if storages.VirtIO != nil {
-		storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, params, changes)
-	}
-	return changes
-}
-
 func (storages QemuStorages) mapToApiValues(vmID uint, params map[string]interface{}) {
 	if storages.Ide != nil {
 		storages.Ide.mapToApiValues(nil, vmID, params, nil)
@@ -584,6 +567,23 @@ func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {
 		return &storage
 	}
 	return nil
+}
+
+func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, vmID uint, params map[string]interface{}) *qemuUpdateChanges {
+	changes := &qemuUpdateChanges{}
+	if storages.Ide != nil {
+		storages.Ide.mapToApiValues(currentStorages.Ide, vmID, params, changes)
+	}
+	if storages.Sata != nil {
+		storages.Sata.mapToApiValues(currentStorages.Sata, vmID, params, changes)
+	}
+	if storages.Scsi != nil {
+		storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, params, changes)
+	}
+	if storages.VirtIO != nil {
+		storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, params, changes)
+	}
+	return changes
 }
 
 type qemuUpdateChanges struct {
