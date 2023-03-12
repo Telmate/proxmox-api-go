@@ -235,13 +235,13 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		diskAndNumberAndFormat := strings.Split(settings[0][0], ":")
 		disk.Storage = diskAndNumberAndFormat[0]
 		if len(diskAndNumberAndFormat) == 2 {
-			idAndFormat := strings.Split(diskAndNumberAndFormat[1], "-")
+			idAndFormat := strings.Split(diskAndNumberAndFormat[1], ".")
 			if len(idAndFormat) == 2 {
-				tmp := strings.Split(idAndFormat[1], ".")
-				tmpId, _ := strconv.Atoi(tmp[0])
-				disk.Id = uint(tmpId)
-				if len(tmp) == 2 {
-					disk.Format = QemuDiskFormat(tmp[1])
+				disk.Format = QemuDiskFormat(idAndFormat[1])
+				tmp := strings.Split(idAndFormat[0], "-")
+				if len(tmp) > 1 {
+					tmpId, _ := strconv.Atoi(tmp[len(tmp)-1])
+					disk.Id = uint(tmpId)
 				}
 			}
 		}
