@@ -6,7 +6,7 @@ type QemuVirtIODisk struct {
 	Bandwidth QemuDiskBandwidth `json:"bandwith,omitempty"`
 	Cache     QemuDiskCache     `json:"cache,omitempty"`
 	Discard   bool              `json:"discard,omitempty"`
-	Id        uint              `json:"id,omitempty"`
+	Id        *uint             `json:"id,omitempty"`
 	IOThread  bool              `json:"iothread,omitempty"`
 	ReadOnly  bool              `json:"readonly,omitempty"`
 	Replicate bool              `json:"replicate,omitempty"`

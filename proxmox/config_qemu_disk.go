@@ -132,8 +132,8 @@ type qemuDisk struct {
 	// TODO custom type
 	File      string // Only set for Passthrough.
 	Format    QemuDiskFormat
-	Id        uint // Only set for Disk
-	IOThread  bool // Only set for scsi,virtio
+	Id        *uint // Only set for Disk
+	IOThread  bool  // Only set for scsi,virtio
 	Number    uint
 	ReadOnly  bool // Only set for scsi,virtio
 	Replicate bool
@@ -241,7 +241,8 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 				tmp := strings.Split(idAndFormat[0], "-")
 				if len(tmp) > 1 {
 					tmpId, _ := strconv.Atoi(tmp[len(tmp)-1])
-					disk.Id = uint(tmpId)
+					idPointer := uint(tmpId)
+					disk.Id = &idPointer
 				}
 			}
 		}
@@ -471,7 +472,7 @@ func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID ui
 		} else {
 			if storage.Disk.Size >= currentStorage.Disk.Size {
 				// Update
-				if storage.Disk.Id == 0 {
+				if storage.Disk.Id == nil {
 					storage.Disk.Id = currentStorage.Disk.Id
 				}
 				if storage.Disk.Storage != currentStorage.Disk.Storage {

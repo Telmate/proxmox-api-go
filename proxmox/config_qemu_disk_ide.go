@@ -7,7 +7,7 @@ type QemuIdeDisk struct {
 	Cache      QemuDiskCache     `json:"cache,omitempty"`
 	Discard    bool              `json:"discard,omitempty"`
 	EmulateSSD bool              `json:"emulatessd,omitempty"`
-	Id         uint              `json:"id,omitempty"`
+	Id         *uint             `json:"id,omitempty"`
 	Replicate  bool              `json:"replicate,omitempty"`
 	Serial     QemuDiskSerial    `json:"serial,omitempty"`
 	Size       uint              `json:"size,omitempty"`
