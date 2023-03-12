@@ -736,6 +736,7 @@ func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exi
 }
 
 // ResizeQemuDisk allows the caller to increase the size of a disk by the indicated number of gigabytes
+// TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
 func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
 	size := fmt.Sprintf("+%dG", moreSizeGB)
 	return c.ResizeQemuDiskRaw(vmr, disk, size)
@@ -746,6 +747,7 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 // your desired size with a '+' character it will ADD size to the disk.  If you just specify the size by
 // itself it will do an absolute resizing to the specified size. Permitted suffixes are K, M, G, T
 // to indicate order of magnitude (kilobyte, megabyte, etc). Decrease of disk size is not permitted.
+// TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
 func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitStatus interface{}, err error) {
 	// PUT
 	//disk:virtio0
