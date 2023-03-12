@@ -463,7 +463,7 @@ func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID ui
 		// Create or Update
 		params[id] = storage.CdRom.mapToApiValues()
 		return
-	} else if currentStorage != nil && currentStorage.CdRom != nil {
+	} else if currentStorage != nil && currentStorage.CdRom != nil && storage.CloudInit == nil && storage.Disk == nil && storage.Passthrough == nil {
 		// Delete
 		changes.Delete = AddToList(changes.Delete, id)
 		return
@@ -473,7 +473,7 @@ func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID ui
 		// Create or Update
 		params[id] = storage.CloudInit.mapToApiValues()
 		return
-	} else if currentStorage != nil && currentStorage.CloudInit != nil {
+	} else if currentStorage != nil && currentStorage.CloudInit != nil && storage.Disk == nil && storage.Passthrough == nil {
 		// Delete
 		changes.Delete = AddToList(changes.Delete, id)
 		return
@@ -483,6 +483,7 @@ func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID ui
 		if currentStorage == nil || currentStorage.Disk == nil {
 			// Create
 			params[id] = storage.Disk.mapToApiValues(vmID, true)
+			return
 		} else {
 			if storage.Disk.Size >= currentStorage.Disk.Size {
 				// Update
@@ -507,12 +508,12 @@ func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID ui
 				params[id] = storage.Disk.mapToApiValues(vmID, false)
 			} else {
 				// Delete and Create
-				changes.Delete = AddToList(changes.Delete, id)
+				// creating a disk on top of an existing disk is the same as detaching the disk and creating a new one.
 				params[id] = storage.Disk.mapToApiValues(vmID, true)
 			}
+			return
 		}
-		return
-	} else if currentStorage != nil && currentStorage.Disk != nil {
+	} else if currentStorage != nil && currentStorage.Disk != nil && storage.Passthrough == nil {
 		// Delete
 		changes.Delete = AddToList(changes.Delete, id)
 		return
@@ -542,16 +543,16 @@ type QemuStorages struct {
 
 func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, vmID uint, params map[string]interface{}) *qemuUpdateChanges {
 	changes := &qemuUpdateChanges{}
-	if currentStorages.Ide != nil {
+	if storages.Ide != nil {
 		storages.Ide.mapToApiValues(currentStorages.Ide, vmID, params, changes)
 	}
-	if currentStorages.Sata != nil {
+	if storages.Sata != nil {
 		storages.Sata.mapToApiValues(currentStorages.Sata, vmID, params, changes)
 	}
-	if currentStorages.Scsi != nil {
+	if storages.Scsi != nil {
 		storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, params, changes)
 	}
-	if currentStorages.VirtIO != nil {
+	if storages.VirtIO != nil {
 		storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, params, changes)
 	}
 	return changes
