@@ -16,23 +16,6 @@ type QemuVirtIODisk struct {
 	Storage   string            `json:"storage,omitempty"`
 }
 
-// TODO write test
-func (disk QemuVirtIODisk) mapToApiValues(vmID uint, create bool) string {
-	return qemuDisk{
-		AsyncIO:   disk.AsyncIO,
-		Backup:    disk.Backup,
-		Bandwidth: disk.Bandwidth,
-		Cache:     disk.Cache,
-		Discard:   disk.Discard,
-		IOThread:  disk.IOThread,
-		ReadOnly:  disk.ReadOnly,
-		Serial:    disk.Serial,
-		Size:      disk.Size,
-		Storage:   disk.Storage,
-		Type:      virtIO,
-	}.mapToApiValues(vmID, create)
-}
-
 type QemuVirtIODisks struct {
 	Disk_0  *QemuVirtIOStorage `json:"0,omitempty"`
 	Disk_1  *QemuVirtIOStorage `json:"1,omitempty"`
@@ -163,22 +146,6 @@ type QemuVirtIOPassthrough struct {
 	Size      uint           //size is only returned and setting it has no effect
 }
 
-// TODO write test
-func (passthrough QemuVirtIOPassthrough) mapToApiValues() string {
-	return qemuDisk{
-		AsyncIO:   passthrough.AsyncIO,
-		Backup:    passthrough.Backup,
-		Bandwidth: passthrough.Bandwidth,
-		Cache:     passthrough.Cache,
-		Discard:   passthrough.Discard,
-		File:      passthrough.File,
-		IOThread:  passthrough.IOThread,
-		ReadOnly:  passthrough.ReadOnly,
-		Serial:    passthrough.Serial,
-		Type:      scsi,
-	}.mapToApiValues(0, false)
-}
-
 type QemuVirtIOStorage struct {
 	CdRom       *QemuCdRom
 	CloudInit   *QemuCloudInitDisk
@@ -211,6 +178,7 @@ func (storage *QemuVirtIOStorage) convertDataStructure() *qemuStorage {
 			Serial:    storage.Disk.Serial,
 			Size:      storage.Disk.Size,
 			Storage:   storage.Disk.Storage,
+			Type:      virtIO,
 		}
 	}
 	if storage.Passthrough != nil {
@@ -224,26 +192,10 @@ func (storage *QemuVirtIOStorage) convertDataStructure() *qemuStorage {
 			IOThread:  storage.Passthrough.IOThread,
 			ReadOnly:  storage.Passthrough.ReadOnly,
 			Serial:    storage.Passthrough.Serial,
+			Type:      virtIO,
 		}
 	}
 	return &generalizedStorage
-}
-
-// TODO write test
-func (storage QemuVirtIOStorage) mapToApiValues(vmID uint, create bool) string {
-	if storage.Disk != nil {
-		return storage.Disk.mapToApiValues(vmID, create)
-	}
-	if storage.CdRom != nil {
-		return storage.CdRom.mapToApiValues()
-	}
-	if storage.CloudInit != nil {
-		return storage.CloudInit.mapToApiValues()
-	}
-	if storage.Passthrough != nil {
-		return storage.Passthrough.mapToApiValues()
-	}
-	return ""
 }
 
 // TODO write test
