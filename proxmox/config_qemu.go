@@ -271,6 +271,348 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[st
 	return
 }
 
+func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu, err error) {
+	// vmConfig Sample: map[ cpu:host
+	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
+	// ide2:local:iso/xxx-xx.iso,media=cdrom memory:2048
+	// smbios1:uuid=8b3bf833-aad8-4545-xxx-xxxxxxx digest:aa6ce5xxxxx1b9ce33e4aaeff564d4 sockets:1
+	// name:terraform-ubuntu1404-template bootdisk:virtio0
+	// virtio0:ProxmoxxxxISCSI:vm-1014-disk-2,size=4G
+	// description:Base image
+	// cores:2 ostype:l26
+
+	config = &ConfigQemu{
+		EFIDisk:         QemuDevice{},
+		QemuDisks:       QemuDevices{},
+		QemuUnusedDisks: QemuDevices{},
+		QemuVga:         QemuDevice{},
+		QemuNetworks:    QemuDevices{},
+		QemuSerials:     QemuDevices{},
+		QemuPCIDevices:  QemuDevices{},
+		QemuUsbs:        QemuDevices{},
+		Ipconfig:        IpconfigMap{},
+	}
+
+	if _, isSet := params["agent"]; isSet {
+		switch params["agent"].(type) {
+		case float64:
+			config.Agent = int(params["agent"].(float64))
+		case string:
+			AgentConfList := strings.Split(params["agent"].(string), ",")
+			config.Agent, _ = strconv.Atoi(AgentConfList[0])
+		}
+	}
+	if _, isSet := params["args"]; isSet {
+		config.Args = strings.TrimSpace(params["args"].(string))
+	}
+	if _, isSet := params["balloon"]; isSet {
+		balloon := int(params["balloon"].(float64))
+		if balloon > 0 {
+			config.Balloon = balloon
+		}
+	}
+	//boot by default from hard disk (c), CD-ROM (d), network (n).
+	if _, isSet := params["boot"]; isSet {
+		config.Boot = params["boot"].(string)
+	} else {
+		config.Boot = "cdn"
+	}
+	if _, isSet := params["bootdisk"]; isSet {
+		config.BootDisk = params["bootdisk"].(string)
+	}
+	if _, isSet := params["bios"]; isSet {
+		config.Bios = params["bios"].(string)
+	} else {
+		config.Bios = "seabios"
+	}
+	if _, isSet := params["cicustom"]; isSet {
+		config.CIcustom = params["cicustom"].(string)
+	}
+	if _, isSet := params["cipassword"]; isSet {
+		config.CIpassword = params["cipassword"].(string)
+	}
+	if _, isSet := params["ciuser"]; isSet {
+		config.CIuser = params["ciuser"].(string)
+	}
+	if _, isSet := params["description"]; isSet {
+		config.Description = strings.TrimSpace(params["description"].(string))
+	}
+	//Can be network,disk,cpu,memory,usb
+	if _, isSet := params["hotplug"]; isSet {
+		config.Hotplug = params["hotplug"].(string)
+	} else {
+		config.Hotplug = "network,disk,usb"
+	}
+	if _, isSet := params["hookscript"]; isSet {
+		config.Hookscript = params["hookscript"].(string)
+	}
+	if _, isSet := params["memory"]; isSet {
+		config.Memory = int(params["memory"].(float64))
+	}
+	if _, isSet := params["name"]; isSet {
+		config.Name = params["name"].(string)
+	}
+	if _, isSet := params["nameserver"]; isSet {
+		config.Nameserver = params["nameserver"].(string)
+	}
+	if _, isSet := params["onboot"]; isSet {
+		config.Onboot = PointerBool(Itob(int(params["onboot"].(float64))))
+	} else {
+		config.Onboot = PointerBool(true)
+	}
+	if _, isSet := params["cores"]; isSet {
+		config.QemuCores = int(params["cores"].(float64))
+	} else {
+		config.QemuCores = 1
+	}
+	if _, isSet := params["cpu"]; isSet {
+		config.QemuCpu = params["cpu"].(string)
+	} else {
+		config.QemuCpu = "host"
+	}
+	if _, isSet := params["kvm"]; isSet {
+		config.QemuKVM = PointerBool(Itob(int(params["kvm"].(float64))))
+	} else {
+		config.QemuKVM = PointerBool(true)
+	}
+	if _, isSet := params["numa"]; isSet {
+		config.QemuNuma = PointerBool(Itob(int(params["numa"].(float64))))
+	}
+	if _, isSet := params["ostype"]; isSet {
+		config.QemuOs = params["ostype"].(string)
+	} else {
+		config.QemuOs = "other"
+	}
+	if _, isSet := params["sockets"]; isSet {
+		config.QemuSockets = int(params["sockets"].(float64))
+	} else {
+		config.QemuSockets = 1
+	}
+	if _, isSet := params["vcpus"]; isSet {
+		vCpu := int(params["vcpus"].(float64))
+		if vCpu > 0 {
+			config.QemuVcpus = vCpu
+		}
+	}
+	if _, isSet := params["scsihw"]; isSet {
+		config.Scsihw = params["scsihw"].(string)
+	} else {
+		config.Scsihw = "lsi"
+	}
+	if _, isSet := params["searchdomain"]; isSet {
+		config.Searchdomain = params["searchdomain"].(string)
+	}
+	if _, isSet := params["sshkeys"]; isSet {
+		config.Sshkeys, _ = url.PathUnescape(params["sshkeys"].(string))
+	}
+	if _, isSet := params["startup"]; isSet {
+		config.Startup = params["startup"].(string)
+	}
+	if _, isSet := params["tablet"]; isSet {
+		config.Tablet = PointerBool(Itob(int(params["tablet"].(float64))))
+	} else {
+		config.Tablet = PointerBool(true)
+	}
+	if _, isSet := params["tags"]; isSet {
+		config.Tags = strings.TrimSpace(params["tags"].(string))
+	}
+
+	ipconfigNames := []string{}
+
+	for k := range params {
+		if ipconfigName := rxIpconfigName.FindStringSubmatch(k); len(ipconfigName) > 0 {
+			ipconfigNames = append(ipconfigNames, ipconfigName[0])
+		}
+	}
+
+	for _, ipconfigName := range ipconfigNames {
+		ipConfStr := params[ipconfigName]
+		id := rxDeviceID.FindStringSubmatch(ipconfigName)
+		ipconfigID, _ := strconv.Atoi(id[0])
+		config.Ipconfig[ipconfigID] = ipConfStr
+	}
+
+	config.Disks = QemuStorages{}.mapToStruct(params)
+
+	if config.Disks != nil && config.Disks.Ide != nil && config.Disks.Ide.Disk_2 != nil && config.Disks.Ide.Disk_2.CdRom != nil {
+		config.Iso = config.Disks.Ide.Disk_2.CdRom.Iso
+	}
+
+	// Add unused disks
+	// unused0:local:100/vm-100-disk-1.qcow2
+	unusedDiskNames := []string{}
+	for k := range params {
+		// look for entries from the config in the format "unusedX:<storagepath>" where X is an integer
+		if unusedDiskName := rxUnusedDiskName.FindStringSubmatch(k); len(unusedDiskName) > 0 {
+			unusedDiskNames = append(unusedDiskNames, unusedDiskName[0])
+		}
+	}
+	// if len(unusedDiskNames) > 0 {
+	// 	log.Printf("[DEBUG] unusedDiskNames: %v", unusedDiskNames)
+	// }
+
+	for _, unusedDiskName := range unusedDiskNames {
+		unusedDiskConfStr := params[unusedDiskName].(string)
+		finalDiskConfMap := QemuDevice{}
+
+		// parse "unused0" to get the id '0' as an int
+		id := rxDeviceID.FindStringSubmatch(unusedDiskName)
+		diskID, err := strconv.Atoi(id[0])
+		if err != nil {
+			return nil, fmt.Errorf(fmt.Sprintf("Unable to parse unused disk id from input string '%v' tried to convert '%v' to integer.", unusedDiskName, diskID))
+		}
+		finalDiskConfMap["slot"] = diskID
+
+		// parse the attributes from the unused disk
+		// extract the storage and file path from the unused disk entry
+		parsedUnusedDiskMap := ParsePMConf(unusedDiskConfStr, "storage+file")
+		storageName, fileName := ParseSubConf(parsedUnusedDiskMap["storage+file"].(string), ":")
+		finalDiskConfMap["storage"] = storageName
+		finalDiskConfMap["file"] = fileName
+
+		config.QemuUnusedDisks[diskID] = finalDiskConfMap
+	}
+
+	//Display
+	if vga, isSet := params["vga"]; isSet {
+		vgaList := strings.Split(vga.(string), ",")
+		vgaMap := QemuDevice{}
+
+		vgaMap.readDeviceConfig(vgaList)
+		if len(vgaMap) > 0 {
+			config.QemuVga = vgaMap
+		}
+	}
+
+	// Add networks.
+	nicNames := []string{}
+
+	for k := range params {
+		if nicName := rxNicName.FindStringSubmatch(k); len(nicName) > 0 {
+			nicNames = append(nicNames, nicName[0])
+		}
+	}
+
+	for _, nicName := range nicNames {
+		nicConfStr := params[nicName]
+		nicConfList := strings.Split(nicConfStr.(string), ",")
+
+		id := rxDeviceID.FindStringSubmatch(nicName)
+		nicID, _ := strconv.Atoi(id[0])
+		model, macaddr := ParseSubConf(nicConfList[0], "=")
+
+		// Add model and MAC address.
+		nicConfMap := QemuDevice{
+			"id":      nicID,
+			"model":   model,
+			"macaddr": macaddr,
+		}
+
+		// Add rest of device config.
+		nicConfMap.readDeviceConfig(nicConfList[1:])
+		switch nicConfMap["firewall"] {
+		case 1:
+			nicConfMap["firewall"] = true
+		case 0:
+			nicConfMap["firewall"] = false
+		}
+		switch nicConfMap["link_down"] {
+		case 1:
+			nicConfMap["link_down"] = true
+		case 0:
+			nicConfMap["link_down"] = false
+		}
+
+		// And device config to networks.
+		if len(nicConfMap) > 0 {
+			config.QemuNetworks[nicID] = nicConfMap
+		}
+	}
+
+	// Add serials
+	serialNames := []string{}
+
+	for k := range params {
+		if serialName := rxSerialName.FindStringSubmatch(k); len(serialName) > 0 {
+			serialNames = append(serialNames, serialName[0])
+		}
+	}
+
+	for _, serialName := range serialNames {
+		id := rxDeviceID.FindStringSubmatch(serialName)
+		serialID, _ := strconv.Atoi(id[0])
+
+		serialConfMap := QemuDevice{
+			"id":   serialID,
+			"type": params[serialName],
+		}
+
+		// And device config to serials map.
+		if len(serialConfMap) > 0 {
+			config.QemuSerials[serialID] = serialConfMap
+		}
+	}
+
+	// Add usbs
+	usbNames := []string{}
+
+	for k := range params {
+		if usbName := rxUsbName.FindStringSubmatch(k); len(usbName) > 0 {
+			usbNames = append(usbNames, usbName[0])
+		}
+	}
+
+	for _, usbName := range usbNames {
+		usbConfStr := params[usbName]
+		usbConfList := strings.Split(usbConfStr.(string), ",")
+		id := rxDeviceID.FindStringSubmatch(usbName)
+		usbID, _ := strconv.Atoi(id[0])
+		_, host := ParseSubConf(usbConfList[0], "=")
+
+		usbConfMap := QemuDevice{
+			"id":   usbID,
+			"host": host,
+		}
+
+		usbConfMap.readDeviceConfig(usbConfList[1:])
+		if usbConfMap["usb3"] == 1 {
+			usbConfMap["usb3"] = true
+		}
+
+		// And device config to usbs map.
+		if len(usbConfMap) > 0 {
+			config.QemuUsbs[usbID] = usbConfMap
+		}
+	}
+
+	// hostpci
+	hostPCInames := []string{}
+
+	for k := range params {
+		if hostPCIname := rxPCIName.FindStringSubmatch(k); len(hostPCIname) > 0 {
+			hostPCInames = append(hostPCInames, hostPCIname[0])
+		}
+	}
+
+	for _, hostPCIname := range hostPCInames {
+		hostPCIConfStr := params[hostPCIname]
+		hostPCIConfList := strings.Split(hostPCIConfStr.(string), ",")
+		id := rxPCIName.FindStringSubmatch(hostPCIname)
+		hostPCIID, _ := strconv.Atoi(id[0])
+		hostPCIConfMap := QemuDevice{
+			"id": hostPCIID,
+		}
+		hostPCIConfMap.readDeviceConfig(hostPCIConfList)
+		// And device config to usbs map.
+		if len(hostPCIConfMap) > 0 {
+			config.QemuPCIDevices[hostPCIID] = hostPCIConfMap
+		}
+	}
+
+	return
+
+}
+
 func (newConfig ConfigQemu) Update(vmr *VmRef, client *Client) (err error) {
 	currentConfig, err := NewConfigQemuFromApi(vmr, client)
 	if err != nil {
@@ -620,370 +962,9 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if vmConfig["lock"] != nil {
 		return nil, fmt.Errorf("vm locked, could not obtain config")
 	}
-
-	// vmConfig Sample: map[ cpu:host
-	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
-	// ide2:local:iso/xxx-xx.iso,media=cdrom memory:2048
-	// smbios1:uuid=8b3bf833-aad8-4545-xxx-xxxxxxx digest:aa6ce5xxxxx1b9ce33e4aaeff564d4 sockets:1
-	// name:terraform-ubuntu1404-template bootdisk:virtio0
-	// virtio0:ProxmoxxxxISCSI:vm-1014-disk-2,size=4G
-	// description:Base image
-	// cores:2 ostype:l26
-
-	name := ""
-	if _, isSet := vmConfig["name"]; isSet {
-		name = vmConfig["name"].(string)
-	}
-	description := ""
-	if _, isSet := vmConfig["description"]; isSet {
-		description = vmConfig["description"].(string)
-	}
-	tags := ""
-	if _, isSet := vmConfig["tags"]; isSet {
-		tags = vmConfig["tags"].(string)
-	}
-	args := ""
-	if _, isSet := vmConfig["args"]; isSet {
-		args = vmConfig["args"].(string)
-	}
-
-	bios := "seabios"
-	if _, isSet := vmConfig["bios"]; isSet {
-		bios = vmConfig["bios"].(string)
-	}
-	onboot := true
-	if _, isSet := vmConfig["onboot"]; isSet {
-		onboot = Itob(int(vmConfig["onboot"].(float64)))
-	}
-	startup := ""
-	if _, isSet := vmConfig["startup"]; isSet {
-		startup = vmConfig["startup"].(string)
-	}
-	tablet := true
-	if _, isSet := vmConfig["tablet"]; isSet {
-		tablet = Itob(int(vmConfig["tablet"].(float64)))
-	}
-
-	agent := 0
-	if _, isSet := vmConfig["agent"]; isSet {
-		switch vmConfig["agent"].(type) {
-		case float64:
-			agent = int(vmConfig["agent"].(float64))
-		case string:
-			AgentConfList := strings.Split(vmConfig["agent"].(string), ",")
-			agent, _ = strconv.Atoi(AgentConfList[0])
-		}
-
-	}
-	ostype := "other"
-	if _, isSet := vmConfig["ostype"]; isSet {
-		ostype = vmConfig["ostype"].(string)
-	}
-	memory := 0.0
-	if _, isSet := vmConfig["memory"]; isSet {
-		memory = vmConfig["memory"].(float64)
-	}
-	balloon := 0.0
-	if _, isSet := vmConfig["balloon"]; isSet {
-		balloon = vmConfig["balloon"].(float64)
-	}
-	cores := 1.0
-	if _, isSet := vmConfig["cores"]; isSet {
-		cores = vmConfig["cores"].(float64)
-	}
-	vcpus := 0.0
-	if _, isSet := vmConfig["vcpus"]; isSet {
-		vcpus = vmConfig["vcpus"].(float64)
-	}
-	sockets := 1.0
-	if _, isSet := vmConfig["sockets"]; isSet {
-		sockets = vmConfig["sockets"].(float64)
-	}
-	cpu := "host"
-	if _, isSet := vmConfig["cpu"]; isSet {
-		cpu = vmConfig["cpu"].(string)
-	}
-	numa := false
-	if _, isSet := vmConfig["numa"]; isSet {
-		numa = Itob(int(vmConfig["numa"].(float64)))
-	}
-	//Can be network,disk,cpu,memory,usb
-	hotplug := "network,disk,usb"
-	if _, isSet := vmConfig["hotplug"]; isSet {
-		hotplug = vmConfig["hotplug"].(string)
-	}
-	//boot by default from hard disk (c), CD-ROM (d), network (n).
-	boot := "cdn"
-	if _, isSet := vmConfig["boot"]; isSet {
-		boot = vmConfig["boot"].(string)
-	}
-	bootdisk := ""
-	if _, isSet := vmConfig["bootdisk"]; isSet {
-		bootdisk = vmConfig["bootdisk"].(string)
-	}
-	kvm := true
-	if _, isSet := vmConfig["kvm"]; isSet {
-		kvm = Itob(int(vmConfig["kvm"].(float64)))
-	}
-	scsihw := "lsi"
-	if _, isSet := vmConfig["scsihw"]; isSet {
-		scsihw = vmConfig["scsihw"].(string)
-	}
-	hookscript := ""
-	if _, isSet := vmConfig["hookscript"]; isSet {
-		hookscript = vmConfig["hookscript"].(string)
-	}
-
-	config = &ConfigQemu{
-		Name:            name,
-		Description:     strings.TrimSpace(description),
-		Tags:            strings.TrimSpace(tags),
-		Args:            strings.TrimSpace(args),
-		Bios:            bios,
-		EFIDisk:         QemuDevice{},
-		Onboot:          &onboot,
-		Startup:         startup,
-		Tablet:          &tablet,
-		Agent:           agent,
-		QemuOs:          ostype,
-		Memory:          int(memory),
-		QemuCores:       int(cores),
-		QemuSockets:     int(sockets),
-		QemuCpu:         cpu,
-		QemuNuma:        &numa,
-		QemuKVM:         &kvm,
-		Hotplug:         hotplug,
-		Boot:            boot,
-		BootDisk:        bootdisk,
-		Scsihw:          scsihw,
-		Hookscript:      hookscript,
-		QemuDisks:       QemuDevices{},
-		QemuUnusedDisks: QemuDevices{},
-		QemuVga:         QemuDevice{},
-		QemuNetworks:    QemuDevices{},
-		QemuSerials:     QemuDevices{},
-		QemuPCIDevices:  QemuDevices{},
-		QemuUsbs:        QemuDevices{},
-		Ipconfig:        IpconfigMap{},
-	}
-
-	if balloon >= 1 {
-		config.Balloon = int(balloon)
-	}
-	if vcpus >= 1 {
-		config.QemuVcpus = int(vcpus)
-	}
-
-	// Add Cloud-Init options
-	if _, isSet := vmConfig["ciuser"]; isSet {
-		config.CIuser = vmConfig["ciuser"].(string)
-	}
-	if _, isSet := vmConfig["cipassword"]; isSet {
-		config.CIpassword = vmConfig["cipassword"].(string)
-	}
-	if _, isSet := vmConfig["cicustom"]; isSet {
-		config.CIcustom = vmConfig["cicustom"].(string)
-	}
-	if _, isSet := vmConfig["searchdomain"]; isSet {
-		config.Searchdomain = vmConfig["searchdomain"].(string)
-	}
-	if _, isSet := vmConfig["nameserver"]; isSet {
-		config.Nameserver = vmConfig["nameserver"].(string)
-	}
-	if _, isSet := vmConfig["sshkeys"]; isSet {
-		config.Sshkeys, _ = url.PathUnescape(vmConfig["sshkeys"].(string))
-	}
-
-	ipconfigNames := []string{}
-
-	for k := range vmConfig {
-		if ipconfigName := rxIpconfigName.FindStringSubmatch(k); len(ipconfigName) > 0 {
-			ipconfigNames = append(ipconfigNames, ipconfigName[0])
-		}
-	}
-
-	for _, ipconfigName := range ipconfigNames {
-		ipConfStr := vmConfig[ipconfigName]
-		id := rxDeviceID.FindStringSubmatch(ipconfigName)
-		ipconfigID, _ := strconv.Atoi(id[0])
-		config.Ipconfig[ipconfigID] = ipConfStr
-	}
-
-	config.Disks = QemuStorages{}.mapToStruct(vmConfig)
-
-	if config.Disks != nil && config.Disks.Ide != nil && config.Disks.Ide.Disk_2 != nil && config.Disks.Ide.Disk_2.CdRom != nil {
-		config.Iso = config.Disks.Ide.Disk_2.CdRom.Iso
-	}
-
-	// Add unused disks
-	// unused0:local:100/vm-100-disk-1.qcow2
-	unusedDiskNames := []string{}
-	for k := range vmConfig {
-		// look for entries from the config in the format "unusedX:<storagepath>" where X is an integer
-		if unusedDiskName := rxUnusedDiskName.FindStringSubmatch(k); len(unusedDiskName) > 0 {
-			unusedDiskNames = append(unusedDiskNames, unusedDiskName[0])
-		}
-	}
-	// if len(unusedDiskNames) > 0 {
-	// 	log.Printf("[DEBUG] unusedDiskNames: %v", unusedDiskNames)
-	// }
-
-	for _, unusedDiskName := range unusedDiskNames {
-		unusedDiskConfStr := vmConfig[unusedDiskName].(string)
-		finalDiskConfMap := QemuDevice{}
-
-		// parse "unused0" to get the id '0' as an int
-		id := rxDeviceID.FindStringSubmatch(unusedDiskName)
-		diskID, err := strconv.Atoi(id[0])
-		if err != nil {
-			return nil, fmt.Errorf(fmt.Sprintf("Unable to parse unused disk id from input string '%v' tried to convert '%v' to integer.", unusedDiskName, diskID))
-		}
-		finalDiskConfMap["slot"] = diskID
-
-		// parse the attributes from the unused disk
-		// extract the storage and file path from the unused disk entry
-		parsedUnusedDiskMap := ParsePMConf(unusedDiskConfStr, "storage+file")
-		storageName, fileName := ParseSubConf(parsedUnusedDiskMap["storage+file"].(string), ":")
-		finalDiskConfMap["storage"] = storageName
-		finalDiskConfMap["file"] = fileName
-
-		config.QemuUnusedDisks[diskID] = finalDiskConfMap
-	}
-
-	//Display
-	if vga, isSet := vmConfig["vga"]; isSet {
-		vgaList := strings.Split(vga.(string), ",")
-		vgaMap := QemuDevice{}
-
-		vgaMap.readDeviceConfig(vgaList)
-		if len(vgaMap) > 0 {
-			config.QemuVga = vgaMap
-		}
-	}
-
-	// Add networks.
-	nicNames := []string{}
-
-	for k := range vmConfig {
-		if nicName := rxNicName.FindStringSubmatch(k); len(nicName) > 0 {
-			nicNames = append(nicNames, nicName[0])
-		}
-	}
-
-	for _, nicName := range nicNames {
-		nicConfStr := vmConfig[nicName]
-		nicConfList := strings.Split(nicConfStr.(string), ",")
-
-		id := rxDeviceID.FindStringSubmatch(nicName)
-		nicID, _ := strconv.Atoi(id[0])
-		model, macaddr := ParseSubConf(nicConfList[0], "=")
-
-		// Add model and MAC address.
-		nicConfMap := QemuDevice{
-			"id":      nicID,
-			"model":   model,
-			"macaddr": macaddr,
-		}
-
-		// Add rest of device config.
-		nicConfMap.readDeviceConfig(nicConfList[1:])
-		switch nicConfMap["firewall"] {
-		case 1:
-			nicConfMap["firewall"] = true
-		case 0:
-			nicConfMap["firewall"] = false
-		}
-		switch nicConfMap["link_down"] {
-		case 1:
-			nicConfMap["link_down"] = true
-		case 0:
-			nicConfMap["link_down"] = false
-		}
-
-		// And device config to networks.
-		if len(nicConfMap) > 0 {
-			config.QemuNetworks[nicID] = nicConfMap
-		}
-	}
-
-	// Add serials
-	serialNames := []string{}
-
-	for k := range vmConfig {
-		if serialName := rxSerialName.FindStringSubmatch(k); len(serialName) > 0 {
-			serialNames = append(serialNames, serialName[0])
-		}
-	}
-
-	for _, serialName := range serialNames {
-		id := rxDeviceID.FindStringSubmatch(serialName)
-		serialID, _ := strconv.Atoi(id[0])
-
-		serialConfMap := QemuDevice{
-			"id":   serialID,
-			"type": vmConfig[serialName],
-		}
-
-		// And device config to serials map.
-		if len(serialConfMap) > 0 {
-			config.QemuSerials[serialID] = serialConfMap
-		}
-	}
-
-	// Add usbs
-	usbNames := []string{}
-
-	for k := range vmConfig {
-		if usbName := rxUsbName.FindStringSubmatch(k); len(usbName) > 0 {
-			usbNames = append(usbNames, usbName[0])
-		}
-	}
-
-	for _, usbName := range usbNames {
-		usbConfStr := vmConfig[usbName]
-		usbConfList := strings.Split(usbConfStr.(string), ",")
-		id := rxDeviceID.FindStringSubmatch(usbName)
-		usbID, _ := strconv.Atoi(id[0])
-		_, host := ParseSubConf(usbConfList[0], "=")
-
-		usbConfMap := QemuDevice{
-			"id":   usbID,
-			"host": host,
-		}
-
-		usbConfMap.readDeviceConfig(usbConfList[1:])
-		if usbConfMap["usb3"] == 1 {
-			usbConfMap["usb3"] = true
-		}
-
-		// And device config to usbs map.
-		if len(usbConfMap) > 0 {
-			config.QemuUsbs[usbID] = usbConfMap
-		}
-	}
-
-	// hostpci
-	hostPCInames := []string{}
-
-	for k := range vmConfig {
-		if hostPCIname := rxPCIName.FindStringSubmatch(k); len(hostPCIname) > 0 {
-			hostPCInames = append(hostPCInames, hostPCIname[0])
-		}
-	}
-
-	for _, hostPCIname := range hostPCInames {
-		hostPCIConfStr := vmConfig[hostPCIname]
-		hostPCIConfList := strings.Split(hostPCIConfStr.(string), ",")
-		id := rxPCIName.FindStringSubmatch(hostPCIname)
-		hostPCIID, _ := strconv.Atoi(id[0])
-		hostPCIConfMap := QemuDevice{
-			"id": hostPCIID,
-		}
-		hostPCIConfMap.readDeviceConfig(hostPCIConfList)
-		// And device config to usbs map.
-		if len(hostPCIConfMap) > 0 {
-			config.QemuPCIDevices[hostPCIID] = hostPCIConfMap
-		}
+	config, err = ConfigQemu{}.mapToStruct(vmConfig)
+	if err != nil {
+		return
 	}
 
 	// HAstate is return by the api for a vm resource type but not the HAgroup
