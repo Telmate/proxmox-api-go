@@ -57,22 +57,22 @@ func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, vmID 
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, vmID, "virtio0", params, changes)
-	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, vmID, "virtio1", params, changes)
-	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, vmID, "virtio2", params, changes)
-	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, vmID, "virtio3", params, changes)
-	disks.Disk_4.markDiskChanges(tmpCurrentDisks.Disk_4, vmID, "virtio4", params, changes)
-	disks.Disk_5.markDiskChanges(tmpCurrentDisks.Disk_5, vmID, "virtio5", params, changes)
-	disks.Disk_6.markDiskChanges(tmpCurrentDisks.Disk_6, vmID, "virtio6", params, changes)
-	disks.Disk_7.markDiskChanges(tmpCurrentDisks.Disk_7, vmID, "virtio7", params, changes)
-	disks.Disk_8.markDiskChanges(tmpCurrentDisks.Disk_8, vmID, "virtio8", params, changes)
-	disks.Disk_9.markDiskChanges(tmpCurrentDisks.Disk_9, vmID, "virtio9", params, changes)
-	disks.Disk_10.markDiskChanges(tmpCurrentDisks.Disk_10, vmID, "virtio10", params, changes)
-	disks.Disk_11.markDiskChanges(tmpCurrentDisks.Disk_11, vmID, "virtio11", params, changes)
-	disks.Disk_12.markDiskChanges(tmpCurrentDisks.Disk_12, vmID, "virtio12", params, changes)
-	disks.Disk_13.markDiskChanges(tmpCurrentDisks.Disk_13, vmID, "virtio13", params, changes)
-	disks.Disk_14.markDiskChanges(tmpCurrentDisks.Disk_14, vmID, "virtio14", params, changes)
-	disks.Disk_15.markDiskChanges(tmpCurrentDisks.Disk_15, vmID, "virtio15", params, changes)
+	disks.Disk_0.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_0.convertDataStructure(), vmID, "virtio0", params, changes)
+	disks.Disk_1.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_1.convertDataStructure(), vmID, "virtio1", params, changes)
+	disks.Disk_2.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_2.convertDataStructure(), vmID, "virtio2", params, changes)
+	disks.Disk_3.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_3.convertDataStructure(), vmID, "virtio3", params, changes)
+	disks.Disk_4.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_4.convertDataStructure(), vmID, "virtio4", params, changes)
+	disks.Disk_5.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_5.convertDataStructure(), vmID, "virtio5", params, changes)
+	disks.Disk_6.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_6.convertDataStructure(), vmID, "virtio6", params, changes)
+	disks.Disk_7.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_7.convertDataStructure(), vmID, "virtio7", params, changes)
+	disks.Disk_8.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_8.convertDataStructure(), vmID, "virtio8", params, changes)
+	disks.Disk_9.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_9.convertDataStructure(), vmID, "virtio9", params, changes)
+	disks.Disk_10.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_10.convertDataStructure(), vmID, "virtio10", params, changes)
+	disks.Disk_11.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_11.convertDataStructure(), vmID, "virtio11", params, changes)
+	disks.Disk_12.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_12.convertDataStructure(), vmID, "virtio12", params, changes)
+	disks.Disk_13.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_13.convertDataStructure(), vmID, "virtio13", params, changes)
+	disks.Disk_14.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_14.convertDataStructure(), vmID, "virtio14", params, changes)
+	disks.Disk_15.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_15.convertDataStructure(), vmID, "virtio15", params, changes)
 }
 
 // TODO write test
@@ -242,11 +242,6 @@ func (storage QemuVirtIOStorage) mapToApiValues(vmID uint, create bool) string {
 		return storage.Passthrough.mapToApiValues()
 	}
 	return ""
-}
-
-// TODO write test
-func (storage *QemuVirtIOStorage) markDiskChanges(currentStorage *QemuVirtIOStorage, vmID uint, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
-	storage.convertDataStructure().markDiskChanges(currentStorage.convertDataStructure(), vmID, id, params, changes)
 }
 
 // TODO write test

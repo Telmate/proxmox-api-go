@@ -44,10 +44,10 @@ func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID uint, 
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, vmID, "ide0", params, changes)
-	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, vmID, "ide1", params, changes)
-	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, vmID, "ide2", params, changes)
-	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, vmID, "ide3", params, changes)
+	disks.Disk_0.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_0.convertDataStructure(), vmID, "ide0", params, changes)
+	disks.Disk_1.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_1.convertDataStructure(), vmID, "ide1", params, changes)
+	disks.Disk_2.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_2.convertDataStructure(), vmID, "ide2", params, changes)
+	disks.Disk_3.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_3.convertDataStructure(), vmID, "ide3", params, changes)
 }
 
 // TODO write test
@@ -168,11 +168,6 @@ func (storage QemuIdeStorage) mapToApiValues(vmID uint, create bool) string {
 		return storage.Passthrough.mapToApiValues()
 	}
 	return ""
-}
-
-// TODO write test
-func (storage *QemuIdeStorage) markDiskChanges(currentStorage *QemuIdeStorage, vmID uint, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
-	storage.convertDataStructure().markDiskChanges(currentStorage.convertDataStructure(), vmID, id, params, changes)
 }
 
 // TODO write test

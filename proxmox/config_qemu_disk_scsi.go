@@ -75,37 +75,37 @@ func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID uint
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, vmID, "scsi0", params, changes)
-	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, vmID, "scsi1", params, changes)
-	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, vmID, "scsi2", params, changes)
-	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, vmID, "scsi3", params, changes)
-	disks.Disk_4.markDiskChanges(tmpCurrentDisks.Disk_4, vmID, "scsi4", params, changes)
-	disks.Disk_5.markDiskChanges(tmpCurrentDisks.Disk_5, vmID, "scsi5", params, changes)
-	disks.Disk_6.markDiskChanges(tmpCurrentDisks.Disk_6, vmID, "scsi6", params, changes)
-	disks.Disk_7.markDiskChanges(tmpCurrentDisks.Disk_7, vmID, "scsi7", params, changes)
-	disks.Disk_8.markDiskChanges(tmpCurrentDisks.Disk_8, vmID, "scsi8", params, changes)
-	disks.Disk_9.markDiskChanges(tmpCurrentDisks.Disk_9, vmID, "scsi9", params, changes)
-	disks.Disk_10.markDiskChanges(tmpCurrentDisks.Disk_10, vmID, "scsi10", params, changes)
-	disks.Disk_11.markDiskChanges(tmpCurrentDisks.Disk_11, vmID, "scsi11", params, changes)
-	disks.Disk_12.markDiskChanges(tmpCurrentDisks.Disk_12, vmID, "scsi12", params, changes)
-	disks.Disk_13.markDiskChanges(tmpCurrentDisks.Disk_13, vmID, "scsi13", params, changes)
-	disks.Disk_14.markDiskChanges(tmpCurrentDisks.Disk_14, vmID, "scsi14", params, changes)
-	disks.Disk_15.markDiskChanges(tmpCurrentDisks.Disk_15, vmID, "scsi15", params, changes)
-	disks.Disk_16.markDiskChanges(tmpCurrentDisks.Disk_16, vmID, "scsi16", params, changes)
-	disks.Disk_17.markDiskChanges(tmpCurrentDisks.Disk_17, vmID, "scsi17", params, changes)
-	disks.Disk_18.markDiskChanges(tmpCurrentDisks.Disk_18, vmID, "scsi18", params, changes)
-	disks.Disk_19.markDiskChanges(tmpCurrentDisks.Disk_19, vmID, "scsi19", params, changes)
-	disks.Disk_20.markDiskChanges(tmpCurrentDisks.Disk_20, vmID, "scsi20", params, changes)
-	disks.Disk_21.markDiskChanges(tmpCurrentDisks.Disk_21, vmID, "scsi21", params, changes)
-	disks.Disk_22.markDiskChanges(tmpCurrentDisks.Disk_22, vmID, "scsi22", params, changes)
-	disks.Disk_23.markDiskChanges(tmpCurrentDisks.Disk_23, vmID, "scsi23", params, changes)
-	disks.Disk_24.markDiskChanges(tmpCurrentDisks.Disk_24, vmID, "scsi24", params, changes)
-	disks.Disk_25.markDiskChanges(tmpCurrentDisks.Disk_25, vmID, "scsi25", params, changes)
-	disks.Disk_26.markDiskChanges(tmpCurrentDisks.Disk_26, vmID, "scsi26", params, changes)
-	disks.Disk_27.markDiskChanges(tmpCurrentDisks.Disk_27, vmID, "scsi27", params, changes)
-	disks.Disk_28.markDiskChanges(tmpCurrentDisks.Disk_28, vmID, "scsi28", params, changes)
-	disks.Disk_29.markDiskChanges(tmpCurrentDisks.Disk_29, vmID, "scsi29", params, changes)
-	disks.Disk_30.markDiskChanges(tmpCurrentDisks.Disk_30, vmID, "scsi30", params, changes)
+	disks.Disk_0.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_0.convertDataStructure(), vmID, "scsi0", params, changes)
+	disks.Disk_1.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_1.convertDataStructure(), vmID, "scsi1", params, changes)
+	disks.Disk_2.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_2.convertDataStructure(), vmID, "scsi2", params, changes)
+	disks.Disk_3.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_3.convertDataStructure(), vmID, "scsi3", params, changes)
+	disks.Disk_4.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_4.convertDataStructure(), vmID, "scsi4", params, changes)
+	disks.Disk_5.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_5.convertDataStructure(), vmID, "scsi5", params, changes)
+	disks.Disk_6.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_6.convertDataStructure(), vmID, "scsi6", params, changes)
+	disks.Disk_7.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_7.convertDataStructure(), vmID, "scsi7", params, changes)
+	disks.Disk_8.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_8.convertDataStructure(), vmID, "scsi8", params, changes)
+	disks.Disk_9.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_9.convertDataStructure(), vmID, "scsi9", params, changes)
+	disks.Disk_10.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_10.convertDataStructure(), vmID, "scsi10", params, changes)
+	disks.Disk_11.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_11.convertDataStructure(), vmID, "scsi11", params, changes)
+	disks.Disk_12.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_12.convertDataStructure(), vmID, "scsi12", params, changes)
+	disks.Disk_13.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_13.convertDataStructure(), vmID, "scsi13", params, changes)
+	disks.Disk_14.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_14.convertDataStructure(), vmID, "scsi14", params, changes)
+	disks.Disk_15.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_15.convertDataStructure(), vmID, "scsi15", params, changes)
+	disks.Disk_16.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_16.convertDataStructure(), vmID, "scsi16", params, changes)
+	disks.Disk_17.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_17.convertDataStructure(), vmID, "scsi17", params, changes)
+	disks.Disk_18.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_18.convertDataStructure(), vmID, "scsi18", params, changes)
+	disks.Disk_19.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_19.convertDataStructure(), vmID, "scsi19", params, changes)
+	disks.Disk_20.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_20.convertDataStructure(), vmID, "scsi20", params, changes)
+	disks.Disk_21.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_21.convertDataStructure(), vmID, "scsi21", params, changes)
+	disks.Disk_22.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_22.convertDataStructure(), vmID, "scsi22", params, changes)
+	disks.Disk_23.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_23.convertDataStructure(), vmID, "scsi23", params, changes)
+	disks.Disk_24.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_24.convertDataStructure(), vmID, "scsi24", params, changes)
+	disks.Disk_25.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_25.convertDataStructure(), vmID, "scsi25", params, changes)
+	disks.Disk_26.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_26.convertDataStructure(), vmID, "scsi26", params, changes)
+	disks.Disk_27.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_27.convertDataStructure(), vmID, "scsi27", params, changes)
+	disks.Disk_28.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_28.convertDataStructure(), vmID, "scsi28", params, changes)
+	disks.Disk_29.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_29.convertDataStructure(), vmID, "scsi29", params, changes)
+	disks.Disk_30.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_30.convertDataStructure(), vmID, "scsi30", params, changes)
 }
 
 // TODO write test
@@ -342,11 +342,6 @@ func (storage QemuScsiStorage) mapToApiValues(vmID uint, create bool) string {
 		return storage.Passthrough.mapToApiValues()
 	}
 	return ""
-}
-
-// TODO write test
-func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage, vmID uint, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
-	storage.convertDataStructure().markDiskChanges(currentStorage.convertDataStructure(), vmID, id, params, changes)
 }
 
 // TODO write test

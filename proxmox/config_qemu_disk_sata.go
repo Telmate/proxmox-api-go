@@ -46,12 +46,12 @@ func (disks QemuSataDisks) mapToApiValues(currentDisks *QemuSataDisks, vmID uint
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, vmID, "sata0", params, changes)
-	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, vmID, "sata1", params, changes)
-	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, vmID, "sata2", params, changes)
-	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, vmID, "sata3", params, changes)
-	disks.Disk_4.markDiskChanges(tmpCurrentDisks.Disk_4, vmID, "sata4", params, changes)
-	disks.Disk_5.markDiskChanges(tmpCurrentDisks.Disk_5, vmID, "sata5", params, changes)
+	disks.Disk_0.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_0.convertDataStructure(), vmID, "sata0", params, changes)
+	disks.Disk_1.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_1.convertDataStructure(), vmID, "sata1", params, changes)
+	disks.Disk_2.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_2.convertDataStructure(), vmID, "sata2", params, changes)
+	disks.Disk_3.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_3.convertDataStructure(), vmID, "sata3", params, changes)
+	disks.Disk_4.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_4.convertDataStructure(), vmID, "sata4", params, changes)
+	disks.Disk_5.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_5.convertDataStructure(), vmID, "sata5", params, changes)
 }
 
 // TODO write test
@@ -180,11 +180,6 @@ func (storage QemuSataStorage) mapToApiValues(vmID uint, create bool) string {
 		return storage.Passthrough.mapToApiValues()
 	}
 	return ""
-}
-
-// TODO write test
-func (storage *QemuSataStorage) markDiskChanges(currentStorage *QemuSataStorage, vmID uint, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
-	storage.convertDataStructure().markDiskChanges(currentStorage.convertDataStructure(), vmID, id, params, changes)
 }
 
 // TODO write test
