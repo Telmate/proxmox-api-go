@@ -3,6 +3,7 @@ package proxmox
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -86,7 +87,11 @@ type ConfigQemu struct {
 
 // CreateVm - Tell Proxmox API to make the VM
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
-	params, _, err := config.mapToApiValues(ConfigQemu{}, vmr)
+	err = config.setVmr(vmr)
+	if err != nil {
+		return
+	}
+	params, _, err := config.mapToApiValues(ConfigQemu{})
 	if err != nil {
 		return
 	}
@@ -104,16 +109,15 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	return
 }
 
-func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu, vmr *VmRef) (params map[string]interface{}, markedDisks *qemuUpdateChanges, err error) {
-
-	vmr.SetVmType("qemu")
+func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[string]interface{}, markedDisks *qemuUpdateChanges, err error) {
 
 	var itemsToDelete string
 
-	params = map[string]interface{}{
-		"vmid": vmr.vmId,
-	}
+	params = map[string]interface{}{}
 
+	if config.VmID != 0 {
+		params["vmid"] = config.VmID
+	}
 	if config.Args != "" {
 		params["args"] = config.Args
 	}
@@ -177,8 +181,8 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu, vmr *VmRef) (p
 	if config.QemuOs != "" {
 		params["ostype"] = config.QemuOs
 	}
-	if vmr.pool != "" {
-		params["pool"] = vmr.pool
+	if config.Pool != "" {
+		params["pool"] = config.Pool
 	}
 	if config.Scsihw != "" {
 		params["scsihw"] = config.Scsihw
@@ -208,14 +212,14 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu, vmr *VmRef) (p
 	// Disks
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
-			markedDisks = config.Disks.markDiskChanges(*currentConfig.Disks, params)
+			markedDisks = config.Disks.markDiskChanges(*currentConfig.Disks, uint(config.VmID), params)
 		}
 		if markedDisks.Delete != "" {
 			itemsToDelete = AddToList(itemsToDelete, markedDisks.Delete)
 		}
 	} else {
 		if config.Disks != nil {
-			config.Disks.mapToApiValues(params)
+			config.Disks.mapToApiValues(uint(config.VmID), params)
 		}
 	}
 
@@ -223,7 +227,7 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu, vmr *VmRef) (p
 	config.CreateQemuEfiParams(params)
 
 	// Create networks config.
-	config.CreateQemuNetworksParams(vmr.vmId, params)
+	config.CreateQemuNetworksParams(params)
 
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
@@ -258,16 +262,40 @@ func (newConfig ConfigQemu) Update(vmr *VmRef, client *Client) (err error) {
 	return newConfig.UpdateAdvanced(currentConfig, vmr, client)
 }
 
+func (config *ConfigQemu) setVmr(vmr *VmRef) error {
+	if config == nil {
+		return errors.New("config may not be nil")
+	}
+	if vmr == nil {
+		return errors.New("vm reference may not be nil")
+	}
+	vmr.SetVmType("qemu")
+	config.VmID = vmr.vmId
+	return nil
+}
+
 func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef, client *Client) (err error) {
-	params, markedDisks, err := newConfig.mapToApiValues(*currentConfig, vmr)
+	err = newConfig.setVmr(vmr)
+	if err != nil {
+		return
+	}
+	params, markedDisks, err := newConfig.mapToApiValues(*currentConfig)
 	if err != nil {
 		return
 	}
 
-	for _, e := range markedDisks.Move {
-		_, err = client.MoveQemuDisk(vmr, e.Id, e.Storage)
-		if err != nil {
-			return
+	if markedDisks != nil {
+		for _, e := range markedDisks.Move {
+			_, err = client.MoveQemuDisk(vmr, e.Id, e.Storage)
+			if err != nil {
+				return
+			}
+		}
+		for _, e := range markedDisks.Resize {
+			_, err = e.resize(vmr, client)
+			if err != nil {
+				return
+			}
 		}
 	}
 
@@ -463,7 +491,8 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 
 	// Create networks config.
-	config.CreateQemuNetworksParams(vmr.vmId, configParams)
+	config.VmID = vmr.vmId
+	config.CreateQemuNetworksParams(configParams)
 
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
@@ -1158,7 +1187,7 @@ func FormatUsbParam(usb QemuDevice) string {
 }
 
 // Create parameters for each Nic device.
-func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interface{}) {
+func (c ConfigQemu) CreateQemuNetworksParams(params map[string]interface{}) {
 	// For new style with multi net device.
 	for nicID, nicConfMap := range c.QemuNetworks {
 
@@ -1184,7 +1213,7 @@ func (c ConfigQemu) CreateQemuNetworksParams(vmID int, params map[string]interfa
 			// Generate deterministic Mac based on VmID and NicID
 			// Assume that rare VM has more than 32 nics
 			macaddr := make(net.HardwareAddr, 6)
-			pairing := vmID<<5 | nicID
+			pairing := c.VmID<<5 | nicID
 			// Linux MAC vendor - 00:18:59
 			macaddr[0] = 0x00
 			macaddr[1] = 0x18
