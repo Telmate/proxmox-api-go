@@ -54,16 +54,17 @@ type ConfigQemu struct {
 	Hookscript      string        `json:"hookscript,omitempty"`
 	Hotplug         string        `json:"hotplug,omitempty"`    // TODO should be a struct
 	Ipconfig        IpconfigMap   `json:"ipconfig,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
+	Iso             *IsoFile      `json:"iso,omitempty"`        // Same as Disks.Ide.Disk_2.CdRom.Iso
 	Machine         string        `json:"machine,omitempty"`    // TODO should be custom type with enum
 	Memory          int           `json:"memory,omitempty"`     // TODO should be uint
 	Name            string        `json:"name,omitempty"`       // TODO should be custom type as there are character and length limitations
 	Nameserver      string        `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	Onboot          *bool         `json:"onboot,omitempty"`
-	Pool            string        `json:"pool,omitempty"`  // TODO should be custom type as there are character and length limitations
-	QemuCores       int           `json:"cores,omitempty"` // TODO should be uint
-	QemuCpu         string        `json:"cpu,omitempty"`   // TODO should be custom type with enum
-	QemuDisks       QemuDevices   `json:"disk,omitempty"`  // DEPRECATED use Disks *QemuStorages instead
-	QemuIso         string        `json:"iso,omitempty"`   // TODO should be a struct
+	Pool            string        `json:"pool,omitempty"`    // TODO should be custom type as there are character and length limitations
+	QemuCores       int           `json:"cores,omitempty"`   // TODO should be uint
+	QemuCpu         string        `json:"cpu,omitempty"`     // TODO should be custom type with enum
+	QemuDisks       QemuDevices   `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
+	QemuIso         string        `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
 	QemuKVM         *bool         `json:"kvm,omitempty"`
 	QemuNetworks    QemuDevices   `json:"network,omitempty"` // TODO should be a struct
 	QemuNuma        *bool         `json:"numa,omitempty"`
@@ -209,6 +210,20 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[st
 		params["vcpus"] = config.QemuVcpus
 	}
 
+	if config.Iso != nil {
+		if config.Disks == nil {
+			config.Disks = &QemuStorages{}
+		}
+		if config.Disks.Ide == nil {
+			config.Disks.Ide = &QemuIdeDisks{}
+		}
+		if config.Disks.Ide.Disk_2 == nil {
+			config.Disks.Ide.Disk_2 = &QemuIdeStorage{}
+		}
+		if config.Disks.Ide.Disk_2.CdRom == nil {
+			config.Disks.Ide.Disk_2.CdRom = &QemuCdRom{Iso: config.Iso}
+		}
+	}
 	// Disks
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
@@ -751,11 +766,6 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		config.QemuVcpus = int(vcpus)
 	}
 
-	if vmConfig["ide2"] != nil {
-		isoMatch := rxIso.FindStringSubmatch(vmConfig["ide2"].(string))
-		config.QemuIso = isoMatch[1]
-	}
-
 	// Add Cloud-Init options
 	if _, isSet := vmConfig["ciuser"]; isSet {
 		config.CIuser = vmConfig["ciuser"].(string)
@@ -792,6 +802,10 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 
 	config.Disks = QemuStorages{}.mapToStruct(vmConfig)
+
+	if config.Disks != nil && config.Disks.Ide != nil && config.Disks.Ide.Disk_2 != nil && config.Disks.Ide.Disk_2.CdRom != nil {
+		config.Iso = config.Disks.Ide.Disk_2.CdRom.Iso
+	}
 
 	// Add unused disks
 	// unused0:local:100/vm-100-disk-1.qcow2
