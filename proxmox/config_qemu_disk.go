@@ -106,8 +106,8 @@ func (qemuCdRom) mapToStruct(settings [][]string) *qemuCdRom {
 }
 
 type QemuCloudInitDisk struct {
-	Storage  string
 	FileType string
+	Storage  string
 }
 
 // TODO write test
