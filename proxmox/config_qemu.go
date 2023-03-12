@@ -213,9 +213,10 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[st
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
 			markedDisks = config.Disks.markDiskChanges(*currentConfig.Disks, uint(config.VmID), params)
-		}
-		if markedDisks.Delete != "" {
-			itemsToDelete = AddToList(itemsToDelete, markedDisks.Delete)
+			if markedDisks.Delete != "" {
+				itemsToDelete = AddToList(itemsToDelete, markedDisks.Delete)
+				markedDisks.Delete = ""
+			}
 		}
 	} else {
 		if config.Disks != nil {
