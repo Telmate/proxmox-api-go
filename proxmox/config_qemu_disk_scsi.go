@@ -7,6 +7,7 @@ type QemuScsiDisk struct {
 	Cache      QemuDiskCache     `json:"cache,omitempty"`
 	Discard    bool              `json:"discard,omitempty"`
 	EmulateSSD bool              `json:"emulatessd,omitempty"`
+	Id         uint              `json:"id,omitempty"`
 	IOThread   bool              `json:"iothread,omitempty"`
 	ReadOnly   bool              `json:"readonly,omitempty"`
 	Replicate  bool              `json:"replicate,omitempty"`
@@ -16,7 +17,7 @@ type QemuScsiDisk struct {
 }
 
 // TODO write test
-func (disk QemuScsiDisk) mapToApiValues(create bool) string {
+func (disk QemuScsiDisk) mapToApiValues(vmID uint, create bool) string {
 	return qemuDisk{
 		AsyncIO:    disk.AsyncIO,
 		Backup:     disk.Backup,
@@ -31,7 +32,7 @@ func (disk QemuScsiDisk) mapToApiValues(create bool) string {
 		Size:       disk.Size,
 		Storage:    disk.Storage,
 		Type:       scsi,
-	}.mapToApiValues(create)
+	}.mapToApiValues(vmID, create)
 }
 
 type QemuScsiDisks struct {
@@ -69,42 +70,42 @@ type QemuScsiDisks struct {
 }
 
 // TODO write test
-func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, params map[string]interface{}, changes *qemuUpdateChanges) {
+func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID uint, params map[string]interface{}, changes *qemuUpdateChanges) {
 	tmpCurrentDisks := QemuScsiDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, "scsi0", params, changes)
-	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, "scsi1", params, changes)
-	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, "scsi2", params, changes)
-	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, "scsi3", params, changes)
-	disks.Disk_4.markDiskChanges(tmpCurrentDisks.Disk_4, "scsi4", params, changes)
-	disks.Disk_5.markDiskChanges(tmpCurrentDisks.Disk_5, "scsi5", params, changes)
-	disks.Disk_6.markDiskChanges(tmpCurrentDisks.Disk_6, "scsi6", params, changes)
-	disks.Disk_7.markDiskChanges(tmpCurrentDisks.Disk_7, "scsi7", params, changes)
-	disks.Disk_8.markDiskChanges(tmpCurrentDisks.Disk_8, "scsi8", params, changes)
-	disks.Disk_9.markDiskChanges(tmpCurrentDisks.Disk_9, "scsi9", params, changes)
-	disks.Disk_10.markDiskChanges(tmpCurrentDisks.Disk_10, "scsi10", params, changes)
-	disks.Disk_11.markDiskChanges(tmpCurrentDisks.Disk_11, "scsi11", params, changes)
-	disks.Disk_12.markDiskChanges(tmpCurrentDisks.Disk_12, "scsi12", params, changes)
-	disks.Disk_13.markDiskChanges(tmpCurrentDisks.Disk_13, "scsi13", params, changes)
-	disks.Disk_14.markDiskChanges(tmpCurrentDisks.Disk_14, "scsi14", params, changes)
-	disks.Disk_15.markDiskChanges(tmpCurrentDisks.Disk_15, "scsi15", params, changes)
-	disks.Disk_16.markDiskChanges(tmpCurrentDisks.Disk_16, "scsi16", params, changes)
-	disks.Disk_17.markDiskChanges(tmpCurrentDisks.Disk_17, "scsi17", params, changes)
-	disks.Disk_18.markDiskChanges(tmpCurrentDisks.Disk_18, "scsi18", params, changes)
-	disks.Disk_19.markDiskChanges(tmpCurrentDisks.Disk_19, "scsi19", params, changes)
-	disks.Disk_20.markDiskChanges(tmpCurrentDisks.Disk_20, "scsi20", params, changes)
-	disks.Disk_21.markDiskChanges(tmpCurrentDisks.Disk_21, "scsi21", params, changes)
-	disks.Disk_22.markDiskChanges(tmpCurrentDisks.Disk_22, "scsi22", params, changes)
-	disks.Disk_23.markDiskChanges(tmpCurrentDisks.Disk_23, "scsi23", params, changes)
-	disks.Disk_24.markDiskChanges(tmpCurrentDisks.Disk_24, "scsi24", params, changes)
-	disks.Disk_25.markDiskChanges(tmpCurrentDisks.Disk_25, "scsi25", params, changes)
-	disks.Disk_26.markDiskChanges(tmpCurrentDisks.Disk_26, "scsi26", params, changes)
-	disks.Disk_27.markDiskChanges(tmpCurrentDisks.Disk_27, "scsi27", params, changes)
-	disks.Disk_28.markDiskChanges(tmpCurrentDisks.Disk_28, "scsi28", params, changes)
-	disks.Disk_29.markDiskChanges(tmpCurrentDisks.Disk_29, "scsi29", params, changes)
-	disks.Disk_30.markDiskChanges(tmpCurrentDisks.Disk_30, "scsi30", params, changes)
+	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, vmID, "scsi0", params, changes)
+	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, vmID, "scsi1", params, changes)
+	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, vmID, "scsi2", params, changes)
+	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, vmID, "scsi3", params, changes)
+	disks.Disk_4.markDiskChanges(tmpCurrentDisks.Disk_4, vmID, "scsi4", params, changes)
+	disks.Disk_5.markDiskChanges(tmpCurrentDisks.Disk_5, vmID, "scsi5", params, changes)
+	disks.Disk_6.markDiskChanges(tmpCurrentDisks.Disk_6, vmID, "scsi6", params, changes)
+	disks.Disk_7.markDiskChanges(tmpCurrentDisks.Disk_7, vmID, "scsi7", params, changes)
+	disks.Disk_8.markDiskChanges(tmpCurrentDisks.Disk_8, vmID, "scsi8", params, changes)
+	disks.Disk_9.markDiskChanges(tmpCurrentDisks.Disk_9, vmID, "scsi9", params, changes)
+	disks.Disk_10.markDiskChanges(tmpCurrentDisks.Disk_10, vmID, "scsi10", params, changes)
+	disks.Disk_11.markDiskChanges(tmpCurrentDisks.Disk_11, vmID, "scsi11", params, changes)
+	disks.Disk_12.markDiskChanges(tmpCurrentDisks.Disk_12, vmID, "scsi12", params, changes)
+	disks.Disk_13.markDiskChanges(tmpCurrentDisks.Disk_13, vmID, "scsi13", params, changes)
+	disks.Disk_14.markDiskChanges(tmpCurrentDisks.Disk_14, vmID, "scsi14", params, changes)
+	disks.Disk_15.markDiskChanges(tmpCurrentDisks.Disk_15, vmID, "scsi15", params, changes)
+	disks.Disk_16.markDiskChanges(tmpCurrentDisks.Disk_16, vmID, "scsi16", params, changes)
+	disks.Disk_17.markDiskChanges(tmpCurrentDisks.Disk_17, vmID, "scsi17", params, changes)
+	disks.Disk_18.markDiskChanges(tmpCurrentDisks.Disk_18, vmID, "scsi18", params, changes)
+	disks.Disk_19.markDiskChanges(tmpCurrentDisks.Disk_19, vmID, "scsi19", params, changes)
+	disks.Disk_20.markDiskChanges(tmpCurrentDisks.Disk_20, vmID, "scsi20", params, changes)
+	disks.Disk_21.markDiskChanges(tmpCurrentDisks.Disk_21, vmID, "scsi21", params, changes)
+	disks.Disk_22.markDiskChanges(tmpCurrentDisks.Disk_22, vmID, "scsi22", params, changes)
+	disks.Disk_23.markDiskChanges(tmpCurrentDisks.Disk_23, vmID, "scsi23", params, changes)
+	disks.Disk_24.markDiskChanges(tmpCurrentDisks.Disk_24, vmID, "scsi24", params, changes)
+	disks.Disk_25.markDiskChanges(tmpCurrentDisks.Disk_25, vmID, "scsi25", params, changes)
+	disks.Disk_26.markDiskChanges(tmpCurrentDisks.Disk_26, vmID, "scsi26", params, changes)
+	disks.Disk_27.markDiskChanges(tmpCurrentDisks.Disk_27, vmID, "scsi27", params, changes)
+	disks.Disk_28.markDiskChanges(tmpCurrentDisks.Disk_28, vmID, "scsi28", params, changes)
+	disks.Disk_29.markDiskChanges(tmpCurrentDisks.Disk_29, vmID, "scsi29", params, changes)
+	disks.Disk_30.markDiskChanges(tmpCurrentDisks.Disk_30, vmID, "scsi30", params, changes)
 }
 
 // TODO write test
@@ -271,7 +272,7 @@ func (passthrough QemuScsiPassthrough) mapToApiValues() string {
 		Replicate:  passthrough.Replicate,
 		Serial:     passthrough.Serial,
 		Type:       scsi,
-	}.mapToApiValues(false)
+	}.mapToApiValues(0, false)
 }
 
 type QemuScsiStorage struct {
@@ -282,9 +283,54 @@ type QemuScsiStorage struct {
 }
 
 // TODO write test
-func (storage QemuScsiStorage) mapToApiValues(create bool) string {
+// converts to qemuStorage
+func (storage *QemuScsiStorage) convertDataStructure() *qemuStorage {
+	if storage == nil {
+		return nil
+	}
+	generalizedStorage := qemuStorage{
+		CdRom:     storage.CdRom,
+		CloudInit: storage.CloudInit,
+	}
 	if storage.Disk != nil {
-		return storage.Disk.mapToApiValues(create)
+		generalizedStorage.Disk = &qemuDisk{
+			AsyncIO:    storage.Disk.AsyncIO,
+			Backup:     storage.Disk.Backup,
+			Bandwidth:  storage.Disk.Bandwidth,
+			Cache:      storage.Disk.Cache,
+			Discard:    storage.Disk.Discard,
+			EmulateSSD: storage.Disk.EmulateSSD,
+			Id:         storage.Disk.Id,
+			IOThread:   storage.Disk.IOThread,
+			ReadOnly:   storage.Disk.ReadOnly,
+			Replicate:  storage.Disk.Replicate,
+			Serial:     storage.Disk.Serial,
+			Size:       storage.Disk.Size,
+			Storage:    storage.Disk.Storage,
+		}
+	}
+	if storage.Passthrough != nil {
+		generalizedStorage.Passthrough = &qemuDisk{
+			AsyncIO:    storage.Passthrough.AsyncIO,
+			Backup:     storage.Passthrough.Backup,
+			Bandwidth:  storage.Passthrough.Bandwidth,
+			Cache:      storage.Passthrough.Cache,
+			Discard:    storage.Passthrough.Discard,
+			EmulateSSD: storage.Passthrough.EmulateSSD,
+			File:       storage.Passthrough.File,
+			IOThread:   storage.Passthrough.IOThread,
+			ReadOnly:   storage.Passthrough.ReadOnly,
+			Replicate:  storage.Passthrough.Replicate,
+			Serial:     storage.Passthrough.Serial,
+		}
+	}
+	return &generalizedStorage
+}
+
+// TODO write test
+func (storage QemuScsiStorage) mapToApiValues(vmID uint, create bool) string {
+	if storage.Disk != nil {
+		return storage.Disk.mapToApiValues(vmID, create)
 	}
 	if storage.CdRom != nil {
 		return storage.CdRom.mapToApiValues()
@@ -299,71 +345,8 @@ func (storage QemuScsiStorage) mapToApiValues(create bool) string {
 }
 
 // TODO write test
-func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
-	if storage == nil {
-		return
-	}
-	// CDROM
-	if storage.CdRom != nil {
-		// Create or Update
-		params[id] = storage.CdRom.mapToApiValues()
-		return
-	} else if currentStorage != nil && currentStorage.CdRom != nil {
-		// Delete
-		changes.Delete = AddToList(changes.Delete, id)
-		return
-	}
-	// CloudInit
-	if storage.CloudInit != nil {
-		// Create or Update
-		params[id] = storage.CloudInit.mapToApiValues()
-		return
-	} else if currentStorage != nil && currentStorage.CloudInit != nil {
-		// Delete
-		changes.Delete = AddToList(changes.Delete, id)
-		return
-	}
-	// Disk
-	if storage.Disk != nil {
-		if currentStorage == nil || currentStorage.Disk == nil {
-			// Create
-			params[id] = storage.Disk.mapToApiValues(true)
-		} else {
-			if storage.Disk.Size >= currentStorage.Disk.Size {
-				// Update
-				if storage.Disk.Storage != currentStorage.Disk.Storage {
-					changes.Move = append(changes.Move, qemuDiskShort{
-						Id:      id,
-						Storage: storage.Disk.Storage,
-					})
-				}
-				params[id] = storage.Disk.mapToApiValues(false)
-			} else {
-				// Delete and Create
-				changes.Delete = AddToList(changes.Delete, id)
-				params[id] = storage.Disk.mapToApiValues(true)
-			}
-		}
-		return
-	} else if currentStorage != nil && currentStorage.Disk != nil {
-		// Delete
-		changes.Delete = AddToList(changes.Delete, id)
-		return
-	}
-	// Passthrough
-	if storage.Passthrough != nil {
-		// Create or Update
-		params[id] = storage.Passthrough.mapToApiValues()
-		return
-	} else if currentStorage != nil && currentStorage.Passthrough != nil {
-		// Delete
-		changes.Delete = AddToList(changes.Delete, id)
-		return
-	}
-	// Delete if no subtype was specified
-	if currentStorage != nil {
-		changes.Delete = AddToList(changes.Delete, id)
-	}
+func (storage *QemuScsiStorage) markDiskChanges(currentStorage *QemuScsiStorage, vmID uint, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
+	storage.convertDataStructure().markDiskChanges(currentStorage.convertDataStructure(), vmID, id, params, changes)
 }
 
 // TODO write test
@@ -390,6 +373,7 @@ func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 			Cache:      tmpDisk.Cache,
 			Discard:    tmpDisk.Discard,
 			EmulateSSD: tmpDisk.EmulateSSD,
+			Id:         tmpDisk.Id,
 			IOThread:   tmpDisk.IOThread,
 			ReadOnly:   tmpDisk.ReadOnly,
 			Replicate:  tmpDisk.Replicate,
@@ -412,5 +396,4 @@ func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 		Serial:     tmpDisk.Serial,
 		Size:       tmpDisk.Size,
 	}}
-
 }

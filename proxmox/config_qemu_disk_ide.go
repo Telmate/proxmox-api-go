@@ -7,6 +7,7 @@ type QemuIdeDisk struct {
 	Cache      QemuDiskCache     `json:"cache,omitempty"`
 	Discard    bool              `json:"discard,omitempty"`
 	EmulateSSD bool              `json:"emulatessd,omitempty"`
+	Id         uint              `json:"id,omitempty"`
 	Replicate  bool              `json:"replicate,omitempty"`
 	Serial     QemuDiskSerial    `json:"serial,omitempty"`
 	Size       uint              `json:"size,omitempty"`
@@ -14,7 +15,7 @@ type QemuIdeDisk struct {
 }
 
 // TODO write test
-func (disk QemuIdeDisk) mapToApiValues(create bool) string {
+func (disk QemuIdeDisk) mapToApiValues(vmID uint, create bool) string {
 	return qemuDisk{
 		AsyncIO:    disk.AsyncIO,
 		Backup:     disk.Backup,
@@ -27,7 +28,7 @@ func (disk QemuIdeDisk) mapToApiValues(create bool) string {
 		Size:       disk.Size,
 		Storage:    disk.Storage,
 		Type:       ide,
-	}.mapToApiValues(create)
+	}.mapToApiValues(vmID, create)
 }
 
 type QemuIdeDisks struct {
@@ -38,15 +39,15 @@ type QemuIdeDisks struct {
 }
 
 // TODO write test
-func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, params map[string]interface{}, changes *qemuUpdateChanges) {
+func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID uint, params map[string]interface{}, changes *qemuUpdateChanges) {
 	tmpCurrentDisks := QemuIdeDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, "ide0", params, changes)
-	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, "ide1", params, changes)
-	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, "ide2", params, changes)
-	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, "ide3", params, changes)
+	disks.Disk_0.markDiskChanges(tmpCurrentDisks.Disk_0, vmID, "ide0", params, changes)
+	disks.Disk_1.markDiskChanges(tmpCurrentDisks.Disk_1, vmID, "ide1", params, changes)
+	disks.Disk_2.markDiskChanges(tmpCurrentDisks.Disk_2, vmID, "ide2", params, changes)
+	disks.Disk_3.markDiskChanges(tmpCurrentDisks.Disk_3, vmID, "ide3", params, changes)
 }
 
 // TODO write test
@@ -101,7 +102,7 @@ func (passthrough QemuIdePassthrough) mapToApiValues() string {
 		Replicate:  passthrough.Replicate,
 		Serial:     passthrough.Serial,
 		Type:       ide,
-	}.mapToApiValues(false)
+	}.mapToApiValues(0, false)
 }
 
 type QemuIdeStorage struct {
@@ -112,9 +113,50 @@ type QemuIdeStorage struct {
 }
 
 // TODO write test
-func (storage QemuIdeStorage) mapToApiValues(create bool) string {
+// converts to qemuStorage
+func (storage *QemuIdeStorage) convertDataStructure() *qemuStorage {
+	if storage == nil {
+		return nil
+	}
+	generalizedStorage := qemuStorage{
+		CdRom:     storage.CdRom,
+		CloudInit: storage.CloudInit,
+	}
 	if storage.Disk != nil {
-		return storage.Disk.mapToApiValues(create)
+		generalizedStorage.Disk = &qemuDisk{
+			AsyncIO:    storage.Disk.AsyncIO,
+			Backup:     storage.Disk.Backup,
+			Bandwidth:  storage.Disk.Bandwidth,
+			Cache:      storage.Disk.Cache,
+			Discard:    storage.Disk.Discard,
+			EmulateSSD: storage.Disk.EmulateSSD,
+			Id:         storage.Disk.Id,
+			Replicate:  storage.Disk.Replicate,
+			Serial:     storage.Disk.Serial,
+			Size:       storage.Disk.Size,
+			Storage:    storage.Disk.Storage,
+		}
+	}
+	if storage.Passthrough != nil {
+		generalizedStorage.Passthrough = &qemuDisk{
+			AsyncIO:    storage.Passthrough.AsyncIO,
+			Backup:     storage.Passthrough.Backup,
+			Bandwidth:  storage.Passthrough.Bandwidth,
+			Cache:      storage.Passthrough.Cache,
+			Discard:    storage.Passthrough.Discard,
+			EmulateSSD: storage.Passthrough.EmulateSSD,
+			File:       storage.Passthrough.File,
+			Replicate:  storage.Passthrough.Replicate,
+			Serial:     storage.Passthrough.Serial,
+		}
+	}
+	return &generalizedStorage
+}
+
+// TODO write test
+func (storage QemuIdeStorage) mapToApiValues(vmID uint, create bool) string {
+	if storage.Disk != nil {
+		return storage.Disk.mapToApiValues(vmID, create)
 	}
 	if storage.CdRom != nil {
 		return storage.CdRom.mapToApiValues()
@@ -129,71 +171,8 @@ func (storage QemuIdeStorage) mapToApiValues(create bool) string {
 }
 
 // TODO write test
-func (storage *QemuIdeStorage) markDiskChanges(currentStorage *QemuIdeStorage, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
-	if storage == nil {
-		return
-	}
-	// CDROM
-	if storage.CdRom != nil {
-		// Create or Update
-		params[id] = storage.CdRom.mapToApiValues()
-		return
-	} else if currentStorage != nil && currentStorage.CdRom != nil {
-		// Delete
-		changes.Delete = AddToList(changes.Delete, id)
-		return
-	}
-	// CloudInit
-	if storage.CloudInit != nil {
-		// Create or Update
-		params[id] = storage.CloudInit.mapToApiValues()
-		return
-	} else if currentStorage != nil && currentStorage.CloudInit != nil {
-		// Delete
-		changes.Delete = AddToList(changes.Delete, id)
-		return
-	}
-	// Disk
-	if storage.Disk != nil {
-		if currentStorage == nil || currentStorage.Disk == nil {
-			// Create
-			params[id] = storage.Disk.mapToApiValues(true)
-		} else {
-			if storage.Disk.Size >= currentStorage.Disk.Size {
-				// Update
-				if storage.Disk.Storage != currentStorage.Disk.Storage {
-					changes.Move = append(changes.Move, qemuDiskShort{
-						Id:      id,
-						Storage: storage.Disk.Storage,
-					})
-				}
-				params[id] = storage.Disk.mapToApiValues(false)
-			} else {
-				// Delete and Create
-				changes.Delete = AddToList(changes.Delete, id)
-				params[id] = storage.Disk.mapToApiValues(true)
-			}
-		}
-		return
-	} else if currentStorage != nil && currentStorage.Disk != nil {
-		// Delete
-		changes.Delete = AddToList(changes.Delete, id)
-		return
-	}
-	// Passthrough
-	if storage.Passthrough != nil {
-		// Create or Update
-		params[id] = storage.Passthrough.mapToApiValues()
-		return
-	} else if currentStorage != nil && currentStorage.Passthrough != nil {
-		// Delete
-		changes.Delete = AddToList(changes.Delete, id)
-		return
-	}
-	// Delete if no subtype was specified
-	if currentStorage != nil {
-		changes.Delete = AddToList(changes.Delete, id)
-	}
+func (storage *QemuIdeStorage) markDiskChanges(currentStorage *QemuIdeStorage, vmID uint, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
+	storage.convertDataStructure().markDiskChanges(currentStorage.convertDataStructure(), vmID, id, params, changes)
 }
 
 // TODO write test
@@ -220,6 +199,7 @@ func (QemuIdeStorage) mapToStruct(param string) *QemuIdeStorage {
 			Cache:      tmpDisk.Cache,
 			Discard:    tmpDisk.Discard,
 			EmulateSSD: tmpDisk.EmulateSSD,
+			Id:         tmpDisk.Id,
 			Replicate:  tmpDisk.Replicate,
 			Serial:     tmpDisk.Serial,
 			Size:       tmpDisk.Size,

@@ -132,7 +132,7 @@ type qemuDisk struct {
 	// TODO custom type
 	File      string // Only set for Passthrough.
 	Format    QemuDiskFormat
-	ID        uint // Only set for Disk
+	Id        uint // Only set for Disk
 	IOThread  bool // Only set for scsi,virtio
 	Number    uint
 	ReadOnly  bool // Only set for scsi,virtio
@@ -145,9 +145,11 @@ type qemuDisk struct {
 }
 
 // TODO write test
-func (disk qemuDisk) mapToApiValues(create bool) (settings string) {
-	if create {
-		if disk.Storage != "" {
+func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
+	if disk.Storage != "" {
+		if create {
+			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
+		} else {
 			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
 		}
 	}
@@ -237,7 +239,7 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 			if len(idAndFormat) == 2 {
 				tmp := strings.Split(idAndFormat[1], ".")
 				tmpId, _ := strconv.Atoi(tmp[0])
-				disk.ID = uint(tmpId)
+				disk.Id = uint(tmpId)
 				if len(tmp) == 2 {
 					disk.Format = QemuDiskFormat(tmp[1])
 				}
@@ -430,6 +432,83 @@ const (
 	virtIO qemuDiskType = 3
 )
 
+type qemuStorage struct {
+	CdRom       *QemuCdRom         `json:"cdrom,omitempty"`
+	CloudInit   *QemuCloudInitDisk `json:"cloudinit,omitempty"`
+	Disk        *qemuDisk          `json:"disk,omitempty"`
+	Passthrough *qemuDisk          `json:"passthrough,omitempty"`
+}
+
+func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID uint, id string, params map[string]interface{}, changes *qemuUpdateChanges) {
+	if storage == nil {
+		return
+	}
+	// CDROM
+	if storage.CdRom != nil {
+		// Create or Update
+		params[id] = storage.CdRom.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.CdRom != nil {
+		// Delete
+		changes.Delete = AddToList(changes.Delete, id)
+		return
+	}
+	// CloudInit
+	if storage.CloudInit != nil {
+		// Create or Update
+		params[id] = storage.CloudInit.mapToApiValues()
+		return
+	} else if currentStorage != nil && currentStorage.CloudInit != nil {
+		// Delete
+		changes.Delete = AddToList(changes.Delete, id)
+		return
+	}
+	// Disk
+	if storage.Disk != nil {
+		if currentStorage == nil || currentStorage.Disk == nil {
+			// Create
+			params[id] = storage.Disk.mapToApiValues(vmID, true)
+		} else {
+			if storage.Disk.Size >= currentStorage.Disk.Size {
+				// Update
+				if storage.Disk.Id == 0 {
+					storage.Disk.Id = currentStorage.Disk.Id
+				}
+				if storage.Disk.Storage != currentStorage.Disk.Storage {
+					changes.Move = append(changes.Move, qemuDiskShort{
+						Id:      id,
+						Storage: storage.Disk.Storage,
+					})
+				}
+				params[id] = storage.Disk.mapToApiValues(vmID, false)
+			} else {
+				// Delete and Create
+				changes.Delete = AddToList(changes.Delete, id)
+				params[id] = storage.Disk.mapToApiValues(vmID, true)
+			}
+		}
+		return
+	} else if currentStorage != nil && currentStorage.Disk != nil {
+		// Delete
+		changes.Delete = AddToList(changes.Delete, id)
+		return
+	}
+	// Passthrough
+	if storage.Passthrough != nil {
+		// Create or Update
+		params[id] = storage.Passthrough.mapToApiValues(0, false)
+		return
+	} else if currentStorage != nil && currentStorage.Passthrough != nil {
+		// Delete
+		changes.Delete = AddToList(changes.Delete, id)
+		return
+	}
+	// Delete if no subtype was specified
+	if currentStorage != nil {
+		changes.Delete = AddToList(changes.Delete, id)
+	}
+}
+
 type QemuStorages struct {
 	Ide    *QemuIdeDisks    `json:"ide,omitempty"`
 	Sata   *QemuSataDisks   `json:"sata,omitempty"`
@@ -437,35 +516,35 @@ type QemuStorages struct {
 	VirtIO *QemuVirtIODisks `json:"virtio,omitempty"`
 }
 
-func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, params map[string]interface{}) *qemuUpdateChanges {
+func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, vmID uint, params map[string]interface{}) *qemuUpdateChanges {
 	changes := &qemuUpdateChanges{}
 	if currentStorages.Ide != nil {
-		storages.Ide.mapToApiValues(currentStorages.Ide, params, changes)
+		storages.Ide.mapToApiValues(currentStorages.Ide, vmID, params, changes)
 	}
 	if currentStorages.Sata != nil {
-		storages.Sata.mapToApiValues(currentStorages.Sata, params, changes)
+		storages.Sata.mapToApiValues(currentStorages.Sata, vmID, params, changes)
 	}
 	if currentStorages.Scsi != nil {
-		storages.Scsi.mapToApiValues(currentStorages.Scsi, params, changes)
+		storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, params, changes)
 	}
 	if currentStorages.VirtIO != nil {
-		storages.VirtIO.mapToApiValues(currentStorages.VirtIO, params, changes)
+		storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, params, changes)
 	}
 	return changes
 }
 
-func (storages QemuStorages) mapToApiValues(params map[string]interface{}) {
+func (storages QemuStorages) mapToApiValues(vmID uint, params map[string]interface{}) {
 	if storages.Ide != nil {
-		storages.Ide.mapToApiValues(nil, params, nil)
+		storages.Ide.mapToApiValues(nil, vmID, params, nil)
 	}
 	if storages.Sata != nil {
-		storages.Sata.mapToApiValues(nil, params, nil)
+		storages.Sata.mapToApiValues(nil, vmID, params, nil)
 	}
 	if storages.Scsi != nil {
-		storages.Scsi.mapToApiValues(nil, params, nil)
+		storages.Scsi.mapToApiValues(nil, vmID, params, nil)
 	}
 	if storages.VirtIO != nil {
-		storages.VirtIO.mapToApiValues(nil, params, nil)
+		storages.VirtIO.mapToApiValues(nil, vmID, params, nil)
 	}
 }
 
