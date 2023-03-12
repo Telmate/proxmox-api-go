@@ -59,6 +59,7 @@ type ConfigQemu struct {
 	Memory          int           `json:"memory,omitempty"`     // TODO should be uint
 	Name            string        `json:"name,omitempty"`       // TODO should be custom type as there are character and length limitations
 	Nameserver      string        `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
+	Node            string        `json:"node,omitempty"`
 	Onboot          *bool         `json:"onboot,omitempty"`
 	Pool            string        `json:"pool,omitempty"`    // TODO should be custom type as there are character and length limitations
 	QemuCores       int           `json:"cores,omitempty"`   // TODO should be uint
@@ -315,7 +316,14 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 		}
 	}
 
-	// TODO Migrate VM
+	if newConfig.Node != currentConfig.Node {
+		vmr.SetNode(currentConfig.Node)
+		_, err = client.MigrateNode(vmr, newConfig.Node, true)
+		if err != nil {
+			return
+		}
+		vmr.SetNode(newConfig.Node)
+	}
 
 	_, err = client.PutWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 	if err != nil {
