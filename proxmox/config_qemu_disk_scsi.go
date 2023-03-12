@@ -7,6 +7,7 @@ type QemuScsiDisk struct {
 	Cache      QemuDiskCache     `json:"cache,omitempty"`
 	Discard    bool              `json:"discard,omitempty"`
 	EmulateSSD bool              `json:"emulatessd,omitempty"`
+	Format     *QemuDiskFormat   `json:"format,omitempty"`
 	Id         *uint             `json:"id,omitempty"`
 	IOThread   bool              `json:"iothread,omitempty"`
 	ReadOnly   bool              `json:"readonly,omitempty"`
@@ -300,6 +301,7 @@ func (storage *QemuScsiStorage) convertDataStructure() *qemuStorage {
 			Cache:      storage.Disk.Cache,
 			Discard:    storage.Disk.Discard,
 			EmulateSSD: storage.Disk.EmulateSSD,
+			Format:     storage.Disk.Format,
 			Id:         storage.Disk.Id,
 			IOThread:   storage.Disk.IOThread,
 			ReadOnly:   storage.Disk.ReadOnly,
@@ -368,6 +370,7 @@ func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 			Cache:      tmpDisk.Cache,
 			Discard:    tmpDisk.Discard,
 			EmulateSSD: tmpDisk.EmulateSSD,
+			Format:     tmpDisk.Format,
 			Id:         tmpDisk.Id,
 			IOThread:   tmpDisk.IOThread,
 			ReadOnly:   tmpDisk.ReadOnly,

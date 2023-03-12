@@ -6,6 +6,7 @@ type QemuVirtIODisk struct {
 	Bandwidth QemuDiskBandwidth `json:"bandwith,omitempty"`
 	Cache     QemuDiskCache     `json:"cache,omitempty"`
 	Discard   bool              `json:"discard,omitempty"`
+	Format    *QemuDiskFormat   `json:"format,omitempty"`
 	Id        *uint             `json:"id,omitempty"`
 	IOThread  bool              `json:"iothread,omitempty"`
 	ReadOnly  bool              `json:"readonly,omitempty"`
@@ -202,6 +203,7 @@ func (storage *QemuVirtIOStorage) convertDataStructure() *qemuStorage {
 			Bandwidth: storage.Disk.Bandwidth,
 			Cache:     storage.Disk.Cache,
 			Discard:   storage.Disk.Discard,
+			Format:    storage.Disk.Format,
 			Id:        storage.Disk.Id,
 			IOThread:  storage.Disk.IOThread,
 			ReadOnly:  storage.Disk.ReadOnly,
@@ -267,6 +269,7 @@ func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
 			Bandwidth: tmpDisk.Bandwidth,
 			Cache:     tmpDisk.Cache,
 			Discard:   tmpDisk.Discard,
+			Format:    tmpDisk.Format,
 			Id:        tmpDisk.Id,
 			IOThread:  tmpDisk.IOThread,
 			ReadOnly:  tmpDisk.ReadOnly,

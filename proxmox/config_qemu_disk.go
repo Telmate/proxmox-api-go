@@ -130,10 +130,10 @@ type qemuDisk struct {
 	Discard    bool
 	EmulateSSD bool // Only set for ide,sata,scsi
 	// TODO custom type
-	File      string // Only set for Passthrough.
-	Format    QemuDiskFormat
-	Id        *uint // Only set for Disk
-	IOThread  bool  // Only set for scsi,virtio
+	File      string          // Only set for Passthrough.
+	Format    *QemuDiskFormat // Only set for Disk
+	Id        *uint           // Only set for Disk
+	IOThread  bool            // Only set for scsi,virtio
 	Number    uint
 	ReadOnly  bool // Only set for scsi,virtio
 	Replicate bool
@@ -150,7 +150,9 @@ func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 		if create {
 			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
 		} else {
-			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
+			// test:100/vm-100-disk-0.raw
+			tmpId := strconv.Itoa(int(vmID))
+			settings = disk.Storage + ":" + tmpId + "/vm-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.Id)) + "." + string(*disk.Format)
 		}
 	}
 
@@ -237,7 +239,8 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		if len(diskAndNumberAndFormat) == 2 {
 			idAndFormat := strings.Split(diskAndNumberAndFormat[1], ".")
 			if len(idAndFormat) == 2 {
-				disk.Format = QemuDiskFormat(idAndFormat[1])
+				tmpFormat := QemuDiskFormat(idAndFormat[1])
+				disk.Format = &tmpFormat
 				tmp := strings.Split(idAndFormat[0], "-")
 				if len(tmp) > 1 {
 					tmpId, _ := strconv.Atoi(tmp[len(tmp)-1])
@@ -419,6 +422,17 @@ func (serial QemuDiskSerial) Validate() error {
 	return nil
 }
 
+type qemuDiskResize struct {
+	Id              string
+	SizeInGigaBytes uint
+}
+
+// Increase the disk size to the specified amount in gigabytes
+// Decrease of disk size is not permitted.
+func (disk qemuDiskResize) resize(vmr *VmRef, client *Client) (exitStatus string, err error) {
+	return client.PutWithTask(map[string]interface{}{"disk": disk.Id, "size": strconv.Itoa(int(disk.SizeInGigaBytes)) + "G"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
+}
+
 type qemuDiskShort struct {
 	Storage string
 	Id      string
@@ -472,8 +486,17 @@ func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID ui
 		} else {
 			if storage.Disk.Size >= currentStorage.Disk.Size {
 				// Update
+				if storage.Disk.Size > currentStorage.Disk.Size {
+					changes.Resize = append(changes.Resize, qemuDiskResize{
+						Id:              id,
+						SizeInGigaBytes: storage.Disk.Size,
+					})
+				}
 				if storage.Disk.Id == nil {
 					storage.Disk.Id = currentStorage.Disk.Id
+				}
+				if storage.Disk.Format == nil {
+					storage.Disk.Format = currentStorage.Disk.Format
 				}
 				if storage.Disk.Storage != currentStorage.Disk.Storage {
 					changes.Move = append(changes.Move, qemuDiskShort{
@@ -563,6 +586,7 @@ func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {
 }
 
 type qemuUpdateChanges struct {
-	Move   []qemuDiskShort
 	Delete string
+	Move   []qemuDiskShort
+	Resize []qemuDiskResize
 }
