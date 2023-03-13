@@ -3,7 +3,7 @@ package proxmox
 type QemuScsiDisk struct {
 	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
 	Backup     bool              `json:"backup,omitempty"`
-	Bandwidth  QemuDiskBandwidth `json:"bandwith,omitempty"`
+	Bandwidth  QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache      QemuDiskCache     `json:"cache,omitempty"`
 	Discard    bool              `json:"discard,omitempty"`
 	EmulateSSD bool              `json:"emulatessd,omitempty"`

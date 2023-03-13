@@ -3,7 +3,7 @@ package proxmox
 type QemuVirtIODisk struct {
 	AsyncIO   QemuDiskAsyncIO   `json:"asyncio,omitempty"`
 	Backup    bool              `json:"backup,omitempty"`
-	Bandwidth QemuDiskBandwidth `json:"bandwith,omitempty"`
+	Bandwidth QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache     QemuDiskCache     `json:"cache,omitempty"`
 	Discard   bool              `json:"discard,omitempty"`
 	Format    *QemuDiskFormat   `json:"format,omitempty"`
