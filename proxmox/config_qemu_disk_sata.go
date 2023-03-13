@@ -15,6 +15,24 @@ type QemuSataDisk struct {
 	Storage    string            `json:"storage,omitempty"`
 }
 
+func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
+	return &qemuDisk{
+		AsyncIO:    disk.AsyncIO,
+		Backup:     disk.Backup,
+		Bandwidth:  disk.Bandwidth,
+		Cache:      disk.Cache,
+		Discard:    disk.Discard,
+		EmulateSSD: disk.EmulateSSD,
+		Format:     disk.Format,
+		Id:         disk.Id,
+		Replicate:  disk.Replicate,
+		Serial:     disk.Serial,
+		Size:       disk.Size,
+		Storage:    disk.Storage,
+		Type:       sata,
+	}
+}
+
 type QemuSataDisks struct {
 	Disk_0 *QemuSataStorage `json:"0,omitempty"`
 	Disk_1 *QemuSataStorage `json:"1,omitempty"`
@@ -85,6 +103,21 @@ type QemuSataPassthrough struct {
 	Size       uint           //size is only returned and setting it has no effect
 }
 
+func (passthrough *QemuSataPassthrough) convertDataStructure() *qemuDisk {
+	return &qemuDisk{
+		AsyncIO:    passthrough.AsyncIO,
+		Backup:     passthrough.Backup,
+		Bandwidth:  passthrough.Bandwidth,
+		Cache:      passthrough.Cache,
+		Discard:    passthrough.Discard,
+		EmulateSSD: passthrough.EmulateSSD,
+		File:       passthrough.File,
+		Replicate:  passthrough.Replicate,
+		Serial:     passthrough.Serial,
+		Type:       sata,
+	}
+}
+
 type QemuSataStorage struct {
 	CdRom       *QemuCdRom
 	CloudInit   *QemuCloudInitDisk
@@ -103,35 +136,10 @@ func (storage *QemuSataStorage) convertDataStructure() *qemuStorage {
 		CloudInit: storage.CloudInit,
 	}
 	if storage.Disk != nil {
-		generalizedStorage.Disk = &qemuDisk{
-			AsyncIO:    storage.Disk.AsyncIO,
-			Backup:     storage.Disk.Backup,
-			Bandwidth:  storage.Disk.Bandwidth,
-			Cache:      storage.Disk.Cache,
-			Discard:    storage.Disk.Discard,
-			EmulateSSD: storage.Disk.EmulateSSD,
-			Format:     storage.Disk.Format,
-			Id:         storage.Disk.Id,
-			Replicate:  storage.Disk.Replicate,
-			Serial:     storage.Disk.Serial,
-			Size:       storage.Disk.Size,
-			Storage:    storage.Disk.Storage,
-			Type:       sata,
-		}
+		generalizedStorage.Disk = storage.Disk.convertDataStructure()
 	}
 	if storage.Passthrough != nil {
-		generalizedStorage.Passthrough = &qemuDisk{
-			AsyncIO:    storage.Passthrough.AsyncIO,
-			Backup:     storage.Passthrough.Backup,
-			Bandwidth:  storage.Passthrough.Bandwidth,
-			Cache:      storage.Passthrough.Cache,
-			Discard:    storage.Passthrough.Discard,
-			EmulateSSD: storage.Passthrough.EmulateSSD,
-			File:       storage.Passthrough.File,
-			Replicate:  storage.Passthrough.Replicate,
-			Serial:     storage.Passthrough.Serial,
-			Type:       sata,
-		}
+		generalizedStorage.Passthrough = storage.Passthrough.convertDataStructure()
 	}
 	return &generalizedStorage
 }
