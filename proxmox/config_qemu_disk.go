@@ -176,34 +176,34 @@ func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 	// format
 	// media
 
-	if disk.Bandwidth.Iops.ReadLimit.Concurrent >= 10 {
-		settings = settings + ",iops_rd=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Concurrent))
+	if disk.Bandwidth.Iops.ReadLimit.Concurrent != nil {
+		settings = settings + ",iops_rd=" + strconv.Itoa(int(*disk.Bandwidth.Iops.ReadLimit.Concurrent))
 	}
-	if disk.Bandwidth.Iops.ReadLimit.Burst >= 10 {
-		settings = settings + ",iops_rd_max=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Burst))
+	if disk.Bandwidth.Iops.ReadLimit.Burst != nil {
+		settings = settings + ",iops_rd_max=" + strconv.Itoa(int(*disk.Bandwidth.Iops.ReadLimit.Burst))
 	}
-	if disk.Bandwidth.Iops.WriteLimit.Concurrent >= 10 {
-		settings = settings + ",iops_wr=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Concurrent))
+	if disk.Bandwidth.Iops.WriteLimit.Concurrent != nil {
+		settings = settings + ",iops_wr=" + strconv.Itoa(int(*disk.Bandwidth.Iops.WriteLimit.Concurrent))
 	}
-	if disk.Bandwidth.Iops.WriteLimit.Burst >= 10 {
-		settings = settings + ",iops_wr_max=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Burst))
+	if disk.Bandwidth.Iops.WriteLimit.Burst != nil {
+		settings = settings + ",iops_wr_max=" + strconv.Itoa(int(*disk.Bandwidth.Iops.WriteLimit.Burst))
 	}
 
 	if (disk.Type == scsi || disk.Type == virtIO) && disk.IOThread {
 		settings = settings + ",iothread=1"
 	}
 
-	if disk.Bandwidth.Data.ReadLimit.Concurrent >= float32(1) {
-		settings = settings + fmt.Sprintf(",mbps_rd=%.2f", disk.Bandwidth.Data.ReadLimit.Concurrent)
+	if disk.Bandwidth.Data.ReadLimit.Concurrent != nil {
+		settings = settings + fmt.Sprintf(",mbps_rd=%.2f", *disk.Bandwidth.Data.ReadLimit.Concurrent)
 	}
-	if disk.Bandwidth.Data.ReadLimit.Burst >= float32(1) {
-		settings = settings + fmt.Sprintf(",mbps_rd_max=%.2f", disk.Bandwidth.Data.ReadLimit.Burst)
+	if disk.Bandwidth.Data.ReadLimit.Burst != nil {
+		settings = settings + fmt.Sprintf(",mbps_rd_max=%.2f", *disk.Bandwidth.Data.ReadLimit.Burst)
 	}
-	if disk.Bandwidth.Data.WriteLimit.Concurrent >= float32(1) {
-		settings = settings + fmt.Sprintf(",mbps_wr=%.2f", disk.Bandwidth.Data.WriteLimit.Concurrent)
+	if disk.Bandwidth.Data.WriteLimit.Concurrent != nil {
+		settings = settings + fmt.Sprintf(",mbps_wr=%.2f", *disk.Bandwidth.Data.WriteLimit.Concurrent)
 	}
-	if disk.Bandwidth.Data.WriteLimit.Burst >= float32(1) {
-		settings = settings + fmt.Sprintf(",mbps_wr_max=%.2f", disk.Bandwidth.Data.WriteLimit.Burst)
+	if disk.Bandwidth.Data.WriteLimit.Burst != nil {
+		settings = settings + fmt.Sprintf(",mbps_wr_max=%.2f", *disk.Bandwidth.Data.WriteLimit.Burst)
 	}
 
 	if !disk.Replicate {
@@ -270,19 +270,23 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		}
 		if e[0] == "iops_rd" {
 			tmp, _ := strconv.Atoi(e[1])
-			disk.Bandwidth.Iops.ReadLimit.Concurrent = uint(tmp)
+			pointer := uint(tmp)
+			disk.Bandwidth.Iops.ReadLimit.Concurrent = &pointer
 		}
 		if e[0] == "iops_rd_max" {
 			tmp, _ := strconv.Atoi(e[1])
-			disk.Bandwidth.Iops.ReadLimit.Burst = uint(tmp)
+			pointer := uint(tmp)
+			disk.Bandwidth.Iops.ReadLimit.Burst = &pointer
 		}
 		if e[0] == "iops_wr" {
 			tmp, _ := strconv.Atoi(e[1])
-			disk.Bandwidth.Iops.WriteLimit.Concurrent = uint(tmp)
+			pointer := uint(tmp)
+			disk.Bandwidth.Iops.WriteLimit.Concurrent = &pointer
 		}
 		if e[0] == "iops_wr_max" {
 			tmp, _ := strconv.Atoi(e[1])
-			disk.Bandwidth.Iops.WriteLimit.Burst = uint(tmp)
+			pointer := uint(tmp)
+			disk.Bandwidth.Iops.WriteLimit.Burst = &pointer
 		}
 		if e[0] == "iothread" {
 			disk.IOThread, _ = strconv.ParseBool(e[1])
@@ -290,19 +294,23 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		}
 		if e[0] == "mbps_rd" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			disk.Bandwidth.Data.ReadLimit.Concurrent = float32(math.Round(tmp*100) / 100)
+			pointer := float32(math.Round(tmp*100) / 100)
+			disk.Bandwidth.Data.ReadLimit.Concurrent = &pointer
 		}
 		if e[0] == "mbps_rd_max" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			disk.Bandwidth.Data.ReadLimit.Burst = float32(math.Round(tmp*100) / 100)
+			pointer := float32(math.Round(tmp*100) / 100)
+			disk.Bandwidth.Data.ReadLimit.Burst = &pointer
 		}
 		if e[0] == "mbps_wr" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			disk.Bandwidth.Data.WriteLimit.Concurrent = float32(math.Round(tmp*100) / 100)
+			pointer := float32(math.Round(tmp*100) / 100)
+			disk.Bandwidth.Data.WriteLimit.Concurrent = &pointer
 		}
 		if e[0] == "mbps_wr_max" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			disk.Bandwidth.Data.WriteLimit.Burst = float32(math.Round(tmp*100) / 100)
+			pointer := float32(math.Round(tmp*100) / 100)
+			disk.Bandwidth.Data.WriteLimit.Burst = &pointer
 		}
 		if e[0] == "replicate" {
 			disk.Replicate, _ = strconv.ParseBool(e[1])
@@ -355,8 +363,8 @@ type QemuDiskBandwidthData struct {
 }
 
 type QemuDiskBandwidthDataLimit struct {
-	Concurrent float32
-	Burst      float32
+	Burst      *float32 // nil = default
+	Concurrent *float32 // nil = unlimited
 }
 
 type QemuDiskBandwidthIops struct {
@@ -365,8 +373,8 @@ type QemuDiskBandwidthIops struct {
 }
 
 type QemuDiskBandwidthIopsLimit struct {
-	Concurrent uint
-	Burst      uint
+	Burst      *uint // nil = default
+	Concurrent *uint // nil = unlimited
 }
 
 type QemuDiskCache string
