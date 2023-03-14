@@ -86,6 +86,7 @@ func Test_QemuDiskAsyncIO_Validate(t *testing.T) {
 		err   bool
 	}{
 		// Valid
+		{input: ""},
 		{input: QemuDiskAsyncIO_Native},
 		{input: QemuDiskAsyncIO_Threads},
 		{input: QemuDiskAsyncIO_IOuring},
