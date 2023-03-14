@@ -161,7 +161,7 @@ func (QemuSataStorage) mapToStruct(param string) *QemuSataStorage {
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(settings)
 	if tmpCdRom != nil {
-		if tmpCdRom.FileType == "" {
+		if tmpCdRom.CdRom {
 			return &QemuSataStorage{CdRom: QemuCdRom{}.mapToStruct(*tmpCdRom)}
 		} else {
 			return &QemuSataStorage{CloudInit: QemuCloudInitDisk{}.mapToStruct(*tmpCdRom)}
