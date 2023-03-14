@@ -357,9 +357,25 @@ type QemuDiskBandwidth struct {
 	Iops QemuDiskBandwidthIops
 }
 
+func (bandwidth QemuDiskBandwidth) Validate() error {
+	err := bandwidth.Data.Validate()
+	if err != nil {
+		return err
+	}
+	return bandwidth.Iops.Validate()
+}
+
 type QemuDiskBandwidthData struct {
 	ReadLimit  QemuDiskBandwidthDataLimit
 	WriteLimit QemuDiskBandwidthDataLimit
+}
+
+func (data QemuDiskBandwidthData) Validate() error {
+	err := data.ReadLimit.Validate()
+	if err != nil {
+		return err
+	}
+	return data.WriteLimit.Validate()
 }
 
 type QemuDiskBandwidthDataLimit struct {
@@ -367,14 +383,42 @@ type QemuDiskBandwidthDataLimit struct {
 	Concurrent *float32 // nil = unlimited
 }
 
+func (limit QemuDiskBandwidthDataLimit) Validate() error {
+	if limit.Burst != nil && *limit.Burst < 1 {
+		return errors.New("burst may not be lower then 1")
+	}
+	if limit.Concurrent != nil && *limit.Concurrent < 1 {
+		return errors.New("concurrent may not be lower then 1")
+	}
+	return nil
+}
+
 type QemuDiskBandwidthIops struct {
 	ReadLimit  QemuDiskBandwidthIopsLimit
 	WriteLimit QemuDiskBandwidthIopsLimit
 }
 
+func (iops QemuDiskBandwidthIops) Validate() error {
+	err := iops.ReadLimit.Validate()
+	if err != nil {
+		return err
+	}
+	return iops.WriteLimit.Validate()
+}
+
 type QemuDiskBandwidthIopsLimit struct {
 	Burst      *uint // nil = default
 	Concurrent *uint // nil = unlimited
+}
+
+func (limit QemuDiskBandwidthIopsLimit) Validate() error {
+	if limit.Burst != nil && *limit.Burst < 10 {
+		return errors.New("burst may not be lower then 10")
+	}
+	if limit.Concurrent != nil && *limit.Concurrent < 10 {
+		return errors.New("concurrent may not be lower then 1")
+	}
+	return nil
 }
 
 type QemuDiskCache string
