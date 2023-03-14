@@ -1,5 +1,7 @@
 package proxmox
 
+import "strconv"
+
 type QemuIdeDisk struct {
 	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
 	Backup     bool              `json:"backup,omitempty"`
@@ -46,10 +48,20 @@ func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID uint, 
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_0.convertDataStructure(), vmID, "ide0", params, changes)
-	disks.Disk_1.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_1.convertDataStructure(), vmID, "ide1", params, changes)
-	disks.Disk_2.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_2.convertDataStructure(), vmID, "ide2", params, changes)
-	disks.Disk_3.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_3.convertDataStructure(), vmID, "ide3", params, changes)
+	diskMap := disks.mapToIntMap()
+	currentDiskMap := tmpCurrentDisks.mapToIntMap()
+	for i := range diskMap {
+		diskMap[i].convertDataStructure().markDiskChanges(currentDiskMap[i].convertDataStructure(), vmID, "ide"+strconv.Itoa(int(i)), params, changes)
+	}
+}
+
+func (disks QemuIdeDisks) mapToIntMap() map[uint8]*QemuIdeStorage {
+	return map[uint8]*QemuIdeStorage{
+		0: disks.Disk_0,
+		1: disks.Disk_1,
+		2: disks.Disk_2,
+		3: disks.Disk_3,
+	}
 }
 
 // TODO write test

@@ -1,5 +1,7 @@
 package proxmox
 
+import "strconv"
+
 type QemuVirtIODisk struct {
 	AsyncIO   QemuDiskAsyncIO   `json:"asyncio,omitempty"`
 	Backup    bool              `json:"backup,omitempty"`
@@ -60,22 +62,32 @@ func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, vmID 
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_0.convertDataStructure(), vmID, "virtio0", params, changes)
-	disks.Disk_1.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_1.convertDataStructure(), vmID, "virtio1", params, changes)
-	disks.Disk_2.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_2.convertDataStructure(), vmID, "virtio2", params, changes)
-	disks.Disk_3.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_3.convertDataStructure(), vmID, "virtio3", params, changes)
-	disks.Disk_4.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_4.convertDataStructure(), vmID, "virtio4", params, changes)
-	disks.Disk_5.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_5.convertDataStructure(), vmID, "virtio5", params, changes)
-	disks.Disk_6.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_6.convertDataStructure(), vmID, "virtio6", params, changes)
-	disks.Disk_7.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_7.convertDataStructure(), vmID, "virtio7", params, changes)
-	disks.Disk_8.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_8.convertDataStructure(), vmID, "virtio8", params, changes)
-	disks.Disk_9.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_9.convertDataStructure(), vmID, "virtio9", params, changes)
-	disks.Disk_10.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_10.convertDataStructure(), vmID, "virtio10", params, changes)
-	disks.Disk_11.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_11.convertDataStructure(), vmID, "virtio11", params, changes)
-	disks.Disk_12.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_12.convertDataStructure(), vmID, "virtio12", params, changes)
-	disks.Disk_13.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_13.convertDataStructure(), vmID, "virtio13", params, changes)
-	disks.Disk_14.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_14.convertDataStructure(), vmID, "virtio14", params, changes)
-	disks.Disk_15.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_15.convertDataStructure(), vmID, "virtio15", params, changes)
+	diskMap := disks.mapToIntMap()
+	currentDiskMap := tmpCurrentDisks.mapToIntMap()
+	for i := range diskMap {
+		diskMap[i].convertDataStructure().markDiskChanges(currentDiskMap[i].convertDataStructure(), vmID, "virtio"+strconv.Itoa(int(i)), params, changes)
+	}
+}
+
+func (disks QemuVirtIODisks) mapToIntMap() map[uint8]*QemuVirtIOStorage {
+	return map[uint8]*QemuVirtIOStorage{
+		0:  disks.Disk_0,
+		1:  disks.Disk_1,
+		2:  disks.Disk_2,
+		3:  disks.Disk_3,
+		4:  disks.Disk_4,
+		5:  disks.Disk_5,
+		6:  disks.Disk_6,
+		7:  disks.Disk_7,
+		8:  disks.Disk_8,
+		9:  disks.Disk_9,
+		10: disks.Disk_10,
+		11: disks.Disk_11,
+		12: disks.Disk_12,
+		13: disks.Disk_13,
+		14: disks.Disk_14,
+		15: disks.Disk_15,
+	}
 }
 
 // TODO write test

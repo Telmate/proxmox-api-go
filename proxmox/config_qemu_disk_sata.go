@@ -1,5 +1,7 @@
 package proxmox
 
+import "strconv"
+
 type QemuSataDisk struct {
 	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
 	Backup     bool              `json:"backup,omitempty"`
@@ -48,12 +50,22 @@ func (disks QemuSataDisks) mapToApiValues(currentDisks *QemuSataDisks, vmID uint
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
 	}
-	disks.Disk_0.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_0.convertDataStructure(), vmID, "sata0", params, changes)
-	disks.Disk_1.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_1.convertDataStructure(), vmID, "sata1", params, changes)
-	disks.Disk_2.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_2.convertDataStructure(), vmID, "sata2", params, changes)
-	disks.Disk_3.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_3.convertDataStructure(), vmID, "sata3", params, changes)
-	disks.Disk_4.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_4.convertDataStructure(), vmID, "sata4", params, changes)
-	disks.Disk_5.convertDataStructure().markDiskChanges(tmpCurrentDisks.Disk_5.convertDataStructure(), vmID, "sata5", params, changes)
+	diskMap := disks.mapToIntMap()
+	currentDiskMap := tmpCurrentDisks.mapToIntMap()
+	for i := range diskMap {
+		diskMap[i].convertDataStructure().markDiskChanges(currentDiskMap[i].convertDataStructure(), vmID, "sata"+strconv.Itoa(int(i)), params, changes)
+	}
+}
+
+func (disks QemuSataDisks) mapToIntMap() map[uint8]*QemuSataStorage {
+	return map[uint8]*QemuSataStorage{
+		0: disks.Disk_0,
+		1: disks.Disk_1,
+		2: disks.Disk_2,
+		3: disks.Disk_3,
+		4: disks.Disk_4,
+		5: disks.Disk_5,
+	}
 }
 
 // TODO write test
