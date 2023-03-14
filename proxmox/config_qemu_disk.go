@@ -70,13 +70,13 @@ func (cdRom QemuCdRom) Validate() error {
 }
 
 type qemuCdRom struct {
+	CdRom bool
 	// "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"
 	Passthrough bool
 	Storage     string
-	// FileType is only set for Cloud init drives, this value will be used to check if it is a normal cdrom or cloud init drive.
-	FileType string
-	File     string
-	Size     string
+	Format      *QemuDiskFormat // Only set for Cloud-init drives
+	File        string
+	Size        string
 }
 
 func (qemuCdRom) mapToStruct(settings [][]string) *qemuCdRom {
@@ -104,11 +104,12 @@ func (qemuCdRom) mapToStruct(settings [][]string) *qemuCdRom {
 		if len(tmpFile) == 2 {
 			tmpFileType := strings.Split(tmpFile[1], ".")
 			if len(tmpFileType) > 1 {
-				fileType := tmpFileType[len(tmpFileType)-1]
+				fileType := QemuDiskFormat(tmpFileType[len(tmpFileType)-1])
 				if fileType == "iso" {
 					for _, e := range settings {
 						if e[0] == "size" {
 							return &qemuCdRom{
+								CdRom:   true,
 								Storage: tmpStorage[0],
 								File:    tmpFile[1],
 								Size:    e[1],
@@ -117,9 +118,9 @@ func (qemuCdRom) mapToStruct(settings [][]string) *qemuCdRom {
 					}
 				} else {
 					return &qemuCdRom{
-						Storage:  tmpStorage[0],
-						File:     tmpFile[1],
-						FileType: fileType,
+						Storage: tmpStorage[0],
+						File:    tmpFile[1],
+						Format:  &fileType,
 					}
 				}
 			}
@@ -129,19 +130,25 @@ func (qemuCdRom) mapToStruct(settings [][]string) *qemuCdRom {
 }
 
 type QemuCloudInitDisk struct {
-	FileType string
-	Storage  string
+	Format  *QemuDiskFormat `json:"format,omitempty"`
+	Storage string          `json:"storage,omitempty"`
 }
 
 // TODO write test
 func (cloudInit QemuCloudInitDisk) mapToApiValues() string {
-	return cloudInit.Storage + ":cloudinit,format=" + cloudInit.FileType
+	var fileType string
+	if cloudInit.Format == nil {
+		fileType = "raw"
+	} else {
+		fileType = string(*cloudInit.Format)
+	}
+	return cloudInit.Storage + ":cloudinit,format=" + fileType
 }
 
 func (QemuCloudInitDisk) mapToStruct(settings qemuCdRom) *QemuCloudInitDisk {
 	return &QemuCloudInitDisk{
-		Storage:  settings.Storage,
-		FileType: settings.FileType,
+		Storage: settings.Storage,
+		Format:  settings.Format,
 	}
 }
 
