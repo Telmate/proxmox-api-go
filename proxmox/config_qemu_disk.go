@@ -56,6 +56,19 @@ func (QemuCdRom) mapToStruct(settings qemuCdRom) *QemuCdRom {
 	return &QemuCdRom{Passthrough: false}
 }
 
+func (cdRom QemuCdRom) Validate() error {
+	if cdRom.Iso != nil {
+		err := cdRom.Iso.Validate()
+		if err != nil {
+			return err
+		}
+		if cdRom.Passthrough {
+			return errors.New("iso and passthrough are mutually exclusive")
+		}
+	}
+	return nil
+}
+
 type qemuCdRom struct {
 	// "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"
 	Passthrough bool
