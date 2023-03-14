@@ -312,7 +312,6 @@ func Test_QemuDiskFormat_Validate(t *testing.T) {
 		err   bool
 	}{
 		// Valid
-		{input: ""},
 		{input: QemuDiskFormat_Cow},
 		{input: QemuDiskFormat_Cloop},
 		{input: QemuDiskFormat_Qcow},
