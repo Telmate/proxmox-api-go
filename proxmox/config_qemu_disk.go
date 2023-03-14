@@ -152,6 +152,18 @@ func (QemuCloudInitDisk) mapToStruct(settings qemuCdRom) *QemuCloudInitDisk {
 	}
 }
 
+func (cloudInit QemuCloudInitDisk) Validate() error {
+	if cloudInit.Format != nil {
+		if err := cloudInit.Format.Validate(); err != nil {
+			return err
+		}
+	}
+	if cloudInit.Storage == "" {
+		return errors.New("storage should not be empty")
+	}
+	return nil
+}
+
 type qemuDisk struct {
 	AsyncIO    QemuDiskAsyncIO
 	Backup     bool

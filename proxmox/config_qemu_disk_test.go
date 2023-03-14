@@ -54,6 +54,32 @@ func Test_QemuCdRom_Validate(t *testing.T) {
 	}
 }
 
+func Test_QemuCloudInitDisk_Validate(t *testing.T) {
+	formatRaw := QemuDiskFormat_Raw
+	formatEmpty := QemuDiskFormat("")
+	formatInvalid := QemuDiskFormat("invalid")
+	testData := []struct {
+		input QemuCloudInitDisk
+		err   bool
+	}{
+		// Valid
+		{input: QemuCloudInitDisk{Storage: "anything"}},
+		{input: QemuCloudInitDisk{Storage: "anything", Format: &formatRaw}},
+		// Invalid
+		{input: QemuCloudInitDisk{}, err: true},
+		{input: QemuCloudInitDisk{Format: &formatRaw}, err: true},
+		{input: QemuCloudInitDisk{Storage: "anything", Format: &formatEmpty}, err: true},
+		{input: QemuCloudInitDisk{Storage: "anything", Format: &formatInvalid}, err: true},
+	}
+	for _, e := range testData {
+		if e.err {
+			require.Error(t, e.input.Validate())
+		} else {
+			require.NoError(t, e.input.Validate())
+		}
+	}
+}
+
 func Test_QemuDiskAsyncIO_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskAsyncIO
