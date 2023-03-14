@@ -10,10 +10,20 @@ import (
 )
 
 type IsoFile struct {
-	Storage string `json:"storage"`
 	File    string `json:"file"`
+	Storage string `json:"storage"`
 	// Size can only be retrieved, setting it has no effect
 	Size string `json:"size"`
+}
+
+func (iso IsoFile) Validate() error {
+	if iso.File == "" {
+		return errors.New("file may not be empty")
+	}
+	if iso.Storage == "" {
+		return errors.New("storage may not be empty")
+	}
+	return nil
 }
 
 type QemuCdRom struct {

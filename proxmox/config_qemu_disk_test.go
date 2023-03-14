@@ -7,6 +7,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_IsoFile_Validate(t *testing.T) {
+	testData := []struct {
+		input IsoFile
+		err   bool
+	}{
+		// Valid
+		{input: IsoFile{File: "anything", Storage: "something"}},
+		// Invalid
+		{input: IsoFile{}, err: true},
+		{input: IsoFile{File: "anything"}, err: true},
+		{input: IsoFile{Storage: "something"}, err: true},
+		{input: IsoFile{Size: "something"}, err: true},
+	}
+	for _, e := range testData {
+		if e.err {
+			require.Error(t, e.input.Validate())
+		} else {
+			require.NoError(t, e.input.Validate())
+		}
+	}
+}
+
 func Test_QemuDiskAsyncIO_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskAsyncIO
