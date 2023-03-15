@@ -16,12 +16,17 @@ type IsoFile struct {
 	Size string `json:"size"`
 }
 
+const (
+	Error_IsoFile_File    string = "file may not be empty"
+	Error_IsoFile_Storage string = "storage may not be empty"
+)
+
 func (iso IsoFile) Validate() error {
 	if iso.File == "" {
-		return errors.New("file may not be empty")
+		return errors.New(Error_IsoFile_File)
 	}
 	if iso.Storage == "" {
-		return errors.New("storage may not be empty")
+		return errors.New(Error_IsoFile_Storage)
 	}
 	return nil
 }

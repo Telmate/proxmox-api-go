@@ -11,19 +11,19 @@ import (
 func Test_IsoFile_Validate(t *testing.T) {
 	testData := []struct {
 		input IsoFile
-		err   bool
+		err   error
 	}{
 		// Valid
 		{input: IsoFile{File: "anything", Storage: "something"}},
 		// Invalid
-		{input: IsoFile{}, err: true},
-		{input: IsoFile{File: "anything"}, err: true},
-		{input: IsoFile{Storage: "something"}, err: true},
-		{input: IsoFile{Size: "something"}, err: true},
+		{input: IsoFile{}, err: errors.New(Error_IsoFile_File)},
+		{input: IsoFile{File: "anything"}, err: errors.New(Error_IsoFile_Storage)},
+		{input: IsoFile{Storage: "something"}, err: errors.New(Error_IsoFile_File)},
+		{input: IsoFile{Size: "something"}, err: errors.New(Error_IsoFile_File)},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}
