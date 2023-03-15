@@ -310,7 +310,7 @@ func Test_QemuDiskCache_Validate(t *testing.T) {
 func Test_QemuDiskFormat_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskFormat
-		err   bool
+		err   error
 	}{
 		// Valid
 		{input: QemuDiskFormat_Cow},
@@ -321,13 +321,13 @@ func Test_QemuDiskFormat_Validate(t *testing.T) {
 		{input: QemuDiskFormat_Vmdk},
 		{input: QemuDiskFormat_Raw},
 		// Invalid
-		{input: "bla", err: true},
-		{input: "invalid value", err: true},
-		{input: "!@#$", err: true},
+		{input: "bla", err: QemuDiskFormat("").Error()},
+		{input: "invalid value", err: QemuDiskFormat("").Error()},
+		{input: "!@#$", err: QemuDiskFormat("").Error()},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}
