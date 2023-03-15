@@ -165,10 +165,10 @@ type qemuDisk struct {
 	Disk       bool // true = disk, false = passthrough
 	EmulateSSD bool // Only set for ide,sata,scsi
 	// TODO custom type
-	File      string          // Only set for Passthrough.
-	Format    *QemuDiskFormat // Only set for Disk
-	Id        *uint           // Only set for Disk
-	IOThread  bool            // Only set for scsi,virtio
+	File      string         // Only set for Passthrough.
+	Format    QemuDiskFormat // Only set for Disk
+	Id        *uint          // Only set for Disk
+	IOThread  bool           // Only set for scsi,virtio
 	Number    uint
 	ReadOnly  bool // Only set for scsi,virtio
 	Replicate bool
@@ -187,7 +187,7 @@ func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 		} else {
 			// test:100/vm-100-disk-0.raw
 			tmpId := strconv.Itoa(int(vmID))
-			settings = disk.Storage + ":" + tmpId + "/vm-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.Id)) + "." + string(*disk.Format)
+			settings = disk.Storage + ":" + tmpId + "/vm-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.Id)) + "." + string(disk.Format)
 		}
 	}
 
@@ -274,8 +274,7 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		if len(diskAndNumberAndFormat) == 2 {
 			idAndFormat := strings.Split(diskAndNumberAndFormat[1], ".")
 			if len(idAndFormat) == 2 {
-				tmpFormat := QemuDiskFormat(idAndFormat[1])
-				disk.Format = &tmpFormat
+				disk.Format = QemuDiskFormat(idAndFormat[1])
 				tmp := strings.Split(idAndFormat[0], "-")
 				if len(tmp) > 1 {
 					tmpId, _ := strconv.Atoi(tmp[len(tmp)-1])
@@ -582,9 +581,6 @@ func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID ui
 				}
 				if storage.Disk.Id == nil {
 					storage.Disk.Id = currentStorage.Disk.Id
-				}
-				if storage.Disk.Format == nil {
-					storage.Disk.Format = currentStorage.Disk.Format
 				}
 				if storage.Disk.Storage != currentStorage.Disk.Storage {
 					changes.Move = append(changes.Move, qemuDiskShort{

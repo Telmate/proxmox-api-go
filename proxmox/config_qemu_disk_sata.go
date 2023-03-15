@@ -9,7 +9,7 @@ type QemuSataDisk struct {
 	Cache      QemuDiskCache     `json:"cache,omitempty"`
 	Discard    bool              `json:"discard,omitempty"`
 	EmulateSSD bool              `json:"emulatessd,omitempty"`
-	Format     *QemuDiskFormat   `json:"format,omitempty"`
+	Format     QemuDiskFormat    `json:"format,omitempty"`
 	Id         *uint             `json:"id,omitempty"`
 	Replicate  bool              `json:"replicate,omitempty"`
 	Serial     QemuDiskSerial    `json:"serial,omitempty"`
