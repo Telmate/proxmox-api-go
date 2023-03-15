@@ -170,6 +170,7 @@ type qemuDisk struct {
 	Bandwidth  QemuDiskBandwidth
 	Cache      QemuDiskCache
 	Discard    bool
+	Disk       bool // true = disk, false = passthrough
 	EmulateSSD bool // Only set for ide,sata,scsi
 	// TODO custom type
 	File      string          // Only set for Passthrough.

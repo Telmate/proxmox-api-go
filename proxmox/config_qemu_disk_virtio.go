@@ -25,6 +25,7 @@ func (disk *QemuVirtIODisk) convertDataStructure() *qemuDisk {
 		Bandwidth: disk.Bandwidth,
 		Cache:     disk.Cache,
 		Discard:   disk.Discard,
+		Disk:      true,
 		Format:    disk.Format,
 		Id:        disk.Id,
 		IOThread:  disk.IOThread,

@@ -24,6 +24,7 @@ func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
 		Bandwidth:  disk.Bandwidth,
 		Cache:      disk.Cache,
 		Discard:    disk.Discard,
+		Disk:       true,
 		EmulateSSD: disk.EmulateSSD,
 		Format:     disk.Format,
 		Id:         disk.Id,
