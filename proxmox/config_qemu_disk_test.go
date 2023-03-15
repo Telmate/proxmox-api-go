@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
@@ -106,7 +107,7 @@ func Test_QemuDiskAsyncIO_Validate(t *testing.T) {
 func Test_QemuDiskBandwidth_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskBandwidth
-		err   bool
+		err   error
 	}{
 		// Valid
 		{input: QemuDiskBandwidth{}},
@@ -133,18 +134,18 @@ func Test_QemuDiskBandwidth_Validate(t *testing.T) {
 		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 0}}}},
 		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}}},
 		// Invalid
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}}, err: true},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Burst)},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Concurrent)},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Burst)},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Concurrent)},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Burst)},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Concurrent)},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Burst)},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Concurrent)},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}
@@ -154,7 +155,7 @@ func Test_QemuDiskBandwidth_Validate(t *testing.T) {
 func Test_QemuDiskBandwidthData_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskBandwidthData
-		err   bool
+		err   error
 	}{
 		// Valid
 		{input: QemuDiskBandwidthData{}},
@@ -169,14 +170,14 @@ func Test_QemuDiskBandwidthData_Validate(t *testing.T) {
 		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0}}},
 		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 1}}},
 		// Invalid
-		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}, err: true},
-		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}, err: true},
-		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}, err: true},
-		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}, err: true},
+		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Burst)},
+		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Concurrent)},
+		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Burst)},
+		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Concurrent)},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}
@@ -186,7 +187,7 @@ func Test_QemuDiskBandwidthData_Validate(t *testing.T) {
 func Test_QemuDiskBandwidthDataLimit_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskBandwidthDataLimit
-		err   bool
+		err   error
 	}{
 		// Valid
 		{input: QemuDiskBandwidthDataLimit{}},
@@ -195,12 +196,12 @@ func Test_QemuDiskBandwidthDataLimit_Validate(t *testing.T) {
 		{input: QemuDiskBandwidthDataLimit{Concurrent: 0}},
 		{input: QemuDiskBandwidthDataLimit{Concurrent: 1}},
 		// Invalid
-		{input: QemuDiskBandwidthDataLimit{Burst: 0.99}, err: true},
-		{input: QemuDiskBandwidthDataLimit{Concurrent: 0.99}, err: true},
+		{input: QemuDiskBandwidthDataLimit{Burst: 0.99}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Burst)},
+		{input: QemuDiskBandwidthDataLimit{Concurrent: 0.99}, err: errors.New(Error_QemuDiskBandwidthDataLimit_Concurrent)},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}
@@ -210,7 +211,7 @@ func Test_QemuDiskBandwidthDataLimit_Validate(t *testing.T) {
 func Test_QemuDiskBandwidthIops_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskBandwidthIops
-		err   bool
+		err   error
 	}{
 		// Valid
 		{input: QemuDiskBandwidthIops{}},
@@ -225,14 +226,14 @@ func Test_QemuDiskBandwidthIops_Validate(t *testing.T) {
 		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 0}}},
 		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 		// Invalid
-		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}, err: true},
-		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}, err: true},
-		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}, err: true},
-		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}, err: true},
+		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Burst)},
+		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Concurrent)},
+		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Burst)},
+		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Concurrent)},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}
@@ -242,7 +243,7 @@ func Test_QemuDiskBandwidthIops_Validate(t *testing.T) {
 func Test_QemuDiskBandwidthIopsLimit_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskBandwidthIopsLimit
-		err   bool
+		err   error
 	}{
 		// Valid
 		{input: QemuDiskBandwidthIopsLimit{}},
@@ -251,12 +252,12 @@ func Test_QemuDiskBandwidthIopsLimit_Validate(t *testing.T) {
 		{input: QemuDiskBandwidthIopsLimit{Concurrent: 0}},
 		{input: QemuDiskBandwidthIopsLimit{Concurrent: 10}},
 		// Invalid
-		{input: QemuDiskBandwidthIopsLimit{Burst: 9}, err: true},
-		{input: QemuDiskBandwidthIopsLimit{Concurrent: 9}, err: true},
+		{input: QemuDiskBandwidthIopsLimit{Burst: 9}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Burst)},
+		{input: QemuDiskBandwidthIopsLimit{Concurrent: 9}, err: errors.New(Error_QemuDiskBandwidthIopsLimit_Concurrent)},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}

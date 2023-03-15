@@ -413,12 +413,17 @@ type QemuDiskBandwidthDataLimit struct {
 	Concurrent float32 // 0 = unlimited
 }
 
+const (
+	Error_QemuDiskBandwidthDataLimit_Burst      string = "burst may not be lower then 1 except for 0"
+	Error_QemuDiskBandwidthDataLimit_Concurrent string = "concurrent may not be lower then 1 except for 0"
+)
+
 func (limit QemuDiskBandwidthDataLimit) Validate() error {
 	if limit.Burst != 0 && limit.Burst < 1 {
-		return errors.New("burst may not be lower then 1 except for 0")
+		return errors.New(Error_QemuDiskBandwidthDataLimit_Burst)
 	}
 	if limit.Concurrent != 0 && limit.Concurrent < 1 {
-		return errors.New("concurrent may not be lower then 1 except for 0")
+		return errors.New(Error_QemuDiskBandwidthDataLimit_Concurrent)
 	}
 	return nil
 }
@@ -441,12 +446,17 @@ type QemuDiskBandwidthIopsLimit struct {
 	Concurrent uint // 0 = unlimited
 }
 
+const (
+	Error_QemuDiskBandwidthIopsLimit_Burst      string = "burst may not be lower then 10 except for 0"
+	Error_QemuDiskBandwidthIopsLimit_Concurrent string = "concurrent may not be lower then 10 except for 0"
+)
+
 func (limit QemuDiskBandwidthIopsLimit) Validate() error {
 	if limit.Burst != 0 && limit.Burst < 10 {
-		return errors.New("burst may not be lower then 10 except for 0")
+		return errors.New(Error_QemuDiskBandwidthIopsLimit_Burst)
 	}
 	if limit.Concurrent != 0 && limit.Concurrent < 10 {
-		return errors.New("concurrent may not be lower then 10 except for 0")
+		return errors.New(Error_QemuDiskBandwidthIopsLimit_Concurrent)
 	}
 	return nil
 }
