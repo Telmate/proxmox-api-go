@@ -469,12 +469,16 @@ const (
 	QemuDiskCache_DirectSync   QemuDiskCache = "directsync"
 )
 
+func (QemuDiskCache) Error() error {
+	return fmt.Errorf("cache can only be one of the following values: %s,%s,%s,%s,%s", QemuDiskCache_None, QemuDiskCache_WriteThrough, QemuDiskCache_WriteBack, QemuDiskCache_Unsafe, QemuDiskCache_DirectSync)
+}
+
 func (cache QemuDiskCache) Validate() error {
 	switch cache {
-	case QemuDiskCache_None, QemuDiskCache_WriteThrough, QemuDiskCache_WriteBack, QemuDiskCache_Unsafe, QemuDiskCache_DirectSync:
+	case "", QemuDiskCache_None, QemuDiskCache_WriteThrough, QemuDiskCache_WriteBack, QemuDiskCache_Unsafe, QemuDiskCache_DirectSync:
 		return nil
 	}
-	return fmt.Errorf("cache can only be one of the following values: %s,%s,%s,%s,%s", QemuDiskCache_None, QemuDiskCache_WriteThrough, QemuDiskCache_WriteBack, QemuDiskCache_Unsafe, QemuDiskCache_DirectSync)
+	return QemuDiskCache("").Error()
 }
 
 type QemuDiskFormat string

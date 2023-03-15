@@ -284,22 +284,23 @@ func Test_QemuDiskBandwidthIopsLimit_Validate(t *testing.T) {
 func Test_QemuDiskCache_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuDiskCache
-		err   bool
+		err   error
 	}{
 		// Valid
+		{input: ""},
 		{input: QemuDiskCache_None},
 		{input: QemuDiskCache_WriteThrough},
 		{input: QemuDiskCache_WriteBack},
 		{input: QemuDiskCache_Unsafe},
 		{input: QemuDiskCache_DirectSync},
 		// Invalid
-		{input: "bla", err: true},
-		{input: "invalid value", err: true},
-		{input: "!@#$", err: true},
+		{input: "bla", err: QemuDiskCache("").Error()},
+		{input: "invalid value", err: QemuDiskCache("").Error()},
+		{input: "!@#$", err: QemuDiskCache("").Error()},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}
