@@ -522,15 +522,20 @@ func (format QemuDiskFormat) Validate() error {
 
 type QemuDiskSerial string
 
+const (
+	Error_QemuDiskSerial_IllegalCharacter string = "serial may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_"
+	Error_QemuDiskSerial_IllegalLength    string = "serial may only be 60 characters long"
+)
+
 // QemuDiskSerial may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
 // And has a max length of 60 characters
 func (serial QemuDiskSerial) Validate() error {
 	regex, _ := regexp.Compile(`^([a-z]|[A-Z]|[0-9]|_|-)*$`)
 	if !regex.Match([]byte(serial)) {
-		return errors.New("serial may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_")
+		return errors.New(Error_QemuDiskSerial_IllegalCharacter)
 	}
 	if len(serial) > 60 {
-		return errors.New("serial may only be 60 characters long")
+		return errors.New(Error_QemuDiskSerial_IllegalLength)
 	}
 	return nil
 }
