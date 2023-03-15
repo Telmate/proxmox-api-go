@@ -33,22 +33,22 @@ func Test_IsoFile_Validate(t *testing.T) {
 func Test_QemuCdRom_Validate(t *testing.T) {
 	testData := []struct {
 		input QemuCdRom
-		err   bool
+		err   error
 	}{
 		// Valid
 		{input: QemuCdRom{}},
 		{input: QemuCdRom{Iso: &IsoFile{File: "anything", Storage: "Something"}}},
 		{input: QemuCdRom{Passthrough: true}},
 		// Invalid
-		{input: QemuCdRom{Iso: &IsoFile{}}, err: true},
-		{input: QemuCdRom{Iso: &IsoFile{File: "anything"}}, err: true},
-		{input: QemuCdRom{Iso: &IsoFile{Storage: "something"}}, err: true},
-		{input: QemuCdRom{Iso: &IsoFile{Size: "something"}}, err: true},
-		{input: QemuCdRom{Iso: &IsoFile{File: "anything", Storage: "something"}, Passthrough: true}, err: true},
+		{input: QemuCdRom{Iso: &IsoFile{}}, err: errors.New(Error_IsoFile_File)},
+		{input: QemuCdRom{Iso: &IsoFile{File: "anything"}}, err: errors.New(Error_IsoFile_Storage)},
+		{input: QemuCdRom{Iso: &IsoFile{Storage: "something"}}, err: errors.New(Error_IsoFile_File)},
+		{input: QemuCdRom{Iso: &IsoFile{Size: "something"}}, err: errors.New(Error_IsoFile_File)},
+		{input: QemuCdRom{Iso: &IsoFile{File: "anything", Storage: "something"}, Passthrough: true}, err: errors.New(Error_QemuCdRom_MutuallyExclusive)},
 	}
 	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.Validate())
+		if e.err != nil {
+			require.Equal(t, e.input.Validate(), e.err)
 		} else {
 			require.NoError(t, e.input.Validate())
 		}

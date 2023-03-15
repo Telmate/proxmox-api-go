@@ -37,6 +37,10 @@ type QemuCdRom struct {
 	Passthrough bool `json:"passthrough,omitempty"`
 }
 
+const (
+	Error_QemuCdRom_MutuallyExclusive string = "iso and passthrough are mutually exclusive"
+)
+
 // TODO write test
 func (cdRom QemuCdRom) mapToApiValues() string {
 	if cdRom.Passthrough {
@@ -68,7 +72,7 @@ func (cdRom QemuCdRom) Validate() error {
 			return err
 		}
 		if cdRom.Passthrough {
-			return errors.New("iso and passthrough are mutually exclusive")
+			return errors.New(Error_QemuCdRom_MutuallyExclusive)
 		}
 	}
 	return nil
