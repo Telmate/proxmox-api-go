@@ -74,7 +74,7 @@ type qemuCdRom struct {
 	// "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"
 	Passthrough bool
 	Storage     string
-	Format      *QemuDiskFormat // Only set for Cloud-init drives
+	Format      QemuDiskFormat // Only set for Cloud-init drives
 	File        string
 	Size        string
 }
@@ -120,7 +120,7 @@ func (qemuCdRom) mapToStruct(settings [][]string) *qemuCdRom {
 					return &qemuCdRom{
 						Storage: tmpStorage[0],
 						File:    tmpFile[1],
-						Format:  &fileType,
+						Format:  fileType,
 					}
 				}
 			}
@@ -130,19 +130,13 @@ func (qemuCdRom) mapToStruct(settings [][]string) *qemuCdRom {
 }
 
 type QemuCloudInitDisk struct {
-	Format  *QemuDiskFormat `json:"format,omitempty"`
-	Storage string          `json:"storage,omitempty"`
+	Format  QemuDiskFormat `json:"format,omitempty"`
+	Storage string         `json:"storage,omitempty"`
 }
 
 // TODO write test
 func (cloudInit QemuCloudInitDisk) mapToApiValues() string {
-	var fileType string
-	if cloudInit.Format == nil {
-		fileType = "raw"
-	} else {
-		fileType = string(*cloudInit.Format)
-	}
-	return cloudInit.Storage + ":cloudinit,format=" + fileType
+	return cloudInit.Storage + ":cloudinit,format=" + string(cloudInit.Format)
 }
 
 func (QemuCloudInitDisk) mapToStruct(settings qemuCdRom) *QemuCloudInitDisk {
@@ -153,10 +147,8 @@ func (QemuCloudInitDisk) mapToStruct(settings qemuCdRom) *QemuCloudInitDisk {
 }
 
 func (cloudInit QemuCloudInitDisk) Validate() error {
-	if cloudInit.Format != nil {
-		if err := cloudInit.Format.Validate(); err != nil {
-			return err
-		}
+	if err := cloudInit.Format.Validate(); err != nil {
+		return err
 	}
 	if cloudInit.Storage == "" {
 		return errors.New("storage should not be empty")

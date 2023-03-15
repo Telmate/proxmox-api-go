@@ -63,13 +63,12 @@ func Test_QemuCloudInitDisk_Validate(t *testing.T) {
 		err   bool
 	}{
 		// Valid
-		{input: QemuCloudInitDisk{Storage: "anything"}},
-		{input: QemuCloudInitDisk{Storage: "anything", Format: &formatRaw}},
+		{input: QemuCloudInitDisk{Storage: "anything", Format: formatRaw}},
 		// Invalid
 		{input: QemuCloudInitDisk{}, err: true},
-		{input: QemuCloudInitDisk{Format: &formatRaw}, err: true},
-		{input: QemuCloudInitDisk{Storage: "anything", Format: &formatEmpty}, err: true},
-		{input: QemuCloudInitDisk{Storage: "anything", Format: &formatInvalid}, err: true},
+		{input: QemuCloudInitDisk{Format: formatRaw}, err: true},
+		{input: QemuCloudInitDisk{Storage: "anything", Format: formatEmpty}, err: true},
+		{input: QemuCloudInitDisk{Storage: "anything", Format: formatInvalid}, err: true},
 	}
 	for _, e := range testData {
 		if e.err {
