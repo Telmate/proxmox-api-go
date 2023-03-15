@@ -104,12 +104,6 @@ func Test_QemuDiskAsyncIO_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidth_Validate(t *testing.T) {
-	float0 := float32(0)
-	float0a := float32(0.99)
-	float1 := float32(1)
-	uint0 := uint(0)
-	uint9 := uint(9)
-	uint10 := uint(10)
 	testData := []struct {
 		input QemuDiskBandwidth
 		err   bool
@@ -118,35 +112,35 @@ func Test_QemuDiskBandwidth_Validate(t *testing.T) {
 		{input: QemuDiskBandwidth{}},
 		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{}}},
 		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{}}}},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: &float1}}}},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: &float1}}}},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 0}}}},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 1}}}},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 0}}}},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 1}}}},
 		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{}}}},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: &float1}}}},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: &float1}}}},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 0}}}},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 1}}}},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0}}}},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 1}}}},
 		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{}}},
 		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{}}}},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: &uint10}}}},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint10}}}},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 0}}}},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 10}}}},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 0}}}},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}}},
 		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{}}}},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: &uint10}}}},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint10}}}},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 0}}}},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 10}}}},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 0}}}},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}}},
 		// Invalid
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: &float0}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: &float0a}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: &float0}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: &float0a}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: &float0}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: &float0a}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: &float0}}}, err: true},
-		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: &float0a}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: &uint9}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: &uint0}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint9}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint0}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: &uint9}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: &uint0}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint9}}}, err: true},
-		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint0}}}, err: true},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}}, err: true},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}}, err: true},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}}, err: true},
+		{input: QemuDiskBandwidth{Data: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}}, err: true},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}, err: true},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}}, err: true},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}, err: true},
+		{input: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}}, err: true},
 	}
 	for _, e := range testData {
 		if e.err {
@@ -158,9 +152,6 @@ func Test_QemuDiskBandwidth_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthData_Validate(t *testing.T) {
-	float0 := float32(0)
-	float0a := float32(0.99)
-	float1 := float32(1)
 	testData := []struct {
 		input QemuDiskBandwidthData
 		err   bool
@@ -168,20 +159,20 @@ func Test_QemuDiskBandwidthData_Validate(t *testing.T) {
 		// Valid
 		{input: QemuDiskBandwidthData{}},
 		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{}}},
-		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: &float1}}},
-		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: &float1}}},
+		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 0}}},
+		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 1}}},
+		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 0}}},
+		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 1}}},
 		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{}}},
-		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: &float1}}},
-		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: &float1}}},
+		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 0}}},
+		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 1}}},
+		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0}}},
+		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 1}}},
 		// Invalid
-		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: &float0}}, err: true},
-		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: &float0a}}, err: true},
-		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: &float0}}, err: true},
-		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: &float0a}}, err: true},
-		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: &float0}}, err: true},
-		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: &float0a}}, err: true},
-		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: &float0}}, err: true},
-		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: &float0a}}, err: true},
+		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}, err: true},
+		{input: QemuDiskBandwidthData{ReadLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}, err: true},
+		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Burst: 0.99}}, err: true},
+		{input: QemuDiskBandwidthData{WriteLimit: QemuDiskBandwidthDataLimit{Concurrent: 0.99}}, err: true},
 	}
 	for _, e := range testData {
 		if e.err {
@@ -193,22 +184,19 @@ func Test_QemuDiskBandwidthData_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthDataLimit_Validate(t *testing.T) {
-	float0 := float32(0)
-	float0a := float32(0.99)
-	float1 := float32(1)
 	testData := []struct {
 		input QemuDiskBandwidthDataLimit
 		err   bool
 	}{
 		// Valid
 		{input: QemuDiskBandwidthDataLimit{}},
-		{input: QemuDiskBandwidthDataLimit{Burst: &float1}},
-		{input: QemuDiskBandwidthDataLimit{Concurrent: &float1}},
+		{input: QemuDiskBandwidthDataLimit{Burst: 0}},
+		{input: QemuDiskBandwidthDataLimit{Burst: 1}},
+		{input: QemuDiskBandwidthDataLimit{Concurrent: 0}},
+		{input: QemuDiskBandwidthDataLimit{Concurrent: 1}},
 		// Invalid
-		{input: QemuDiskBandwidthDataLimit{Burst: &float0}, err: true},
-		{input: QemuDiskBandwidthDataLimit{Burst: &float0a}, err: true},
-		{input: QemuDiskBandwidthDataLimit{Concurrent: &float0}, err: true},
-		{input: QemuDiskBandwidthDataLimit{Concurrent: &float0a}, err: true},
+		{input: QemuDiskBandwidthDataLimit{Burst: 0.99}, err: true},
+		{input: QemuDiskBandwidthDataLimit{Concurrent: 0.99}, err: true},
 	}
 	for _, e := range testData {
 		if e.err {
@@ -220,9 +208,6 @@ func Test_QemuDiskBandwidthDataLimit_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthIops_Validate(t *testing.T) {
-	uint0 := uint(0)
-	uint9 := uint(9)
-	uint10 := uint(10)
 	testData := []struct {
 		input QemuDiskBandwidthIops
 		err   bool
@@ -230,20 +215,20 @@ func Test_QemuDiskBandwidthIops_Validate(t *testing.T) {
 		// Valid
 		{input: QemuDiskBandwidthIops{}},
 		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{}}},
-		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: &uint10}}},
-		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint10}}},
+		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 10}}},
+		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 10}}},
+		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 0}}},
+		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{}}},
-		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: &uint10}}},
-		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint10}}},
+		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 0}}},
+		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 10}}},
+		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 0}}},
+		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 		// Invalid
-		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: &uint0}}, err: true},
-		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: &uint9}}, err: true},
-		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint0}}, err: true},
-		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint9}}, err: true},
-		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: &uint0}}, err: true},
-		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: &uint9}}, err: true},
-		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint0}}, err: true},
-		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: &uint9}}, err: true},
+		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}, err: true},
+		{input: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}, err: true},
+		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}, err: true},
+		{input: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 9}}, err: true},
 	}
 	for _, e := range testData {
 		if e.err {
@@ -255,22 +240,19 @@ func Test_QemuDiskBandwidthIops_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthIopsLimit_Validate(t *testing.T) {
-	uint0 := uint(0)
-	uint9 := uint(9)
-	uint10 := uint(10)
 	testData := []struct {
 		input QemuDiskBandwidthIopsLimit
 		err   bool
 	}{
 		// Valid
 		{input: QemuDiskBandwidthIopsLimit{}},
-		{input: QemuDiskBandwidthIopsLimit{Burst: &uint10}},
-		{input: QemuDiskBandwidthIopsLimit{Concurrent: &uint10}},
+		{input: QemuDiskBandwidthIopsLimit{Burst: 0}},
+		{input: QemuDiskBandwidthIopsLimit{Burst: 10}},
+		{input: QemuDiskBandwidthIopsLimit{Concurrent: 0}},
+		{input: QemuDiskBandwidthIopsLimit{Concurrent: 10}},
 		// Invalid
-		{input: QemuDiskBandwidthIopsLimit{Burst: &uint0}, err: true},
-		{input: QemuDiskBandwidthIopsLimit{Burst: &uint9}, err: true},
-		{input: QemuDiskBandwidthIopsLimit{Concurrent: &uint0}, err: true},
-		{input: QemuDiskBandwidthIopsLimit{Concurrent: &uint9}, err: true},
+		{input: QemuDiskBandwidthIopsLimit{Burst: 9}, err: true},
+		{input: QemuDiskBandwidthIopsLimit{Concurrent: 9}, err: true},
 	}
 	for _, e := range testData {
 		if e.err {

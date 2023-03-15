@@ -211,34 +211,34 @@ func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 	// format
 	// media
 
-	if disk.Bandwidth.Iops.ReadLimit.Concurrent != nil {
-		settings = settings + ",iops_rd=" + strconv.Itoa(int(*disk.Bandwidth.Iops.ReadLimit.Concurrent))
+	if disk.Bandwidth.Iops.ReadLimit.Concurrent != 0 {
+		settings = settings + ",iops_rd=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Concurrent))
 	}
-	if disk.Bandwidth.Iops.ReadLimit.Burst != nil {
-		settings = settings + ",iops_rd_max=" + strconv.Itoa(int(*disk.Bandwidth.Iops.ReadLimit.Burst))
+	if disk.Bandwidth.Iops.ReadLimit.Burst != 0 {
+		settings = settings + ",iops_rd_max=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Burst))
 	}
-	if disk.Bandwidth.Iops.WriteLimit.Concurrent != nil {
-		settings = settings + ",iops_wr=" + strconv.Itoa(int(*disk.Bandwidth.Iops.WriteLimit.Concurrent))
+	if disk.Bandwidth.Iops.WriteLimit.Concurrent != 0 {
+		settings = settings + ",iops_wr=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Concurrent))
 	}
-	if disk.Bandwidth.Iops.WriteLimit.Burst != nil {
-		settings = settings + ",iops_wr_max=" + strconv.Itoa(int(*disk.Bandwidth.Iops.WriteLimit.Burst))
+	if disk.Bandwidth.Iops.WriteLimit.Burst != 0 {
+		settings = settings + ",iops_wr_max=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Burst))
 	}
 
 	if (disk.Type == scsi || disk.Type == virtIO) && disk.IOThread {
 		settings = settings + ",iothread=1"
 	}
 
-	if disk.Bandwidth.Data.ReadLimit.Concurrent != nil {
-		settings = settings + fmt.Sprintf(",mbps_rd=%.2f", *disk.Bandwidth.Data.ReadLimit.Concurrent)
+	if disk.Bandwidth.Data.ReadLimit.Concurrent != 0 {
+		settings = settings + fmt.Sprintf(",mbps_rd=%.2f", disk.Bandwidth.Data.ReadLimit.Concurrent)
 	}
-	if disk.Bandwidth.Data.ReadLimit.Burst != nil {
-		settings = settings + fmt.Sprintf(",mbps_rd_max=%.2f", *disk.Bandwidth.Data.ReadLimit.Burst)
+	if disk.Bandwidth.Data.ReadLimit.Burst != 0 {
+		settings = settings + fmt.Sprintf(",mbps_rd_max=%.2f", disk.Bandwidth.Data.ReadLimit.Burst)
 	}
-	if disk.Bandwidth.Data.WriteLimit.Concurrent != nil {
-		settings = settings + fmt.Sprintf(",mbps_wr=%.2f", *disk.Bandwidth.Data.WriteLimit.Concurrent)
+	if disk.Bandwidth.Data.WriteLimit.Concurrent != 0 {
+		settings = settings + fmt.Sprintf(",mbps_wr=%.2f", disk.Bandwidth.Data.WriteLimit.Concurrent)
 	}
-	if disk.Bandwidth.Data.WriteLimit.Burst != nil {
-		settings = settings + fmt.Sprintf(",mbps_wr_max=%.2f", *disk.Bandwidth.Data.WriteLimit.Burst)
+	if disk.Bandwidth.Data.WriteLimit.Burst != 0 {
+		settings = settings + fmt.Sprintf(",mbps_wr_max=%.2f", disk.Bandwidth.Data.WriteLimit.Burst)
 	}
 
 	if !disk.Replicate {
@@ -304,23 +304,19 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		}
 		if e[0] == "iops_rd" {
 			tmp, _ := strconv.Atoi(e[1])
-			pointer := uint(tmp)
-			disk.Bandwidth.Iops.ReadLimit.Concurrent = &pointer
+			disk.Bandwidth.Iops.ReadLimit.Concurrent = uint(tmp)
 		}
 		if e[0] == "iops_rd_max" {
 			tmp, _ := strconv.Atoi(e[1])
-			pointer := uint(tmp)
-			disk.Bandwidth.Iops.ReadLimit.Burst = &pointer
+			disk.Bandwidth.Iops.ReadLimit.Burst = uint(tmp)
 		}
 		if e[0] == "iops_wr" {
 			tmp, _ := strconv.Atoi(e[1])
-			pointer := uint(tmp)
-			disk.Bandwidth.Iops.WriteLimit.Concurrent = &pointer
+			disk.Bandwidth.Iops.WriteLimit.Concurrent = uint(tmp)
 		}
 		if e[0] == "iops_wr_max" {
 			tmp, _ := strconv.Atoi(e[1])
-			pointer := uint(tmp)
-			disk.Bandwidth.Iops.WriteLimit.Burst = &pointer
+			disk.Bandwidth.Iops.WriteLimit.Burst = uint(tmp)
 		}
 		if e[0] == "iothread" {
 			disk.IOThread, _ = strconv.ParseBool(e[1])
@@ -328,23 +324,19 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		}
 		if e[0] == "mbps_rd" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			pointer := float32(math.Round(tmp*100) / 100)
-			disk.Bandwidth.Data.ReadLimit.Concurrent = &pointer
+			disk.Bandwidth.Data.ReadLimit.Concurrent = float32(math.Round(tmp*100) / 100)
 		}
 		if e[0] == "mbps_rd_max" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			pointer := float32(math.Round(tmp*100) / 100)
-			disk.Bandwidth.Data.ReadLimit.Burst = &pointer
+			disk.Bandwidth.Data.ReadLimit.Burst = float32(math.Round(tmp*100) / 100)
 		}
 		if e[0] == "mbps_wr" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			pointer := float32(math.Round(tmp*100) / 100)
-			disk.Bandwidth.Data.WriteLimit.Concurrent = &pointer
+			disk.Bandwidth.Data.WriteLimit.Concurrent = float32(math.Round(tmp*100) / 100)
 		}
 		if e[0] == "mbps_wr_max" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			pointer := float32(math.Round(tmp*100) / 100)
-			disk.Bandwidth.Data.WriteLimit.Burst = &pointer
+			disk.Bandwidth.Data.WriteLimit.Burst = float32(math.Round(tmp*100) / 100)
 		}
 		if e[0] == "replicate" {
 			disk.Replicate, _ = strconv.ParseBool(e[1])
@@ -417,16 +409,16 @@ func (data QemuDiskBandwidthData) Validate() error {
 }
 
 type QemuDiskBandwidthDataLimit struct {
-	Burst      *float32 // nil = default
-	Concurrent *float32 // nil = unlimited
+	Burst      float32 // 0 = default
+	Concurrent float32 // 0 = unlimited
 }
 
 func (limit QemuDiskBandwidthDataLimit) Validate() error {
-	if limit.Burst != nil && *limit.Burst < 1 {
-		return errors.New("burst may not be lower then 1")
+	if limit.Burst != 0 && limit.Burst < 1 {
+		return errors.New("burst may not be lower then 1 except for 0")
 	}
-	if limit.Concurrent != nil && *limit.Concurrent < 1 {
-		return errors.New("concurrent may not be lower then 1")
+	if limit.Concurrent != 0 && limit.Concurrent < 1 {
+		return errors.New("concurrent may not be lower then 1 except for 0")
 	}
 	return nil
 }
@@ -445,16 +437,16 @@ func (iops QemuDiskBandwidthIops) Validate() error {
 }
 
 type QemuDiskBandwidthIopsLimit struct {
-	Burst      *uint // nil = default
-	Concurrent *uint // nil = unlimited
+	Burst      uint // 0 = default
+	Concurrent uint // 0 = unlimited
 }
 
 func (limit QemuDiskBandwidthIopsLimit) Validate() error {
-	if limit.Burst != nil && *limit.Burst < 10 {
-		return errors.New("burst may not be lower then 10")
+	if limit.Burst != 0 && limit.Burst < 10 {
+		return errors.New("burst may not be lower then 10 except for 0")
 	}
-	if limit.Concurrent != nil && *limit.Concurrent < 10 {
-		return errors.New("concurrent may not be lower then 1")
+	if limit.Concurrent != 0 && limit.Concurrent < 10 {
+		return errors.New("concurrent may not be lower then 10 except for 0")
 	}
 	return nil
 }
