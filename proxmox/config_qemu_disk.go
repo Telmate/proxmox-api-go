@@ -143,6 +143,10 @@ type QemuCloudInitDisk struct {
 	Storage string         `json:"storage,omitempty"`
 }
 
+const (
+	Error_QemuCloudInitDisk_Storage string = "storage should not be empty"
+)
+
 // TODO write test
 func (cloudInit QemuCloudInitDisk) mapToApiValues() string {
 	return cloudInit.Storage + ":cloudinit,format=" + string(cloudInit.Format)
@@ -160,7 +164,7 @@ func (cloudInit QemuCloudInitDisk) Validate() error {
 		return err
 	}
 	if cloudInit.Storage == "" {
-		return errors.New("storage should not be empty")
+		return errors.New(Error_QemuCloudInitDisk_Storage)
 	}
 	return nil
 }
