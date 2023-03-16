@@ -691,6 +691,7 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 
 func (config ConfigQemu) Validate() (err error) {
 	// TODO test all other use cases
+	// TODO has no context about changes caused by updating the vm
 	if config.Disks != nil {
 		err = config.Disks.Validate()
 		if err != nil {
