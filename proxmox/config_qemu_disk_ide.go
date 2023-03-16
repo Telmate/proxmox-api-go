@@ -36,6 +36,10 @@ func (disk *QemuIdeDisk) convertDataStructure() *qemuDisk {
 	}
 }
 
+func (disk QemuIdeDisk) Validate() error {
+	return disk.convertDataStructure().validate()
+}
+
 type QemuIdeDisks struct {
 	Disk_0 *QemuIdeStorage `json:"0,omitempty"`
 	Disk_1 *QemuIdeStorage `json:"1,omitempty"`
@@ -91,6 +95,19 @@ func (QemuIdeDisks) mapToStruct(params map[string]interface{}) *QemuIdeDisks {
 	return nil
 }
 
+func (disks QemuIdeDisks) Validate() error {
+	diskMap := disks.mapToIntMap()
+	for _, e := range diskMap {
+		if e != nil {
+			err := e.Validate()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 type QemuIdePassthrough struct {
 	AsyncIO    QemuDiskAsyncIO
 	Backup     bool
@@ -117,6 +134,10 @@ func (passthrough *QemuIdePassthrough) convertDataStructure() *qemuDisk {
 		Serial:     passthrough.Serial,
 		Type:       ide,
 	}
+}
+
+func (passthrough QemuIdePassthrough) Validate() error {
+	return passthrough.convertDataStructure().validate()
 }
 
 type QemuIdeStorage struct {
@@ -189,4 +210,49 @@ func (QemuIdeStorage) mapToStruct(param string) *QemuIdeStorage {
 		Serial:     tmpDisk.Serial,
 		Size:       tmpDisk.Size,
 	}}
+}
+
+func (storage QemuIdeStorage) Validate() (err error) {
+	// First check if more than one item is nil
+	var subTypeSet bool
+	if storage.CdRom != nil {
+		subTypeSet = true
+	}
+	if storage.CloudInit != nil {
+		if err = diskSubtypeSet(subTypeSet); err != nil {
+			return
+		}
+		subTypeSet = true
+	}
+	if storage.Disk != nil {
+		if err = diskSubtypeSet(subTypeSet); err != nil {
+			return
+		}
+		subTypeSet = true
+	}
+	if storage.Passthrough != nil {
+		if err = diskSubtypeSet(subTypeSet); err != nil {
+			return
+		}
+	}
+	// Validate sub items
+	if storage.CdRom != nil {
+		if err = storage.CdRom.Validate(); err != nil {
+			return
+		}
+	}
+	if storage.CloudInit != nil {
+		if err = storage.CloudInit.Validate(); err != nil {
+			return
+		}
+	}
+	if storage.Disk != nil {
+		if err = storage.Disk.Validate(); err != nil {
+			return
+		}
+	}
+	if storage.Passthrough != nil {
+		err = storage.Passthrough.Validate()
+	}
+	return
 }

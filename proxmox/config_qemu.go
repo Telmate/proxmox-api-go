@@ -93,6 +93,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		return
 	}
+	err = config.Validate()
+	if err != nil {
+		return
+	}
 	params, _, err := config.mapToApiValues(ConfigQemu{})
 	if err != nil {
 		return
@@ -638,6 +642,10 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 	if err != nil {
 		return
 	}
+	err = newConfig.Validate()
+	if err != nil {
+		return
+	}
 	params, markedDisks, err := newConfig.mapToApiValues(*currentConfig)
 	if err != nil {
 		return
@@ -678,6 +686,18 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 	}
 
 	_, err = client.UpdateVMPool(vmr, newConfig.Pool)
+	return
+}
+
+func (config ConfigQemu) Validate() (err error) {
+	// TODO test all other use cases
+	if config.Disks != nil {
+		err = config.Disks.Validate()
+		if err != nil {
+			return
+		}
+	}
+
 	return
 }
 

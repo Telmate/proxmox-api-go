@@ -192,6 +192,13 @@ type qemuDisk struct {
 	Type    qemuDiskType
 }
 
+const (
+	Error_QemuDisk_File              string = "file may not be empty"
+	Error_QemuDisk_MutuallyExclusive string = "settings cdrom,cloudinit,disk,passthrough are mutually exclusive"
+	Error_QemuDisk_Size              string = "size must be greater then 0"
+	Error_QemuDisk_Storage           string = "storage may not be empty"
+)
+
 // TODO write test
 func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 	if disk.Storage != "" {
@@ -373,6 +380,42 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		}
 	}
 	return &disk
+}
+
+func (disk *qemuDisk) validate() (err error) {
+	if disk == nil {
+		return
+	}
+	if err = disk.AsyncIO.Validate(); err != nil {
+		return
+	}
+	if err = disk.Bandwidth.Validate(); err != nil {
+		return
+	}
+	if err = disk.Cache.Validate(); err != nil {
+		return
+	}
+	if err = disk.Serial.Validate(); err != nil {
+		return
+	}
+	if disk.Disk {
+		// disk
+		if err = disk.Format.Validate(); err != nil {
+			return
+		}
+		if disk.Size == 0 {
+			return errors.New(Error_QemuDisk_Size)
+		}
+		if disk.Storage == "" {
+			return errors.New(Error_QemuDisk_Storage)
+		}
+	} else {
+		// passthrough
+		if disk.File == "" {
+			return errors.New(Error_QemuDisk_File)
+		}
+	}
+	return
 }
 
 type QemuDiskAsyncIO string
@@ -701,8 +744,40 @@ func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, vmID 
 	return changes
 }
 
+func (storages QemuStorages) Validate() (err error) {
+	if storages.Ide != nil {
+		err = storages.Ide.Validate()
+		if err != nil {
+			return
+		}
+	}
+	if storages.Sata != nil {
+		err = storages.Sata.Validate()
+		if err != nil {
+			return
+		}
+	}
+	if storages.Scsi != nil {
+		err = storages.Scsi.Validate()
+		if err != nil {
+			return
+		}
+	}
+	if storages.VirtIO != nil {
+		err = storages.VirtIO.Validate()
+	}
+	return
+}
+
 type qemuUpdateChanges struct {
 	Delete string
 	Move   []qemuDiskShort
 	Resize []qemuDiskResize
+}
+
+func diskSubtypeSet(set bool) error {
+	if set {
+		return errors.New(Error_QemuDisk_MutuallyExclusive)
+	}
+	return nil
 }
