@@ -327,7 +327,9 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 			continue
 		}
 		if e[0] == "discard" {
-			disk.Discard, _ = strconv.ParseBool(e[1])
+			if e[1] == "on" {
+				disk.Discard = true
+			}
 			continue
 		}
 		if e[0] == "iops_rd" {
