@@ -4,17 +4,17 @@ import "strconv"
 
 type QemuSataDisk struct {
 	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup     bool              `json:"backup,omitempty"`
+	Backup     bool              `json:"backup"`
 	Bandwidth  QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache      QemuDiskCache     `json:"cache,omitempty"`
-	Discard    bool              `json:"discard,omitempty"`
-	EmulateSSD bool              `json:"emulatessd,omitempty"`
-	Format     QemuDiskFormat    `json:"format,omitempty"`
+	Discard    bool              `json:"discard"`
+	EmulateSSD bool              `json:"emulatessd"`
+	Format     QemuDiskFormat    `json:"format"`
 	Id         *uint             `json:"id,omitempty"`
-	Replicate  bool              `json:"replicate,omitempty"`
+	Replicate  bool              `json:"replicate"`
 	Serial     QemuDiskSerial    `json:"serial,omitempty"`
-	Size       uint              `json:"size,omitempty"`
-	Storage    string            `json:"storage,omitempty"`
+	Size       uint              `json:"size"`
+	Storage    string            `json:"storage"`
 }
 
 func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
@@ -121,16 +121,16 @@ func (disks QemuSataDisks) Validate() error {
 }
 
 type QemuSataPassthrough struct {
-	AsyncIO    QemuDiskAsyncIO
-	Backup     bool
-	Bandwidth  QemuDiskBandwidth
-	Cache      QemuDiskCache
-	Discard    bool
-	EmulateSSD bool
-	File       string
-	Replicate  bool
-	Serial     QemuDiskSerial `json:"serial,omitempty"`
-	Size       uint           //size is only returned and setting it has no effect
+	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup     bool              `json:"backup"`
+	Bandwidth  QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache      QemuDiskCache     `json:"cache,omitempty"`
+	Discard    bool              `json:"discard"`
+	EmulateSSD bool              `json:"emulatessd"`
+	File       string            `json:"file"`
+	Replicate  bool              `json:"replicate"`
+	Serial     QemuDiskSerial    `json:"serial,omitempty"`
+	Size       uint              `json:"size"` //size is only returned and setting it has no effect
 }
 
 func (passthrough *QemuSataPassthrough) convertDataStructure() *qemuDisk {
@@ -153,10 +153,10 @@ func (passthrough QemuSataPassthrough) Validate() error {
 }
 
 type QemuSataStorage struct {
-	CdRom       *QemuCdRom
-	CloudInit   *QemuCloudInitDisk
-	Disk        *QemuSataDisk
-	Passthrough *QemuSataPassthrough
+	CdRom       *QemuCdRom           `json:"cdrom,omitempty"`
+	CloudInit   *QemuCloudInitDisk   `json:"cloudinit,omitempty"`
+	Disk        *QemuSataDisk        `json:"disk,omitempty"`
+	Passthrough *QemuSataPassthrough `json:"passthrough,omitempty"`
 }
 
 // TODO write test

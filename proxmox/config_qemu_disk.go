@@ -439,8 +439,8 @@ func (asyncIO QemuDiskAsyncIO) Validate() error {
 }
 
 type QemuDiskBandwidth struct {
-	Data QemuDiskBandwidthData
-	Iops QemuDiskBandwidthIops
+	Data QemuDiskBandwidthData `json:"data,omitempty"`
+	Iops QemuDiskBandwidthIops `json:"iops,omitempty"`
 }
 
 func (bandwidth QemuDiskBandwidth) Validate() error {
@@ -452,8 +452,8 @@ func (bandwidth QemuDiskBandwidth) Validate() error {
 }
 
 type QemuDiskBandwidthData struct {
-	ReadLimit  QemuDiskBandwidthDataLimit
-	WriteLimit QemuDiskBandwidthDataLimit
+	ReadLimit  QemuDiskBandwidthDataLimit `json:"read,omitempty"`
+	WriteLimit QemuDiskBandwidthDataLimit `json:"write,omitempty"`
 }
 
 func (data QemuDiskBandwidthData) Validate() error {
@@ -465,8 +465,8 @@ func (data QemuDiskBandwidthData) Validate() error {
 }
 
 type QemuDiskBandwidthDataLimit struct {
-	Burst      float32 // 0 = default
-	Concurrent float32 // 0 = unlimited
+	Burst      float32 `json:"burst,omitempty"`      // 0 = default
+	Concurrent float32 `json:"concurrent,omitempty"` // 0 = unlimited
 }
 
 const (
@@ -485,8 +485,8 @@ func (limit QemuDiskBandwidthDataLimit) Validate() error {
 }
 
 type QemuDiskBandwidthIops struct {
-	ReadLimit  QemuDiskBandwidthIopsLimit
-	WriteLimit QemuDiskBandwidthIopsLimit
+	ReadLimit  QemuDiskBandwidthIopsLimit `json:"read,omitempty"`
+	WriteLimit QemuDiskBandwidthIopsLimit `json:"write,omitempty"`
 }
 
 func (iops QemuDiskBandwidthIops) Validate() error {
@@ -498,8 +498,8 @@ func (iops QemuDiskBandwidthIops) Validate() error {
 }
 
 type QemuDiskBandwidthIopsLimit struct {
-	Burst      uint // 0 = default
-	Concurrent uint // 0 = unlimited
+	Burst      uint `json:"burst,omitempty"`      // 0 = default
+	Concurrent uint `json:"concurrent,omitempty"` // 0 = unlimited
 }
 
 const (
@@ -609,10 +609,10 @@ const (
 )
 
 type qemuStorage struct {
-	CdRom       *QemuCdRom         `json:"cdrom,omitempty"`
-	CloudInit   *QemuCloudInitDisk `json:"cloudinit,omitempty"`
-	Disk        *qemuDisk          `json:"disk,omitempty"`
-	Passthrough *qemuDisk          `json:"passthrough,omitempty"`
+	CdRom       *QemuCdRom
+	CloudInit   *QemuCloudInitDisk
+	Disk        *qemuDisk
+	Passthrough *qemuDisk
 }
 
 func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID uint, id string, params map[string]interface{}, changes *qemuUpdateChanges) {

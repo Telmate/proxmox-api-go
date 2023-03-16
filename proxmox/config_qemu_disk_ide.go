@@ -4,17 +4,17 @@ import "strconv"
 
 type QemuIdeDisk struct {
 	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup     bool              `json:"backup,omitempty"`
+	Backup     bool              `json:"backup"`
 	Bandwidth  QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache      QemuDiskCache     `json:"cache,omitempty"`
-	Discard    bool              `json:"discard,omitempty"`
-	EmulateSSD bool              `json:"emulatessd,omitempty"`
-	Format     QemuDiskFormat    `json:"format,omitempty"`
+	Discard    bool              `json:"discard"`
+	EmulateSSD bool              `json:"emulatessd"`
+	Format     QemuDiskFormat    `json:"format"`
 	Id         *uint             `json:"id,omitempty"`
-	Replicate  bool              `json:"replicate,omitempty"`
+	Replicate  bool              `json:"replicate"`
 	Serial     QemuDiskSerial    `json:"serial,omitempty"`
-	Size       uint              `json:"size,omitempty"`
-	Storage    string            `json:"storage,omitempty"`
+	Size       uint              `json:"size"`
+	Storage    string            `json:"storage"`
 }
 
 func (disk *QemuIdeDisk) convertDataStructure() *qemuDisk {
@@ -109,16 +109,16 @@ func (disks QemuIdeDisks) Validate() error {
 }
 
 type QemuIdePassthrough struct {
-	AsyncIO    QemuDiskAsyncIO
-	Backup     bool
-	Bandwidth  QemuDiskBandwidth
-	Cache      QemuDiskCache
-	Discard    bool
-	EmulateSSD bool
-	File       string
-	Replicate  bool
-	Serial     QemuDiskSerial `json:"serial,omitempty"`
-	Size       uint           //size is only returned and setting it has no effect
+	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup     bool              `json:"backup"`
+	Bandwidth  QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache      QemuDiskCache     `json:"cache,omitempty"`
+	Discard    bool              `json:"discard"`
+	EmulateSSD bool              `json:"emulatessd"`
+	File       string            `json:"file"`
+	Replicate  bool              `json:"replicate"`
+	Serial     QemuDiskSerial    `json:"serial,omitempty"`
+	Size       uint              `json:"size"` //size is only returned and setting it has no effect
 }
 
 func (passthrough *QemuIdePassthrough) convertDataStructure() *qemuDisk {
