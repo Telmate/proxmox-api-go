@@ -342,7 +342,7 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[st
 	return
 }
 
-func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu, err error) {
+func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error) {
 	// vmConfig Sample: map[ cpu:host
 	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
 	// ide2:local:iso/xxx-xx.iso,media=cdrom memory:2048
@@ -352,7 +352,7 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 	// description:Base image
 	// cores:2 ostype:l26
 
-	config = &ConfigQemu{}
+	config := ConfigQemu{}
 
 	if _, isSet := params["agent"]; isSet {
 		switch params["agent"].(type) {
@@ -656,8 +656,7 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 		}
 	}
 
-	return
-
+	return &config, nil
 }
 
 func (newConfig ConfigQemu) Update(vmr *VmRef, client *Client) (err error) {
