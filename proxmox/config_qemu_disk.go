@@ -53,7 +53,7 @@ func (cdRom QemuCdRom) mapToApiValues() string {
 }
 
 func (QemuCdRom) mapToStruct(settings qemuCdRom) *QemuCdRom {
-	if !settings.Passthrough {
+	if settings.File != "" {
 		return &QemuCdRom{
 			Iso: &IsoFile{
 				Storage: settings.Storage,
@@ -62,7 +62,7 @@ func (QemuCdRom) mapToStruct(settings qemuCdRom) *QemuCdRom {
 			},
 		}
 	}
-	return &QemuCdRom{Passthrough: false}
+	return &QemuCdRom{Passthrough: settings.Passthrough}
 }
 
 func (cdRom QemuCdRom) Validate() error {
@@ -102,10 +102,10 @@ func (qemuCdRom) mapToStruct(settings [][]string) *qemuCdRom {
 		return nil
 	}
 	if settings[0][0] == "none" {
-		return &qemuCdRom{}
+		return &qemuCdRom{CdRom: true}
 	}
 	if settings[0][0] == "cdrom" {
-		return &qemuCdRom{Passthrough: true}
+		return &qemuCdRom{CdRom: true, Passthrough: true}
 	}
 	tmpStorage := strings.Split(settings[0][0], ":")
 	if len(tmpStorage) > 1 {
