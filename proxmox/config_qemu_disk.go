@@ -313,6 +313,9 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		}
 	}
 
+	// Replicate defaults to true
+	disk.Replicate = true
+
 	for _, e := range settings {
 		if e[0] == "aio" {
 			disk.AsyncIO = QemuDiskAsyncIO(e[1])
