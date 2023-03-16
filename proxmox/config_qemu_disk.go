@@ -145,7 +145,15 @@ type QemuCloudInitDisk struct {
 
 const (
 	Error_QemuCloudInitDisk_Storage string = "storage should not be empty"
+	Error_QemuCloudInitDisk_OnlyOne string = "only one cloud init disk may exist"
 )
+
+func (QemuCloudInitDisk) checkDuplicates(numberOFCloudInitDrives uint8) error {
+	if numberOFCloudInitDrives > 1 {
+		return errors.New(Error_QemuCloudInitDisk_OnlyOne)
+	}
+	return nil
+}
 
 // TODO write test
 func (cloudInit QemuCloudInitDisk) mapToApiValues() string {
@@ -745,26 +753,45 @@ func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, vmID 
 }
 
 func (storages QemuStorages) Validate() (err error) {
+	var numberOfCloudInitDevices uint8
+	var CloudInit uint8
 	if storages.Ide != nil {
-		err = storages.Ide.Validate()
+		CloudInit, err = storages.Ide.validate()
 		if err != nil {
+			return
+		}
+		numberOfCloudInitDevices += CloudInit
+		if err = (QemuCloudInitDisk{}.checkDuplicates(numberOfCloudInitDevices)); err != nil {
 			return
 		}
 	}
 	if storages.Sata != nil {
-		err = storages.Sata.Validate()
+		CloudInit, err = storages.Sata.validate()
 		if err != nil {
+			return
+		}
+		numberOfCloudInitDevices += CloudInit
+		if err = (QemuCloudInitDisk{}.checkDuplicates(numberOfCloudInitDevices)); err != nil {
 			return
 		}
 	}
 	if storages.Scsi != nil {
-		err = storages.Scsi.Validate()
+		CloudInit, err = storages.Scsi.validate()
 		if err != nil {
+			return
+		}
+		numberOfCloudInitDevices += CloudInit
+		if err = (QemuCloudInitDisk{}.checkDuplicates(numberOfCloudInitDevices)); err != nil {
 			return
 		}
 	}
 	if storages.VirtIO != nil {
-		err = storages.VirtIO.Validate()
+		CloudInit, err = storages.VirtIO.validate()
+		if err != nil {
+			return
+		}
+		numberOfCloudInitDevices += CloudInit
+		err = QemuCloudInitDisk{}.checkDuplicates(numberOfCloudInitDevices)
 	}
 	return
 }

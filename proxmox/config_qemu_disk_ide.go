@@ -95,17 +95,27 @@ func (QemuIdeDisks) mapToStruct(params map[string]interface{}) *QemuIdeDisks {
 	return nil
 }
 
-func (disks QemuIdeDisks) Validate() error {
+func (disks QemuIdeDisks) Validate() (err error) {
+	_, err = disks.validate()
+	return
+}
+
+func (disks QemuIdeDisks) validate() (numberOfCloudInitDevices uint8, err error) {
 	diskMap := disks.mapToIntMap()
+	var cloudInit uint8
 	for _, e := range diskMap {
 		if e != nil {
-			err := e.Validate()
+			cloudInit, err = e.validate()
 			if err != nil {
-				return err
+				return
+			}
+			numberOfCloudInitDevices += cloudInit
+			if err = (QemuCloudInitDisk{}.checkDuplicates(numberOfCloudInitDevices)); err != nil {
+				return
 			}
 		}
 	}
-	return nil
+	return
 }
 
 type QemuIdePassthrough struct {
@@ -213,6 +223,11 @@ func (QemuIdeStorage) mapToStruct(param string) *QemuIdeStorage {
 }
 
 func (storage QemuIdeStorage) Validate() (err error) {
+	_, err = storage.validate()
+	return
+}
+
+func (storage QemuIdeStorage) validate() (CloudInit uint8, err error) {
 	// First check if more than one item is nil
 	var subTypeSet bool
 	if storage.CdRom != nil {
@@ -223,6 +238,7 @@ func (storage QemuIdeStorage) Validate() (err error) {
 			return
 		}
 		subTypeSet = true
+		CloudInit = 1
 	}
 	if storage.Disk != nil {
 		if err = diskSubtypeSet(subTypeSet); err != nil {

@@ -98,6 +98,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			},
 		},
 	}
+	validCloudInit := QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}
 	testData := []struct {
 		name  string
 		input ConfigQemu
@@ -126,13 +127,17 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			}},
 		},
 		// Valid Disks CloudInit
-		{name: "Valid Disks CloudInit",
-			input: ConfigQemu{Disks: &QemuStorages{
-				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}},
-				Sata:   &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}},
-				Scsi:   &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}},
-				VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}},
-			}},
+		{name: "Valid Disks CloudInit Ide",
+			input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit}}}},
+		},
+		{name: "Valid Disks CloudInit Sata",
+			input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &validCloudInit}}}},
+		},
+		{name: "Valid Disks CloudInit Scsi",
+			input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &validCloudInit}}}},
+		},
+		{name: "Valid Disks CloudInit VirtIO",
+			input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit}}}},
 		},
 		// Valid Disks Disk
 		{name: "Valid Disks Disk",
@@ -604,6 +609,52 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		{name: "Invalid Disks CdRom VirtIO errors.New(Error_QemuCdRom_MutuallyExclusive)",
 			input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}},
 			err:   errors.New(Error_QemuCdRom_MutuallyExclusive),
+		},
+		// Invalid Disks CloudInit Duplicate
+		{name: "Invalid Disks CloudInit Duplicate errors.New(Error_QemuCloudInitDisk_OnlyOne)",
+			input: ConfigQemu{Disks: &QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit}},
+				Sata:   &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &validCloudInit}},
+				Scsi:   &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &validCloudInit}},
+				VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit}},
+			}},
+			err: errors.New(Error_QemuCloudInitDisk_OnlyOne),
+		},
+		{name: "Invalid Disks CloudInit Duplicate Ide errors.New(Error_QemuCloudInitDisk_OnlyOne)",
+			input: ConfigQemu{Disks: &QemuStorages{
+				Ide: &QemuIdeDisks{
+					Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit},
+					Disk_1: &QemuIdeStorage{CloudInit: &validCloudInit},
+				},
+			}},
+			err: errors.New(Error_QemuCloudInitDisk_OnlyOne),
+		},
+		{name: "Invalid Disks CloudInit Duplicate Sata errors.New(Error_QemuCloudInitDisk_OnlyOne)",
+			input: ConfigQemu{Disks: &QemuStorages{
+				Sata: &QemuSataDisks{
+					Disk_0: &QemuSataStorage{CloudInit: &validCloudInit},
+					Disk_1: &QemuSataStorage{CloudInit: &validCloudInit},
+				},
+			}},
+			err: errors.New(Error_QemuCloudInitDisk_OnlyOne),
+		},
+		{name: "Invalid Disks CloudInit Duplicate Scsi errors.New(Error_QemuCloudInitDisk_OnlyOne)",
+			input: ConfigQemu{Disks: &QemuStorages{
+				Scsi: &QemuScsiDisks{
+					Disk_0: &QemuScsiStorage{CloudInit: &validCloudInit},
+					Disk_1: &QemuScsiStorage{CloudInit: &validCloudInit},
+				},
+			}},
+			err: errors.New(Error_QemuCloudInitDisk_OnlyOne),
+		},
+		{name: "Invalid Disks CloudInit Duplicate VirtIO errors.New(Error_QemuCloudInitDisk_OnlyOne)",
+			input: ConfigQemu{Disks: &QemuStorages{
+				VirtIO: &QemuVirtIODisks{
+					Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit},
+					Disk_1: &QemuVirtIOStorage{CloudInit: &validCloudInit},
+				},
+			}},
+			err: errors.New(Error_QemuCloudInitDisk_OnlyOne),
 		},
 		// Invalid Disks CloudInit Ide
 		{name: `Invalid Disks CloudInit Ide QemuDiskFormat("").Error() 0`,
