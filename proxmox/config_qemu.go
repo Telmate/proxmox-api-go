@@ -116,11 +116,17 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 }
 
 func (config *ConfigQemu) defaults() {
+	if config == nil {
+		return
+	}
 	if config.Boot == "" {
 		config.Boot = "cdn"
 	}
 	if config.Bios == "" {
 		config.Bios = "seabios"
+	}
+	if config.EFIDisk == nil {
+		config.EFIDisk = QemuDevice{}
 	}
 	if config.Onboot == nil {
 		config.Onboot = PointerBool(true)
@@ -128,20 +134,44 @@ func (config *ConfigQemu) defaults() {
 	if config.Hotplug == "" {
 		config.Hotplug = "network,disk,usb"
 	}
+	if config.Ipconfig == nil {
+		config.Ipconfig = IpconfigMap{}
+	}
 	if config.QemuCores == 0 {
 		config.QemuCores = 1
 	}
 	if config.QemuCpu == "" {
 		config.QemuCpu = "host"
 	}
+	if config.QemuDisks == nil {
+		config.QemuDisks = QemuDevices{}
+	}
 	if config.QemuKVM == nil {
 		config.QemuKVM = PointerBool(true)
+	}
+	if config.QemuNetworks == nil {
+		config.QemuNetworks = QemuDevices{}
 	}
 	if config.QemuOs == "" {
 		config.QemuOs = "other"
 	}
+	if config.QemuPCIDevices == nil {
+		config.QemuPCIDevices = QemuDevices{}
+	}
+	if config.QemuSerials == nil {
+		config.QemuSerials = QemuDevices{}
+	}
 	if config.QemuSockets == 0 {
 		config.QemuSockets = 1
+	}
+	if config.QemuUnusedDisks == nil {
+		config.QemuUnusedDisks = QemuDevices{}
+	}
+	if config.QemuUsbs == nil {
+		config.QemuUsbs = QemuDevices{}
+	}
+	if config.QemuVga == nil {
+		config.QemuVga = QemuDevice{}
 	}
 	if config.Scsihw == "" {
 		config.Scsihw = "lsi"
@@ -149,6 +179,7 @@ func (config *ConfigQemu) defaults() {
 	if config.Tablet == nil {
 		config.Tablet = PointerBool(true)
 	}
+
 }
 
 func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[string]interface{}, markedDisks *qemuUpdateChanges, err error) {
@@ -321,17 +352,7 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 	// description:Base image
 	// cores:2 ostype:l26
 
-	config = &ConfigQemu{
-		EFIDisk:         QemuDevice{},
-		QemuDisks:       QemuDevices{},
-		QemuUnusedDisks: QemuDevices{},
-		QemuVga:         QemuDevice{},
-		QemuNetworks:    QemuDevices{},
-		QemuSerials:     QemuDevices{},
-		QemuPCIDevices:  QemuDevices{},
-		QemuUsbs:        QemuDevices{},
-		Ipconfig:        IpconfigMap{},
-	}
+	config = &ConfigQemu{}
 
 	if _, isSet := params["agent"]; isSet {
 		switch params["agent"].(type) {
@@ -443,11 +464,14 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 		}
 	}
 
-	for _, ipconfigName := range ipconfigNames {
-		ipConfStr := params[ipconfigName]
-		id := rxDeviceID.FindStringSubmatch(ipconfigName)
-		ipconfigID, _ := strconv.Atoi(id[0])
-		config.Ipconfig[ipconfigID] = ipConfStr
+	if len(ipconfigNames) > 0 {
+		config.Ipconfig = IpconfigMap{}
+		for _, ipconfigName := range ipconfigNames {
+			ipConfStr := params[ipconfigName]
+			id := rxDeviceID.FindStringSubmatch(ipconfigName)
+			ipconfigID, _ := strconv.Atoi(id[0])
+			config.Ipconfig[ipconfigID] = ipConfStr
+		}
 	}
 
 	config.Disks = QemuStorages{}.mapToStruct(params)
@@ -469,29 +493,34 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 	// 	log.Printf("[DEBUG] unusedDiskNames: %v", unusedDiskNames)
 	// }
 
-	for _, unusedDiskName := range unusedDiskNames {
-		unusedDiskConfStr := params[unusedDiskName].(string)
-		finalDiskConfMap := QemuDevice{}
+	if len(unusedDiskNames) > 0 {
+		config.QemuUnusedDisks = QemuDevices{}
+		for _, unusedDiskName := range unusedDiskNames {
+			unusedDiskConfStr := params[unusedDiskName].(string)
+			finalDiskConfMap := QemuDevice{}
 
-		// parse "unused0" to get the id '0' as an int
-		id := rxDeviceID.FindStringSubmatch(unusedDiskName)
-		diskID, err := strconv.Atoi(id[0])
-		if err != nil {
-			return nil, fmt.Errorf(fmt.Sprintf("Unable to parse unused disk id from input string '%v' tried to convert '%v' to integer.", unusedDiskName, diskID))
+			// parse "unused0" to get the id '0' as an int
+			id := rxDeviceID.FindStringSubmatch(unusedDiskName)
+			diskID, err := strconv.Atoi(id[0])
+			if err != nil {
+				return nil, fmt.Errorf(fmt.Sprintf("Unable to parse unused disk id from input string '%v' tried to convert '%v' to integer.", unusedDiskName, diskID))
+			}
+			finalDiskConfMap["slot"] = diskID
+
+			// parse the attributes from the unused disk
+			// extract the storage and file path from the unused disk entry
+			parsedUnusedDiskMap := ParsePMConf(unusedDiskConfStr, "storage+file")
+			storageName, fileName := ParseSubConf(parsedUnusedDiskMap["storage+file"].(string), ":")
+			finalDiskConfMap["storage"] = storageName
+			finalDiskConfMap["file"] = fileName
+
+			config.QemuUnusedDisks[diskID] = finalDiskConfMap
+			config.QemuUnusedDisks[diskID] = finalDiskConfMap
+			config.QemuUnusedDisks[diskID] = finalDiskConfMap
 		}
-		finalDiskConfMap["slot"] = diskID
-
-		// parse the attributes from the unused disk
-		// extract the storage and file path from the unused disk entry
-		parsedUnusedDiskMap := ParsePMConf(unusedDiskConfStr, "storage+file")
-		storageName, fileName := ParseSubConf(parsedUnusedDiskMap["storage+file"].(string), ":")
-		finalDiskConfMap["storage"] = storageName
-		finalDiskConfMap["file"] = fileName
-
-		config.QemuUnusedDisks[diskID] = finalDiskConfMap
 	}
-
 	//Display
+
 	if vga, isSet := params["vga"]; isSet {
 		vgaList := strings.Split(vga.(string), ",")
 		vgaMap := QemuDevice{}
