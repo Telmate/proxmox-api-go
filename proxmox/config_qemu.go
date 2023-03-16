@@ -115,6 +115,42 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	return
 }
 
+func (config *ConfigQemu) defaults() {
+	if config.Boot == "" {
+		config.Boot = "cdn"
+	}
+	if config.Bios == "" {
+		config.Bios = "seabios"
+	}
+	if config.Onboot == nil {
+		config.Onboot = PointerBool(true)
+	}
+	if config.Hotplug == "" {
+		config.Hotplug = "network,disk,usb"
+	}
+	if config.QemuCores == 0 {
+		config.QemuCores = 1
+	}
+	if config.QemuCpu == "" {
+		config.QemuCpu = "host"
+	}
+	if config.QemuKVM == nil {
+		config.QemuKVM = PointerBool(true)
+	}
+	if config.QemuOs == "" {
+		config.QemuOs = "other"
+	}
+	if config.QemuSockets == 0 {
+		config.QemuSockets = 1
+	}
+	if config.Scsihw == "" {
+		config.Scsihw = "lsi"
+	}
+	if config.Tablet == nil {
+		config.Tablet = PointerBool(true)
+	}
+}
+
 func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[string]interface{}, markedDisks *qemuUpdateChanges, err error) {
 
 	var itemsToDelete string
@@ -318,16 +354,12 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 	//boot by default from hard disk (c), CD-ROM (d), network (n).
 	if _, isSet := params["boot"]; isSet {
 		config.Boot = params["boot"].(string)
-	} else {
-		config.Boot = "cdn"
 	}
 	if _, isSet := params["bootdisk"]; isSet {
 		config.BootDisk = params["bootdisk"].(string)
 	}
 	if _, isSet := params["bios"]; isSet {
 		config.Bios = params["bios"].(string)
-	} else {
-		config.Bios = "seabios"
 	}
 	if _, isSet := params["cicustom"]; isSet {
 		config.CIcustom = params["cicustom"].(string)
@@ -344,8 +376,6 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 	//Can be network,disk,cpu,memory,usb
 	if _, isSet := params["hotplug"]; isSet {
 		config.Hotplug = params["hotplug"].(string)
-	} else {
-		config.Hotplug = "network,disk,usb"
 	}
 	if _, isSet := params["hookscript"]; isSet {
 		config.Hookscript = params["hookscript"].(string)
@@ -361,36 +391,24 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 	}
 	if _, isSet := params["onboot"]; isSet {
 		config.Onboot = PointerBool(Itob(int(params["onboot"].(float64))))
-	} else {
-		config.Onboot = PointerBool(true)
 	}
 	if _, isSet := params["cores"]; isSet {
 		config.QemuCores = int(params["cores"].(float64))
-	} else {
-		config.QemuCores = 1
 	}
 	if _, isSet := params["cpu"]; isSet {
 		config.QemuCpu = params["cpu"].(string)
-	} else {
-		config.QemuCpu = "host"
 	}
 	if _, isSet := params["kvm"]; isSet {
 		config.QemuKVM = PointerBool(Itob(int(params["kvm"].(float64))))
-	} else {
-		config.QemuKVM = PointerBool(true)
 	}
 	if _, isSet := params["numa"]; isSet {
 		config.QemuNuma = PointerBool(Itob(int(params["numa"].(float64))))
 	}
 	if _, isSet := params["ostype"]; isSet {
 		config.QemuOs = params["ostype"].(string)
-	} else {
-		config.QemuOs = "other"
 	}
 	if _, isSet := params["sockets"]; isSet {
 		config.QemuSockets = int(params["sockets"].(float64))
-	} else {
-		config.QemuSockets = 1
 	}
 	if _, isSet := params["vcpus"]; isSet {
 		vCpu := int(params["vcpus"].(float64))
@@ -400,8 +418,6 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 	}
 	if _, isSet := params["scsihw"]; isSet {
 		config.Scsihw = params["scsihw"].(string)
-	} else {
-		config.Scsihw = "lsi"
 	}
 	if _, isSet := params["searchdomain"]; isSet {
 		config.Searchdomain = params["searchdomain"].(string)
@@ -414,8 +430,6 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (config *ConfigQemu
 	}
 	if _, isSet := params["tablet"]; isSet {
 		config.Tablet = PointerBool(Itob(int(params["tablet"].(float64))))
-	} else {
-		config.Tablet = PointerBool(true)
 	}
 	if _, isSet := params["tags"]; isSet {
 		config.Tags = strings.TrimSpace(params["tags"].(string))
@@ -987,7 +1001,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if err != nil {
 		return
 	}
-
+	config.defaults()
 	// HAstate is return by the api for a vm resource type but not the HAgroup
 	err = client.ReadVMHA(vmr)
 	if err == nil {
