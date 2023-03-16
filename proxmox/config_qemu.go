@@ -540,39 +540,42 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 		}
 	}
 
-	for _, nicName := range nicNames {
-		nicConfStr := params[nicName]
-		nicConfList := strings.Split(nicConfStr.(string), ",")
+	if len(nicNames) > 0 {
+		config.QemuNetworks = QemuDevices{}
+		for _, nicName := range nicNames {
+			nicConfStr := params[nicName]
+			nicConfList := strings.Split(nicConfStr.(string), ",")
 
-		id := rxDeviceID.FindStringSubmatch(nicName)
-		nicID, _ := strconv.Atoi(id[0])
-		model, macaddr := ParseSubConf(nicConfList[0], "=")
+			id := rxDeviceID.FindStringSubmatch(nicName)
+			nicID, _ := strconv.Atoi(id[0])
+			model, macaddr := ParseSubConf(nicConfList[0], "=")
 
-		// Add model and MAC address.
-		nicConfMap := QemuDevice{
-			"id":      nicID,
-			"model":   model,
-			"macaddr": macaddr,
-		}
+			// Add model and MAC address.
+			nicConfMap := QemuDevice{
+				"id":      nicID,
+				"model":   model,
+				"macaddr": macaddr,
+			}
 
-		// Add rest of device config.
-		nicConfMap.readDeviceConfig(nicConfList[1:])
-		switch nicConfMap["firewall"] {
-		case 1:
-			nicConfMap["firewall"] = true
-		case 0:
-			nicConfMap["firewall"] = false
-		}
-		switch nicConfMap["link_down"] {
-		case 1:
-			nicConfMap["link_down"] = true
-		case 0:
-			nicConfMap["link_down"] = false
-		}
+			// Add rest of device config.
+			nicConfMap.readDeviceConfig(nicConfList[1:])
+			switch nicConfMap["firewall"] {
+			case 1:
+				nicConfMap["firewall"] = true
+			case 0:
+				nicConfMap["firewall"] = false
+			}
+			switch nicConfMap["link_down"] {
+			case 1:
+				nicConfMap["link_down"] = true
+			case 0:
+				nicConfMap["link_down"] = false
+			}
 
-		// And device config to networks.
-		if len(nicConfMap) > 0 {
-			config.QemuNetworks[nicID] = nicConfMap
+			// And device config to networks.
+			if len(nicConfMap) > 0 {
+				config.QemuNetworks[nicID] = nicConfMap
+			}
 		}
 	}
 
@@ -585,18 +588,21 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 		}
 	}
 
-	for _, serialName := range serialNames {
-		id := rxDeviceID.FindStringSubmatch(serialName)
-		serialID, _ := strconv.Atoi(id[0])
+	if len(serialNames) > 0 {
+		config.QemuSerials = QemuDevices{}
+		for _, serialName := range serialNames {
+			id := rxDeviceID.FindStringSubmatch(serialName)
+			serialID, _ := strconv.Atoi(id[0])
 
-		serialConfMap := QemuDevice{
-			"id":   serialID,
-			"type": params[serialName],
-		}
+			serialConfMap := QemuDevice{
+				"id":   serialID,
+				"type": params[serialName],
+			}
 
-		// And device config to serials map.
-		if len(serialConfMap) > 0 {
-			config.QemuSerials[serialID] = serialConfMap
+			// And device config to serials map.
+			if len(serialConfMap) > 0 {
+				config.QemuSerials[serialID] = serialConfMap
+			}
 		}
 	}
 
@@ -609,26 +615,29 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 		}
 	}
 
-	for _, usbName := range usbNames {
-		usbConfStr := params[usbName]
-		usbConfList := strings.Split(usbConfStr.(string), ",")
-		id := rxDeviceID.FindStringSubmatch(usbName)
-		usbID, _ := strconv.Atoi(id[0])
-		_, host := ParseSubConf(usbConfList[0], "=")
+	if len(usbNames) > 0 {
+		config.QemuUsbs = QemuDevices{}
+		for _, usbName := range usbNames {
+			usbConfStr := params[usbName]
+			usbConfList := strings.Split(usbConfStr.(string), ",")
+			id := rxDeviceID.FindStringSubmatch(usbName)
+			usbID, _ := strconv.Atoi(id[0])
+			_, host := ParseSubConf(usbConfList[0], "=")
 
-		usbConfMap := QemuDevice{
-			"id":   usbID,
-			"host": host,
-		}
+			usbConfMap := QemuDevice{
+				"id":   usbID,
+				"host": host,
+			}
 
-		usbConfMap.readDeviceConfig(usbConfList[1:])
-		if usbConfMap["usb3"] == 1 {
-			usbConfMap["usb3"] = true
-		}
+			usbConfMap.readDeviceConfig(usbConfList[1:])
+			if usbConfMap["usb3"] == 1 {
+				usbConfMap["usb3"] = true
+			}
 
-		// And device config to usbs map.
-		if len(usbConfMap) > 0 {
-			config.QemuUsbs[usbID] = usbConfMap
+			// And device config to usbs map.
+			if len(usbConfMap) > 0 {
+				config.QemuUsbs[usbID] = usbConfMap
+			}
 		}
 	}
 
@@ -641,18 +650,21 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 		}
 	}
 
-	for _, hostPCIname := range hostPCInames {
-		hostPCIConfStr := params[hostPCIname]
-		hostPCIConfList := strings.Split(hostPCIConfStr.(string), ",")
-		id := rxPCIName.FindStringSubmatch(hostPCIname)
-		hostPCIID, _ := strconv.Atoi(id[0])
-		hostPCIConfMap := QemuDevice{
-			"id": hostPCIID,
-		}
-		hostPCIConfMap.readDeviceConfig(hostPCIConfList)
-		// And device config to usbs map.
-		if len(hostPCIConfMap) > 0 {
-			config.QemuPCIDevices[hostPCIID] = hostPCIConfMap
+	if len(hostPCInames) > 0 {
+		config.QemuPCIDevices = QemuDevices{}
+		for _, hostPCIname := range hostPCInames {
+			hostPCIConfStr := params[hostPCIname]
+			hostPCIConfList := strings.Split(hostPCIConfStr.(string), ",")
+			id := rxPCIName.FindStringSubmatch(hostPCIname)
+			hostPCIID, _ := strconv.Atoi(id[0])
+			hostPCIConfMap := QemuDevice{
+				"id": hostPCIID,
+			}
+			hostPCIConfMap.readDeviceConfig(hostPCIConfList)
+			// And device config to usbs map.
+			if len(hostPCIConfMap) > 0 {
+				config.QemuPCIDevices[hostPCIID] = hostPCIConfMap
+			}
 		}
 	}
 
