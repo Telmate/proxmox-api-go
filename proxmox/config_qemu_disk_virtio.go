@@ -201,6 +201,7 @@ type QemuVirtIOPassthrough struct {
 	File      string            `json:"file"`
 	IOThread  bool              `json:"iothread"`
 	ReadOnly  bool              `json:"readonly"`
+	Replicate bool              `json:"replicate"`
 	Serial    QemuDiskSerial    `json:"serial,omitempty"`
 	Size      uint              `json:"size"` //size is only returned and setting it has no effect
 }
@@ -215,6 +216,7 @@ func (passthrough *QemuVirtIOPassthrough) convertDataStructure() *qemuDisk {
 		File:      passthrough.File,
 		IOThread:  passthrough.IOThread,
 		ReadOnly:  passthrough.ReadOnly,
+		Replicate: passthrough.Replicate,
 		Serial:    passthrough.Serial,
 		Type:      virtIO,
 	}
@@ -292,6 +294,7 @@ func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
 		File:      tmpDisk.File,
 		IOThread:  tmpDisk.IOThread,
 		ReadOnly:  tmpDisk.ReadOnly,
+		Replicate: tmpDisk.Replicate,
 		Serial:    tmpDisk.Serial,
 		Size:      tmpDisk.Size,
 	}}
