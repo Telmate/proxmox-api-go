@@ -236,7 +236,9 @@ func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 	if disk.Discard {
 		settings = settings + ",discard=on"
 	}
-	// format
+	if disk.Format != "" {
+		settings = settings + ",format=" + string(disk.Format)
+	}
 	// media
 
 	if disk.Bandwidth.Iops.ReadLimit.Concurrent != 0 {
