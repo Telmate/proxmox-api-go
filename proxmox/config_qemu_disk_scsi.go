@@ -87,7 +87,7 @@ func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID uint
 	diskMap := disks.mapToIntMap()
 	currentDiskMap := tmpCurrentDisks.mapToIntMap()
 	for i := range diskMap {
-		diskMap[i].convertDataStructure().markDiskChanges(currentDiskMap[i].convertDataStructure(), vmID, "scsi"+strconv.Itoa(int(i)), params, changes)
+		diskMap[i].convertDataStructure().markDiskChanges(currentDiskMap[i].convertDataStructure(), vmID, QemuDiskId("scsi"+strconv.Itoa(int(i))), params, changes)
 	}
 }
 

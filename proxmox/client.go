@@ -788,6 +788,7 @@ func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatu
 	return
 }
 
+// DEPRECATED use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	if disk == "" {

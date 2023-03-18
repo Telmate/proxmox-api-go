@@ -319,7 +319,7 @@ func Test_QemuDiskCache_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskFormat_Validate(t *testing.T) {
-	testData := []struct {
+	tests := []struct {
 		name  string
 		input QemuDiskFormat
 		err   error
@@ -336,6 +336,98 @@ func Test_QemuDiskFormat_Validate(t *testing.T) {
 		{name: "Invalid 00", input: "bla", err: QemuDiskFormat("").Error()},
 		{name: "Invalid 01", input: "invalid value", err: QemuDiskFormat("").Error()},
 		{name: "Invalid 02", input: "!@#$", err: QemuDiskFormat("").Error()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			if test.err != nil {
+				require.Equal(t, test.input.Validate(), test.err, test.name)
+			} else {
+				require.NoError(t, test.input.Validate(), test.name)
+			}
+		})
+	}
+}
+
+func Test_QemuDiskId_Validate(t *testing.T) {
+	testData := []struct {
+		name  string
+		input QemuDiskId
+		err   error
+	}{
+		// Invalid
+		{name: "Invalid 00", input: "ide4", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 01", input: "ide01", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 02", input: "ide10", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 03", input: "sata6", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 04", input: "sata01", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 05", input: "sata10", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 06", input: "scsi31", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 07", input: "scsi01", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 08", input: "scsi100", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 09", input: "virtio16", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 10", input: "virtio01", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 11", input: "virtio100", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 12", input: "bla", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 13", input: "invalid value", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		{name: "Invalid 14", input: "!@#$", err: errors.New(ERROR_QemuDiskId_Invalid)},
+		// Valid
+		{name: "Valid 01", input: "ide0"},
+		{name: "Valid 02", input: "ide1"},
+		{name: "Valid 03", input: "ide2"},
+		{name: "Valid 04", input: "ide3"},
+		{name: "Valid 05", input: "sata0"},
+		{name: "Valid 06", input: "sata1"},
+		{name: "Valid 07", input: "sata2"},
+		{name: "Valid 08", input: "sata3"},
+		{name: "Valid 09", input: "sata4"},
+		{name: "Valid 10", input: "sata5"},
+		{name: "Valid 11", input: "scsi0"},
+		{name: "Valid 12", input: "scsi1"},
+		{name: "Valid 13", input: "scsi2"},
+		{name: "Valid 14", input: "scsi3"},
+		{name: "Valid 15", input: "scsi4"},
+		{name: "Valid 16", input: "scsi5"},
+		{name: "Valid 17", input: "scsi6"},
+		{name: "Valid 18", input: "scsi7"},
+		{name: "Valid 19", input: "scsi8"},
+		{name: "Valid 20", input: "scsi9"},
+		{name: "Valid 21", input: "scsi10"},
+		{name: "Valid 22", input: "scsi11"},
+		{name: "Valid 23", input: "scsi12"},
+		{name: "Valid 24", input: "scsi13"},
+		{name: "Valid 25", input: "scsi14"},
+		{name: "Valid 26", input: "scsi15"},
+		{name: "Valid 27", input: "scsi16"},
+		{name: "Valid 28", input: "scsi17"},
+		{name: "Valid 29", input: "scsi18"},
+		{name: "Valid 30", input: "scsi19"},
+		{name: "Valid 31", input: "scsi20"},
+		{name: "Valid 32", input: "scsi21"},
+		{name: "Valid 33", input: "scsi22"},
+		{name: "Valid 34", input: "scsi23"},
+		{name: "Valid 35", input: "scsi24"},
+		{name: "Valid 36", input: "scsi25"},
+		{name: "Valid 37", input: "scsi26"},
+		{name: "Valid 38", input: "scsi27"},
+		{name: "Valid 39", input: "scsi28"},
+		{name: "Valid 40", input: "scsi29"},
+		{name: "Valid 41", input: "scsi30"},
+		{name: "Valid 42", input: "virtio0"},
+		{name: "Valid 43", input: "virtio1"},
+		{name: "Valid 44", input: "virtio2"},
+		{name: "Valid 45", input: "virtio3"},
+		{name: "Valid 46", input: "virtio4"},
+		{name: "Valid 47", input: "virtio5"},
+		{name: "Valid 48", input: "virtio6"},
+		{name: "Valid 49", input: "virtio7"},
+		{name: "Valid 50", input: "virtio8"},
+		{name: "Valid 51", input: "virtio9"},
+		{name: "Valid 52", input: "virtio10"},
+		{name: "Valid 53", input: "virtio11"},
+		{name: "Valid 54", input: "virtio12"},
+		{name: "Valid 55", input: "virtio13"},
+		{name: "Valid 56", input: "virtio14"},
+		{name: "Valid 57", input: "virtio15"},
 	}
 	for _, test := range testData {
 		t.Run(test.name, func(*testing.T) {
@@ -366,6 +458,111 @@ func Test_QemuDiskSerial_Validate(t *testing.T) {
 		name := fmt.Sprintf("illegal%03d", i)
 		t.Run(name, func(*testing.T) {
 			require.Error(t, QemuDiskSerial(test).Validate(), name)
+		})
+	}
+}
+
+func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
+	format_Raw := QemuDiskFormat_Raw
+	format_Qcow2 := QemuDiskFormat_Qcow2
+	tests := []struct {
+		name   string
+		delete bool
+		input  qemuDiskShort
+		output map[string]interface{}
+	}{
+		{name: "ALL",
+			delete: true,
+			input: qemuDiskShort{
+				Format:  &format_Raw,
+				Id:      "ide0",
+				Storage: "test0",
+			},
+			output: map[string]interface{}{
+				"disk":    "ide0",
+				"storage": "test0",
+				"delete":  "1",
+				"format":  "raw",
+			},
+		},
+		{name: "Format nil",
+			delete: true,
+			input: qemuDiskShort{
+				Id:      "sata4",
+				Storage: "aaa0",
+			},
+			output: map[string]interface{}{
+				"disk":    "sata4",
+				"storage": "aaa0",
+				"delete":  "1",
+			},
+		},
+		{name: "Delete false",
+			input: qemuDiskShort{
+				Format:  &format_Qcow2,
+				Id:      "scsi10",
+				Storage: "test0",
+			},
+			output: map[string]interface{}{
+				"format":  "qcow2",
+				"disk":    "scsi10",
+				"storage": "test0",
+			},
+		},
+		{name: "MINIMAL",
+			input: qemuDiskShort{
+				Id:      "virtio13",
+				Storage: "Test0",
+			},
+			output: map[string]interface{}{
+				"disk":    "virtio13",
+				"storage": "Test0",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, test.input.mapToApiValues(test.delete), test.name)
+		})
+	}
+}
+
+func Test_qemuDiskShort_Validate(t *testing.T) {
+	format_Raw := QemuDiskFormat_Raw
+	format_Invalid := QemuDiskFormat("invalid")
+	format_Empty := QemuDiskFormat("")
+	tests := []struct {
+		name  string
+		input qemuDiskShort
+		err   error
+	}{
+		// TODO Add cases when Storage has a custom type
+		// Invalid
+		{name: "Invalid 00", input: qemuDiskShort{Format: &format_Invalid},
+			err: QemuDiskFormat("").Error(),
+		},
+		{name: "Invalid 01", input: qemuDiskShort{Format: &format_Empty},
+			err: QemuDiskFormat("").Error(),
+		},
+		{name: "Invalid 02", input: qemuDiskShort{Id: "invalid"},
+			err: errors.New(ERROR_QemuDiskId_Invalid),
+		},
+		// Valid
+		{name: "Valid 00", input: qemuDiskShort{
+			Format: &format_Raw,
+			Id:     "ide0",
+		}},
+		{name: "Valid 01", input: qemuDiskShort{
+			Id: "ide0",
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			if test.err != nil {
+				require.Equal(t, test.input.Validate(), test.err, test.name)
+			} else {
+				require.NoError(t, test.input.Validate(), test.name)
+			}
 		})
 	}
 }

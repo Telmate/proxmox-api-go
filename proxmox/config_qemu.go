@@ -707,7 +707,7 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 
 	if markedDisks != nil {
 		for _, e := range markedDisks.Move {
-			_, err = client.MoveQemuDisk(vmr, e.Id, e.Storage)
+			_, err = e.move(true, vmr, client)
 			if err != nil {
 				return
 			}
