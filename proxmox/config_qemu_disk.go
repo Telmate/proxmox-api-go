@@ -236,7 +236,7 @@ func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 	if disk.Discard {
 		settings = settings + ",discard=on"
 	}
-	if disk.Format != "" {
+	if disk.Format != "" && create {
 		settings = settings + ",format=" + string(disk.Format)
 	}
 	// media
