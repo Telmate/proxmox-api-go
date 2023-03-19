@@ -97,7 +97,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		return
 	}
-	params, _, err := config.mapToApiValues(ConfigQemu{})
+	params, err := config.mapToApiValues(ConfigQemu{})
 	if err != nil {
 		return
 	}
@@ -182,7 +182,7 @@ func (config *ConfigQemu) defaults() {
 
 }
 
-func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[string]interface{}, markedDisks *qemuUpdateChanges, err error) {
+func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[string]interface{}, err error) {
 
 	var itemsToDelete string
 
@@ -299,15 +299,14 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[st
 	// Disks
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
-			markedDisks = config.Disks.markDiskChanges(*currentConfig.Disks, uint(config.VmID), params)
-			if markedDisks.Delete != "" {
-				itemsToDelete = AddToList(itemsToDelete, markedDisks.Delete)
-				markedDisks.Delete = ""
+			delete := config.Disks.mapToApiValues(*currentConfig.Disks, uint(config.VmID), params)
+			if delete != "" {
+				itemsToDelete = AddToList(itemsToDelete, delete)
 			}
 		}
 	} else {
 		if config.Disks != nil {
-			config.Disks.mapToApiValues(uint(config.VmID), params)
+			config.Disks.mapToApiValues(QemuStorages{}, uint(config.VmID), params)
 		}
 	}
 
@@ -700,12 +699,9 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 	if err != nil {
 		return
 	}
-	params, markedDisks, err := newConfig.mapToApiValues(*currentConfig)
-	if err != nil {
-		return
-	}
 
-	if markedDisks != nil {
+	if currentConfig != nil {
+		markedDisks := newConfig.Disks.markDiskChanges(*currentConfig.Disks)
 		for _, e := range markedDisks.Move {
 			_, err = e.move(true, vmr, client)
 			if err != nil {
@@ -714,6 +710,13 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 		}
 		for _, e := range markedDisks.Resize {
 			_, err = e.resize(vmr, client)
+			if err != nil {
+				return
+			}
+		}
+		// Moving disks changes the disk id. we need to get the config again if any disk was moved
+		if len(markedDisks.Move) != 0 {
+			currentConfig, err = NewConfigQemuFromApi(vmr, client)
 			if err != nil {
 				return
 			}
@@ -727,6 +730,16 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 			return
 		}
 		vmr.SetNode(newConfig.Node)
+	}
+
+	var params map[string]interface{}
+	if currentConfig != nil {
+		params, err = newConfig.mapToApiValues(*currentConfig)
+	} else {
+		params, err = newConfig.mapToApiValues(ConfigQemu{})
+	}
+	if err != nil {
+		return
 	}
 
 	_, err = client.PutWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")

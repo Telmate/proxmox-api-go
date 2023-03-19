@@ -50,7 +50,7 @@ type QemuSataDisks struct {
 }
 
 // TODO write test
-func (disks QemuSataDisks) mapToApiValues(currentDisks *QemuSataDisks, vmID uint, params map[string]interface{}, changes *qemuUpdateChanges) {
+func (disks QemuSataDisks) mapToApiValues(currentDisks *QemuSataDisks, vmID uint, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuSataDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -58,8 +58,9 @@ func (disks QemuSataDisks) mapToApiValues(currentDisks *QemuSataDisks, vmID uint
 	diskMap := disks.mapToIntMap()
 	currentDiskMap := tmpCurrentDisks.mapToIntMap()
 	for i := range diskMap {
-		diskMap[i].convertDataStructure().markDiskChanges(currentDiskMap[i].convertDataStructure(), vmID, QemuDiskId("sata"+strconv.Itoa(int(i))), params, changes)
+		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, QemuDiskId("sata"+strconv.Itoa(int(i))), params, delete)
 	}
+	return delete
 }
 
 func (disks QemuSataDisks) mapToIntMap() map[uint8]*QemuSataStorage {
@@ -105,6 +106,18 @@ func (QemuSataDisks) mapToStruct(params map[string]interface{}) *QemuSataDisks {
 		return &disks
 	}
 	return nil
+}
+
+func (disks QemuSataDisks) markDiskChanges(currentDisks *QemuSataDisks, changes *qemuUpdateChanges) {
+	tmpCurrentDisks := QemuSataDisks{}
+	if currentDisks != nil {
+		tmpCurrentDisks = *currentDisks
+	}
+	diskMap := disks.mapToIntMap()
+	currentDiskMap := tmpCurrentDisks.mapToIntMap()
+	for i := range diskMap {
+		diskMap[i].convertDataStructureMark().markChanges(currentDiskMap[i].convertDataStructureMark(), QemuDiskId("sata"+strconv.Itoa(int(i))), changes)
+	}
 }
 
 func (disks QemuSataDisks) Validate() (err error) {
@@ -186,6 +199,22 @@ func (storage *QemuSataStorage) convertDataStructure() *qemuStorage {
 		generalizedStorage.Passthrough = storage.Passthrough.convertDataStructure()
 	}
 	return &generalizedStorage
+}
+
+// converts to qemuDiskMark
+func (storage *QemuSataStorage) convertDataStructureMark() *qemuDiskMark {
+	if storage == nil {
+		return nil
+	}
+	if storage.Disk != nil {
+		return &qemuDiskMark{
+			Format:  storage.Disk.Format,
+			Size:    storage.Disk.Size,
+			Storage: storage.Disk.Storage,
+			Type:    ide,
+		}
+	}
+	return nil
 }
 
 // TODO write test

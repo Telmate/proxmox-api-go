@@ -580,7 +580,9 @@ func (format QemuDiskFormat) Validate() error {
 
 type QemuDiskId string
 
-const ERROR_QemuDiskId_Invalid string = "invalid Disk ID"
+const (
+	ERROR_QemuDiskId_Invalid string = "invalid Disk ID"
+)
 
 func (id QemuDiskId) Validate() error {
 	if len(id) >= 7 {
@@ -637,6 +639,42 @@ func (id QemuDiskId) Validate() error {
 	return errors.New(ERROR_QemuDiskId_Invalid)
 }
 
+type qemuDiskMark struct {
+	Format  QemuDiskFormat
+	Id      QemuDiskId
+	Size    uint
+	Storage string
+	Type    qemuDiskType
+}
+
+// Generate lists of disks that need to be moved and or resized
+func (disk *qemuDiskMark) markChanges(currentDisk *qemuDiskMark, id QemuDiskId, changes *qemuUpdateChanges) {
+	if disk == nil || currentDisk == nil {
+		return
+	}
+	// Disk
+	if disk.Size >= currentDisk.Size {
+		// Update
+		if disk.Size > currentDisk.Size {
+			changes.Resize = append(changes.Resize, qemuDiskResize{
+				Id:              id,
+				SizeInGigaBytes: disk.Size,
+			})
+		}
+		if disk.Storage != currentDisk.Storage || disk.Format != currentDisk.Format {
+			var format *QemuDiskFormat
+			if disk.Format != currentDisk.Format {
+				format = &disk.Format
+			}
+			changes.Move = append(changes.Move, qemuDiskShort{
+				Format:  format,
+				Id:      id,
+				Storage: disk.Storage,
+			})
+		}
+	}
+}
+
 type QemuDiskSerial string
 
 const (
@@ -668,6 +706,7 @@ func (disk qemuDiskResize) resize(vmr *VmRef, client *Client) (exitStatus string
 	return client.PutWithTask(map[string]interface{}{"disk": disk.Id, "size": strconv.Itoa(int(disk.SizeInGigaBytes)) + "G"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
 }
 
+// TODO rename to qemuDiskMove
 type qemuDiskShort struct {
 	Format  *QemuDiskFormat
 	Id      QemuDiskId
@@ -717,82 +756,64 @@ type qemuStorage struct {
 	Passthrough *qemuDisk
 }
 
-func (storage *qemuStorage) markDiskChanges(currentStorage *qemuStorage, vmID uint, id QemuDiskId, params map[string]interface{}, changes *qemuUpdateChanges) {
+func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID uint, id QemuDiskId, params map[string]interface{}, delete string) string {
 	if storage == nil {
-		return
+		return delete
 	}
 	// CDROM
 	if storage.CdRom != nil {
 		// Create or Update
 		params[string(id)] = storage.CdRom.mapToApiValues()
-		return
+		return delete
 	} else if currentStorage != nil && currentStorage.CdRom != nil && storage.CloudInit == nil && storage.Disk == nil && storage.Passthrough == nil {
 		// Delete
-		changes.Delete = AddToList(changes.Delete, string(id))
-		return
+		return AddToList(delete, string(id))
 	}
 	// CloudInit
 	if storage.CloudInit != nil {
 		// Create or Update
 		params[string(id)] = storage.CloudInit.mapToApiValues()
-		return
+		return delete
 	} else if currentStorage != nil && currentStorage.CloudInit != nil && storage.Disk == nil && storage.Passthrough == nil {
 		// Delete
-		changes.Delete = AddToList(changes.Delete, string(id))
-		return
+		return AddToList(delete, string(id))
 	}
 	// Disk
 	if storage.Disk != nil {
 		if currentStorage == nil || currentStorage.Disk == nil {
 			// Create
 			params[string(id)] = storage.Disk.mapToApiValues(vmID, true)
-			return
+			return delete
 		} else {
 			if storage.Disk.Size >= currentStorage.Disk.Size {
 				// Update
-				if storage.Disk.Size > currentStorage.Disk.Size {
-					changes.Resize = append(changes.Resize, qemuDiskResize{
-						Id:              id,
-						SizeInGigaBytes: storage.Disk.Size,
-					})
-				}
-				if storage.Disk.Id == nil {
-					storage.Disk.Id = currentStorage.Disk.Id
-				}
-				if storage.Disk.Storage != currentStorage.Disk.Storage || storage.Disk.Format != currentStorage.Disk.Format {
-					changes.Move = append(changes.Move, qemuDiskShort{
-						Format:  &storage.Disk.Format,
-						Id:      id,
-						Storage: storage.Disk.Storage,
-					})
-				}
+				storage.Disk.Id = currentStorage.Disk.Id
 				params[string(id)] = storage.Disk.mapToApiValues(vmID, false)
 			} else {
 				// Delete and Create
 				// creating a disk on top of an existing disk is the same as detaching the disk and creating a new one.
 				params[string(id)] = storage.Disk.mapToApiValues(vmID, true)
 			}
-			return
+			return delete
 		}
 	} else if currentStorage != nil && currentStorage.Disk != nil && storage.Passthrough == nil {
 		// Delete
-		changes.Delete = AddToList(changes.Delete, string(id))
-		return
+		return AddToList(delete, string(id))
 	}
 	// Passthrough
 	if storage.Passthrough != nil {
 		// Create or Update
 		params[string(id)] = storage.Passthrough.mapToApiValues(0, false)
-		return
+		return delete
 	} else if currentStorage != nil && currentStorage.Passthrough != nil {
 		// Delete
-		changes.Delete = AddToList(changes.Delete, string(id))
-		return
+		return AddToList(delete, string(id))
 	}
 	// Delete if no subtype was specified
 	if currentStorage != nil {
-		changes.Delete = AddToList(changes.Delete, string(id))
+		return AddToList(delete, string(id))
 	}
+	return delete
 }
 
 type QemuStorages struct {
@@ -802,19 +823,20 @@ type QemuStorages struct {
 	VirtIO *QemuVirtIODisks `json:"virtio,omitempty"`
 }
 
-func (storages QemuStorages) mapToApiValues(vmID uint, params map[string]interface{}) {
+func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, vmID uint, params map[string]interface{}) (delete string) {
 	if storages.Ide != nil {
-		storages.Ide.mapToApiValues(nil, vmID, params, nil)
+		delete = storages.Ide.mapToApiValues(currentStorages.Ide, vmID, params, delete)
 	}
 	if storages.Sata != nil {
-		storages.Sata.mapToApiValues(nil, vmID, params, nil)
+		delete = storages.Sata.mapToApiValues(currentStorages.Sata, vmID, params, delete)
 	}
 	if storages.Scsi != nil {
-		storages.Scsi.mapToApiValues(nil, vmID, params, nil)
+		delete = storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, params, delete)
 	}
 	if storages.VirtIO != nil {
-		storages.VirtIO.mapToApiValues(nil, vmID, params, nil)
+		delete = storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, params, delete)
 	}
+	return delete
 }
 
 func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {
@@ -830,19 +852,19 @@ func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {
 	return nil
 }
 
-func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages, vmID uint, params map[string]interface{}) *qemuUpdateChanges {
+func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages) *qemuUpdateChanges {
 	changes := &qemuUpdateChanges{}
 	if storages.Ide != nil {
-		storages.Ide.mapToApiValues(currentStorages.Ide, vmID, params, changes)
+		storages.Ide.markDiskChanges(currentStorages.Ide, changes)
 	}
 	if storages.Sata != nil {
-		storages.Sata.mapToApiValues(currentStorages.Sata, vmID, params, changes)
+		storages.Sata.markDiskChanges(currentStorages.Sata, changes)
 	}
 	if storages.Scsi != nil {
-		storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, params, changes)
+		storages.Scsi.markDiskChanges(currentStorages.Scsi, changes)
 	}
 	if storages.VirtIO != nil {
-		storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, params, changes)
+		storages.VirtIO.markDiskChanges(currentStorages.VirtIO, changes)
 	}
 	return changes
 }
@@ -892,7 +914,6 @@ func (storages QemuStorages) Validate() (err error) {
 }
 
 type qemuUpdateChanges struct {
-	Delete string
 	Move   []qemuDiskShort
 	Resize []qemuDiskResize
 }
