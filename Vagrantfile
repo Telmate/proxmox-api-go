@@ -1,5 +1,5 @@
 Vagrant.configure("2") do |config|
-    config.vm.box = "debian/buster64"
+    config.vm.box = "generic/debian11"
 
     config.vm.boot_timeout = 1800
     config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -18,6 +18,13 @@ Vagrant.configure("2") do |config|
     config.vm.provider :virtualbox do |vb|
         vb.memory = 2048
         vb.cpus = 2
+        vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+    end
+
+    config.vm.provider :vmware do |vm|
+        vm.vmx["memsize"] = "2048"
+        vm.vmx["numvcpus"] = "2"
+        vm.vmx["vhv.enable"] = "TRUE"
     end
 
     config.vm.provider :libvirt do |v, override|
