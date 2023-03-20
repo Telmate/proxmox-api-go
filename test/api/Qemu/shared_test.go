@@ -41,7 +41,7 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 		QemuOs:       "l26",
 		QemuCores:    1,
 		QemuSockets:  1,
-		QemuCpu:      "host",
+		QemuCpu:      "kvm64",
 		QemuNuma:     pxapi.PointerBool(false),
 		QemuKVM:      pxapi.PointerBool(true),
 		Hotplug:      "network,disk,usb",

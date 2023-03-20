@@ -1,11 +1,13 @@
 package api_test
 
 import (
-    "github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	//	"os"
-	"github.com/Telmate/proxmox-api-go/test/api"
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
+	api_test "github.com/Telmate/proxmox-api-go/test/api"
 )
 
 var account = `
@@ -21,7 +23,7 @@ var account = `
 }`
 
 func Test_Create_Acme_Account(t *testing.T) {
-	Test := api_test.Test {}
+	Test := api_test.Test{}
 	_ = Test.CreateTest()
 	acmeAccount, _ := pxapi.NewConfigAcmeAccountFromJson([]byte(account))
 	err := acmeAccount.CreateAcmeAccount("test", Test.GetClient())
@@ -38,7 +40,7 @@ func Test_Acme_Account_Is_Added(t *testing.T) {
 }
 
 func Test_Remove_Acme_Account(t *testing.T) {
-	Test := api_test.Test {}
+	Test := api_test.Test{}
 	_ = Test.CreateTest()
 	_, err := Test.GetClient().DeleteAcmeAccount("test")
 
