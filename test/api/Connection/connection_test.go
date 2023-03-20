@@ -1,13 +1,13 @@
 package api_test
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
-	"github.com/Telmate/proxmox-api-go/test/api"
+
+	api_test "github.com/Telmate/proxmox-api-go/test/api"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Connection_Certificate_No_Validation(t *testing.T) {
-	api_test.SetEnvironmentVariables()
 	Test := api_test.Test{
 		RequireSSL: false,
 	}
@@ -16,7 +16,6 @@ func Test_Connection_Certificate_No_Validation(t *testing.T) {
 }
 
 func Test_Connection_Certificate_Validation(t *testing.T) {
-	api_test.SetEnvironmentVariables()
 	Test := api_test.Test{
 		RequireSSL: true,
 	}
