@@ -11,10 +11,6 @@ func _create_vmref() (ref *pxapi.VmRef) {
 	return ref
 }
 
-func BoolPointer(b bool) *bool {
-	return &b
-}
-
 func _create_vm_spec(network bool) pxapi.ConfigQemu {
 
 	disks := make(pxapi.QemuDevices)
