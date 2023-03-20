@@ -884,6 +884,7 @@ func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {
 	return nil
 }
 
+// mark disk that need to be moved or resized
 func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages) *qemuUpdateChanges {
 	changes := &qemuUpdateChanges{}
 	if storages.Ide != nil {
