@@ -78,7 +78,6 @@ type QemuScsiDisks struct {
 	Disk_30 *QemuScsiStorage `json:"30,omitempty"`
 }
 
-// TODO write test
 func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID uint, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuScsiDisks{}
 	if currentDisks != nil {
@@ -128,7 +127,6 @@ func (disks QemuScsiDisks) mapToIntMap() map[uint8]*QemuScsiStorage {
 	}
 }
 
-// TODO write test
 func (QemuScsiDisks) mapToStruct(params map[string]interface{}) *QemuScsiDisks {
 	disks := QemuScsiDisks{}
 	var structPopulated bool
@@ -340,7 +338,6 @@ type QemuScsiStorage struct {
 	Passthrough *QemuScsiPassthrough `json:"passthrough,omitempty"`
 }
 
-// TODO write test
 // converts to qemuStorage
 func (storage *QemuScsiStorage) convertDataStructure() *qemuStorage {
 	if storage == nil {
@@ -375,7 +372,6 @@ func (storage *QemuScsiStorage) convertDataStructureMark() *qemuDiskMark {
 	return nil
 }
 
-// TODO write test
 func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(settings)

@@ -41,7 +41,6 @@ const (
 	Error_QemuCdRom_MutuallyExclusive string = "iso and passthrough are mutually exclusive"
 )
 
-// TODO write test
 func (cdRom QemuCdRom) mapToApiValues() string {
 	if cdRom.Passthrough {
 		return "cdrom,media=cdrom"
@@ -155,7 +154,6 @@ func (QemuCloudInitDisk) checkDuplicates(numberOFCloudInitDrives uint8) error {
 	return nil
 }
 
-// TODO write test
 func (cloudInit QemuCloudInitDisk) mapToApiValues() string {
 	return cloudInit.Storage + ":cloudinit,format=" + string(cloudInit.Format)
 }
@@ -207,7 +205,6 @@ const (
 	Error_QemuDisk_Storage           string = "storage may not be empty"
 )
 
-// TODO write test
 func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 	if disk.Storage != "" {
 		if create {
@@ -288,7 +285,6 @@ func (disk qemuDisk) mapToApiValues(vmID uint, create bool) (settings string) {
 }
 
 // Maps all the disk related settings
-// TODO write test
 func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 	if len(settings) == 0 {
 		return nil
