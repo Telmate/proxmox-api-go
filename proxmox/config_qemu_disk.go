@@ -334,19 +334,19 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		}
 		if e[0] == "iops_rd" {
 			tmp, _ := strconv.Atoi(e[1])
-			disk.Bandwidth.Iops.ReadLimit.Concurrent = uint(tmp)
+			disk.Bandwidth.Iops.ReadLimit.Concurrent = QemuDiskBandwidthIopsLimitConcurrent(tmp)
 		}
 		if e[0] == "iops_rd_max" {
 			tmp, _ := strconv.Atoi(e[1])
-			disk.Bandwidth.Iops.ReadLimit.Burst = uint(tmp)
+			disk.Bandwidth.Iops.ReadLimit.Burst = QemuDiskBandwidthIopsLimitBurst(tmp)
 		}
 		if e[0] == "iops_wr" {
 			tmp, _ := strconv.Atoi(e[1])
-			disk.Bandwidth.Iops.WriteLimit.Concurrent = uint(tmp)
+			disk.Bandwidth.Iops.WriteLimit.Concurrent = QemuDiskBandwidthIopsLimitConcurrent(tmp)
 		}
 		if e[0] == "iops_wr_max" {
 			tmp, _ := strconv.Atoi(e[1])
-			disk.Bandwidth.Iops.WriteLimit.Burst = uint(tmp)
+			disk.Bandwidth.Iops.WriteLimit.Burst = QemuDiskBandwidthIopsLimitBurst(tmp)
 		}
 		if e[0] == "iothread" {
 			disk.IOThread, _ = strconv.ParseBool(e[1])
@@ -354,19 +354,19 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		}
 		if e[0] == "mbps_rd" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			disk.Bandwidth.Data.ReadLimit.Concurrent = float32(math.Round(tmp*100) / 100)
+			disk.Bandwidth.Data.ReadLimit.Concurrent = QemuDiskBandwidthDataLimitConcurrent(math.Round(tmp*100) / 100)
 		}
 		if e[0] == "mbps_rd_max" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			disk.Bandwidth.Data.ReadLimit.Burst = float32(math.Round(tmp*100) / 100)
+			disk.Bandwidth.Data.ReadLimit.Burst = QemuDiskBandwidthDataLimitBurst(math.Round(tmp*100) / 100)
 		}
 		if e[0] == "mbps_wr" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			disk.Bandwidth.Data.WriteLimit.Concurrent = float32(math.Round(tmp*100) / 100)
+			disk.Bandwidth.Data.WriteLimit.Concurrent = QemuDiskBandwidthDataLimitConcurrent(math.Round(tmp*100) / 100)
 		}
 		if e[0] == "mbps_wr_max" {
 			tmp, _ := strconv.ParseFloat(e[1], 32)
-			disk.Bandwidth.Data.WriteLimit.Burst = float32(math.Round(tmp*100) / 100)
+			disk.Bandwidth.Data.WriteLimit.Burst = QemuDiskBandwidthDataLimitBurst(math.Round(tmp*100) / 100)
 		}
 		if e[0] == "replicate" {
 			disk.Replicate, _ = strconv.ParseBool(e[1])
@@ -475,21 +475,40 @@ func (data QemuDiskBandwidthData) Validate() error {
 }
 
 type QemuDiskBandwidthDataLimit struct {
-	Burst      float32 `json:"burst,omitempty"`      // 0 = default
-	Concurrent float32 `json:"concurrent,omitempty"` // 0 = unlimited
+	Burst      QemuDiskBandwidthDataLimitBurst      `json:"burst,omitempty"`      // 0 = default
+	Concurrent QemuDiskBandwidthDataLimitConcurrent `json:"concurrent,omitempty"` // 0 = unlimited
+}
+
+func (limit QemuDiskBandwidthDataLimit) Validate() (err error) {
+	if err = limit.Burst.Validate(); err != nil {
+		return
+	}
+	err = limit.Concurrent.Validate()
+	return
 }
 
 const (
-	Error_QemuDiskBandwidthDataLimit_Burst      string = "burst may not be lower then 1 except for 0"
-	Error_QemuDiskBandwidthDataLimit_Concurrent string = "concurrent may not be lower then 1 except for 0"
+	Error_QemuDiskBandwidthDataLimitBurst string = "burst may not be lower then 1 except for 0"
 )
 
-func (limit QemuDiskBandwidthDataLimit) Validate() error {
-	if limit.Burst != 0 && limit.Burst < 1 {
-		return errors.New(Error_QemuDiskBandwidthDataLimit_Burst)
+type QemuDiskBandwidthDataLimitBurst float32
+
+func (limit QemuDiskBandwidthDataLimitBurst) Validate() error {
+	if limit != 0 && limit < 1 {
+		return errors.New(Error_QemuDiskBandwidthDataLimitBurst)
 	}
-	if limit.Concurrent != 0 && limit.Concurrent < 1 {
-		return errors.New(Error_QemuDiskBandwidthDataLimit_Concurrent)
+	return nil
+}
+
+const (
+	Error_QemuDiskBandwidthDataLimitConcurrent string = "concurrent may not be lower then 1 except for 0"
+)
+
+type QemuDiskBandwidthDataLimitConcurrent float32
+
+func (limit QemuDiskBandwidthDataLimitConcurrent) Validate() error {
+	if limit != 0 && limit < 1 {
+		return errors.New(Error_QemuDiskBandwidthDataLimitConcurrent)
 	}
 	return nil
 }
@@ -508,21 +527,40 @@ func (iops QemuDiskBandwidthIops) Validate() error {
 }
 
 type QemuDiskBandwidthIopsLimit struct {
-	Burst      uint `json:"burst,omitempty"`      // 0 = default
-	Concurrent uint `json:"concurrent,omitempty"` // 0 = unlimited
+	Burst      QemuDiskBandwidthIopsLimitBurst      `json:"burst,omitempty"`      // 0 = default
+	Concurrent QemuDiskBandwidthIopsLimitConcurrent `json:"concurrent,omitempty"` // 0 = unlimited
 }
 
+func (limit QemuDiskBandwidthIopsLimit) Validate() (err error) {
+	if err = limit.Burst.Validate(); err != nil {
+		return
+	}
+	err = limit.Concurrent.Validate()
+	return
+}
+
+type QemuDiskBandwidthIopsLimitBurst uint
+
 const (
-	Error_QemuDiskBandwidthIopsLimit_Burst      string = "burst may not be lower then 10 except for 0"
-	Error_QemuDiskBandwidthIopsLimit_Concurrent string = "concurrent may not be lower then 10 except for 0"
+	Error_QemuDiskBandwidthIopsLimitBurst string = "burst may not be lower then 10 except for 0"
 )
 
-func (limit QemuDiskBandwidthIopsLimit) Validate() error {
-	if limit.Burst != 0 && limit.Burst < 10 {
-		return errors.New(Error_QemuDiskBandwidthIopsLimit_Burst)
+func (limit QemuDiskBandwidthIopsLimitBurst) Validate() error {
+	if limit != 0 && limit < 10 {
+		return errors.New(Error_QemuDiskBandwidthIopsLimitBurst)
 	}
-	if limit.Concurrent != 0 && limit.Concurrent < 10 {
-		return errors.New(Error_QemuDiskBandwidthIopsLimit_Concurrent)
+	return nil
+}
+
+type QemuDiskBandwidthIopsLimitConcurrent uint
+
+const (
+	Error_QemuDiskBandwidthIopsLimitConcurrent string = "concurrent may not be lower then 10 except for 0"
+)
+
+func (limit QemuDiskBandwidthIopsLimitConcurrent) Validate() error {
+	if limit != 0 && limit < 10 {
+		return errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)
 	}
 	return nil
 }
