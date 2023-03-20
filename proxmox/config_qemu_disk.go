@@ -666,7 +666,7 @@ func (disk *qemuDiskMark) markChanges(currentDisk *qemuDiskMark, id QemuDiskId, 
 			if disk.Format != currentDisk.Format {
 				format = &disk.Format
 			}
-			changes.Move = append(changes.Move, qemuDiskShort{
+			changes.Move = append(changes.Move, qemuDiskMove{
 				Format:  format,
 				Id:      id,
 				Storage: disk.Storage,
@@ -706,14 +706,13 @@ func (disk qemuDiskResize) resize(vmr *VmRef, client *Client) (exitStatus string
 	return client.PutWithTask(map[string]interface{}{"disk": disk.Id, "size": strconv.Itoa(int(disk.SizeInGigaBytes)) + "G"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
 }
 
-// TODO rename to qemuDiskMove
-type qemuDiskShort struct {
+type qemuDiskMove struct {
 	Format  *QemuDiskFormat
 	Id      QemuDiskId
 	Storage string
 }
 
-func (disk qemuDiskShort) mapToApiValues(delete bool) (params map[string]interface{}) {
+func (disk qemuDiskMove) mapToApiValues(delete bool) (params map[string]interface{}) {
 	params = map[string]interface{}{"disk": string(disk.Id), "storage": string(disk.Storage)}
 	if delete {
 		params["delete"] = "1"
@@ -724,11 +723,11 @@ func (disk qemuDiskShort) mapToApiValues(delete bool) (params map[string]interfa
 	return
 }
 
-func (disk qemuDiskShort) move(delete bool, vmr *VmRef, client *Client) (exitStatus interface{}, err error) {
+func (disk qemuDiskMove) move(delete bool, vmr *VmRef, client *Client) (exitStatus interface{}, err error) {
 	return client.PostWithTask(disk.mapToApiValues(delete), fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId))
 }
 
-func (disk qemuDiskShort) Validate() (err error) {
+func (disk qemuDiskMove) Validate() (err error) {
 	if disk.Format != nil {
 		err = disk.Format.Validate()
 		if err != nil {
@@ -914,7 +913,7 @@ func (storages QemuStorages) Validate() (err error) {
 }
 
 type qemuUpdateChanges struct {
-	Move   []qemuDiskShort
+	Move   []qemuDiskMove
 	Resize []qemuDiskResize
 }
 
@@ -926,7 +925,7 @@ func diskSubtypeSet(set bool) error {
 }
 
 func MoveQemuDisk(format *QemuDiskFormat, diskId QemuDiskId, storage string, deleteAfterMove bool, vmr *VmRef, client *Client) (err error) {
-	disk := qemuDiskShort{
+	disk := qemuDiskMove{
 		Format:  format,
 		Id:      diskId,
 		Storage: storage,

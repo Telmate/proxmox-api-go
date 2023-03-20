@@ -468,12 +468,12 @@ func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
 	tests := []struct {
 		name   string
 		delete bool
-		input  qemuDiskShort
+		input  qemuDiskMove
 		output map[string]interface{}
 	}{
 		{name: "ALL",
 			delete: true,
-			input: qemuDiskShort{
+			input: qemuDiskMove{
 				Format:  &format_Raw,
 				Id:      "ide0",
 				Storage: "test0",
@@ -487,7 +487,7 @@ func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
 		},
 		{name: "Format nil",
 			delete: true,
-			input: qemuDiskShort{
+			input: qemuDiskMove{
 				Id:      "sata4",
 				Storage: "aaa0",
 			},
@@ -498,7 +498,7 @@ func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
 			},
 		},
 		{name: "Delete false",
-			input: qemuDiskShort{
+			input: qemuDiskMove{
 				Format:  &format_Qcow2,
 				Id:      "scsi10",
 				Storage: "test0",
@@ -510,7 +510,7 @@ func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
 			},
 		},
 		{name: "MINIMAL",
-			input: qemuDiskShort{
+			input: qemuDiskMove{
 				Id:      "virtio13",
 				Storage: "Test0",
 			},
@@ -533,26 +533,26 @@ func Test_qemuDiskShort_Validate(t *testing.T) {
 	format_Empty := QemuDiskFormat("")
 	tests := []struct {
 		name  string
-		input qemuDiskShort
+		input qemuDiskMove
 		err   error
 	}{
 		// TODO Add cases when Storage has a custom type
 		// Invalid
-		{name: "Invalid 00", input: qemuDiskShort{Format: &format_Invalid},
+		{name: "Invalid 00", input: qemuDiskMove{Format: &format_Invalid},
 			err: QemuDiskFormat("").Error(),
 		},
-		{name: "Invalid 01", input: qemuDiskShort{Format: &format_Empty},
+		{name: "Invalid 01", input: qemuDiskMove{Format: &format_Empty},
 			err: QemuDiskFormat("").Error(),
 		},
-		{name: "Invalid 02", input: qemuDiskShort{Id: "invalid"},
+		{name: "Invalid 02", input: qemuDiskMove{Id: "invalid"},
 			err: errors.New(ERROR_QemuDiskId_Invalid),
 		},
 		// Valid
-		{name: "Valid 00", input: qemuDiskShort{
+		{name: "Valid 00", input: qemuDiskMove{
 			Format: &format_Raw,
 			Id:     "ide0",
 		}},
-		{name: "Valid 01", input: qemuDiskShort{
+		{name: "Valid 01", input: qemuDiskMove{
 			Id: "ide0",
 		}},
 	}
@@ -589,7 +589,7 @@ func Test_QemuStorages_markDiskChanges(t *testing.T) {
 				VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Format: QemuDiskFormat_Vmdk, Size: 32, Storage: "Test"}}},
 			},
 			output: &qemuUpdateChanges{
-				Move: []qemuDiskShort{
+				Move: []qemuDiskMove{
 					{Format: &format_Raw, Id: "ide0", Storage: "NewStorage"},
 					{Format: &format_Raw, Id: "sata1", Storage: "NewStorage"},
 					{Format: &format_Raw, Id: "scsi2", Storage: "NewStorage"},
@@ -646,7 +646,7 @@ func Test_QemuStorages_markDiskChanges(t *testing.T) {
 				Scsi:   &QemuScsiDisks{Disk_4: &QemuScsiStorage{Disk: &QemuScsiDisk{Format: QemuDiskFormat_Vmdk, Size: 32, Storage: "Test"}}},
 				VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Format: QemuDiskFormat_Vmdk, Size: 32, Storage: "Test"}}},
 			},
-			output: &qemuUpdateChanges{Move: []qemuDiskShort{
+			output: &qemuUpdateChanges{Move: []qemuDiskMove{
 				{Format: &format_Raw, Id: "ide2", Storage: "Test"},
 				{Format: &format_Raw, Id: "sata3", Storage: "Test"},
 				{Format: &format_Raw, Id: "scsi4", Storage: "Test"},
@@ -701,7 +701,7 @@ func Test_QemuStorages_markDiskChanges(t *testing.T) {
 				Scsi:   &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{Format: QemuDiskFormat_Raw, Size: 32, Storage: "Test"}}},
 				VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Format: QemuDiskFormat_Raw, Size: 32, Storage: "Test"}}},
 			},
-			output: &qemuUpdateChanges{Move: []qemuDiskShort{
+			output: &qemuUpdateChanges{Move: []qemuDiskMove{
 				{Id: "ide1", Storage: "NewStorage"},
 				{Id: "sata0", Storage: "NewStorage"},
 				{Id: "scsi7", Storage: "NewStorage"},
