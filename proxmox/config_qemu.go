@@ -675,7 +675,7 @@ func (newConfig ConfigQemu) Update(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		return
 	}
-	return newConfig.UpdateAdvanced(currentConfig, vmr, client)
+	return newConfig.SetAdvanced(currentConfig, vmr, client)
 }
 
 func (config *ConfigQemu) setVmr(vmr *VmRef) error {
@@ -690,7 +690,7 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) error {
 	return nil
 }
 
-func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef, client *Client) (err error) {
+func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, vmr *VmRef, client *Client) (err error) {
 	err = newConfig.setVmr(vmr)
 	if err != nil {
 		return
@@ -700,14 +700,21 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 		return
 	}
 
+	var params map[string]interface{}
+	var exitStatus string
+
 	if currentConfig != nil {
+		// Update
+
 		markedDisks := newConfig.Disks.markDiskChanges(*currentConfig.Disks)
+		// move disk to different storage or change disk format
 		for _, e := range markedDisks.Move {
 			_, err = e.move(true, vmr, client)
 			if err != nil {
 				return
 			}
 		}
+		// increase Disks in size
 		for _, e := range markedDisks.Resize {
 			_, err = e.resize(vmr, client)
 			if err != nil {
@@ -721,30 +728,35 @@ func (newConfig ConfigQemu) UpdateAdvanced(currentConfig *ConfigQemu, vmr *VmRef
 				return
 			}
 		}
-	}
 
-	if newConfig.Node != currentConfig.Node {
-		vmr.SetNode(currentConfig.Node)
-		_, err = client.MigrateNode(vmr, newConfig.Node, true)
+		// Migrate VM
+		if newConfig.Node != currentConfig.Node {
+			vmr.SetNode(currentConfig.Node)
+			_, err = client.MigrateNode(vmr, newConfig.Node, true)
+			if err != nil {
+				return
+			}
+			// Set node to the node the VM was migrated to
+			vmr.SetNode(newConfig.Node)
+		}
+
+		params, err = newConfig.mapToApiValues(*currentConfig)
 		if err != nil {
 			return
 		}
-		vmr.SetNode(newConfig.Node)
-	}
-
-	var params map[string]interface{}
-	if currentConfig != nil {
-		params, err = newConfig.mapToApiValues(*currentConfig)
+		exitStatus, err = client.PutWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 	} else {
+		// Create
+
 		params, err = newConfig.mapToApiValues(ConfigQemu{})
-	}
-	if err != nil {
-		return
+		if err != nil {
+			return
+		}
+		exitStatus, err = client.CreateQemuVm(vmr.node, params)
 	}
 
-	_, err = client.PutWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 	if err != nil {
-		return
+		return fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
 
 	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)
