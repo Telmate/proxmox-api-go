@@ -9,7 +9,7 @@ type QemuVirtIODisk struct {
 	Cache     QemuDiskCache     `json:"cache,omitempty"`
 	Discard   bool              `json:"discard"`
 	Format    QemuDiskFormat    `json:"format"`
-	Id        *uint             `json:"id,omitempty"`
+	Id        uint              `json:"id"` //Id is only returned and setting it has no effect
 	IOThread  bool              `json:"iothread"`
 	ReadOnly  bool              `json:"readonly"`
 	Replicate bool              `json:"replicate"`
