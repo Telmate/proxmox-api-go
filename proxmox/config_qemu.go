@@ -87,6 +87,13 @@ type ConfigQemu struct {
 	VmID            int           `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
 }
 
+// Create - Tell Proxmox API to make the VM
+func (config ConfigQemu) Create(vmr *VmRef, client *Client) error {
+	return config.SetAdvanced(nil, vmr, client)
+}
+
+// DEPRECATED use ConfigQemu{}.Create Instead.
+//
 // CreateVm - Tell Proxmox API to make the VM
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	err = config.setVmr(vmr)
