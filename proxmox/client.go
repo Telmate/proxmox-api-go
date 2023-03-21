@@ -444,6 +444,7 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 }
 
 var rxTaskNode = regexp.MustCompile("UPID:(.*?):")
+var rxExitStatusSuccess = regexp.MustCompile(`^(OK|WARNINGS)`)
 
 func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err error) {
 	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
@@ -453,7 +454,7 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
-	if exitStatus != nil && exitStatus != exitStatusSuccess {
+	if exitStatus != nil && rxExitStatusSuccess.FindString(exitStatus.(string)) == "" {
 		err = fmt.Errorf(exitStatus.(string))
 	}
 	return
