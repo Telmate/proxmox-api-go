@@ -3,7 +3,7 @@ package test_data_cli
 import (
 	"fmt"
 
-	"github.com/Telmate/proxmox-api-go/proxmox"
+	"github.com/perimeter-81/proxmox-api-go/proxmox"
 )
 
 func User_Empty_testData(testNumber uint) proxmox.ConfigUser {

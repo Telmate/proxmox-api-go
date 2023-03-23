@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/test/data/test_data_group"
+	"github.com/perimeter-81/proxmox-api-go/test/data/test_data_group"
 	"github.com/stretchr/testify/require"
 )
 

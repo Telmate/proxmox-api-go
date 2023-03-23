@@ -3,8 +3,8 @@ package user_sub_tests
 import (
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
+	"github.com/perimeter-81/proxmox-api-go/proxmox"
+	cliTest "github.com/perimeter-81/proxmox-api-go/test/cli"
 )
 
 // Default CLEANUP test for User
