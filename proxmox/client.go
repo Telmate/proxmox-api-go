@@ -81,6 +81,13 @@ func (vmr *VmRef) HaGroup() string {
 	return vmr.haGroup
 }
 
+func (vmr *VmRef) nilCheck() error {
+	if vmr == nil {
+		return errors.New("vm reference may not be nil")
+	}
+	return nil
+}
+
 func NewVmRef(vmId int) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
 	return

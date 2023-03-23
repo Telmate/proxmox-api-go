@@ -685,16 +685,16 @@ func (newConfig ConfigQemu) Update(vmr *VmRef, client *Client) (err error) {
 	return newConfig.SetAdvanced(currentConfig, vmr, client)
 }
 
-func (config *ConfigQemu) setVmr(vmr *VmRef) error {
+func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 	if config == nil {
 		return errors.New("config may not be nil")
 	}
-	if vmr == nil {
-		return errors.New("vm reference may not be nil")
+	if err = vmr.nilCheck(); err != nil {
+		return
 	}
 	vmr.SetVmType("qemu")
 	config.VmID = vmr.vmId
-	return nil
+	return
 }
 
 func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, vmr *VmRef, client *Client) (err error) {
