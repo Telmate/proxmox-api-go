@@ -25,7 +25,7 @@ func Test_GuestQemu_100_Create(t *testing.T) {
 	"bios": "seabios",
 	"tablet": true,
 	"memory": 128,
-	"os": "l26",
+	"ostype": "l26",
 	"cores": 1,
 	"sockets": 1,
 	"cpu": "host",
@@ -45,8 +45,7 @@ func Test_GuestQemu_100_Create(t *testing.T) {
 		}
 	}
 }`,
-		Expected: "(100)",
-		Contains: true,
+		Contains: []string{"(100)"},
 		Args:     []string{"-i", "create", "guest", "qemu", "100", "pve"},
 	}
 	Test.StandardTest(t)
@@ -61,7 +60,7 @@ func Test_GuestQemu_100_Get(t *testing.T) {
 	"onboot": true,
 	"tablet": true,
 	"memory": 128,
-	"os": "l26",
+	"ostype": "l26",
 	"cores": 1,
 	"sockets": 1,
 	"cpu": "host",

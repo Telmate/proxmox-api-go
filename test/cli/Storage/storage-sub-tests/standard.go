@@ -19,9 +19,7 @@ func Cleanup(name string, t *testing.T) {
 
 func Delete(name string, t *testing.T) {
 	Test := cliTest.Test{
-		Expected: name,
-		Contains: true,
-		ReqErr:   false,
+		Contains: []string{name},
 		Args:     []string{"-i", "delete", "storage", name},
 	}
 	Test.StandardTest(t)
@@ -47,8 +45,7 @@ func Update(s *proxmox.ConfigStorage, name string, t *testing.T) {
 func createOrUpdate(s *proxmox.ConfigStorage, name, command string, t *testing.T) {
 	Test := cliTest.Test{
 		InputJson: InlineMarshal(s),
-		Expected:  "(" + name + ")",
-		Contains:  true,
+		Contains:  []string{"(" + name + ")"},
 		Args:      []string{"-i", command, "storage", name},
 	}
 	Test.StandardTest(t)

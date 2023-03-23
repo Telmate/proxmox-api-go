@@ -48,7 +48,7 @@ type ConfigQemu struct {
 	Agent           int         `json:"agent,omitempty"`
 	Memory          int         `json:"memory,omitempty"`
 	Balloon         int         `json:"balloon,omitempty"`
-	QemuOs          string      `json:"os,omitempty"`
+	QemuOs          string      `json:"ostype,omitempty"`
 	QemuCores       int         `json:"cores,omitempty"`
 	QemuSockets     int         `json:"sockets,omitempty"`
 	QemuVcpus       int         `json:"vcpus,omitempty"`
@@ -226,7 +226,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 // HasCloudInit - are there cloud-init options?
 func (config ConfigQemu) HasCloudInit() bool {
 	for _, config := range config.Ipconfig {
-		if config != nil {
+		if config != nil && config != "" {
 			return true
 		}
 	}
@@ -355,6 +355,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 
 	if config.QemuVcpus >= 1 {
 		configParams["vcpus"] = config.QemuVcpus
+	}
+
+	if config.Boot != "" {
+		configParams["boot"] = config.Boot
 	}
 
 	if config.BootDisk != "" {
@@ -1175,8 +1179,17 @@ func FormatDiskParam(disk QemuDevice) string {
 		diskConfParam = append(diskConfParam, diskMountOpts)
 	}
 
+	// Backup
+	if backup, ok := disk["backup"].(bool); ok {
+		// Backups are enabled by default (backup=1)
+		// Only set the parameter if backups are explicitly disabled
+		if !backup {
+			diskConfParam = append(diskConfParam, "backup=0")
+		}
+	}
+
 	// Keys that are not used as real/direct conf.
-	ignoredKeys := []string{"key", "slot", "type", "storage", "file", "size", "cache", "volume", "container", "vm", "mountoptions", "storage_type"}
+	ignoredKeys := []string{"backup", "key", "slot", "type", "storage", "file", "size", "cache", "volume", "container", "vm", "mountoptions", "storage_type"}
 
 	// Rest of config.
 	diskConfParam = diskConfParam.createDeviceParam(disk, ignoredKeys)

@@ -590,12 +590,18 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
 	if err != nil {
-		defer resp.Body.Close()
-		// This might not work if we never got a body. We'll ignore errors in trying to read,
-		// but extract the body if possible to give any error information back in the exitStatus
-		b, _ := io.ReadAll(resp.Body)
-		exitStatus = string(b)
-		return exitStatus, err
+		// Only attempt to read the body if it is available.
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+			// This might not work if we never got a body. We'll ignore errors in trying to read,
+			// but extract the body if possible to give any error information back in the exitStatus
+			b, _ := io.ReadAll(resp.Body)
+			exitStatus = string(b)
+
+			return exitStatus, err
+		}
+
+		return "", err
 	}
 
 	taskResponse, err := ResponseJSON(resp)
@@ -1323,12 +1329,13 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 	}
 
 	url := fmt.Sprintf("%s/nodes/%s/storage/%s/upload", c.session.ApiUrl, node, storage)
-	req, err := c.session.NewRequest(http.MethodPost, url, &c.session.Headers, body)
+	headers := c.session.Headers.Clone()
+	headers.Add("Content-Type", mimetype)
+	headers.Add("Accept", "application/json")
+	req, err := c.session.NewRequest(http.MethodPost, url, &headers, body)
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Content-Type", mimetype)
-	req.Header.Add("Accept", "application/json")
 
 	if doStreamingIO {
 		req.ContentLength = contentLength
@@ -1936,10 +1943,16 @@ func (c *Client) GetItemList(url string) (list map[string]interface{}, err error
 // HandleTaskError reads the body from the passed in HTTP response and closes it.
 // It returns the body of the passed in HTTP response.
 func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
+	// Only attempt to read the body if it is available.
+	if resp == nil || resp.Body == nil {
+		return "no body available for HTTP response"
+	}
+
 	defer resp.Body.Close()
 	// This might not work if we never got a body. We'll ignore errors in trying to read,
 	// but extract the body if possible to give any error information back in the exitStatus
 	b, _ := io.ReadAll(resp.Body)
+
 	return string(b)
 }
 

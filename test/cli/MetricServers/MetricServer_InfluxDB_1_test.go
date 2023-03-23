@@ -1,9 +1,10 @@
 package cli_metricservers_test
 
 import (
-	_ "github.com/perimeter-81/proxmox-api-go/cli/command/commands"
-	cliTest "github.com/perimeter-81/proxmox-api-go/test/cli"
 	"testing"
+
+	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
 )
 
 func Test_MetricServer_InfluxDB_1_Cleanup(t *testing.T) {
@@ -27,8 +28,7 @@ func Test_MetricServer_InfluxDB_1_Set_Empty(t *testing.T) {
 		"verify-certificate": false
 	}
 }`,
-		Expected: "(test-metricserver1)",
-		Contains: true,
+		Contains: []string{"(test-metricserver1)"},
 		Args:     []string{"-i", "set", "metricserver", "test-metricserver1"},
 	}
 	Test.StandardTest(t)
@@ -78,8 +78,7 @@ func Test_MetricServer_InfluxDB_1_Set_Full(t *testing.T) {
 		"verify-certificate": false
 	}
 }`,
-		Expected: "(test-metricserver1)",
-		Contains: true,
+		Contains: []string{"(test-metricserver1)"},
 		Args:     []string{"-i", "set", "metricserver", "test-metricserver1"},
 	}
 	Test.StandardTest(t)

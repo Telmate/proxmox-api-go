@@ -26,8 +26,7 @@ func Test_AcmeAccount_1_Set(t *testing.T) {
 	"directory": "https://acme-staging-v02.api.letsencrypt.org/directory",
 	"tos": true
 }`,
-		Expected: "(test-1)",
-		Contains: true,
+		Contains: []string{"(test-1)"},
 		Args:     []string{"-i", "create", "acmeaccount", "test-1"},
 	}
 	Test.StandardTest(t)

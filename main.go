@@ -476,7 +476,7 @@ func main() {
 		log.Println(string(cj))
 
 	case "getUserList":
-		users, err := proxmox.ListUsers(c)
+		users, err := proxmox.ListUsers(c, true)
 		if err != nil {
 			log.Printf("Error listing users %+v\n", err)
 			os.Exit(1)
