@@ -105,7 +105,7 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		return
 	}
-	params, err := config.mapToApiValues(ConfigQemu{})
+	_, params, err := config.mapToApiValues(ConfigQemu{})
 	if err != nil {
 		return
 	}
@@ -190,8 +190,8 @@ func (config *ConfigQemu) defaults() {
 
 }
 
-func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (params map[string]interface{}, err error) {
-
+func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequired bool, params map[string]interface{}, err error) {
+	// TODO check if cloudInit settings changed, they require a reboot to take effect.
 	var itemsToDelete string
 
 	params = map[string]interface{}{}
@@ -748,7 +748,7 @@ func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			vmr.SetNode(newConfig.Node)
 		}
 
-		params, err = newConfig.mapToApiValues(*currentConfig)
+		rebootRequired, params, err = newConfig.mapToApiValues(*currentConfig)
 		if err != nil {
 			return
 		}
@@ -757,9 +757,11 @@ func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}
 
-		rebootRequired, err = GuestHasPendingChanges(vmr, client)
-		if err != nil {
-			return
+		if !rebootRequired {
+			rebootRequired, err = GuestHasPendingChanges(vmr, client)
+			if err != nil {
+				return
+			}
 		}
 
 		if rebootRequired && rebootIfNeeded {
@@ -771,7 +773,7 @@ func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 	} else {
 		// Create
 
-		params, err = newConfig.mapToApiValues(ConfigQemu{})
+		_, params, err = newConfig.mapToApiValues(ConfigQemu{})
 		if err != nil {
 			return
 		}

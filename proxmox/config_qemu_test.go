@@ -28,6 +28,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		name          string
 		config        *ConfigQemu
 		currentConfig ConfigQemu
+		reboot        bool
 		vmr           *VmRef
 		output        map[string]interface{}
 	}{
@@ -1794,8 +1795,9 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			tmpParams, _ := test.config.mapToApiValues(test.currentConfig)
+			reboot, tmpParams, _ := test.config.mapToApiValues(test.currentConfig)
 			require.Equal(t, test.output, tmpParams, test.name)
+			require.Equal(t, test.reboot, reboot, test.name)
 		})
 	}
 }
