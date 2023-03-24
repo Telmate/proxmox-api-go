@@ -88,8 +88,9 @@ type ConfigQemu struct {
 }
 
 // Create - Tell Proxmox API to make the VM
-func (config ConfigQemu) Create(vmr *VmRef, client *Client) error {
-	return config.SetAdvanced(nil, vmr, client)
+func (config ConfigQemu) Create(vmr *VmRef, client *Client) (err error) {
+	_, err = config.SetAdvanced(nil, false, vmr, client)
+	return
 }
 
 // DEPRECATED use ConfigQemu{}.Create Instead.
@@ -677,12 +678,12 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 	return &config, nil
 }
 
-func (newConfig ConfigQemu) Update(vmr *VmRef, client *Client) (err error) {
+func (newConfig ConfigQemu) Update(rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
 	currentConfig, err := NewConfigQemuFromApi(vmr, client)
 	if err != nil {
 		return
 	}
-	return newConfig.SetAdvanced(currentConfig, vmr, client)
+	return newConfig.SetAdvanced(currentConfig, rebootIfNeeded, vmr, client)
 }
 
 func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
@@ -697,7 +698,7 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 	return
 }
 
-func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, vmr *VmRef, client *Client) (err error) {
+func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
 	err = newConfig.setVmr(vmr)
 	if err != nil {
 		return
@@ -730,6 +731,19 @@ func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, vmr *VmRef, c
 		}
 		// Moving disks changes the disk id. we need to get the config again if any disk was moved
 		if len(markedDisks.Move) != 0 {
+			// We also need to check if there are pending changes
+			rebootRequired, err = GuestHasPendingChanges(vmr, client)
+			if err != nil {
+				return
+			}
+			if rebootRequired && rebootIfNeeded {
+				if err = GuestReboot(vmr, client); err != nil {
+					return
+				}
+				rebootRequired = false
+			} else {
+				return true, fmt.Errorf("unable to proceed with configuring vm: %d, a reboot is required", vmr.vmId)
+			}
 			currentConfig, err = NewConfigQemuFromApi(vmr, client)
 			if err != nil {
 				return
@@ -752,6 +766,21 @@ func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, vmr *VmRef, c
 			return
 		}
 		exitStatus, err = client.PutWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
+		if err != nil {
+			return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		}
+
+		rebootRequired, err = GuestHasPendingChanges(vmr, client)
+		if err != nil {
+			return
+		}
+
+		if rebootRequired && rebootIfNeeded {
+			if err = GuestReboot(vmr, client); err != nil {
+				return
+			}
+			rebootRequired = false
+		}
 	} else {
 		// Create
 
@@ -760,10 +789,9 @@ func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, vmr *VmRef, c
 			return
 		}
 		exitStatus, err = client.CreateQemuVm(vmr.node, params)
-	}
-
-	if err != nil {
-		return fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		if err != nil {
+			return false, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		}
 	}
 
 	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)
