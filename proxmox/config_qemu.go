@@ -731,19 +731,6 @@ func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		}
 		// Moving disks changes the disk id. we need to get the config again if any disk was moved
 		if len(markedDisks.Move) != 0 {
-			// We also need to check if there are pending changes
-			rebootRequired, err = GuestHasPendingChanges(vmr, client)
-			if err != nil {
-				return
-			}
-			if rebootRequired && rebootIfNeeded {
-				if err = GuestReboot(vmr, client); err != nil {
-					return
-				}
-				rebootRequired = false
-			} else {
-				return true, fmt.Errorf("unable to proceed with configuring vm: %d, a reboot is required", vmr.vmId)
-			}
 			currentConfig, err = NewConfigQemuFromApi(vmr, client)
 			if err != nil {
 				return
