@@ -713,27 +713,28 @@ func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 
 	if currentConfig != nil {
 		// Update
-
-		markedDisks := newConfig.Disks.markDiskChanges(*currentConfig.Disks)
-		// move disk to different storage or change disk format
-		for _, e := range markedDisks.Move {
-			_, err = e.move(true, vmr, client)
-			if err != nil {
-				return
+		if newConfig.Disks != nil && currentConfig.Disks != nil {
+			markedDisks := newConfig.Disks.markDiskChanges(*currentConfig.Disks)
+			// move disk to different storage or change disk format
+			for _, e := range markedDisks.Move {
+				_, err = e.move(true, vmr, client)
+				if err != nil {
+					return
+				}
 			}
-		}
-		// increase Disks in size
-		for _, e := range markedDisks.Resize {
-			_, err = e.resize(vmr, client)
-			if err != nil {
-				return
+			// increase Disks in size
+			for _, e := range markedDisks.Resize {
+				_, err = e.resize(vmr, client)
+				if err != nil {
+					return
+				}
 			}
-		}
-		// Moving disks changes the disk id. we need to get the config again if any disk was moved
-		if len(markedDisks.Move) != 0 {
-			currentConfig, err = NewConfigQemuFromApi(vmr, client)
-			if err != nil {
-				return
+			// Moving disks changes the disk id. we need to get the config again if any disk was moved
+			if len(markedDisks.Move) != 0 {
+				currentConfig, err = NewConfigQemuFromApi(vmr, client)
+				if err != nil {
+					return
+				}
 			}
 		}
 
