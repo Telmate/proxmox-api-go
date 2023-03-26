@@ -73,6 +73,7 @@ type ConfigQemu struct {
 	HaState         string      `json:"hastate,omitempty"`
 	HaGroup         string      `json:"hagroup,omitempty"`
 	Tags            string      `json:"tags,omitempty"`
+	Smbios1         string      `json:"smbios1,omitempty"`
 	Args            string      `json:"args,omitempty"`
 
 	// cloud-init options
@@ -697,6 +698,9 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 	if _, isSet := vmConfig["sshkeys"]; isSet {
 		config.Sshkeys, _ = url.PathUnescape(vmConfig["sshkeys"].(string))
+	}
+	if _, isSet := vmConfig["smbios1"]; isSet {
+		config.Smbios1 = vmConfig["smbios1"].(string)
 	}
 
 	ipconfigNames := []string{}
