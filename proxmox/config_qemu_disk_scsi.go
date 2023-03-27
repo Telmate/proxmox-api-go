@@ -3,40 +3,42 @@ package proxmox
 import "strconv"
 
 type QemuScsiDisk struct {
-	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup     bool              `json:"backup"`
-	Bandwidth  QemuDiskBandwidth `json:"bandwidth,omitempty"`
-	Cache      QemuDiskCache     `json:"cache,omitempty"`
-	Discard    bool              `json:"discard"`
-	EmulateSSD bool              `json:"emulatessd"`
-	Format     QemuDiskFormat    `json:"format"`
-	Id         uint              `json:"id"` //Id is only returned and setting it has no effect
-	IOThread   bool              `json:"iothread"`
-	ReadOnly   bool              `json:"readonly"`
-	Replicate  bool              `json:"replicate"`
-	Serial     QemuDiskSerial    `json:"serial,omitempty"`
-	Size       uint              `json:"size"`
-	Storage    string            `json:"storage"`
+	AsyncIO     QemuDiskAsyncIO      `json:"asyncio,omitempty"`
+	Backup      bool                 `json:"backup"`
+	Bandwidth   QemuDiskBandwidth    `json:"bandwidth,omitempty"`
+	Cache       QemuDiskCache        `json:"cache,omitempty"`
+	Discard     bool                 `json:"discard"`
+	EmulateSSD  bool                 `json:"emulatessd"`
+	Format      QemuDiskFormat       `json:"format"`
+	Id          uint                 `json:"id"` //Id is only returned and setting it has no effect
+	IOThread    bool                 `json:"iothread"`
+	LinkedClone *QemuDiskLinkedClone `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
+	ReadOnly    bool                 `json:"readonly"`
+	Replicate   bool                 `json:"replicate"`
+	Serial      QemuDiskSerial       `json:"serial,omitempty"`
+	Size        uint                 `json:"size"`
+	Storage     string               `json:"storage"`
 }
 
 func (disk *QemuScsiDisk) convertDataStructure() *qemuDisk {
 	return &qemuDisk{
-		AsyncIO:    disk.AsyncIO,
-		Backup:     disk.Backup,
-		Bandwidth:  disk.Bandwidth,
-		Cache:      disk.Cache,
-		Discard:    disk.Discard,
-		Disk:       true,
-		EmulateSSD: disk.EmulateSSD,
-		Format:     disk.Format,
-		Id:         disk.Id,
-		IOThread:   disk.IOThread,
-		ReadOnly:   disk.ReadOnly,
-		Replicate:  disk.Replicate,
-		Serial:     disk.Serial,
-		Size:       disk.Size,
-		Storage:    disk.Storage,
-		Type:       scsi,
+		AsyncIO:     disk.AsyncIO,
+		Backup:      disk.Backup,
+		Bandwidth:   disk.Bandwidth,
+		Cache:       disk.Cache,
+		Discard:     disk.Discard,
+		Disk:        true,
+		EmulateSSD:  disk.EmulateSSD,
+		Format:      disk.Format,
+		Id:          disk.Id,
+		IOThread:    disk.IOThread,
+		LinkedClone: disk.LinkedClone,
+		ReadOnly:    disk.ReadOnly,
+		Replicate:   disk.Replicate,
+		Serial:      disk.Serial,
+		Size:        disk.Size,
+		Storage:     disk.Storage,
+		Type:        scsi,
 	}
 }
 
@@ -389,20 +391,21 @@ func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 	}
 	if tmpDisk.File == "" {
 		return &QemuScsiStorage{Disk: &QemuScsiDisk{
-			AsyncIO:    tmpDisk.AsyncIO,
-			Backup:     tmpDisk.Backup,
-			Bandwidth:  tmpDisk.Bandwidth,
-			Cache:      tmpDisk.Cache,
-			Discard:    tmpDisk.Discard,
-			EmulateSSD: tmpDisk.EmulateSSD,
-			Format:     tmpDisk.Format,
-			Id:         tmpDisk.Id,
-			IOThread:   tmpDisk.IOThread,
-			ReadOnly:   tmpDisk.ReadOnly,
-			Replicate:  tmpDisk.Replicate,
-			Serial:     tmpDisk.Serial,
-			Size:       tmpDisk.Size,
-			Storage:    tmpDisk.Storage,
+			AsyncIO:     tmpDisk.AsyncIO,
+			Backup:      tmpDisk.Backup,
+			Bandwidth:   tmpDisk.Bandwidth,
+			Cache:       tmpDisk.Cache,
+			Discard:     tmpDisk.Discard,
+			EmulateSSD:  tmpDisk.EmulateSSD,
+			Format:      tmpDisk.Format,
+			Id:          tmpDisk.Id,
+			IOThread:    tmpDisk.IOThread,
+			LinkedClone: tmpDisk.LinkedClone,
+			ReadOnly:    tmpDisk.ReadOnly,
+			Replicate:   tmpDisk.Replicate,
+			Serial:      tmpDisk.Serial,
+			Size:        tmpDisk.Size,
+			Storage:     tmpDisk.Storage,
 		}}
 	}
 	return &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
