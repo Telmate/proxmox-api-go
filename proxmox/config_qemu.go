@@ -449,6 +449,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	if config.Nameserver != "" {
 		configParams["nameserver"] = config.Nameserver
 	}
+	if config.Smbios1 != "" {
+		configParams["smbios1"] = config.Smbios1
+	}
 	if config.Sshkeys != "" {
 		configParams["sshkeys"] = sshKeyUrlEncode(config.Sshkeys)
 	}
