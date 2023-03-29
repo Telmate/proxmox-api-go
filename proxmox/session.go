@@ -17,6 +17,8 @@ import (
 
 var Debug = new(bool)
 
+const DebugLargeBodyThreshold = 5 * 1024 * 1024
+
 type Response struct {
 	Resp *http.Response
 	Body []byte
@@ -217,7 +219,11 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	if *Debug {
-		d, _ := httputil.DumpRequestOut(req, true)
+		includeBody := req.ContentLength < DebugLargeBodyThreshold
+		d, _ := httputil.DumpRequestOut(req, includeBody)
+		if !includeBody {
+			d = append(d, fmt.Sprintf("<request body of %d bytes not shown>\n\n", req.ContentLength)...)
+		}
 		log.Printf(">>>>>>>>>> REQUEST:\n%v", string(d))
 	}
 
@@ -238,7 +244,11 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	resp.Body = io.NopCloser(bytes.NewReader(respBody))
 
 	if *Debug {
-		dr, _ := httputil.DumpResponse(resp, true)
+		includeBody := resp.ContentLength < DebugLargeBodyThreshold
+		dr, _ := httputil.DumpResponse(resp, includeBody)
+		if !includeBody {
+			dr = append(dr, fmt.Sprintf("<response body of %d bytes not shown>\n\n", resp.ContentLength)...)
+		}
 		log.Printf("<<<<<<<<<< RESULT:\n%v", string(dr))
 	}
 
