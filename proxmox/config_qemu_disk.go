@@ -821,8 +821,16 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID uin
 	}
 	// CDROM
 	if storage.CdRom != nil {
-		// Create or Update
-		params[string(id)] = storage.CdRom.mapToApiValues()
+		if currentStorage == nil || currentStorage.CdRom == nil {
+			// Create
+			params[string(id)] = storage.CdRom.mapToApiValues()
+		} else {
+			// Update
+			cdRom := storage.CdRom.mapToApiValues()
+			if cdRom != currentStorage.CdRom.mapToApiValues() {
+				params[string(id)] = cdRom
+			}
+		}
 		return delete
 	} else if currentStorage != nil && currentStorage.CdRom != nil && storage.CloudInit == nil && storage.Disk == nil && storage.Passthrough == nil {
 		// Delete
@@ -830,8 +838,16 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID uin
 	}
 	// CloudInit
 	if storage.CloudInit != nil {
-		// Create or Update
-		params[string(id)] = storage.CloudInit.mapToApiValues()
+		if currentStorage == nil || currentStorage.CloudInit == nil {
+			// Create
+			params[string(id)] = storage.CloudInit.mapToApiValues()
+		} else {
+			// Update
+			cloudInit := storage.CloudInit.mapToApiValues()
+			if cloudInit != currentStorage.CloudInit.mapToApiValues() {
+				params[string(id)] = cloudInit
+			}
+		}
 		return delete
 	} else if currentStorage != nil && currentStorage.CloudInit != nil && storage.Disk == nil && storage.Passthrough == nil {
 		// Delete
@@ -842,28 +858,38 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID uin
 		if currentStorage == nil || currentStorage.Disk == nil {
 			// Create
 			params[string(id)] = storage.Disk.mapToApiValues(vmID, "", "", true)
-			return delete
 		} else {
 			if storage.Disk.Size >= currentStorage.Disk.Size {
 				// Update
 				storage.Disk.Id = currentStorage.Disk.Id
 				storage.Disk.LinkedClone = currentStorage.Disk.LinkedClone
-				params[string(id)] = storage.Disk.mapToApiValues(vmID, currentStorage.Disk.Storage, currentStorage.Disk.Format, false)
+				disk := storage.Disk.mapToApiValues(vmID, currentStorage.Disk.Storage, currentStorage.Disk.Format, false)
+				if disk != currentStorage.Disk.mapToApiValues(vmID, currentStorage.Disk.Storage, currentStorage.Disk.Format, false) {
+					params[string(id)] = disk
+				}
 			} else {
 				// Delete and Create
 				// creating a disk on top of an existing disk is the same as detaching the disk and creating a new one.
 				params[string(id)] = storage.Disk.mapToApiValues(vmID, "", "", true)
 			}
-			return delete
 		}
+		return delete
 	} else if currentStorage != nil && currentStorage.Disk != nil && storage.Passthrough == nil {
 		// Delete
 		return AddToList(delete, string(id))
 	}
 	// Passthrough
 	if storage.Passthrough != nil {
-		// Create or Update
-		params[string(id)] = storage.Passthrough.mapToApiValues(0, "", "", false)
+		if currentStorage == nil || currentStorage.Passthrough == nil {
+			// Create
+			params[string(id)] = storage.Passthrough.mapToApiValues(0, "", "", false)
+		} else {
+			// Update
+			passthrough := storage.Passthrough.mapToApiValues(0, "", "", false)
+			if passthrough != currentStorage.Passthrough.mapToApiValues(0, "", "", false) {
+				params[string(id)] = passthrough
+			}
+		}
 		return delete
 	} else if currentStorage != nil && currentStorage.Passthrough != nil {
 		// Delete
