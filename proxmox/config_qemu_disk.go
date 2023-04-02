@@ -189,8 +189,7 @@ type qemuDisk struct {
 	Id          uint                 // Only set for Disk
 	IOThread    bool                 // Only set for scsi,virtio
 	LinkedClone *QemuDiskLinkedClone // Only set for Disk
-	Number      uint
-	ReadOnly    bool // Only set for scsi,virtio
+	ReadOnly    bool                 // Only set for scsi,virtio
 	Replicate   bool
 	Serial      QemuDiskSerial
 	Size        uint
