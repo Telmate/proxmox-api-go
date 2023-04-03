@@ -205,6 +205,7 @@ const (
 	Error_QemuDisk_Storage           string = "storage may not be empty"
 )
 
+// Maps all the disk related settings to api values proxmox understands.
 func (disk qemuDisk) mapToApiValues(vmID uint, currentStorage string, currentFormat QemuDiskFormat, create bool) (settings string) {
 	if disk.Storage != "" {
 		if create {
@@ -250,11 +251,18 @@ func (disk qemuDisk) mapToApiValues(vmID uint, currentStorage string, currentFor
 	if disk.Bandwidth.Iops.ReadLimit.Burst != 0 {
 		settings = settings + ",iops_rd_max=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Burst))
 	}
+	if disk.Bandwidth.Iops.ReadLimit.BurstDuration != 0 {
+		settings = settings + ",iops_rd_max_length=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.BurstDuration))
+	}
+
 	if disk.Bandwidth.Iops.WriteLimit.Concurrent != 0 {
 		settings = settings + ",iops_wr=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Concurrent))
 	}
 	if disk.Bandwidth.Iops.WriteLimit.Burst != 0 {
 		settings = settings + ",iops_wr_max=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Burst))
+	}
+	if disk.Bandwidth.Iops.WriteLimit.BurstDuration != 0 {
+		settings = settings + ",iops_wr_max_length=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.BurstDuration))
 	}
 
 	if (disk.Type == scsi || disk.Type == virtIO) && disk.IOThread {
@@ -267,6 +275,7 @@ func (disk qemuDisk) mapToApiValues(vmID uint, currentStorage string, currentFor
 	if disk.Bandwidth.Data.ReadLimit.Burst != 0 {
 		settings = settings + fmt.Sprintf(",mbps_rd_max=%.2f", disk.Bandwidth.Data.ReadLimit.Burst)
 	}
+
 	if disk.Bandwidth.Data.WriteLimit.Concurrent != 0 {
 		settings = settings + fmt.Sprintf(",mbps_wr=%.2f", disk.Bandwidth.Data.WriteLimit.Concurrent)
 	}
@@ -290,7 +299,7 @@ func (disk qemuDisk) mapToApiValues(vmID uint, currentStorage string, currentFor
 	return
 }
 
-// Maps all the disk related settings
+// Maps all the disk related settings to our own data structure.
 func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 	if len(settings) == 0 {
 		return nil
@@ -362,6 +371,10 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 			tmp, _ := strconv.Atoi(e[1])
 			disk.Bandwidth.Iops.ReadLimit.Burst = QemuDiskBandwidthIopsLimitBurst(tmp)
 		}
+		if e[0] == "iops_rd_max_length" {
+			tmp, _ := strconv.Atoi(e[1])
+			disk.Bandwidth.Iops.ReadLimit.BurstDuration = QemuDiskBandwidthBurstDuration(tmp)
+		}
 		if e[0] == "iops_wr" {
 			tmp, _ := strconv.Atoi(e[1])
 			disk.Bandwidth.Iops.WriteLimit.Concurrent = QemuDiskBandwidthIopsLimitConcurrent(tmp)
@@ -369,6 +382,10 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 		if e[0] == "iops_wr_max" {
 			tmp, _ := strconv.Atoi(e[1])
 			disk.Bandwidth.Iops.WriteLimit.Burst = QemuDiskBandwidthIopsLimitBurst(tmp)
+		}
+		if e[0] == "iops_wr_max_length" {
+			tmp, _ := strconv.Atoi(e[1])
+			disk.Bandwidth.Iops.WriteLimit.BurstDuration = QemuDiskBandwidthBurstDuration(tmp)
 		}
 		if e[0] == "iothread" {
 			disk.IOThread, _ = strconv.ParseBool(e[1])
@@ -483,6 +500,9 @@ func (bandwidth QemuDiskBandwidth) Validate() error {
 	return bandwidth.Iops.Validate()
 }
 
+// burst duration in seconds
+type QemuDiskBandwidthBurstDuration uint
+
 type QemuDiskBandwidthData struct {
 	ReadLimit  QemuDiskBandwidthDataLimit `json:"read,omitempty"`
 	WriteLimit QemuDiskBandwidthDataLimit `json:"write,omitempty"`
@@ -497,7 +517,7 @@ func (data QemuDiskBandwidthData) Validate() error {
 }
 
 type QemuDiskBandwidthDataLimit struct {
-	Burst      QemuDiskBandwidthDataLimitBurst      `json:"burst,omitempty"`      // 0 = default
+	Burst      QemuDiskBandwidthDataLimitBurst      `json:"burst,omitempty"`      // 0 = unlimited
 	Concurrent QemuDiskBandwidthDataLimitConcurrent `json:"concurrent,omitempty"` // 0 = unlimited
 }
 
@@ -549,8 +569,9 @@ func (iops QemuDiskBandwidthIops) Validate() error {
 }
 
 type QemuDiskBandwidthIopsLimit struct {
-	Burst      QemuDiskBandwidthIopsLimitBurst      `json:"burst,omitempty"`      // 0 = default
-	Concurrent QemuDiskBandwidthIopsLimitConcurrent `json:"concurrent,omitempty"` // 0 = unlimited
+	Burst         QemuDiskBandwidthIopsLimitBurst      `json:"burst,omitempty"` // 0 = unlimited
+	BurstDuration QemuDiskBandwidthBurstDuration       `json:"burst_duration,omitempty"`
+	Concurrent    QemuDiskBandwidthIopsLimitConcurrent `json:"concurrent,omitempty"` // 0 = unlimited
 }
 
 func (limit QemuDiskBandwidthIopsLimit) Validate() (err error) {
