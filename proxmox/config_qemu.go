@@ -290,6 +290,9 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.QemuVcpus >= 1 {
 		params["vcpus"] = config.QemuVcpus
 	}
+	if config.Smbios1 != "" {
+		params["smbios1"] = config.Smbios1
+	}
 
 	if config.Iso != nil {
 		if config.Disks == nil {
@@ -462,6 +465,9 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 	}
 	if _, isSet := params["tags"]; isSet {
 		config.Tags = strings.TrimSpace(params["tags"].(string))
+	}
+	if _, isSet := params["smbios1"]; isSet {
+		config.Smbios1 = params["smbios1"].(string)
 	}
 
 	ipconfigNames := []string{}
