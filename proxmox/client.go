@@ -451,6 +451,7 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 }
 
 var rxTaskNode = regexp.MustCompile("UPID:(.*?):")
+var rxExitStatusSuccess = regexp.MustCompile(`^(OK|WARNINGS)`)
 
 func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err error) {
 	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
@@ -460,7 +461,7 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
-	if exitStatus != nil && exitStatus != exitStatusSuccess {
+	if exitStatus != nil && rxExitStatusSuccess.FindString(exitStatus.(string)) == "" {
 		err = fmt.Errorf(exitStatus.(string))
 	}
 	return
@@ -568,12 +569,18 @@ func (c *Client) CreateQemuVm(node string, vmParams map[string]interface{}) (exi
 	var resp *http.Response
 	resp, err = c.session.Post(url, nil, nil, &reqbody)
 	if err != nil {
-		defer resp.Body.Close()
-		// This might not work if we never got a body. We'll ignore errors in trying to read,
-		// but extract the body if possible to give any error information back in the exitStatus
-		b, _ := io.ReadAll(resp.Body)
-		exitStatus = string(b)
-		return exitStatus, err
+		// Only attempt to read the body if it is available.
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+			// This might not work if we never got a body. We'll ignore errors in trying to read,
+			// but extract the body if possible to give any error information back in the exitStatus
+			b, _ := io.ReadAll(resp.Body)
+			exitStatus = string(b)
+
+			return exitStatus, err
+		}
+
+		return "", err
 	}
 
 	taskResponse, err := ResponseJSON(resp)
@@ -1918,10 +1925,16 @@ func (c *Client) GetItemList(url string) (list map[string]interface{}, err error
 // HandleTaskError reads the body from the passed in HTTP response and closes it.
 // It returns the body of the passed in HTTP response.
 func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
+	// Only attempt to read the body if it is available.
+	if resp == nil || resp.Body == nil {
+		return "no body available for HTTP response"
+	}
+
 	defer resp.Body.Close()
 	// This might not work if we never got a body. We'll ignore errors in trying to read,
 	// but extract the body if possible to give any error information back in the exitStatus
 	b, _ := io.ReadAll(resp.Body)
+
 	return string(b)
 }
 

@@ -41,7 +41,7 @@ type ConfigQemu struct {
 	Balloon         int           `json:"balloon,omitempty"` // TODO should probably be a bool
 	Bios            string        `json:"bios,omitempty"`
 	Boot            string        `json:"boot,omitempty"`       // TODO should be an array of custom enums
-	BootDisk        string        `json:"bootdisk,omitempty"`   // Only returned as it's deprecated in the proxmox api
+	BootDisk        string        `json:"bootdisk,omitempty"`   // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
 	CIcustom        string        `json:"cicustom,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
 	CIpassword      string        `json:"cipassword,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	CIuser          string        `json:"ciuser,omitempty"`     // TODO should be part of a cloud-init struct (cloud-init option)
@@ -80,6 +80,7 @@ type ConfigQemu struct {
 	QemuVga         QemuDevice    `json:"vga,omitempty"`          // TODO should be a struct
 	Scsihw          string        `json:"scsihw,omitempty"`       // TODO should be custom type with enum
 	Searchdomain    string        `json:"searchdomain,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
+	Smbios1         string        `json:"smbios1,omitempty"`      // TODO should be custom type with enum?
 	Sshkeys         string        `json:"sshkeys,omitempty"`      // TODO should be an array of strings
 	Startup         string        `json:"startup,omitempty"`      // TODO should be a struct?
 	Tablet          *bool         `json:"tablet,omitempty"`
@@ -809,7 +810,7 @@ func (config ConfigQemu) Validate() (err error) {
 // HasCloudInit - are there cloud-init options?
 func (config ConfigQemu) HasCloudInit() bool {
 	for _, config := range config.Ipconfig {
-		if config != nil {
+		if config != nil && config != "" {
 			return true
 		}
 	}
@@ -941,6 +942,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		configParams["vcpus"] = config.QemuVcpus
 	}
 
+	if config.Boot != "" {
+		configParams["boot"] = config.Boot
+	}
+
 	if config.BootDisk != "" {
 		configParams["bootdisk"] = config.BootDisk
 	}
@@ -1014,6 +1019,9 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	}
 	if config.Nameserver != "" {
 		configParams["nameserver"] = config.Nameserver
+	}
+	if config.Smbios1 != "" {
+		configParams["smbios1"] = config.Smbios1
 	}
 	if config.Sshkeys != "" {
 		configParams["sshkeys"] = sshKeyUrlEncode(config.Sshkeys)
