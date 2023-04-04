@@ -3,40 +3,40 @@ package proxmox
 import "strconv"
 
 type QemuVirtIODisk struct {
-	AsyncIO     QemuDiskAsyncIO      `json:"asyncio,omitempty"`
-	Backup      bool                 `json:"backup"`
-	Bandwidth   QemuDiskBandwidth    `json:"bandwidth,omitempty"`
-	Cache       QemuDiskCache        `json:"cache,omitempty"`
-	Discard     bool                 `json:"discard"`
-	Format      QemuDiskFormat       `json:"format"`
-	Id          uint                 `json:"id"` //Id is only returned and setting it has no effect
-	IOThread    bool                 `json:"iothread"`
-	LinkedClone *QemuDiskLinkedClone `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
-	ReadOnly    bool                 `json:"readonly"`
-	Replicate   bool                 `json:"replicate"`
-	Serial      QemuDiskSerial       `json:"serial,omitempty"`
-	Size        uint                 `json:"size"`
-	Storage     string               `json:"storage"`
+	AsyncIO      QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup       bool              `json:"backup"`
+	Bandwidth    QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache        QemuDiskCache     `json:"cache,omitempty"`
+	Discard      bool              `json:"discard"`
+	Format       QemuDiskFormat    `json:"format"`
+	Id           uint              `json:"id"` //Id is only returned and setting it has no effect
+	IOThread     bool              `json:"iothread"`
+	LinkedDiskId *uint             `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
+	ReadOnly     bool              `json:"readonly"`
+	Replicate    bool              `json:"replicate"`
+	Serial       QemuDiskSerial    `json:"serial,omitempty"`
+	Size         uint              `json:"size"`
+	Storage      string            `json:"storage"`
 }
 
 func (disk *QemuVirtIODisk) convertDataStructure() *qemuDisk {
 	return &qemuDisk{
-		AsyncIO:     disk.AsyncIO,
-		Backup:      disk.Backup,
-		Bandwidth:   disk.Bandwidth,
-		Cache:       disk.Cache,
-		Discard:     disk.Discard,
-		Disk:        true,
-		Format:      disk.Format,
-		Id:          disk.Id,
-		IOThread:    disk.IOThread,
-		LinkedClone: disk.LinkedClone,
-		ReadOnly:    disk.ReadOnly,
-		Replicate:   disk.Replicate,
-		Serial:      disk.Serial,
-		Size:        disk.Size,
-		Storage:     disk.Storage,
-		Type:        virtIO,
+		AsyncIO:      disk.AsyncIO,
+		Backup:       disk.Backup,
+		Bandwidth:    disk.Bandwidth,
+		Cache:        disk.Cache,
+		Discard:      disk.Discard,
+		Disk:         true,
+		Format:       disk.Format,
+		Id:           disk.Id,
+		IOThread:     disk.IOThread,
+		LinkedDiskId: disk.LinkedDiskId,
+		ReadOnly:     disk.ReadOnly,
+		Replicate:    disk.Replicate,
+		Serial:       disk.Serial,
+		Size:         disk.Size,
+		Storage:      disk.Storage,
+		Type:         virtIO,
 	}
 }
 
@@ -63,7 +63,7 @@ type QemuVirtIODisks struct {
 	Disk_15 *QemuVirtIOStorage `json:"15,omitempty"`
 }
 
-func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, vmID uint, params map[string]interface{}, delete string) string {
+func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, vmID, linkedVmId uint, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuVirtIODisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -71,7 +71,7 @@ func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, vmID 
 	diskMap := disks.mapToIntMap()
 	currentDiskMap := tmpCurrentDisks.mapToIntMap()
 	for i := range diskMap {
-		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, QemuDiskId("virtio"+strconv.Itoa(int(i))), params, delete)
+		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, linkedVmId, QemuDiskId("virtio"+strconv.Itoa(int(i))), params, delete)
 	}
 	return delete
 }
@@ -97,71 +97,71 @@ func (disks QemuVirtIODisks) mapToIntMap() map[uint8]*QemuVirtIOStorage {
 	}
 }
 
-func (QemuVirtIODisks) mapToStruct(params map[string]interface{}) *QemuVirtIODisks {
+func (QemuVirtIODisks) mapToStruct(params map[string]interface{}, linkedVmId *uint) *QemuVirtIODisks {
 	disks := QemuVirtIODisks{}
 	var structPopulated bool
 	if _, isSet := params["virtio0"]; isSet {
-		disks.Disk_0 = QemuVirtIOStorage{}.mapToStruct(params["virtio0"].(string))
+		disks.Disk_0 = QemuVirtIOStorage{}.mapToStruct(params["virtio0"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio1"]; isSet {
-		disks.Disk_1 = QemuVirtIOStorage{}.mapToStruct(params["virtio1"].(string))
+		disks.Disk_1 = QemuVirtIOStorage{}.mapToStruct(params["virtio1"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio2"]; isSet {
-		disks.Disk_2 = QemuVirtIOStorage{}.mapToStruct(params["virtio2"].(string))
+		disks.Disk_2 = QemuVirtIOStorage{}.mapToStruct(params["virtio2"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio3"]; isSet {
-		disks.Disk_3 = QemuVirtIOStorage{}.mapToStruct(params["virtio3"].(string))
+		disks.Disk_3 = QemuVirtIOStorage{}.mapToStruct(params["virtio3"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio4"]; isSet {
-		disks.Disk_4 = QemuVirtIOStorage{}.mapToStruct(params["virtio4"].(string))
+		disks.Disk_4 = QemuVirtIOStorage{}.mapToStruct(params["virtio4"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio5"]; isSet {
-		disks.Disk_5 = QemuVirtIOStorage{}.mapToStruct(params["virtio5"].(string))
+		disks.Disk_5 = QemuVirtIOStorage{}.mapToStruct(params["virtio5"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio6"]; isSet {
-		disks.Disk_6 = QemuVirtIOStorage{}.mapToStruct(params["virtio6"].(string))
+		disks.Disk_6 = QemuVirtIOStorage{}.mapToStruct(params["virtio6"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio7"]; isSet {
-		disks.Disk_7 = QemuVirtIOStorage{}.mapToStruct(params["virtio7"].(string))
+		disks.Disk_7 = QemuVirtIOStorage{}.mapToStruct(params["virtio7"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio8"]; isSet {
-		disks.Disk_8 = QemuVirtIOStorage{}.mapToStruct(params["virtio8"].(string))
+		disks.Disk_8 = QemuVirtIOStorage{}.mapToStruct(params["virtio8"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio9"]; isSet {
-		disks.Disk_9 = QemuVirtIOStorage{}.mapToStruct(params["virtio9"].(string))
+		disks.Disk_9 = QemuVirtIOStorage{}.mapToStruct(params["virtio9"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio10"]; isSet {
-		disks.Disk_10 = QemuVirtIOStorage{}.mapToStruct(params["virtio10"].(string))
+		disks.Disk_10 = QemuVirtIOStorage{}.mapToStruct(params["virtio10"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio11"]; isSet {
-		disks.Disk_11 = QemuVirtIOStorage{}.mapToStruct(params["virtio11"].(string))
+		disks.Disk_11 = QemuVirtIOStorage{}.mapToStruct(params["virtio11"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio12"]; isSet {
-		disks.Disk_12 = QemuVirtIOStorage{}.mapToStruct(params["virtio12"].(string))
+		disks.Disk_12 = QemuVirtIOStorage{}.mapToStruct(params["virtio12"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio13"]; isSet {
-		disks.Disk_13 = QemuVirtIOStorage{}.mapToStruct(params["virtio13"].(string))
+		disks.Disk_13 = QemuVirtIOStorage{}.mapToStruct(params["virtio13"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio14"]; isSet {
-		disks.Disk_14 = QemuVirtIOStorage{}.mapToStruct(params["virtio14"].(string))
+		disks.Disk_14 = QemuVirtIOStorage{}.mapToStruct(params["virtio14"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["virtio15"]; isSet {
-		disks.Disk_15 = QemuVirtIOStorage{}.mapToStruct(params["virtio15"].(string))
+		disks.Disk_15 = QemuVirtIOStorage{}.mapToStruct(params["virtio15"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if structPopulated {
@@ -280,7 +280,7 @@ func (storage *QemuVirtIOStorage) convertDataStructureMark() *qemuDiskMark {
 	return nil
 }
 
-func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
+func (QemuVirtIOStorage) mapToStruct(param string, LinkedVmId *uint) *QemuVirtIOStorage {
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(settings)
 	if tmpCdRom != nil {
@@ -291,26 +291,26 @@ func (QemuVirtIOStorage) mapToStruct(param string) *QemuVirtIOStorage {
 		}
 	}
 
-	tmpDisk := qemuDisk{}.mapToStruct(settings)
+	tmpDisk := qemuDisk{}.mapToStruct(settings, LinkedVmId)
 	if tmpDisk == nil {
 		return nil
 	}
 	if tmpDisk.File == "" {
 		return &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
-			AsyncIO:     tmpDisk.AsyncIO,
-			Backup:      tmpDisk.Backup,
-			Bandwidth:   tmpDisk.Bandwidth,
-			Cache:       tmpDisk.Cache,
-			Discard:     tmpDisk.Discard,
-			Format:      tmpDisk.Format,
-			Id:          tmpDisk.Id,
-			IOThread:    tmpDisk.IOThread,
-			LinkedClone: tmpDisk.LinkedClone,
-			ReadOnly:    tmpDisk.ReadOnly,
-			Replicate:   tmpDisk.Replicate,
-			Serial:      tmpDisk.Serial,
-			Size:        tmpDisk.Size,
-			Storage:     tmpDisk.Storage,
+			AsyncIO:      tmpDisk.AsyncIO,
+			Backup:       tmpDisk.Backup,
+			Bandwidth:    tmpDisk.Bandwidth,
+			Cache:        tmpDisk.Cache,
+			Discard:      tmpDisk.Discard,
+			Format:       tmpDisk.Format,
+			Id:           tmpDisk.Id,
+			IOThread:     tmpDisk.IOThread,
+			LinkedDiskId: tmpDisk.LinkedDiskId,
+			ReadOnly:     tmpDisk.ReadOnly,
+			Replicate:    tmpDisk.Replicate,
+			Serial:       tmpDisk.Serial,
+			Size:         tmpDisk.Size,
+			Storage:      tmpDisk.Storage,
 		}}
 	}
 	return &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{

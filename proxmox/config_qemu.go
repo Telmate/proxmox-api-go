@@ -55,6 +55,7 @@ type ConfigQemu struct {
 	Hotplug         string        `json:"hotplug,omitempty"`    // TODO should be a struct
 	Ipconfig        IpconfigMap   `json:"ipconfig,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
 	Iso             *IsoFile      `json:"iso,omitempty"`        // Same as Disks.Ide.Disk_2.CdRom.Iso
+	LinkedVmId      uint          `json:"linked_id,omitempty"`  // Only returned setting it has no effect
 	Machine         string        `json:"machine,omitempty"`    // TODO should be custom type with enum
 	Memory          int           `json:"memory,omitempty"`     // TODO should be uint
 	Name            string        `json:"name,omitempty"`       // TODO should be custom type as there are character and length limitations
@@ -311,14 +312,16 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	// Disks
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
-			delete := config.Disks.mapToApiValues(*currentConfig.Disks, uint(config.VmID), params)
+			// Create,Update,Delete
+			delete := config.Disks.mapToApiValues(*currentConfig.Disks, uint(config.VmID), currentConfig.LinkedVmId, params)
 			if delete != "" {
 				itemsToDelete = AddToList(itemsToDelete, delete)
 			}
 		}
 	} else {
 		if config.Disks != nil {
-			config.Disks.mapToApiValues(QemuStorages{}, uint(config.VmID), params)
+			// Create
+			config.Disks.mapToApiValues(QemuStorages{}, uint(config.VmID), 0, params)
 		}
 	}
 
@@ -488,7 +491,11 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 		}
 	}
 
-	config.Disks = QemuStorages{}.mapToStruct(params)
+	linkedVmId := uint(0)
+	config.Disks = QemuStorages{}.mapToStruct(params, &linkedVmId)
+	if linkedVmId != 0 {
+		config.LinkedVmId = linkedVmId
+	}
 
 	if config.Disks != nil && config.Disks.Ide != nil && config.Disks.Ide.Disk_2 != nil && config.Disks.Ide.Disk_2.CdRom != nil {
 		config.Iso = config.Disks.Ide.Disk_2.CdRom.Iso

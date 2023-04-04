@@ -15,6 +15,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 	float45 := QemuDiskBandwidthMBpsLimitConcurrent(45.23)
 	float79 := QemuDiskBandwidthMBpsLimitBurst(79.23)
 	float99 := QemuDiskBandwidthMBpsLimitBurst(99.2)
+	uint1 := uint(1)
 	uint23 := QemuDiskBandwidthIopsLimitConcurrent(23)
 	uint34 := QemuDiskBandwidthIopsLimitConcurrent(34)
 	uint78 := QemuDiskBandwidthIopsLimitBurst(78)
@@ -1275,14 +1276,16 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"ide3": "test:0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk CHANGE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
-				AsyncIO:     QemuDiskAsyncIO_IOuring,
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					AsyncIO:      QemuDiskAsyncIO_IOuring,
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 				AsyncIO: QemuDiskAsyncIO_Native,
 				Format:  QemuDiskFormat_Raw,
@@ -1311,13 +1314,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"ide1": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk MIGRATE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{DiskId: 1, VmId: 100},
-				Size:        10,
-				Storage:     "test1",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test1",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    10,
@@ -1340,13 +1345,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"ide2": "test:9,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk RESIZE DOWN LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    9,
@@ -1369,13 +1376,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk RESIZE UP LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 110, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 110,
+				Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    11,
@@ -1407,13 +1416,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"ide1": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk.Format CHANGE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 				Format:  QemuDiskFormat_Qcow2,
 				Size:    10,
@@ -1537,14 +1548,16 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"sata3": "test:0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk CHANGE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
-				AsyncIO:     QemuDiskAsyncIO_IOuring,
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					AsyncIO:      QemuDiskAsyncIO_IOuring,
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 				AsyncIO: QemuDiskAsyncIO_Native,
 				Format:  QemuDiskFormat_Raw,
@@ -1573,13 +1586,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"sata5": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk MIGRATE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{DiskId: 1, VmId: 100},
-				Size:        10,
-				Storage:     "test1",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test1",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    10,
@@ -1602,13 +1617,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"sata0": "test:9,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk RESIZE DOWN LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    9,
@@ -1631,13 +1648,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk RESIZE UP LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    11,
@@ -1669,13 +1688,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"sata3": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk.Format CHANGE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 				Format:  QemuDiskFormat_Qcow2,
 				Size:    10,
@@ -1799,14 +1820,16 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"scsi15": "test:0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk CHANGE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
-				AsyncIO:     QemuDiskAsyncIO_IOuring,
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					AsyncIO:      QemuDiskAsyncIO_IOuring,
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
 				AsyncIO: QemuDiskAsyncIO_Native,
 				Format:  QemuDiskFormat_Raw,
@@ -1835,13 +1858,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"scsi17": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk MIGRATE Linked Clone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{DiskId: 1, VmId: 100},
-				Size:        10,
-				Storage:     "test1",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test1",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    10,
@@ -1864,13 +1889,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"scsi18": "test:9,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk RESIZE DOWN LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    9,
@@ -1893,13 +1920,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk RESIZE UP LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    11,
@@ -1931,13 +1960,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"scsi21": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk.Format CHANGE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 				Format:  QemuDiskFormat_Qcow2,
 				Size:    10,
@@ -2061,14 +2092,16 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"virtio15": "test:0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk CHANGE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
-				AsyncIO:     QemuDiskAsyncIO_IOuring,
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					AsyncIO:      QemuDiskAsyncIO_IOuring,
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 				AsyncIO: QemuDiskAsyncIO_Native,
 				Format:  QemuDiskFormat_Raw,
@@ -2097,13 +2130,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"virtio1": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk MIGRATE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{DiskId: 1, VmId: 100},
-				Size:        10,
-				Storage:     "test1",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test1",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    10,
@@ -2126,13 +2161,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"virtio2": "test:9,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk RESIZE DOWN LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    9,
@@ -2155,13 +2192,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk RESIZE UP LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 				Format:  QemuDiskFormat_Raw,
 				Size:    11,
@@ -2193,13 +2232,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"virtio5": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk.Format CHANGE LinkedClone",
-			currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
-				Format:      QemuDiskFormat_Raw,
-				Id:          23,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 100, DiskId: 1},
-				Size:        10,
-				Storage:     "test",
-			}}}}},
+			currentConfig: ConfigQemu{
+				LinkedVmId: 100,
+				Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					Format:       QemuDiskFormat_Raw,
+					Id:           23,
+					LinkedDiskId: &uint1,
+					Size:         10,
+					Storage:      "test",
+				}}}}},
 			config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 				Format:  QemuDiskFormat_Qcow2,
 				Size:    10,
@@ -2259,6 +2300,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 }
 
 func Test_ConfigQemu_mapToStruct(t *testing.T) {
+	uint1 := uint(1)
 	uint2 := uint(2)
 	uint31 := uint(31)
 	uint47 := uint(47)
@@ -2334,30 +2376,32 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		},
 		{name: "Disks Ide Disk ALL LinkedClone",
 			input: map[string]interface{}{"ide1": "test2:110/base-110-disk-1.qcow2/100/vm-100-disk-53.qcow2,aio=io_uring,backup=0,cache=writethrough,discard=on,iops_rd=12,iops_rd_max=13,iops_rd_max_length=4,iops_wr=15,iops_wr_max=14,iops_wr_max_length=5,mbps_rd=1.46,mbps_rd_max=3.57,mbps_wr=2.68,mbps_wr_max=4.55,replicate=0,serial=disk-9763,size=1032G,ssd=1"},
-			output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
-				AsyncIO: QemuDiskAsyncIO_IOuring,
-				Backup:  false,
-				Bandwidth: QemuDiskBandwidth{
-					MBps: QemuDiskBandwidthMBps{
-						ReadLimit:  QemuDiskBandwidthMBpsLimit{Burst: 3.57, Concurrent: 1.46},
-						WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.55, Concurrent: 2.68},
+			output: &ConfigQemu{
+				LinkedVmId: 110,
+				Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					AsyncIO: QemuDiskAsyncIO_IOuring,
+					Backup:  false,
+					Bandwidth: QemuDiskBandwidth{
+						MBps: QemuDiskBandwidthMBps{
+							ReadLimit:  QemuDiskBandwidthMBpsLimit{Burst: 3.57, Concurrent: 1.46},
+							WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.55, Concurrent: 2.68},
+						},
+						Iops: QemuDiskBandwidthIops{
+							ReadLimit:  QemuDiskBandwidthIopsLimit{Burst: 13, BurstDuration: 4, Concurrent: 12},
+							WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 14, BurstDuration: 5, Concurrent: 15},
+						},
 					},
-					Iops: QemuDiskBandwidthIops{
-						ReadLimit:  QemuDiskBandwidthIopsLimit{Burst: 13, BurstDuration: 4, Concurrent: 12},
-						WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 14, BurstDuration: 5, Concurrent: 15},
-					},
-				},
-				Cache:       QemuDiskCache_WriteThrough,
-				Discard:     true,
-				EmulateSSD:  true,
-				Format:      QemuDiskFormat_Qcow2,
-				Id:          uint53,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 110, DiskId: 1},
-				Replicate:   false,
-				Serial:      "disk-9763",
-				Size:        1032,
-				Storage:     "test2",
-			}}}}},
+					Cache:        QemuDiskCache_WriteThrough,
+					Discard:      true,
+					EmulateSSD:   true,
+					Format:       QemuDiskFormat_Qcow2,
+					Id:           uint53,
+					LinkedDiskId: &uint1,
+					Replicate:    false,
+					Serial:       "disk-9763",
+					Size:         1032,
+					Storage:      "test2",
+				}}}}},
 		},
 		{name: "Disks Ide Disk aio",
 			input: map[string]interface{}{"ide2": "test2:100/vm-100-disk-53.qcow2,aio=io_uring"},
@@ -2812,30 +2856,32 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		},
 		{name: "Disks Sata Disk ALL LinkedClone",
 			input: map[string]interface{}{"sata1": "test2:110/base-110-disk-1.qcow2/100/vm-100-disk-47.qcow2,aio=native,backup=0,cache=none,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,serial=disk-9763,size=32G,ssd=1"},
-			output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
-				AsyncIO: QemuDiskAsyncIO_Native,
-				Backup:  false,
-				Bandwidth: QemuDiskBandwidth{
-					MBps: QemuDiskBandwidthMBps{
-						ReadLimit:  QemuDiskBandwidthMBpsLimit{Burst: 3.51, Concurrent: 1.51},
-						WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51, Concurrent: 2.51},
+			output: &ConfigQemu{
+				LinkedVmId: 110,
+				Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					AsyncIO: QemuDiskAsyncIO_Native,
+					Backup:  false,
+					Bandwidth: QemuDiskBandwidth{
+						MBps: QemuDiskBandwidthMBps{
+							ReadLimit:  QemuDiskBandwidthMBpsLimit{Burst: 3.51, Concurrent: 1.51},
+							WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51, Concurrent: 2.51},
+						},
+						Iops: QemuDiskBandwidthIops{
+							ReadLimit:  QemuDiskBandwidthIopsLimit{Burst: 12, BurstDuration: 4, Concurrent: 10},
+							WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13, BurstDuration: 5, Concurrent: 11},
+						},
 					},
-					Iops: QemuDiskBandwidthIops{
-						ReadLimit:  QemuDiskBandwidthIopsLimit{Burst: 12, BurstDuration: 4, Concurrent: 10},
-						WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13, BurstDuration: 5, Concurrent: 11},
-					},
-				},
-				Cache:       QemuDiskCache_None,
-				Discard:     true,
-				EmulateSSD:  true,
-				Format:      QemuDiskFormat_Qcow2,
-				Id:          uint47,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 110, DiskId: 1},
-				Replicate:   false,
-				Serial:      "disk-9763",
-				Size:        32,
-				Storage:     "test2",
-			}}}}},
+					Cache:        QemuDiskCache_None,
+					Discard:      true,
+					EmulateSSD:   true,
+					Format:       QemuDiskFormat_Qcow2,
+					Id:           uint47,
+					LinkedDiskId: &uint1,
+					Replicate:    false,
+					Serial:       "disk-9763",
+					Size:         32,
+					Storage:      "test2",
+				}}}}},
 		},
 		{name: "Disks Sata Disk aio",
 			input: map[string]interface{}{"sata2": "test2:100/vm-100-disk-47.qcow2,aio=native"},
@@ -3296,32 +3342,34 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		},
 		{name: "Disks Scsi Disk ALL LinkedClone",
 			input: map[string]interface{}{"scsi1": "test:110/base-110-disk-1.qcow2/100/vm-100-disk-2.qcow2,aio=threads,backup=0,cache=writeback,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,iothread=1,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,ro=1,serial=disk-9763,size=32G,ssd=1"},
-			output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Disk: &QemuScsiDisk{
-				AsyncIO: QemuDiskAsyncIO_Threads,
-				Backup:  false,
-				Bandwidth: QemuDiskBandwidth{
-					MBps: QemuDiskBandwidthMBps{
-						ReadLimit:  QemuDiskBandwidthMBpsLimit{Burst: 3.51, Concurrent: 1.51},
-						WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51, Concurrent: 2.51},
+			output: &ConfigQemu{
+				LinkedVmId: 110,
+				Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					AsyncIO: QemuDiskAsyncIO_Threads,
+					Backup:  false,
+					Bandwidth: QemuDiskBandwidth{
+						MBps: QemuDiskBandwidthMBps{
+							ReadLimit:  QemuDiskBandwidthMBpsLimit{Burst: 3.51, Concurrent: 1.51},
+							WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51, Concurrent: 2.51},
+						},
+						Iops: QemuDiskBandwidthIops{
+							ReadLimit:  QemuDiskBandwidthIopsLimit{Burst: 12, BurstDuration: 4, Concurrent: 10},
+							WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13, BurstDuration: 5, Concurrent: 11},
+						},
 					},
-					Iops: QemuDiskBandwidthIops{
-						ReadLimit:  QemuDiskBandwidthIopsLimit{Burst: 12, BurstDuration: 4, Concurrent: 10},
-						WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13, BurstDuration: 5, Concurrent: 11},
-					},
-				},
-				Cache:       QemuDiskCache_WriteBack,
-				Discard:     true,
-				EmulateSSD:  true,
-				Format:      QemuDiskFormat_Qcow2,
-				Id:          uint2,
-				IOThread:    true,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 110, DiskId: 1},
-				ReadOnly:    true,
-				Replicate:   false,
-				Serial:      "disk-9763",
-				Size:        32,
-				Storage:     "test",
-			}}}}},
+					Cache:        QemuDiskCache_WriteBack,
+					Discard:      true,
+					EmulateSSD:   true,
+					Format:       QemuDiskFormat_Qcow2,
+					Id:           uint2,
+					IOThread:     true,
+					LinkedDiskId: &uint1,
+					ReadOnly:     true,
+					Replicate:    false,
+					Serial:       "disk-9763",
+					Size:         32,
+					Storage:      "test",
+				}}}}},
 		},
 		{name: "Disks Scsi Disk aio",
 			input: map[string]interface{}{"scsi2": "test:100/vm-100-disk-2.qcow2,aio=threads"},
@@ -3819,31 +3867,33 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		},
 		{name: "Disks VirtIO Disk ALL LinkedClone",
 			input: map[string]interface{}{"virtio1": "test2:110/base-110-disk-1.qcow2/100/vm-100-disk-31.qcow2,aio=io_uring,backup=0,cache=directsync,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=2,iops_wr=11,iops_wr_max=13,iops_wr_max_length=3,iothread=1,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,ro=1,serial=disk-9763,size=32G"},
-			output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
-				AsyncIO: QemuDiskAsyncIO_IOuring,
-				Backup:  false,
-				Bandwidth: QemuDiskBandwidth{
-					MBps: QemuDiskBandwidthMBps{
-						ReadLimit:  QemuDiskBandwidthMBpsLimit{Burst: 3.51, Concurrent: 1.51},
-						WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51, Concurrent: 2.51},
+			output: &ConfigQemu{
+				LinkedVmId: 110,
+				Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					AsyncIO: QemuDiskAsyncIO_IOuring,
+					Backup:  false,
+					Bandwidth: QemuDiskBandwidth{
+						MBps: QemuDiskBandwidthMBps{
+							ReadLimit:  QemuDiskBandwidthMBpsLimit{Burst: 3.51, Concurrent: 1.51},
+							WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51, Concurrent: 2.51},
+						},
+						Iops: QemuDiskBandwidthIops{
+							ReadLimit:  QemuDiskBandwidthIopsLimit{Burst: 12, BurstDuration: 2, Concurrent: 10},
+							WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13, BurstDuration: 3, Concurrent: 11},
+						},
 					},
-					Iops: QemuDiskBandwidthIops{
-						ReadLimit:  QemuDiskBandwidthIopsLimit{Burst: 12, BurstDuration: 2, Concurrent: 10},
-						WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13, BurstDuration: 3, Concurrent: 11},
-					},
-				},
-				Cache:       QemuDiskCache_DirectSync,
-				Discard:     true,
-				Format:      QemuDiskFormat_Qcow2,
-				Id:          uint31,
-				IOThread:    true,
-				LinkedClone: &QemuDiskLinkedClone{VmId: 110, DiskId: 1},
-				ReadOnly:    true,
-				Replicate:   false,
-				Serial:      "disk-9763",
-				Size:        32,
-				Storage:     "test2",
-			}}}}},
+					Cache:        QemuDiskCache_DirectSync,
+					Discard:      true,
+					Format:       QemuDiskFormat_Qcow2,
+					Id:           uint31,
+					IOThread:     true,
+					LinkedDiskId: &uint1,
+					ReadOnly:     true,
+					Replicate:    false,
+					Serial:       "disk-9763",
+					Size:         32,
+					Storage:      "test2",
+				}}}}},
 		},
 		{name: "Disks VirtIO Disk aio",
 			input: map[string]interface{}{"virtio2": "test2:100/vm-100-disk-31.qcow2,aio=io_uring"},

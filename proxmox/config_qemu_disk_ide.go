@@ -3,38 +3,38 @@ package proxmox
 import "strconv"
 
 type QemuIdeDisk struct {
-	AsyncIO     QemuDiskAsyncIO      `json:"asyncio,omitempty"`
-	Backup      bool                 `json:"backup"`
-	Bandwidth   QemuDiskBandwidth    `json:"bandwidth,omitempty"`
-	Cache       QemuDiskCache        `json:"cache,omitempty"`
-	Discard     bool                 `json:"discard"`
-	EmulateSSD  bool                 `json:"emulatessd"`
-	Format      QemuDiskFormat       `json:"format"`
-	Id          uint                 `json:"id"`     //Id is only returned and setting it has no effect
-	LinkedClone *QemuDiskLinkedClone `json:"linked"` //LinkedClone is only returned and setting it has no effect
-	Replicate   bool                 `json:"replicate"`
-	Serial      QemuDiskSerial       `json:"serial,omitempty"`
-	Size        uint                 `json:"size"`
-	Storage     string               `json:"storage"`
+	AsyncIO      QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup       bool              `json:"backup"`
+	Bandwidth    QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache        QemuDiskCache     `json:"cache,omitempty"`
+	Discard      bool              `json:"discard"`
+	EmulateSSD   bool              `json:"emulatessd"`
+	Format       QemuDiskFormat    `json:"format"`
+	Id           uint              `json:"id"`     //Id is only returned and setting it has no effect
+	LinkedDiskId *uint             `json:"linked"` //LinkedClone is only returned and setting it has no effect
+	Replicate    bool              `json:"replicate"`
+	Serial       QemuDiskSerial    `json:"serial,omitempty"`
+	Size         uint              `json:"size"`
+	Storage      string            `json:"storage"`
 }
 
 func (disk *QemuIdeDisk) convertDataStructure() *qemuDisk {
 	return &qemuDisk{
-		AsyncIO:     disk.AsyncIO,
-		Backup:      disk.Backup,
-		Bandwidth:   disk.Bandwidth,
-		Cache:       disk.Cache,
-		Discard:     disk.Discard,
-		Disk:        true,
-		EmulateSSD:  disk.EmulateSSD,
-		Format:      disk.Format,
-		Id:          disk.Id,
-		LinkedClone: disk.LinkedClone,
-		Replicate:   disk.Replicate,
-		Serial:      disk.Serial,
-		Size:        disk.Size,
-		Storage:     disk.Storage,
-		Type:        ide,
+		AsyncIO:      disk.AsyncIO,
+		Backup:       disk.Backup,
+		Bandwidth:    disk.Bandwidth,
+		Cache:        disk.Cache,
+		Discard:      disk.Discard,
+		Disk:         true,
+		EmulateSSD:   disk.EmulateSSD,
+		Format:       disk.Format,
+		Id:           disk.Id,
+		LinkedDiskId: disk.LinkedDiskId,
+		Replicate:    disk.Replicate,
+		Serial:       disk.Serial,
+		Size:         disk.Size,
+		Storage:      disk.Storage,
+		Type:         ide,
 	}
 }
 
@@ -49,7 +49,7 @@ type QemuIdeDisks struct {
 	Disk_3 *QemuIdeStorage `json:"3,omitempty"`
 }
 
-func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID uint, params map[string]interface{}, delete string) string {
+func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID, LinkedVmId uint, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuIdeDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -57,7 +57,7 @@ func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID uint, 
 	diskMap := disks.mapToIntMap()
 	currentDiskMap := tmpCurrentDisks.mapToIntMap()
 	for i := range diskMap {
-		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, QemuDiskId("ide"+strconv.Itoa(int(i))), params, delete)
+		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, LinkedVmId, QemuDiskId("ide"+strconv.Itoa(int(i))), params, delete)
 	}
 	return delete
 }
@@ -71,23 +71,23 @@ func (disks QemuIdeDisks) mapToIntMap() map[uint8]*QemuIdeStorage {
 	}
 }
 
-func (QemuIdeDisks) mapToStruct(params map[string]interface{}) *QemuIdeDisks {
+func (QemuIdeDisks) mapToStruct(params map[string]interface{}, linkedVmId *uint) *QemuIdeDisks {
 	disks := QemuIdeDisks{}
 	var structPopulated bool
 	if _, isSet := params["ide0"]; isSet {
-		disks.Disk_0 = QemuIdeStorage{}.mapToStruct(params["ide0"].(string))
+		disks.Disk_0 = QemuIdeStorage{}.mapToStruct(params["ide0"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["ide1"]; isSet {
-		disks.Disk_1 = QemuIdeStorage{}.mapToStruct(params["ide1"].(string))
+		disks.Disk_1 = QemuIdeStorage{}.mapToStruct(params["ide1"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["ide2"]; isSet {
-		disks.Disk_2 = QemuIdeStorage{}.mapToStruct(params["ide2"].(string))
+		disks.Disk_2 = QemuIdeStorage{}.mapToStruct(params["ide2"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["ide3"]; isSet {
-		disks.Disk_3 = QemuIdeStorage{}.mapToStruct(params["ide3"].(string))
+		disks.Disk_3 = QemuIdeStorage{}.mapToStruct(params["ide3"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if structPopulated {
@@ -204,7 +204,7 @@ func (storage *QemuIdeStorage) convertDataStructureMark() *qemuDiskMark {
 	return nil
 }
 
-func (QemuIdeStorage) mapToStruct(param string) *QemuIdeStorage {
+func (QemuIdeStorage) mapToStruct(param string, LinkedVmId *uint) *QemuIdeStorage {
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(settings)
 	if tmpCdRom != nil {
@@ -215,25 +215,25 @@ func (QemuIdeStorage) mapToStruct(param string) *QemuIdeStorage {
 		}
 	}
 
-	tmpDisk := qemuDisk{}.mapToStruct(settings)
+	tmpDisk := qemuDisk{}.mapToStruct(settings, LinkedVmId)
 	if tmpDisk == nil {
 		return nil
 	}
 	if tmpDisk.File == "" {
 		return &QemuIdeStorage{Disk: &QemuIdeDisk{
-			AsyncIO:     tmpDisk.AsyncIO,
-			Backup:      tmpDisk.Backup,
-			Bandwidth:   tmpDisk.Bandwidth,
-			Cache:       tmpDisk.Cache,
-			Discard:     tmpDisk.Discard,
-			EmulateSSD:  tmpDisk.EmulateSSD,
-			Format:      tmpDisk.Format,
-			Id:          tmpDisk.Id,
-			LinkedClone: tmpDisk.LinkedClone,
-			Replicate:   tmpDisk.Replicate,
-			Serial:      tmpDisk.Serial,
-			Size:        tmpDisk.Size,
-			Storage:     tmpDisk.Storage,
+			AsyncIO:      tmpDisk.AsyncIO,
+			Backup:       tmpDisk.Backup,
+			Bandwidth:    tmpDisk.Bandwidth,
+			Cache:        tmpDisk.Cache,
+			Discard:      tmpDisk.Discard,
+			EmulateSSD:   tmpDisk.EmulateSSD,
+			Format:       tmpDisk.Format,
+			Id:           tmpDisk.Id,
+			LinkedDiskId: tmpDisk.LinkedDiskId,
+			Replicate:    tmpDisk.Replicate,
+			Serial:       tmpDisk.Serial,
+			Size:         tmpDisk.Size,
+			Storage:      tmpDisk.Storage,
 		}}
 	}
 	return &QemuIdeStorage{Passthrough: &QemuIdePassthrough{

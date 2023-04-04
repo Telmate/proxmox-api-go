@@ -3,42 +3,42 @@ package proxmox
 import "strconv"
 
 type QemuScsiDisk struct {
-	AsyncIO     QemuDiskAsyncIO      `json:"asyncio,omitempty"`
-	Backup      bool                 `json:"backup"`
-	Bandwidth   QemuDiskBandwidth    `json:"bandwidth,omitempty"`
-	Cache       QemuDiskCache        `json:"cache,omitempty"`
-	Discard     bool                 `json:"discard"`
-	EmulateSSD  bool                 `json:"emulatessd"`
-	Format      QemuDiskFormat       `json:"format"`
-	Id          uint                 `json:"id"` //Id is only returned and setting it has no effect
-	IOThread    bool                 `json:"iothread"`
-	LinkedClone *QemuDiskLinkedClone `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
-	ReadOnly    bool                 `json:"readonly"`
-	Replicate   bool                 `json:"replicate"`
-	Serial      QemuDiskSerial       `json:"serial,omitempty"`
-	Size        uint                 `json:"size"`
-	Storage     string               `json:"storage"`
+	AsyncIO      QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup       bool              `json:"backup"`
+	Bandwidth    QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache        QemuDiskCache     `json:"cache,omitempty"`
+	Discard      bool              `json:"discard"`
+	EmulateSSD   bool              `json:"emulatessd"`
+	Format       QemuDiskFormat    `json:"format"`
+	Id           uint              `json:"id"` //Id is only returned and setting it has no effect
+	IOThread     bool              `json:"iothread"`
+	LinkedDiskId *uint             `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
+	ReadOnly     bool              `json:"readonly"`
+	Replicate    bool              `json:"replicate"`
+	Serial       QemuDiskSerial    `json:"serial,omitempty"`
+	Size         uint              `json:"size"`
+	Storage      string            `json:"storage"`
 }
 
 func (disk *QemuScsiDisk) convertDataStructure() *qemuDisk {
 	return &qemuDisk{
-		AsyncIO:     disk.AsyncIO,
-		Backup:      disk.Backup,
-		Bandwidth:   disk.Bandwidth,
-		Cache:       disk.Cache,
-		Discard:     disk.Discard,
-		Disk:        true,
-		EmulateSSD:  disk.EmulateSSD,
-		Format:      disk.Format,
-		Id:          disk.Id,
-		IOThread:    disk.IOThread,
-		LinkedClone: disk.LinkedClone,
-		ReadOnly:    disk.ReadOnly,
-		Replicate:   disk.Replicate,
-		Serial:      disk.Serial,
-		Size:        disk.Size,
-		Storage:     disk.Storage,
-		Type:        scsi,
+		AsyncIO:      disk.AsyncIO,
+		Backup:       disk.Backup,
+		Bandwidth:    disk.Bandwidth,
+		Cache:        disk.Cache,
+		Discard:      disk.Discard,
+		Disk:         true,
+		EmulateSSD:   disk.EmulateSSD,
+		Format:       disk.Format,
+		Id:           disk.Id,
+		IOThread:     disk.IOThread,
+		LinkedDiskId: disk.LinkedDiskId,
+		ReadOnly:     disk.ReadOnly,
+		Replicate:    disk.Replicate,
+		Serial:       disk.Serial,
+		Size:         disk.Size,
+		Storage:      disk.Storage,
+		Type:         scsi,
 	}
 }
 
@@ -80,7 +80,7 @@ type QemuScsiDisks struct {
 	Disk_30 *QemuScsiStorage `json:"30,omitempty"`
 }
 
-func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID uint, params map[string]interface{}, delete string) string {
+func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID, linkedVmId uint, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuScsiDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -88,7 +88,7 @@ func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID uint
 	diskMap := disks.mapToIntMap()
 	currentDiskMap := tmpCurrentDisks.mapToIntMap()
 	for i := range diskMap {
-		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, QemuDiskId("scsi"+strconv.Itoa(int(i))), params, delete)
+		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, linkedVmId, QemuDiskId("scsi"+strconv.Itoa(int(i))), params, delete)
 	}
 	return delete
 }
@@ -129,131 +129,131 @@ func (disks QemuScsiDisks) mapToIntMap() map[uint8]*QemuScsiStorage {
 	}
 }
 
-func (QemuScsiDisks) mapToStruct(params map[string]interface{}) *QemuScsiDisks {
+func (QemuScsiDisks) mapToStruct(params map[string]interface{}, linkedVmId *uint) *QemuScsiDisks {
 	disks := QemuScsiDisks{}
 	var structPopulated bool
 	if _, isSet := params["scsi0"]; isSet {
-		disks.Disk_0 = QemuScsiStorage{}.mapToStruct(params["scsi0"].(string))
+		disks.Disk_0 = QemuScsiStorage{}.mapToStruct(params["scsi0"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi1"]; isSet {
-		disks.Disk_1 = QemuScsiStorage{}.mapToStruct(params["scsi1"].(string))
+		disks.Disk_1 = QemuScsiStorage{}.mapToStruct(params["scsi1"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi2"]; isSet {
-		disks.Disk_2 = QemuScsiStorage{}.mapToStruct(params["scsi2"].(string))
+		disks.Disk_2 = QemuScsiStorage{}.mapToStruct(params["scsi2"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi3"]; isSet {
-		disks.Disk_3 = QemuScsiStorage{}.mapToStruct(params["scsi3"].(string))
+		disks.Disk_3 = QemuScsiStorage{}.mapToStruct(params["scsi3"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi4"]; isSet {
-		disks.Disk_4 = QemuScsiStorage{}.mapToStruct(params["scsi4"].(string))
+		disks.Disk_4 = QemuScsiStorage{}.mapToStruct(params["scsi4"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi5"]; isSet {
-		disks.Disk_5 = QemuScsiStorage{}.mapToStruct(params["scsi5"].(string))
+		disks.Disk_5 = QemuScsiStorage{}.mapToStruct(params["scsi5"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi6"]; isSet {
-		disks.Disk_6 = QemuScsiStorage{}.mapToStruct(params["scsi6"].(string))
+		disks.Disk_6 = QemuScsiStorage{}.mapToStruct(params["scsi6"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi7"]; isSet {
-		disks.Disk_7 = QemuScsiStorage{}.mapToStruct(params["scsi7"].(string))
+		disks.Disk_7 = QemuScsiStorage{}.mapToStruct(params["scsi7"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi8"]; isSet {
-		disks.Disk_8 = QemuScsiStorage{}.mapToStruct(params["scsi8"].(string))
+		disks.Disk_8 = QemuScsiStorage{}.mapToStruct(params["scsi8"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi9"]; isSet {
-		disks.Disk_9 = QemuScsiStorage{}.mapToStruct(params["scsi9"].(string))
+		disks.Disk_9 = QemuScsiStorage{}.mapToStruct(params["scsi9"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi10"]; isSet {
-		disks.Disk_10 = QemuScsiStorage{}.mapToStruct(params["scsi10"].(string))
+		disks.Disk_10 = QemuScsiStorage{}.mapToStruct(params["scsi10"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi11"]; isSet {
-		disks.Disk_11 = QemuScsiStorage{}.mapToStruct(params["scsi11"].(string))
+		disks.Disk_11 = QemuScsiStorage{}.mapToStruct(params["scsi11"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi12"]; isSet {
-		disks.Disk_12 = QemuScsiStorage{}.mapToStruct(params["scsi12"].(string))
+		disks.Disk_12 = QemuScsiStorage{}.mapToStruct(params["scsi12"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi13"]; isSet {
-		disks.Disk_13 = QemuScsiStorage{}.mapToStruct(params["scsi13"].(string))
+		disks.Disk_13 = QemuScsiStorage{}.mapToStruct(params["scsi13"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi14"]; isSet {
-		disks.Disk_14 = QemuScsiStorage{}.mapToStruct(params["scsi14"].(string))
+		disks.Disk_14 = QemuScsiStorage{}.mapToStruct(params["scsi14"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi15"]; isSet {
-		disks.Disk_15 = QemuScsiStorage{}.mapToStruct(params["scsi15"].(string))
+		disks.Disk_15 = QemuScsiStorage{}.mapToStruct(params["scsi15"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi16"]; isSet {
-		disks.Disk_16 = QemuScsiStorage{}.mapToStruct(params["scsi16"].(string))
+		disks.Disk_16 = QemuScsiStorage{}.mapToStruct(params["scsi16"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi17"]; isSet {
-		disks.Disk_17 = QemuScsiStorage{}.mapToStruct(params["scsi17"].(string))
+		disks.Disk_17 = QemuScsiStorage{}.mapToStruct(params["scsi17"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi18"]; isSet {
-		disks.Disk_18 = QemuScsiStorage{}.mapToStruct(params["scsi18"].(string))
+		disks.Disk_18 = QemuScsiStorage{}.mapToStruct(params["scsi18"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi19"]; isSet {
-		disks.Disk_19 = QemuScsiStorage{}.mapToStruct(params["scsi19"].(string))
+		disks.Disk_19 = QemuScsiStorage{}.mapToStruct(params["scsi19"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi20"]; isSet {
-		disks.Disk_20 = QemuScsiStorage{}.mapToStruct(params["scsi20"].(string))
+		disks.Disk_20 = QemuScsiStorage{}.mapToStruct(params["scsi20"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi21"]; isSet {
-		disks.Disk_21 = QemuScsiStorage{}.mapToStruct(params["scsi21"].(string))
+		disks.Disk_21 = QemuScsiStorage{}.mapToStruct(params["scsi21"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi22"]; isSet {
-		disks.Disk_22 = QemuScsiStorage{}.mapToStruct(params["scsi22"].(string))
+		disks.Disk_22 = QemuScsiStorage{}.mapToStruct(params["scsi22"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi23"]; isSet {
-		disks.Disk_23 = QemuScsiStorage{}.mapToStruct(params["scsi23"].(string))
+		disks.Disk_23 = QemuScsiStorage{}.mapToStruct(params["scsi23"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi24"]; isSet {
-		disks.Disk_24 = QemuScsiStorage{}.mapToStruct(params["scsi24"].(string))
+		disks.Disk_24 = QemuScsiStorage{}.mapToStruct(params["scsi24"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi25"]; isSet {
-		disks.Disk_25 = QemuScsiStorage{}.mapToStruct(params["scsi25"].(string))
+		disks.Disk_25 = QemuScsiStorage{}.mapToStruct(params["scsi25"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi26"]; isSet {
-		disks.Disk_26 = QemuScsiStorage{}.mapToStruct(params["scsi26"].(string))
+		disks.Disk_26 = QemuScsiStorage{}.mapToStruct(params["scsi26"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi27"]; isSet {
-		disks.Disk_27 = QemuScsiStorage{}.mapToStruct(params["scsi27"].(string))
+		disks.Disk_27 = QemuScsiStorage{}.mapToStruct(params["scsi27"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi28"]; isSet {
-		disks.Disk_28 = QemuScsiStorage{}.mapToStruct(params["scsi28"].(string))
+		disks.Disk_28 = QemuScsiStorage{}.mapToStruct(params["scsi28"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi29"]; isSet {
-		disks.Disk_29 = QemuScsiStorage{}.mapToStruct(params["scsi29"].(string))
+		disks.Disk_29 = QemuScsiStorage{}.mapToStruct(params["scsi29"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if _, isSet := params["scsi30"]; isSet {
-		disks.Disk_30 = QemuScsiStorage{}.mapToStruct(params["scsi30"].(string))
+		disks.Disk_30 = QemuScsiStorage{}.mapToStruct(params["scsi30"].(string), linkedVmId)
 		structPopulated = true
 	}
 	if structPopulated {
@@ -374,7 +374,7 @@ func (storage *QemuScsiStorage) convertDataStructureMark() *qemuDiskMark {
 	return nil
 }
 
-func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
+func (QemuScsiStorage) mapToStruct(param string, LinkedVmId *uint) *QemuScsiStorage {
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(settings)
 	if tmpCdRom != nil {
@@ -385,27 +385,27 @@ func (QemuScsiStorage) mapToStruct(param string) *QemuScsiStorage {
 		}
 	}
 
-	tmpDisk := qemuDisk{}.mapToStruct(settings)
+	tmpDisk := qemuDisk{}.mapToStruct(settings, LinkedVmId)
 	if tmpDisk == nil {
 		return nil
 	}
 	if tmpDisk.File == "" {
 		return &QemuScsiStorage{Disk: &QemuScsiDisk{
-			AsyncIO:     tmpDisk.AsyncIO,
-			Backup:      tmpDisk.Backup,
-			Bandwidth:   tmpDisk.Bandwidth,
-			Cache:       tmpDisk.Cache,
-			Discard:     tmpDisk.Discard,
-			EmulateSSD:  tmpDisk.EmulateSSD,
-			Format:      tmpDisk.Format,
-			Id:          tmpDisk.Id,
-			IOThread:    tmpDisk.IOThread,
-			LinkedClone: tmpDisk.LinkedClone,
-			ReadOnly:    tmpDisk.ReadOnly,
-			Replicate:   tmpDisk.Replicate,
-			Serial:      tmpDisk.Serial,
-			Size:        tmpDisk.Size,
-			Storage:     tmpDisk.Storage,
+			AsyncIO:      tmpDisk.AsyncIO,
+			Backup:       tmpDisk.Backup,
+			Bandwidth:    tmpDisk.Bandwidth,
+			Cache:        tmpDisk.Cache,
+			Discard:      tmpDisk.Discard,
+			EmulateSSD:   tmpDisk.EmulateSSD,
+			Format:       tmpDisk.Format,
+			Id:           tmpDisk.Id,
+			IOThread:     tmpDisk.IOThread,
+			LinkedDiskId: tmpDisk.LinkedDiskId,
+			ReadOnly:     tmpDisk.ReadOnly,
+			Replicate:    tmpDisk.Replicate,
+			Serial:       tmpDisk.Serial,
+			Size:         tmpDisk.Size,
+			Storage:      tmpDisk.Storage,
 		}}
 	}
 	return &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{

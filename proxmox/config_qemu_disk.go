@@ -184,15 +184,15 @@ type qemuDisk struct {
 	Disk       bool // true = disk, false = passthrough
 	EmulateSSD bool // Only set for ide,sata,scsi
 	// TODO custom type
-	File        string               // Only set for Passthrough.
-	Format      QemuDiskFormat       // Only set for Disk
-	Id          uint                 // Only set for Disk
-	IOThread    bool                 // Only set for scsi,virtio
-	LinkedClone *QemuDiskLinkedClone // Only set for Disk
-	ReadOnly    bool                 // Only set for scsi,virtio
-	Replicate   bool
-	Serial      QemuDiskSerial
-	Size        uint
+	File         string         // Only set for Passthrough.
+	Format       QemuDiskFormat // Only set for Disk
+	Id           uint           // Only set for Disk
+	IOThread     bool           // Only set for scsi,virtio
+	LinkedDiskId *uint          // Only set for Disk
+	ReadOnly     bool           // Only set for scsi,virtio
+	Replicate    bool
+	Serial       QemuDiskSerial
+	Size         uint
 	// TODO custom type
 	Storage string // Only set for Disk
 	Type    qemuDiskType
@@ -206,7 +206,7 @@ const (
 )
 
 // Maps all the disk related settings to api values proxmox understands.
-func (disk qemuDisk) mapToApiValues(vmID uint, currentStorage string, currentFormat QemuDiskFormat, create bool) (settings string) {
+func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string, currentFormat QemuDiskFormat, create bool) (settings string) {
 	if disk.Storage != "" {
 		if create {
 			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
@@ -214,10 +214,10 @@ func (disk qemuDisk) mapToApiValues(vmID uint, currentStorage string, currentFor
 			tmpId := strconv.Itoa(int(vmID))
 			settings = tmpId + "/vm-" + tmpId + "-disk-" + strconv.Itoa(int(disk.Id)) + "." + string(disk.Format)
 			// storage:100/vm-100-disk-0.raw
-			if disk.LinkedClone != nil && disk.Storage == currentStorage && disk.Format == currentFormat {
+			if disk.LinkedDiskId != nil && disk.Storage == currentStorage && disk.Format == currentFormat {
 				// storage:110/base-110-disk-1.raw/100/vm-100-disk-0.raw
-				tmpId = strconv.Itoa(int(disk.LinkedClone.VmId))
-				settings = tmpId + "/base-" + tmpId + "-disk-" + strconv.Itoa(int(disk.LinkedClone.DiskId)) + "." + string(disk.Format) + "/" + settings
+				tmpId = strconv.Itoa(int(LinkedVmId))
+				settings = tmpId + "/base-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.LinkedDiskId)) + "." + string(disk.Format) + "/" + settings
 			}
 			settings = disk.Storage + ":" + settings
 		}
@@ -300,7 +300,7 @@ func (disk qemuDisk) mapToApiValues(vmID uint, currentStorage string, currentFor
 }
 
 // Maps all the disk related settings to our own data structure.
-func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
+func (qemuDisk) mapToStruct(settings [][]string, linkedVmId *uint) *qemuDisk {
 	if len(settings) == 0 {
 		return nil
 	}
@@ -309,8 +309,8 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 	if settings[0][0][0:1] == "/" {
 		disk.File = settings[0][0]
 	} else {
-		// storage:110/base-110-disk-1.qcow2/100/vm-100-disk-0.qcow2,
-		// storage:100/vm-100-disk-0.qcow2,
+		// storage:110/base-110-disk-1.qcow2/100/vm-100-disk-0.qcow2
+		// storage:100/vm-100-disk-0.qcow2
 		diskAndPath := strings.Split(settings[0][0], ":")
 		disk.Storage = diskAndPath[0]
 		if len(diskAndPath) == 2 {
@@ -318,13 +318,12 @@ func (qemuDisk) mapToStruct(settings [][]string) *qemuDisk {
 			if len(pathParts) == 4 {
 				var tmpDiskId int
 				tmpVmId, _ := strconv.Atoi(pathParts[0])
+				*linkedVmId = uint(tmpVmId)
 				tmp := strings.Split(strings.Split(pathParts[1], ".")[0], "-")
 				if len(tmp) > 1 {
 					tmpDiskId, _ = strconv.Atoi(tmp[len(tmp)-1])
-				}
-				disk.LinkedClone = &QemuDiskLinkedClone{
-					VmId:   uint(tmpVmId),
-					DiskId: uint(tmpDiskId),
+					tmpDiskIdPointer := uint(tmpDiskId)
+					disk.LinkedDiskId = &tmpDiskIdPointer
 				}
 			}
 			if len(pathParts) > 1 {
@@ -715,11 +714,6 @@ func (id QemuDiskId) Validate() error {
 	return errors.New(ERROR_QemuDiskId_Invalid)
 }
 
-type QemuDiskLinkedClone struct {
-	DiskId uint `json:"disk"`
-	VmId   uint `json:"vm"`
-}
-
 type qemuDiskMark struct {
 	Format  QemuDiskFormat
 	Id      QemuDiskId
@@ -836,7 +830,7 @@ type qemuStorage struct {
 	Passthrough *qemuDisk
 }
 
-func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID uint, id QemuDiskId, params map[string]interface{}, delete string) string {
+func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, linkedVmId uint, id QemuDiskId, params map[string]interface{}, delete string) string {
 	if storage == nil {
 		return delete
 	}
@@ -878,20 +872,20 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID uin
 	if storage.Disk != nil {
 		if currentStorage == nil || currentStorage.Disk == nil {
 			// Create
-			params[string(id)] = storage.Disk.mapToApiValues(vmID, "", "", true)
+			params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", true)
 		} else {
 			if storage.Disk.Size >= currentStorage.Disk.Size {
 				// Update
 				storage.Disk.Id = currentStorage.Disk.Id
-				storage.Disk.LinkedClone = currentStorage.Disk.LinkedClone
-				disk := storage.Disk.mapToApiValues(vmID, currentStorage.Disk.Storage, currentStorage.Disk.Format, false)
-				if disk != currentStorage.Disk.mapToApiValues(vmID, currentStorage.Disk.Storage, currentStorage.Disk.Format, false) {
+				storage.Disk.LinkedDiskId = currentStorage.Disk.LinkedDiskId
+				disk := storage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, false)
+				if disk != currentStorage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, false) {
 					params[string(id)] = disk
 				}
 			} else {
 				// Delete and Create
 				// creating a disk on top of an existing disk is the same as detaching the disk and creating a new one.
-				params[string(id)] = storage.Disk.mapToApiValues(vmID, "", "", true)
+				params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", true)
 			}
 		}
 		return delete
@@ -903,11 +897,11 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID uin
 	if storage.Passthrough != nil {
 		if currentStorage == nil || currentStorage.Passthrough == nil {
 			// Create
-			params[string(id)] = storage.Passthrough.mapToApiValues(0, "", "", false)
+			params[string(id)] = storage.Passthrough.mapToApiValues(0, 0, "", "", false)
 		} else {
 			// Update
-			passthrough := storage.Passthrough.mapToApiValues(0, "", "", false)
-			if passthrough != currentStorage.Passthrough.mapToApiValues(0, "", "", false) {
+			passthrough := storage.Passthrough.mapToApiValues(0, 0, "", "", false)
+			if passthrough != currentStorage.Passthrough.mapToApiValues(0, 0, "", "", false) {
 				params[string(id)] = passthrough
 			}
 		}
@@ -930,28 +924,28 @@ type QemuStorages struct {
 	VirtIO *QemuVirtIODisks `json:"virtio,omitempty"`
 }
 
-func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, vmID uint, params map[string]interface{}) (delete string) {
+func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, vmID, linkedVmId uint, params map[string]interface{}) (delete string) {
 	if storages.Ide != nil {
-		delete = storages.Ide.mapToApiValues(currentStorages.Ide, vmID, params, delete)
+		delete = storages.Ide.mapToApiValues(currentStorages.Ide, vmID, linkedVmId, params, delete)
 	}
 	if storages.Sata != nil {
-		delete = storages.Sata.mapToApiValues(currentStorages.Sata, vmID, params, delete)
+		delete = storages.Sata.mapToApiValues(currentStorages.Sata, vmID, linkedVmId, params, delete)
 	}
 	if storages.Scsi != nil {
-		delete = storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, params, delete)
+		delete = storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, linkedVmId, params, delete)
 	}
 	if storages.VirtIO != nil {
-		delete = storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, params, delete)
+		delete = storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, linkedVmId, params, delete)
 	}
 	return delete
 }
 
-func (QemuStorages) mapToStruct(params map[string]interface{}) *QemuStorages {
+func (QemuStorages) mapToStruct(params map[string]interface{}, linkedVmId *uint) *QemuStorages {
 	storage := QemuStorages{
-		Ide:    QemuIdeDisks{}.mapToStruct(params),
-		Sata:   QemuSataDisks{}.mapToStruct(params),
-		Scsi:   QemuScsiDisks{}.mapToStruct(params),
-		VirtIO: QemuVirtIODisks{}.mapToStruct(params),
+		Ide:    QemuIdeDisks{}.mapToStruct(params, linkedVmId),
+		Sata:   QemuSataDisks{}.mapToStruct(params, linkedVmId),
+		Scsi:   QemuScsiDisks{}.mapToStruct(params, linkedVmId),
+		VirtIO: QemuVirtIODisks{}.mapToStruct(params, linkedVmId),
 	}
 	if storage.Ide != nil || storage.Sata != nil || storage.Scsi != nil || storage.VirtIO != nil {
 		return &storage
