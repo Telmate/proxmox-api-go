@@ -419,8 +419,16 @@ func (qemuDisk) mapToStruct(settings [][]string, linkedVmId *uint) *qemuDisk {
 			continue
 		}
 		if e[0] == "size" {
-			diskSize, _ := strconv.Atoi(strings.TrimSuffix(e[1], "G"))
-			disk.Size = uint(diskSize)
+			if len(e[1]) > 1 {
+				test := e[1][0 : len(e[1])-1]
+				diskSize, _ := strconv.Atoi(test)
+				switch e[1][len(e[1])-1:] {
+				case "G":
+					disk.Size = uint(diskSize)
+				case "T":
+					disk.Size = uint(diskSize * 1024)
+				}
+			}
 			continue
 		}
 		if e[0] == "ssd" {
