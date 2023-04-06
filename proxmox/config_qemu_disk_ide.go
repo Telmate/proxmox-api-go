@@ -1,6 +1,9 @@
 package proxmox
 
-import "strconv"
+import (
+	"strconv"
+	"strings"
+)
 
 type QemuIdeDisk struct {
 	AsyncIO      QemuDiskAsyncIO   `json:"asyncio,omitempty"`
@@ -205,8 +208,9 @@ func (storage *QemuIdeStorage) convertDataStructureMark() *qemuDiskMark {
 }
 
 func (QemuIdeStorage) mapToStruct(param string, LinkedVmId *uint) *QemuIdeStorage {
+	diskData, _, _ := strings.Cut(param, ",")
 	settings := splitStringOfSettings(param)
-	tmpCdRom := qemuCdRom{}.mapToStruct(settings)
+	tmpCdRom := qemuCdRom{}.mapToStruct(diskData, settings)
 	if tmpCdRom != nil {
 		if tmpCdRom.CdRom {
 			return &QemuIdeStorage{CdRom: QemuCdRom{}.mapToStruct(*tmpCdRom)}
@@ -215,7 +219,7 @@ func (QemuIdeStorage) mapToStruct(param string, LinkedVmId *uint) *QemuIdeStorag
 		}
 	}
 
-	tmpDisk := qemuDisk{}.mapToStruct(settings, LinkedVmId)
+	tmpDisk := qemuDisk{}.mapToStruct(diskData, settings, LinkedVmId)
 	if tmpDisk == nil {
 		return nil
 	}

@@ -90,24 +90,24 @@ func Test_QemuCloudInitDisk_Validate(t *testing.T) {
 func Test_qemuDisk_mapToStruct(t *testing.T) {
 	tests := []struct {
 		name       string
-		input      [][]string
+		input      string
 		linkedVmId uint
 		output     uint
 	}{
 		{name: "Don't Update LinkedVmId",
-			input:      [][]string{{"storage:100/vm-100-disk-0.qcow2"}},
+			input:      "storage:100/vm-100-disk-0.qcow2",
 			linkedVmId: 110,
 			output:     110,
 		},
 		{name: "Update LinkedVmId",
-			input:  [][]string{{"storage:110/base-110-disk-1.qcow2/100/vm-100-disk-0.qcow2"}},
+			input:  "storage:110/base-110-disk-1.qcow2/100/vm-100-disk-0.qcow2",
 			output: 110,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
 			linkedVmId := uint(test.linkedVmId)
-			qemuDisk{}.mapToStruct(test.input, &linkedVmId)
+			qemuDisk{}.mapToStruct(test.input, nil, &linkedVmId)
 			require.Equal(t, test.output, linkedVmId, test.name)
 		})
 	}

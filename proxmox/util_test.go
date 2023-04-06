@@ -55,16 +55,16 @@ func Test_keyExists(t *testing.T) {
 func Test_splitStringOfSettings(t *testing.T) {
 	testData := []struct {
 		Input  string
-		Output [][]string
+		Output map[string]interface{}
 	}{
 		{
 			Input: "setting=a,thing=b,randomString,doubleTest=value=equals,object=test",
-			Output: [][]string{
-				{"setting", "a"},
-				{"thing", "b"},
-				{"randomString"},
-				{"doubleTest", "value=equals"},
-				{"object", "test"},
+			Output: map[string]interface{}{
+				"setting":      "a",
+				"thing":        "b",
+				"randomString": "",
+				"doubleTest":   "value=equals",
+				"object":       "test",
 			},
 		},
 	}

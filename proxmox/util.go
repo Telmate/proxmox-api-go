@@ -216,11 +216,16 @@ func keyExists(array []interface{}, key string) (existence bool) {
 	return false
 }
 
-func splitStringOfSettings(settings string) (settingArray [][]string) {
+func splitStringOfSettings(settings string) map[string]interface{} {
 	settingValuePairs := strings.Split(settings, ",")
-	settingArray = make([][]string, len(settingValuePairs))
-	for i, e := range settingValuePairs {
-		settingArray[i] = strings.SplitN(e, "=", 2)
+	settingMap := map[string]interface{}{}
+	for _, e := range settingValuePairs {
+		keyValuePair := strings.SplitN(e, "=", 2)
+		var value string
+		if len(keyValuePair) == 2 {
+			value = keyValuePair[1]
+		}
+		settingMap[keyValuePair[0]] = value
 	}
-	return
+	return settingMap
 }
