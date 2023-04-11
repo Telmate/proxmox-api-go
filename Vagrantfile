@@ -21,6 +21,12 @@ Vagrant.configure("2") do |config|
         vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
     end
 
+    config.vm.provider :hyperv do |hv|
+        hv.memory = 2048
+        hv.cpus = 2
+        hv.enable_virtualization_extensions = true
+    end
+
     config.vm.provider :vmware do |vm|
         vm.vmx["memsize"] = "2048"
         vm.vmx["numvcpus"] = "2"
