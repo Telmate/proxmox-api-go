@@ -279,6 +279,26 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 	return err
 }
 
+func (config ConfigQemu) RestoreVm(archive string, vmr *VmRef, client *Client) (err error) {
+	vmr.SetVmType("qemu")
+	var storage string
+
+	if disk0Storage, ok := config.QemuDisks[0]["storage"].(string); ok && len(disk0Storage) > 0 {
+		storage = disk0Storage
+	}
+
+	params := map[string]interface{}{
+		"vmid":    vmr.vmId,
+		"unique":  1,
+		"storage": storage,
+		"name":    config.Name,
+		"archive": archive,
+	}
+
+	_, err = client.CreateQemuVm(vmr.node, params)
+	return err
+}
+
 func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParams := map[string]interface{}{}
 
