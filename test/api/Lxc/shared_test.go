@@ -20,10 +20,6 @@ func _create_lxc_spec(network bool) pxapi.ConfigLxc {
 	disks[0]["size"] = "8G"
 
 	networks := make(pxapi.QemuDevices)
-	networks[0] = make(map[string]interface{})
-	networks[0]["bridge"] = "vmbr0"
-	networks[0]["firewall"] = "true"
-	networks[0]["name"] = "nnet0"
 
 	config := pxapi.ConfigLxc{
 		Hostname:     "test-lxc01",
