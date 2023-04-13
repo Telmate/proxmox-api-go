@@ -11,9 +11,16 @@ Vagrant.configure("2") do |config|
             host: 8006
 
     # install and configure proxmox
-    config.vm.provision "shell",
+    config.vm.provision "Bootstrap System", 
+            type: "shell",
             privileged: true,
 			path: './scripts/vagrant-bootstrap.sh'
+    
+    config.vm.provision "Import LXC Template",
+            type: "shell",
+            privileged: true,
+            path: './scripts/vagrant-get-container-template.sh',
+            run: "always"
     
     config.vm.provider :virtualbox do |vb|
         vb.memory = 2048
