@@ -9,7 +9,7 @@ import (
 )
 
 func _create_clone_vmref() (ref *pxapi.VmRef) {
-	ref = pxapi.NewVmRef(100)
+	ref = pxapi.NewVmRef(101)
 	ref.SetNode("pve")
 	ref.SetVmType("qemu")
 	return ref
