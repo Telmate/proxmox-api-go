@@ -492,7 +492,6 @@ func NewConfigQemuFromJson(input []byte) (config *ConfigQemu, err error) {
 var (
 	rxIso            = regexp.MustCompile(`(.*?),media`)
 	rxDeviceID       = regexp.MustCompile(`\d+`)
-	rxDiskName       = regexp.MustCompile(`(virtio|scsi|ide|sata)\d+`)
 	rxDiskType       = regexp.MustCompile(`\D+`)
 	rxUnusedDiskName = regexp.MustCompile(`^(unused)\d+`)
 	rxNicName        = regexp.MustCompile(`net\d+`)
@@ -723,13 +722,20 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 
 	// Add disks.
 	diskNames := []string{}
+	diskTypes := []string{"ide", "scsi", "virtio", "sata"}
 
-	for k := range vmConfig {
-		if diskName := rxDiskName.FindStringSubmatch(k); len(diskName) > 0 {
-			diskNames = append(diskNames, diskName[0])
+	// Search for disks in a predictable order
+	for _, t := range diskTypes {
+		// 30 is the max number for scsi disks
+		for i := 0; i <= 30; i++ {
+			n := fmt.Sprintf("%s%d", t, i)
+			if _, ok := vmConfig[n]; ok {
+				diskNames = append(diskNames, n)
+			}
 		}
 	}
 
+	var diskIndex int = 0
 	for _, diskName := range diskNames {
 		var isDiskByID bool = false
 		diskConfStr := vmConfig[diskName].(string)
@@ -800,7 +806,8 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 
 		// And device config to disks map.
 		if len(diskConfMap) > 0 {
-			config.QemuDisks[diskID] = diskConfMap
+			config.QemuDisks[diskIndex] = diskConfMap
+			diskIndex += 1
 		}
 	}
 
