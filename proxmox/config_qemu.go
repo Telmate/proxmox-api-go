@@ -722,7 +722,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 
 	// Add disks.
 	diskNames := []string{}
-	diskTypes := []string{"ide", "scsi", "virtio", "sata"}
+	diskTypes := []string{"scsi", "virtio", "sata", "ide"}
 
 	// Search for disks in a predictable order
 	for _, t := range diskTypes {
