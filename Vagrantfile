@@ -11,14 +11,27 @@ Vagrant.configure("2") do |config|
             host: 8006
 
     # install and configure proxmox
-    config.vm.provision "shell",
+    config.vm.provision "Bootstrap System", 
+            type: "shell",
             privileged: true,
 			path: './scripts/vagrant-bootstrap.sh'
+    
+    config.vm.provision "Import LXC Template",
+            type: "shell",
+            privileged: true,
+            path: './scripts/vagrant-get-container-template.sh',
+            run: "always"
     
     config.vm.provider :virtualbox do |vb|
         vb.memory = 2048
         vb.cpus = 2
         vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+    end
+
+    config.vm.provider :hyperv do |hv|
+        hv.memory = 2048
+        hv.cpus = 2
+        hv.enable_virtualization_extensions = true
     end
 
     config.vm.provider :vmware do |vm|
