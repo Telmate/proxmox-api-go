@@ -91,7 +91,7 @@ type ConfigQemu struct {
 
 // Create - Tell Proxmox API to make the VM
 func (config ConfigQemu) Create(vmr *VmRef, client *Client) (err error) {
-	_, err = config.SetAdvanced(nil, false, vmr, client)
+	_, err = config.setAdvanced(nil, false, vmr, client)
 	return
 }
 
@@ -697,7 +697,7 @@ func (newConfig ConfigQemu) Update(rebootIfNeeded bool, vmr *VmRef, client *Clie
 	if err != nil {
 		return
 	}
-	return newConfig.SetAdvanced(currentConfig, rebootIfNeeded, vmr, client)
+	return newConfig.setAdvanced(currentConfig, rebootIfNeeded, vmr, client)
 }
 
 func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
@@ -712,7 +712,7 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 	return
 }
 
-func (newConfig ConfigQemu) SetAdvanced(currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
+func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
 	err = newConfig.setVmr(vmr)
 	if err != nil {
 		return
