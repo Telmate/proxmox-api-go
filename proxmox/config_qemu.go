@@ -1164,16 +1164,12 @@ func NewConfigQemuFromJson(input []byte) (config *ConfigQemu, err error) {
 }
 
 var (
-	rxIso            = regexp.MustCompile(`(.*?),media`)
 	rxDeviceID       = regexp.MustCompile(`\d+`)
-	rxDiskName       = regexp.MustCompile(`(virtio|scsi|ide|sata)\d+`)
-	rxDiskType       = regexp.MustCompile(`\D+`)
 	rxUnusedDiskName = regexp.MustCompile(`^(unused)\d+`)
 	rxNicName        = regexp.MustCompile(`net\d+`)
 	rxMpName         = regexp.MustCompile(`mp\d+`)
 	rxSerialName     = regexp.MustCompile(`serial\d+`)
 	rxUsbName        = regexp.MustCompile(`usb\d+`)
-	rxDiskPath       = regexp.MustCompile(`^\/dev\/.*`)
 	rxPCIName        = regexp.MustCompile(`hostpci\d+`)
 	rxIpconfigName   = regexp.MustCompile(`ipconfig\d+`)
 )
