@@ -99,18 +99,109 @@ func (config ConfigQemu) Create(vmr *VmRef, client *Client) (err error) {
 //
 // CreateVm - Tell Proxmox API to make the VM
 func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
-	err = config.setVmr(vmr)
-	if err != nil {
-		return
+	if config.HasCloudInit() {
+		return fmt.Errorf("cloud-init parameters only supported on clones or updates")
 	}
-	err = config.Validate()
-	if err != nil {
-		return
+	vmr.SetVmType("qemu")
+
+	params := map[string]interface{}{
+		"vmid":        vmr.vmId,
+		"name":        config.Name,
+		"startup":     config.Startup,
+		"agent":       config.Agent,
+		"ostype":      config.QemuOs,
+		"sockets":     config.QemuSockets,
+		"cores":       config.QemuCores,
+		"cpu":         config.QemuCpu,
+		"hotplug":     config.Hotplug,
+		"memory":      config.Memory,
+		"boot":        config.Boot,
+		"description": config.Description,
+		"tags":        config.Tags,
+		"machine":     config.Machine,
+		"args":        config.Args,
 	}
-	_, params, err := config.mapToApiValues(ConfigQemu{})
-	if err != nil {
-		return
+
+	if config.QemuNuma != nil {
+		params["numa"] = *config.QemuNuma
 	}
+
+	if config.QemuKVM != nil {
+		params["kvm"] = *config.QemuKVM
+	}
+
+	if config.Tablet != nil {
+		params["tablet"] = *config.Tablet
+	}
+
+	if config.Onboot != nil {
+		params["onboot"] = *config.Onboot
+	}
+
+	if config.QemuIso != "" {
+		params["ide2"] = config.QemuIso + ",media=cdrom"
+	}
+
+	if config.Bios != "" {
+		params["bios"] = config.Bios
+	}
+
+	if config.Balloon >= 1 {
+		params["balloon"] = config.Balloon
+	}
+
+	if config.QemuVcpus >= 1 {
+		params["vcpus"] = config.QemuVcpus
+	}
+
+	if vmr.pool != "" {
+		params["pool"] = vmr.pool
+	}
+	if config.Boot != "" {
+		params["boot"] = config.Boot
+	}
+	if config.BootDisk != "" {
+		params["bootdisk"] = config.BootDisk
+	}
+
+	if config.Scsihw != "" {
+		params["scsihw"] = config.Scsihw
+	}
+
+	err = config.CreateQemuMachineParam(params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
+	// Create disks config.
+	config.CreateQemuDisksParams(params, false)
+
+	// Create EFI disk
+	config.CreateQemuEfiParams(params)
+
+	// Create vga config.
+	vgaParam := QemuDeviceParam{}
+	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
+	if len(vgaParam) > 0 {
+		params["vga"] = strings.Join(vgaParam, ",")
+	}
+
+	// Create networks config.
+	config.CreateQemuNetworksParams(params)
+
+	// Create ipconfig.
+	err = config.CreateIpconfigParams(params)
+	if err != nil {
+		log.Printf("[ERROR] %q", err)
+	}
+
+	// Create serial interfaces
+	config.CreateQemuSerialsParams(params)
+
+	config.CreateQemuPCIsParams(params)
+
+	// Create usb interfaces
+	config.CreateQemuUsbsParams(params)
 
 	exitStatus, err := client.CreateQemuVm(vmr.node, params)
 	if err != nil {
@@ -984,7 +1075,6 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	configParamsDisk := map[string]interface{}{
 		"vmid": vmr.vmId,
 	}
-	// TODO keep going if error=
 	config.CreateQemuDisksParams(configParamsDisk, false)
 	// TODO keep going if error=
 	_, err = client.createVMDisks(vmr.node, configParamsDisk)
