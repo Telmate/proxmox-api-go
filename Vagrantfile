@@ -22,6 +22,12 @@ Vagrant.configure("2") do |config|
             path: './scripts/vagrant-get-container-template.sh',
             run: "always"
     
+    config.vm.provision "Download Cloud-Init Template",
+            type: "shell",
+            privileged: true,
+            path: './scripts/vagrant-get-cloudinit-template.sh',
+            run: "always"
+    
     config.vm.provider :virtualbox do |vb|
         vb.memory = 2048
         vb.cpus = 2
