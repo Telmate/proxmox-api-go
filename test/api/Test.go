@@ -19,7 +19,7 @@ type Test struct {
 
 func (test *Test) CreateClient() (err error) {
 	if test.APIurl == "" {
-		test.APIurl = "https://172.26.8.219:8006/api2/json"
+		test.APIurl = "https://127.0.0.1:8006/api2/json"
 	}
 	if test.UserID == "" {
 		test.UserID = "root@pam"

@@ -4,12 +4,6 @@ import (
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
 )
 
-func _create_basevmref() (ref *pxapi.VmRef) {
-	ref = pxapi.NewVmRef(100)
-	ref.SetNode("pve")
-	ref.SetVmType("qemu")
-	return ref
-}
 func _create_vmref() (ref *pxapi.VmRef) {
 	ref = pxapi.NewVmRef(101)
 	ref.SetNode("pve")
