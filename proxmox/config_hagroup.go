@@ -1,6 +1,9 @@
 package proxmox
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 type HAGroup struct {
 	Comment    string   // Description.
@@ -49,5 +52,5 @@ func (c *Client) GetHAGroupByName(GroupName string) (*HAGroup, error) {
 		}
 	}
 
-	return nil, nil
+	return nil, errors.New("cannot find HaGroup by name " + GroupName)
 }
