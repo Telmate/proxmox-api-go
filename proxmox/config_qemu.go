@@ -989,6 +989,37 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		}
 	}
 
+	// efidisk
+	if _, isSet := vmConfig["efidisk0"]; isSet {
+		efidisk := vmConfig["efidisk0"].(string)
+		efiDiskConfMap := ParsePMConf(efidisk, "volume")
+
+		storageName, fileName := ParseSubConf(efiDiskConfMap["volume"].(string), ":")
+		efiDiskConfMap["storage"] = storageName
+		efiDiskConfMap["file"] = fileName
+
+		filePath := efiDiskConfMap["volume"]
+
+		// Get disk format
+		storageContent, err := client.GetStorageContent(vmr, storageName)
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+		var storageFormat string
+		contents := storageContent["data"].([]interface{})
+		for content := range contents {
+			storageContentMap := contents[content].(map[string]interface{})
+			if storageContentMap["volid"] == filePath {
+				storageFormat = storageContentMap["format"].(string)
+				break
+			}
+		}
+		efiDiskConfMap["format"] = storageFormat
+
+		config.EFIDisk = efiDiskConfMap
+	}
+
 	// hastate is return by the api for a vm resource type but not the hagroup
 	err = client.ReadVMHA(vmr)
 	if err == nil {
