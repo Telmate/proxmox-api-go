@@ -380,7 +380,9 @@ func (c *Client) CreateTemplate(vmr *VmRef) error {
 		return err
 	}
 
-	if exitStatus != "OK" {
+	// Specifically ignore empty exit status for LXCs, since they don't return a task ID
+	// when creating templates in the first place (but still successfully create them).
+	if exitStatus != "OK" && vmr.vmType != "lxc" {
 		return errors.New("Can't convert Vm to template:" + exitStatus)
 	}
 
