@@ -81,6 +81,13 @@ func (vmr *VmRef) HaGroup() string {
 	return vmr.haGroup
 }
 
+func (vmr *VmRef) nilCheck() error {
+	if vmr == nil {
+		return errors.New("vm reference may not be nil")
+	}
+	return nil
+}
+
 func NewVmRef(vmId int) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
 	return
@@ -703,7 +710,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 	return RollbackSnapshot(c, vmr, snapshot)
 }
 
-// SetVmConfig - send config options
+// DEPRECATED SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 }
@@ -743,6 +750,7 @@ func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exi
 }
 
 // ResizeQemuDisk allows the caller to increase the size of a disk by the indicated number of gigabytes
+// TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
 func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
 	size := fmt.Sprintf("+%dG", moreSizeGB)
 	return c.ResizeQemuDiskRaw(vmr, disk, size)
@@ -753,6 +761,7 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 // your desired size with a '+' character it will ADD size to the disk.  If you just specify the size by
 // itself it will do an absolute resizing to the specified size. Permitted suffixes are K, M, G, T
 // to indicate order of magnitude (kilobyte, megabyte, etc). Decrease of disk size is not permitted.
+// TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
 func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitStatus interface{}, err error) {
 	// PUT
 	//disk:virtio0
@@ -793,6 +802,7 @@ func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatu
 	return
 }
 
+// DEPRECATED use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	if disk == "" {
