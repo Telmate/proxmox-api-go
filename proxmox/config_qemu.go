@@ -48,6 +48,7 @@ type ConfigQemu struct {
 	Description     string        `json:"description,omitempty"`
 	Disks           *QemuStorages `json:"disks,omitempty"`
 	EFIDisk         QemuDevice    `json:"efidisk,omitempty"`   // TODO should be a struct
+	RNGDrive        QemuDevice    `json:"rng0,omitempty"`      // TODO should be a struct
 	FullClone       *int          `json:"fullclone,omitempty"` // TODO should probably be a bool
 	HaGroup         string        `json:"hagroup,omitempty"`
 	HaState         string        `json:"hastate,omitempty"` // TODO should be custom type with enum
@@ -179,6 +180,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	// Create EFI disk
 	config.CreateQemuEfiParams(params)
 
+	// Create VirtIO RNG
+	config.CreateQemuRngParams(params)
+
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
 	vgaParam = vgaParam.createDeviceParam(config.QemuVga, nil)
@@ -225,6 +229,9 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.Bios == "" {
 		config.Bios = "seabios"
+	}
+	if config.RNGDrive == nil {
+		config.RNGDrive = QemuDevice{}
 	}
 	if config.EFIDisk == nil {
 		config.EFIDisk = QemuDevice{}
@@ -418,6 +425,9 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 
 	// Create EFI disk
 	config.CreateQemuEfiParams(params)
+
+	// Create VirtIO RNG
+	config.CreateQemuRngParams(params)
 
 	// Create networks config.
 	config.CreateQemuNetworksParams(params)
@@ -1503,6 +1513,25 @@ func (c ConfigQemu) CreateIpconfigParams(params map[string]interface{}) error {
 	return nil
 }
 
+// Create RNG parameter.
+func (c ConfigQemu) CreateQemuRngParams(params map[string]interface{}) {
+	rngParam := QemuDeviceParam{}
+	rngParam = rngParam.createDeviceParam(c.RNGDrive, nil)
+
+	if len(rngParam) > 0 {
+		rng_info := []string{}
+		rng := ""
+		for _, param := range rngParam {
+			key := strings.Split(param, "=")
+			rng_info = append(rng_info, fmt.Sprintf("%s=%s", key[0], key[1]))
+		}
+		if len(rng_info) > 0 {
+			rng = strings.Join(rng_info, ",")
+			params["rng0"] = rng
+		}
+	}
+}
+
 // Create efi parameter.
 func (c ConfigQemu) CreateQemuEfiParams(params map[string]interface{}) {
 	efiParam := QemuDeviceParam{}
@@ -1613,6 +1642,8 @@ func (p QemuDeviceParam) createDeviceParam(
 			} else if sValue, ok := value.(string); ok && len(sValue) > 0 {
 				confValue = sValue
 			} else if iValue, ok := value.(int); ok && iValue > 0 {
+				confValue = iValue
+			} else if iValue, ok := value.(float64); ok && iValue > 0 {
 				confValue = iValue
 			}
 			if confValue != nil {
