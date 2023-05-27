@@ -13,7 +13,6 @@ type ConfigSDNZone struct {
 	Bridge                   string `json:"bridge,omitempty"`
 	BridgeDisableMacLearning bool   `json:"bridge-disable-mac-learning,omitempty"`
 	Controller               string `json:"controller,omitempty"`
-	Delete                   string `json:"delete,omitempty"`
 	DisableARPNDSuppression  bool   `json:"disable-arp-nd-suppression,omitempty"`
 	DNS                      string `json:"dns,omitempty"`
 	DNSZone                  string `json:"dnszone,omitempty"`
@@ -31,6 +30,8 @@ type ConfigSDNZone struct {
 	Tag                      int    `json:"tag,omitempty"`
 	VlanProtocol             string `json:"vlan-protocol,omitempty"`
 	VrfVxlan                 int    `json:"vrf-vxlan,omitempty"`
+	// Pass a string of attributes to be deleted from the remote object
+	Delete string `json:"delete,omitempty"`
 	// Digest allows for a form of optimistic locking
 	Digest string `json:"digest,omitempty"`
 }
