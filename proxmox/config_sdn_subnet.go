@@ -6,22 +6,6 @@ import (
 	"net"
 )
 
-/*
-	{
-	 "cidr":"192.168.11.0/24",
-	 "zone":"testlab",
-	 "mask":"24",
-	 "network":"192.168.11.0",
-	 "type":"subnet",
-	 "pending":{"gateway":"192.168.11.2"},
-	 "digest":null,
-	 "snat":1,
-	 "state":"changed",
-	 "subnet":"testlab-192.168.11.0-24",
-	 "vnet":"testlab1",
-	 "gateway":"192.168.11.1"
-	 }
-*/
 type ConfigSDNSubnet struct {
 	// For creation purposes - Subnet is a CIDR
 	// Once a subnet has been created, the Subnet is an identifier with the format
