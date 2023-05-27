@@ -785,6 +785,90 @@ func main() {
 		}
 		log.Printf("Network configuration on node %s has been reverted\n", node)
 
+	//SDN
+	case "applySDN":
+		exitStatus, err := c.ApplySDN()
+		if err != nil {
+			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
+		}
+		log.Printf("SDN configuration has been applied\n")
+
+	case "getZonesList":
+		zones, err := c.GetSDNZones(true, "")
+		if err != nil {
+			log.Printf("Error listing SDN zones %+v\n", err)
+			os.Exit(1)
+		}
+		zonesList, err := json.Marshal(zones)
+		failError(err)
+		fmt.Println(string(zonesList))
+
+	case "getZone":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: Zone name is needed"))
+		}
+		zoneName := flag.Args()[1]
+		zone, err := c.GetSDNZone(zoneName)
+		if err != nil {
+			log.Printf("Error listing SDN zones %+v\n", err)
+			os.Exit(1)
+		}
+		zoneList, err := json.Marshal(zone)
+		failError(err)
+		fmt.Println(string(zoneList))
+
+	case "createZone":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: Zone name is needed"))
+		}
+		zoneName := flag.Args()[1]
+		config, err := proxmox.NewConfigSDNZoneFromJson(GetConfig(*fConfigFile))
+		failError(err)
+		failError(config.CreateWithValidate(zoneName, c))
+		log.Printf("Zone %s has been created\n", zoneName)
+
+	case "deleteZone":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: zone name required"))
+		}
+		zoneName := flag.Args()[1]
+		err := c.DeleteSDNZone(zoneName)
+		failError(err)
+
+	case "updateZone":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: zone name required"))
+		}
+		zoneName := flag.Args()[1]
+		config, err := proxmox.NewConfigSDNZoneFromJson(GetConfig(*fConfigFile))
+		failError(err)
+		failError(config.UpdateWithValidate(zoneName, c))
+		log.Printf("Zone %s has been updated\n", zoneName)
+
+	case "getDNSList":
+		dns, err := c.GetSDNDNSs("")
+		if err != nil {
+			log.Printf("Error listing SDN DNS entries %+v\n", err)
+			os.Exit(1)
+		}
+		dnsList, err := json.Marshal(dns)
+		failError(err)
+		fmt.Println(string(dnsList))
+
+	case "getDNS":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: DNS name is needed"))
+		}
+		name := flag.Args()[1]
+		dns, err := c.GetSDNDNS(name)
+		if err != nil {
+			log.Printf("Error listing SDN DNS %+v\n", err)
+			os.Exit(1)
+		}
+		dnsList, err := json.Marshal(dns)
+		failError(err)
+		fmt.Println(string(dnsList))
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
