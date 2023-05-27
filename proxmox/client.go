@@ -1844,6 +1844,84 @@ func (c *Client) ApplySDN() (string, error) {
 	return c.PutWithTask(nil, "/cluster/sdn")
 }
 
+// GetSDNVNets returns a list of all VNet definitions in the "data" element of the returned
+// map.
+func (c *Client) GetSDNVNets(pending bool) (list map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/vnets?pending=%d", Btoi(pending))
+	err = c.GetJsonRetryable(url, &list, 3)
+	return
+}
+
+// CheckSDNVNetExistance returns true if a DNS entry with the provided ID exists, false otherwise.
+func (c *Client) CheckSDNVNetExistance(id string) (existance bool, err error) {
+	list, err := c.GetSDNVNets(true)
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "vnet", id)
+	return
+}
+
+// GetSDNVNet returns details about the DNS entry whose name was provided.
+// An error is returned if the zone doesn't exist.
+// The returned zone can be unmarshalled into a ConfigSDNVNet struct.
+func (c *Client) GetSDNVNet(name string) (dns map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/vnets/%s", name)
+	err = c.GetJsonRetryable(url, &dns, 3)
+	return
+}
+
+// CreateSDNVNet creates a new SDN DNS in the cluster
+func (c *Client) CreateSDNVNet(params map[string]interface{}) error {
+	return c.Post(params, "/cluster/sdn/vnets")
+}
+
+// DeleteSDNVNet deletes an existing SDN DNS in the cluster
+func (c *Client) DeleteSDNVNet(name string) error {
+	return c.Delete(fmt.Sprintf("/cluster/sdn/vnets/%s", name))
+}
+
+// UpdateSDNVNet updates the given DNS with the provided parameters
+func (c *Client) UpdateSDNVNet(id string, params map[string]interface{}) error {
+	return c.Put(params, "/cluster/sdn/vnets/"+id)
+}
+
+// GetSDNSubnets returns a list of all Subnet definitions in the "data" element of the returned
+// map.
+func (c *Client) GetSDNSubnets(vnet string) (list map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/vnets/%s/subnets", vnet)
+	err = c.GetJsonRetryable(url, &list, 3)
+	return
+}
+
+// CheckSDNSubnetExistance returns true if a DNS entry with the provided ID exists, false otherwise.
+func (c *Client) CheckSDNSubnetExistance(vnet, id string) (existance bool, err error) {
+	list, err := c.GetSDNSubnets(vnet)
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "subnet", id)
+	return
+}
+
+// GetSDNSubnet returns details about the Subnet entry whose name was provided.
+// An error is returned if the zone doesn't exist.
+// The returned map["data"] section can be unmarshalled into a ConfigSDNSubnet struct.
+func (c *Client) GetSDNSubnet(vnet, name string) (subnet map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/vnets/%s/subnets/%s", vnet, name)
+	err = c.GetJsonRetryable(url, &subnet, 3)
+	return
+}
+
+// CreateSDNSubnet creates a new SDN DNS in the cluster
+func (c *Client) CreateSDNSubnet(vnet string, params map[string]interface{}) error {
+	return c.Post(params, fmt.Sprintf("/cluster/sdn/vnets/%s/subnets", vnet))
+}
+
+// DeleteSDNSubnet deletes an existing SDN DNS in the cluster
+func (c *Client) DeleteSDNSubnet(vnet, name string) error {
+	return c.Delete(fmt.Sprintf("/cluster/sdn/vnets/%s/subnets/%s", vnet, name))
+}
+
+// UpdateSDNSubnet updates the given DNS with the provided parameters
+func (c *Client) UpdateSDNSubnet(vnet, id string, params map[string]interface{}) error {
+	return c.Put(params, fmt.Sprintf("/cluster/sdn/vnets/%s/subnets/%s", vnet, id))
+}
+
 // GetSDNDNSs returns a list of all DNS definitions in the "data" element of the returned
 // map.
 func (c *Client) GetSDNDNSs(typeFilter string) (list map[string]interface{}, err error) {

@@ -5,29 +5,6 @@ import (
 	"fmt"
 )
 
-// ConfigSDNDNS describes the SDN DNS configurable element
-type ConfigSDNDNS struct {
-	DNS  string `json:"dns"`
-	Key  string `json:"key"`
-	Type string `json:"type"`
-	URL  string `json:"url"`
-	TTL  int    `json:"ttl,omitempty"`
-	// The SDN Plugin schema contains ReverseV6Mask attribute while the
-	// PowerDNS plugin schema contains the ReverseMaskV6 attribute
-	// This is probably a bug that crept into the Proxmox implementation.a
-	// Checked in libpve-network-perl=0.7.3
-	ReverseMaskV6 int `json:"reversemaskv6,omitempty"`
-	ReverseV6Mask int `json:"reversev6mask,omitempty"`
-	// Digest allows for a form of optimistic locking
-	Digest string `json:"digest,omitempty"`
-}
-
-func NewConfigSDNDNSFromJson(input []byte) (config *ConfigSDNDNS, err error) {
-	config = &ConfigSDNDNS{}
-	err = json.Unmarshal([]byte(input), config)
-	return
-}
-
 // ConfigSDNZone describes the Zone configurable element
 type ConfigSDNZone struct {
 	Type                     string `json:"type"`

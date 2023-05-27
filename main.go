@@ -845,6 +845,58 @@ func main() {
 		failError(config.UpdateWithValidate(zoneName, c))
 		log.Printf("Zone %s has been updated\n", zoneName)
 
+	case "getVNetsList":
+		zones, err := c.GetSDNVNets(true)
+		if err != nil {
+			log.Printf("Error listing SDN zones %+v\n", err)
+			os.Exit(1)
+		}
+		vnetsList, err := json.Marshal(zones)
+		failError(err)
+		fmt.Println(string(vnetsList))
+
+	case "getVNet":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: VNet name is needed"))
+		}
+		vnetName := flag.Args()[1]
+		vnet, err := c.GetSDNVNet(vnetName)
+		if err != nil {
+			log.Printf("Error listing SDN VNets %+v\n", err)
+			os.Exit(1)
+		}
+		vnetsList, err := json.Marshal(vnet)
+		failError(err)
+		fmt.Println(string(vnetsList))
+
+	case "createVNet":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: VNet name is needed"))
+		}
+		vnetName := flag.Args()[1]
+		config, err := proxmox.NewConfigSDNVNetFromJson(GetConfig(*fConfigFile))
+		failError(err)
+		failError(config.CreateWithValidate(vnetName, c))
+		log.Printf("VNet %s has been created\n", vnetName)
+
+	case "deleteVNet":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: VNet name required"))
+		}
+		vnetName := flag.Args()[1]
+		err := c.DeleteSDNVNet(vnetName)
+		failError(err)
+
+	case "updateVNet":
+		if len(flag.Args()) < 2 {
+			failError(fmt.Errorf("error: zone name required"))
+		}
+		vnetName := flag.Args()[1]
+		config, err := proxmox.NewConfigSDNVNetFromJson(GetConfig(*fConfigFile))
+		failError(err)
+		failError(config.UpdateWithValidate(vnetName, c))
+		log.Printf("VNet %s has been updated\n", vnetName)
+
 	case "getDNSList":
 		dns, err := c.GetSDNDNSs("")
 		if err != nil {
