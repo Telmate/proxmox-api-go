@@ -16,7 +16,7 @@ var (
 		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			id := cli.ValidateExistingGuestID(args, 0)
-			jBody, err := proxmox.ListSnapshots(cli.NewClient(), proxmox.NewVmRef(id))
+			rawSnapshots, err := proxmox.ListSnapshots(cli.NewClient(), proxmox.NewVmRef(id))
 			if err != nil {
 				noTree = false
 				return
@@ -24,9 +24,9 @@ var (
 			var list []*proxmox.Snapshot
 			if noTree {
 				noTree = false
-				list = proxmox.FormatSnapshotsList(jBody)
+				list = rawSnapshots.FormatSnapshotsList()
 			} else {
-				list = proxmox.FormatSnapshotsTree(jBody)
+				list = rawSnapshots.FormatSnapshotsTree()
 			}
 			if len(list) == 0 {
 				listCmd.Printf("Guest with ID (%d) has no snapshots", id)
