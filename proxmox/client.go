@@ -170,6 +170,7 @@ func (c *Client) GetResourceList(resourceType string) (list []interface{}, err e
 	return c.GetItemListInterfaceArray(url)
 }
 
+// TODO deprecate once nothing uses this anymore, use GetResourceList() instead
 func (c *Client) GetVmList() (map[string]interface{}, error) {
 	list, err := c.GetResourceList(resourceListGuest)
 	return map[string]interface{}{"data": list}, err
