@@ -156,6 +156,8 @@ func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
 	return
 }
 
+const resourceListGuest string = "vm"
+
 // GetResourceList returns a list of all enabled proxmox resources.
 // For resource types that can be in a disabled state, disabled resources
 // will not be returned
@@ -169,7 +171,7 @@ func (c *Client) GetResourceList(resourceType string) (list []interface{}, err e
 }
 
 func (c *Client) GetVmList() (map[string]interface{}, error) {
-	list, err := c.GetResourceList("vm")
+	list, err := c.GetResourceList(resourceListGuest)
 	return map[string]interface{}{"data": list}, err
 }
 
