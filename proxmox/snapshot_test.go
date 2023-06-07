@@ -12,7 +12,7 @@ func Test_FormatSnapshotsTree(t *testing.T) {
 	input := test_FormatSnapshots_Input()
 	output := test_FormatSnapshotsTree_Output()
 	for i, e := range input {
-		result, _ := json.Marshal(FormatSnapshotsTree(e))
+		result, _ := json.Marshal(e.FormatSnapshotsTree())
 		require.JSONEq(t, output[i], string(result))
 	}
 }
@@ -22,13 +22,13 @@ func Test_FormatSnapshotsList(t *testing.T) {
 	input := test_FormatSnapshots_Input()
 	output := test_FormatSnapshotsList_Output()
 	for i, e := range input {
-		result, _ := json.Marshal(FormatSnapshotsList(e))
+		result, _ := json.Marshal(e.FormatSnapshotsList())
 		require.JSONEq(t, output[i], string(result))
 	}
 }
 
-func test_FormatSnapshots_Input() [][]interface{} {
-	return [][]interface{}{{map[string]interface{}{
+func test_FormatSnapshots_Input() []rawSnapshots {
+	return []rawSnapshots{{map[string]interface{}{
 		"name":        "aa",
 		"snaptime":    float64(1666361849),
 		"description": "",

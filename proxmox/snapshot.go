@@ -35,10 +35,12 @@ func (config *ConfigSnapshot) CreateSnapshot(c *Client, guestId uint) (err error
 	return
 }
 
-func ListSnapshots(c *Client, vmr *VmRef) (taskResponse []interface{}, err error) {
-	err = c.CheckVmRef(vmr)
+type rawSnapshots []interface{}
+
+func ListSnapshots(c *Client, vmr *VmRef) (rawSnapshots, error) {
+	err := c.CheckVmRef(vmr)
 	if err != nil {
-		return
+		return nil, err
 	}
 	return c.GetItemConfigInterfaceArray("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/", "Guest", "SNAPSHOTS")
 }
@@ -79,9 +81,9 @@ type Snapshot struct {
 }
 
 // Formats the taskResponse as a list of snapshots
-func FormatSnapshotsList(taskResponse []interface{}) (list []*Snapshot) {
-	list = make([]*Snapshot, len(taskResponse))
-	for i, e := range taskResponse {
+func (raw rawSnapshots) FormatSnapshotsList() (list []*Snapshot) {
+	list = make([]*Snapshot, len(raw))
+	for i, e := range raw {
 		list[i] = &Snapshot{}
 		if _, isSet := e.(map[string]interface{})["description"]; isSet {
 			list[i].Description = e.(map[string]interface{})["description"].(string)
@@ -103,8 +105,8 @@ func FormatSnapshotsList(taskResponse []interface{}) (list []*Snapshot) {
 }
 
 // Formats a list of snapshots as a tree of snapshots
-func FormatSnapshotsTree(taskResponse []interface{}) (tree []*Snapshot) {
-	list := FormatSnapshotsList(taskResponse)
+func (raw rawSnapshots) FormatSnapshotsTree() (tree []*Snapshot) {
+	list := raw.FormatSnapshotsList()
 	for _, e := range list {
 		for _, ee := range list {
 			if e.Parent == ee.Name {
