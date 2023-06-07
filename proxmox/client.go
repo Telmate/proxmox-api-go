@@ -188,11 +188,7 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 	if resp, err = c.GetVmList(); err != nil {
 		return
 	}
-	vms, ok := resp["data"].([]interface{})
-	if !ok {
-		err = fmt.Errorf("failed to cast response to list, resp: %v", resp)
-		return
-	}
+	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if int(vm["vmid"].(float64)) == vmr.vmId {
@@ -1957,7 +1953,11 @@ func (c *Client) GetItemListInterfaceArray(url string) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return list["data"].([]interface{}), nil
+	data, ok := list["data"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to cast response to list, resp: %v", list)
+	}
+	return data, nil
 }
 
 func (c *Client) GetItemList(url string) (list map[string]interface{}, err error) {
