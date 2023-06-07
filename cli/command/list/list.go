@@ -23,8 +23,6 @@ func listRaw(IDtype string) {
 		list, err = c.GetAcmeAccountList()
 	case "AcmePlugins":
 		list, err = c.GetAcmePluginList()
-	case "Guests":
-		list, err = c.GetVmList()
 	case "MetricServers":
 		list, err = c.GetMetricsServerList()
 	case "Nodes":

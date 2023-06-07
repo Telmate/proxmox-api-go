@@ -156,21 +156,24 @@ func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
 	return
 }
 
+const resourceListGuest string = "vm"
+
 // GetResourceList returns a list of all enabled proxmox resources.
 // For resource types that can be in a disabled state, disabled resources
 // will not be returned
-func (c *Client) GetResourceList(resourceType string) (list map[string]interface{}, err error) {
-	endpoint := "/cluster/resources"
+// TODO this func should not be exported
+func (c *Client) GetResourceList(resourceType string) (list []interface{}, err error) {
+	url := "/cluster/resources"
 	if resourceType != "" {
-		endpoint = fmt.Sprintf("%s?type=%s", endpoint, resourceType)
+		url = url + "?type=" + resourceType
 	}
-	err = c.GetJsonRetryable(endpoint, &list, 3)
-	return
+	return c.GetItemListInterfaceArray(url)
 }
 
-func (c *Client) GetVmList() (list map[string]interface{}, err error) {
-	list, err = c.GetResourceList("vm")
-	return
+// TODO deprecate once nothing uses this anymore, use GetResourceList() instead
+func (c *Client) GetVmList() (map[string]interface{}, error) {
+	list, err := c.GetResourceList(resourceListGuest)
+	return map[string]interface{}{"data": list}, err
 }
 
 func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
