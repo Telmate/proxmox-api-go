@@ -12,7 +12,7 @@ type ConfigSnapshot struct {
 	VmState     bool   `json:"ram,omitempty"`
 }
 
-func (config *ConfigSnapshot) mapToApiValues() map[string]interface{} {
+func (config ConfigSnapshot) mapToApiValues() map[string]interface{} {
 	return map[string]interface{}{
 		"snapname":    config.Name,
 		"description": config.Description,
@@ -20,7 +20,7 @@ func (config *ConfigSnapshot) mapToApiValues() map[string]interface{} {
 	}
 }
 
-func (config *ConfigSnapshot) CreateSnapshot(c *Client, vmr *VmRef) (err error) {
+func (config ConfigSnapshot) CreateSnapshot(c *Client, vmr *VmRef) (err error) {
 	params := config.mapToApiValues()
 	err = c.CheckVmRef(vmr)
 	if err != nil {
