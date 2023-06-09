@@ -157,21 +157,24 @@ func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
 	return
 }
 
+const resourceListGuest string = "vm"
+
 // GetResourceList returns a list of all enabled proxmox resources.
 // For resource types that can be in a disabled state, disabled resources
 // will not be returned
-func (c *Client) GetResourceList(resourceType string) (list map[string]interface{}, err error) {
-	endpoint := "/cluster/resources"
+// TODO this func should not be exported
+func (c *Client) GetResourceList(resourceType string) (list []interface{}, err error) {
+	url := "/cluster/resources"
 	if resourceType != "" {
-		endpoint = fmt.Sprintf("%s?type=%s", endpoint, resourceType)
+		url = url + "?type=" + resourceType
 	}
-	err = c.GetJsonRetryable(endpoint, &list, 3)
-	return
+	return c.GetItemListInterfaceArray(url)
 }
 
-func (c *Client) GetVmList() (list map[string]interface{}, err error) {
-	list, err = c.GetResourceList("vm")
-	return
+// TODO deprecate once nothing uses this anymore, use ListGuests() instead
+func (c *Client) GetVmList() (map[string]interface{}, error) {
+	list, err := c.GetResourceList(resourceListGuest)
+	return map[string]interface{}{"data": list}, err
 }
 
 func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
@@ -182,13 +185,8 @@ func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
 }
 
 func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error) {
-	var resp map[string]interface{}
-	if resp, err = c.GetVmList(); err != nil {
-		return
-	}
-	vms, ok := resp["data"].([]interface{})
-	if !ok {
-		err = fmt.Errorf("failed to cast response to list, resp: %v", resp)
+	vms, err := c.GetResourceList(resourceListGuest)
+	if err != nil {
 		return
 	}
 	for vmii := range vms {
@@ -220,11 +218,10 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 }
 
 func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
-	resp, err := c.GetVmList()
+	vms, err := c.GetResourceList(resourceListGuest)
 	if err != nil {
 		return
 	}
-	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vm["name"] != nil && vm["name"].(string) == vmName {
@@ -873,11 +870,10 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 
 // VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false
 func (c *Client) VMIdExists(vmID int) (exists bool, err error) {
-	resp, err := c.GetVmList()
+	vms, err := c.GetResourceList(resourceListGuest)
 	if err != nil {
 		return
 	}
-	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vmID == int(vm["vmid"].(float64)) {
@@ -2122,7 +2118,11 @@ func (c *Client) GetItemListInterfaceArray(url string) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return list["data"].([]interface{}), nil
+	data, ok := list["data"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to cast response to list, resp: %v", list)
+	}
+	return data, nil
 }
 
 func (c *Client) GetItemList(url string) (list map[string]interface{}, err error) {

@@ -23,7 +23,13 @@ var (
 				VmState:     memory,
 			}
 			memory = false
-			err = config.CreateSnapshot(cli.NewClient(), uint(id))
+			client := cli.NewClient()
+			vmr := proxmox.NewVmRef(id)
+			_, err = client.GetVmInfo(vmr)
+			if err != nil {
+				return
+			}
+			err = config.CreateSnapshot(client, vmr)
 			if err != nil {
 				return
 			}
