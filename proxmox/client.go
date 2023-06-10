@@ -30,7 +30,6 @@ type Client struct {
 	ApiUrl      string
 	Username    string
 	Password    string
-	ApiToken    string
 	Otp         string
 	TaskTimeout int
 }
