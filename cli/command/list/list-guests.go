@@ -1,6 +1,8 @@
 package list
 
 import (
+	"github.com/Telmate/proxmox-api-go/cli"
+	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
@@ -9,7 +11,10 @@ var list_qemuguestsCmd = &cobra.Command{
 	Short: "Prints a list of Qemu/Lxc Guests in raw json format",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		listRaw("Guests")
+		c := cli.NewClient()
+		guests, err := proxmox.ListGuests(c)
+		cli.LogFatalListing("Guests", err)
+		cli.PrintRawJson(listCmd.OutOrStdout(), guests)
 	},
 }
 

@@ -54,3 +54,16 @@ func Test_Remove_Lxc_Container(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func Test_Create_Template_Lxc_Container(t *testing.T) {
+	Test := api_test.Test{}
+	_ = Test.CreateTest()
+	config := _create_lxc_spec(true)
+
+	vmRef := _create_vmref()
+	err := config.CreateLxc(vmRef, Test.GetClient())
+	require.NoError(t, err)
+
+	err = Test.GetClient().CreateTemplate(vmRef)
+	require.NoError(t, err)
+}

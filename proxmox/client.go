@@ -81,6 +81,13 @@ func (vmr *VmRef) HaGroup() string {
 	return vmr.haGroup
 }
 
+func (vmr *VmRef) nilCheck() error {
+	if vmr == nil {
+		return errors.New("vm reference may not be nil")
+	}
+	return nil
+}
+
 func NewVmRef(vmId int) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
 	return
@@ -138,7 +145,7 @@ func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, trie
 		if strings.Contains(statErr.Error(), "500 no such resource") {
 			return statErr
 		}
-		//fmt.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
+		// fmt.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
 		time.Sleep(time.Duration(ii+1) * time.Second)
 	}
 	return statErr
@@ -149,21 +156,24 @@ func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
 	return
 }
 
+const resourceListGuest string = "vm"
+
 // GetResourceList returns a list of all enabled proxmox resources.
 // For resource types that can be in a disabled state, disabled resources
 // will not be returned
-func (c *Client) GetResourceList(resourceType string) (list map[string]interface{}, err error) {
-	var endpoint = "/cluster/resources"
+// TODO this func should not be exported
+func (c *Client) GetResourceList(resourceType string) (list []interface{}, err error) {
+	url := "/cluster/resources"
 	if resourceType != "" {
-		endpoint = fmt.Sprintf("%s?type=%s", endpoint, resourceType)
+		url = url + "?type=" + resourceType
 	}
-	err = c.GetJsonRetryable(endpoint, &list, 3)
-	return
+	return c.GetItemListInterfaceArray(url)
 }
 
-func (c *Client) GetVmList() (list map[string]interface{}, err error) {
-	list, err = c.GetResourceList("vm")
-	return
+// TODO deprecate once nothing uses this anymore, use ListGuests() instead
+func (c *Client) GetVmList() (map[string]interface{}, error) {
+	list, err := c.GetResourceList(resourceListGuest)
+	return map[string]interface{}{"data": list}, err
 }
 
 func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
@@ -174,13 +184,8 @@ func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
 }
 
 func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error) {
-	var resp map[string]interface{}
-	if resp, err = c.GetVmList(); err != nil {
-		return
-	}
-	vms, ok := resp["data"].([]interface{})
-	if !ok {
-		err = fmt.Errorf("failed to cast response to list, resp: %v", resp)
+	vms, err := c.GetResourceList(resourceListGuest)
+	if err != nil {
 		return
 	}
 	for vmii := range vms {
@@ -212,11 +217,10 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 }
 
 func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
-	resp, err := c.GetVmList()
+	vms, err := c.GetResourceList(resourceListGuest)
 	if err != nil {
 		return
 	}
-	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vm["name"] != nil && vm["name"].(string) == vmName {
@@ -380,7 +384,9 @@ func (c *Client) CreateTemplate(vmr *VmRef) error {
 		return err
 	}
 
-	if exitStatus != "OK" {
+	// Specifically ignore empty exit status for LXCs, since they don't return a task ID
+	// when creating templates in the first place (but still successfully create them).
+	if exitStatus != "OK" && vmr.vmType != "lxc" {
 		return errors.New("Can't convert Vm to template:" + exitStatus)
 	}
 
@@ -443,8 +449,10 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 	return "", fmt.Errorf("Wait timeout for:" + taskUpid)
 }
 
-var rxTaskNode = regexp.MustCompile("UPID:(.*?):")
-var rxExitStatusSuccess = regexp.MustCompile(`^(OK|WARNINGS)`)
+var (
+	rxTaskNode          = regexp.MustCompile("UPID:(.*?):")
+	rxExitStatusSuccess = regexp.MustCompile(`^(OK|WARNINGS)`)
+)
 
 func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err error) {
 	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
@@ -518,7 +526,7 @@ func (c *Client) DeleteVmParams(vmr *VmRef, params map[string]interface{}) (exit
 		return "", err
 	}
 
-	//Remove HA if required
+	// Remove HA if required
 	if vmr.haState != "" {
 		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
 		resp, err := c.session.Delete(url, nil, nil)
@@ -616,7 +624,6 @@ func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}
 }
 
 func (c *Client) CloneLxcContainer(vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
-
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc/%s/clone", vmr.node, vmParams["vmid"])
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -703,7 +710,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 	return RollbackSnapshot(c, vmr, snapshot)
 }
 
-// SetVmConfig - send config options
+// DEPRECATED SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 }
@@ -743,6 +750,7 @@ func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exi
 }
 
 // ResizeQemuDisk allows the caller to increase the size of a disk by the indicated number of gigabytes
+// TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
 func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
 	size := fmt.Sprintf("+%dG", moreSizeGB)
 	return c.ResizeQemuDiskRaw(vmr, disk, size)
@@ -753,6 +761,7 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 // your desired size with a '+' character it will ADD size to the disk.  If you just specify the size by
 // itself it will do an absolute resizing to the specified size. Permitted suffixes are K, M, G, T
 // to indicate order of magnitude (kilobyte, megabyte, etc). Decrease of disk size is not permitted.
+// TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
 func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitStatus interface{}, err error) {
 	// PUT
 	//disk:virtio0
@@ -793,6 +802,7 @@ func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatu
 	return
 }
 
+// DEPRECATED use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	if disk == "" {
@@ -859,11 +869,10 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 
 // VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false
 func (c *Client) VMIdExists(vmID int) (exists bool, err error) {
-	resp, err := c.GetVmList()
+	vms, err := c.GetResourceList(resourceListGuest)
 	if err != nil {
 		return
 	}
-	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vmID == int(vm["vmid"].(float64)) {
@@ -880,7 +889,6 @@ func (c *Client) CreateVMDisk(
 	fullDiskName string,
 	diskParams map[string]interface{},
 ) error {
-
 	reqbody := ParamsToBody(diskParams)
 	url := fmt.Sprintf("/nodes/%s/storage/%s/content", nodeName, storageName)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -936,7 +944,6 @@ func (c *Client) createVMDisks(
 // CreateNewDisk - This method allows simpler disk creation for direct client users
 // It should work for any existing container and virtual machine
 func (c *Client) CreateNewDisk(vmr *VmRef, disk string, volume string) (exitStatus interface{}, err error) {
-
 	reqbody := ParamsToBody(map[string]interface{}{disk: volume})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(url, nil, nil, &reqbody)
@@ -1332,6 +1339,47 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 	return nil
 }
 
+func (c *Client) UploadLargeFile(node string, storage string, contentType string, filename string, filesize int64, file io.Reader) error {
+	var contentLength int64
+
+	var body io.Reader
+	var mimetype string
+	var err error
+	body, mimetype, contentLength, err = createStreamedUploadBody(contentType, filename, filesize, file)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/nodes/%s/storage/%s/upload", c.session.ApiUrl, node, storage)
+	headers := c.session.Headers.Clone()
+	headers.Add("Content-Type", mimetype)
+	headers.Add("Accept", "application/json")
+	req, err := c.session.NewRequest(http.MethodPost, url, &headers, body)
+	if err != nil {
+		return err
+	}
+
+	req.ContentLength = contentLength
+
+	resp, err := c.session.Do(req)
+	if err != nil {
+		return err
+	}
+
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return err
+	}
+	exitStatus, err := c.WaitForCompletion(taskResponse)
+	if err != nil {
+		return err
+	}
+	if exitStatus != exitStatusSuccess {
+		return fmt.Errorf("moving file to destination failed: %v", exitStatus)
+	}
+	return nil
+}
+
 func createUploadBody(contentType string, filename string, r io.Reader) (io.Reader, string, error) {
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
@@ -1476,7 +1524,6 @@ func (c *Client) ReadVMHA(vmr *VmRef) (err error) {
 		}
 	}
 	return
-
 }
 
 func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, err error) {
@@ -1485,7 +1532,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 		return
 	}
 
-	//Remove HA
+	// Remove HA
 	if haState == "" {
 		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
 		resp, err := c.session.Delete(url, nil, nil)
@@ -1502,7 +1549,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 		return nil, err
 	}
 
-	//Activate HA
+	// Activate HA
 	if vmr.haState == "" {
 		paramMap := map[string]interface{}{
 			"sid": vmr.vmId,
@@ -1525,7 +1572,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 		}
 	}
 
-	//Set wanted state
+	// Set wanted state
 	paramMap := map[string]interface{}{
 		"state": haState,
 		"group": haGroup,
@@ -1573,8 +1620,7 @@ func (c *Client) DeletePool(poolid string) error {
 	return c.Delete("/pools/" + poolid)
 }
 
-//permissions check
-
+// permissions check
 func (c *Client) GetUserPermissions(id UserID, path string) (permissions []string, err error) {
 	existence, err := CheckUserExistence(id, c)
 	if err != nil {
@@ -1904,7 +1950,11 @@ func (c *Client) GetItemListInterfaceArray(url string) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return list["data"].([]interface{}), nil
+	data, ok := list["data"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to cast response to list, resp: %v", list)
+	}
+	return data, nil
 }
 
 func (c *Client) GetItemList(url string) (list map[string]interface{}, err error) {

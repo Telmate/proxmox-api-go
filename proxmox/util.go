@@ -204,3 +204,28 @@ func createHeaderList(header_string string, sess *Session) (*Session, error) {
 	}
 	return sess, nil
 }
+
+// check if a key exists in a nested array of map[string]interface{}
+func keyExists(array []interface{}, key string) (existence bool) {
+	for i := range array {
+		item := array[i].(map[string]interface{})
+		if _, isSet := item[key]; isSet {
+			return true
+		}
+	}
+	return false
+}
+
+func splitStringOfSettings(settings string) map[string]interface{} {
+	settingValuePairs := strings.Split(settings, ",")
+	settingMap := map[string]interface{}{}
+	for _, e := range settingValuePairs {
+		keyValuePair := strings.SplitN(e, "=", 2)
+		var value string
+		if len(keyValuePair) == 2 {
+			value = keyValuePair[1]
+		}
+		settingMap[keyValuePair[0]] = value
+	}
+	return settingMap
+}

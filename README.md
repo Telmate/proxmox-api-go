@@ -157,6 +157,11 @@ createQemu JSON Sample:
       "tag": -1
     }
   },
+  "rng0": {
+    "source": "/dev/urandom",
+    "max_bytes": "1024",
+    "period": "1000"
+  },
   "usb": {
     "0": {
       "host": "0658:0200",
