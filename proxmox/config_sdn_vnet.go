@@ -72,12 +72,12 @@ func (c *ConfigSDNVNet) Validate(id string, create bool, client *Client) (err er
 		return
 	}
 	if !zoneExists {
-		return fmt.Errorf("VNet must be associated to an existing zone. Zone %s could not be found.", c.Zone)
+		return fmt.Errorf("vnet must be associated to an existing zone. zone %s could not be found", c.Zone)
 	}
 	if c.Alias != "" {
-		regex, _ := regexp.Compile(`^(?^i:[\(\)-_.\w\d\s]{0,256})$`)
+		regex, _ := regexp.Compile(`^(?i:[\(\)-_.\w\d\s]{0,256})$`)
 		if !regex.Match([]byte(c.Alias)) {
-			return fmt.Errorf(`Alias must match the validation regular expression: ^(?^i:[\(\)-_.\w\d\s]{0,256})$`)
+			return fmt.Errorf(`alias must match the validation regular expression: ^(?i:[\(\)-_.\w\d\s]{0,256})$`)
 		}
 	}
 	err = ValidateIntGreater(0, c.Tag, "tag")

@@ -75,7 +75,7 @@ func (c *ConfigSDNSubnet) Validate(vnet, id string, create bool, client *Client)
 		return
 	}
 	if !vnetExists {
-		return fmt.Errorf("Subnet must be created in an existing vnet. Vnet (%s) wasn't found", vnet)
+		return fmt.Errorf("subnet must be created in an existing vnet. vnet (%s) wasn't found", vnet)
 	}
 	exists, err := client.CheckSDNSubnetExistance(vnet, id)
 	if err != nil {
