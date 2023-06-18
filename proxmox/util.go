@@ -19,6 +19,15 @@ func inArray(arr []string, str string) bool {
 	return false
 }
 
+func Btoi(b bool) int {
+	switch b {
+	case true:
+		return 1
+	default:
+		return 0
+	}
+}
+
 func Itob(i int) bool {
 	return i == 1
 }
