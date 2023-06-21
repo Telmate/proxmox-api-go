@@ -6,38 +6,40 @@ import (
 )
 
 type QemuSataDisk struct {
-	AsyncIO      QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup       bool              `json:"backup"`
-	Bandwidth    QemuDiskBandwidth `json:"bandwidth,omitempty"`
-	Cache        QemuDiskCache     `json:"cache,omitempty"`
-	Discard      bool              `json:"discard"`
-	EmulateSSD   bool              `json:"emulatessd"`
-	Format       QemuDiskFormat    `json:"format"`
-	Id           uint              `json:"id"`     //Id is only returned and setting it has no effect
-	LinkedDiskId *uint             `json:"linked"` //LinkedClone is only returned and setting it has no effect
-	Replicate    bool              `json:"replicate"`
-	Serial       QemuDiskSerial    `json:"serial,omitempty"`
-	Size         uint              `json:"size"`
-	Storage      string            `json:"storage"`
+	AsyncIO       QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup        bool              `json:"backup"`
+	Bandwidth     QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache         QemuDiskCache     `json:"cache,omitempty"`
+	Discard       bool              `json:"discard"`
+	EmulateSSD    bool              `json:"emulatessd"`
+	Format        QemuDiskFormat    `json:"format"`
+	Id            uint              `json:"id"`     //Id is only returned and setting it has no effect
+	LinkedDiskId  *uint             `json:"linked"` //LinkedClone is only returned and setting it has no effect
+	Replicate     bool              `json:"replicate"`
+	Serial        QemuDiskSerial    `json:"serial,omitempty"`
+	Size          uint              `json:"size"`
+	Storage       string            `json:"storage"`
+	WorldWideName QemuWorldWideName `json:"wwn"`
 }
 
 func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
 	return &qemuDisk{
-		AsyncIO:      disk.AsyncIO,
-		Backup:       disk.Backup,
-		Bandwidth:    disk.Bandwidth,
-		Cache:        disk.Cache,
-		Discard:      disk.Discard,
-		Disk:         true,
-		EmulateSSD:   disk.EmulateSSD,
-		Format:       disk.Format,
-		Id:           disk.Id,
-		LinkedDiskId: disk.LinkedDiskId,
-		Replicate:    disk.Replicate,
-		Serial:       disk.Serial,
-		Size:         disk.Size,
-		Storage:      disk.Storage,
-		Type:         sata,
+		AsyncIO:       disk.AsyncIO,
+		Backup:        disk.Backup,
+		Bandwidth:     disk.Bandwidth,
+		Cache:         disk.Cache,
+		Discard:       disk.Discard,
+		Disk:          true,
+		EmulateSSD:    disk.EmulateSSD,
+		Format:        disk.Format,
+		Id:            disk.Id,
+		LinkedDiskId:  disk.LinkedDiskId,
+		Replicate:     disk.Replicate,
+		Serial:        disk.Serial,
+		Size:          disk.Size,
+		Storage:       disk.Storage,
+		Type:          sata,
+		WorldWideName: disk.WorldWideName,
 	}
 }
 
@@ -147,30 +149,32 @@ func (disks QemuSataDisks) validate() (numberOfCloudInitDevices uint8, err error
 }
 
 type QemuSataPassthrough struct {
-	AsyncIO    QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup     bool              `json:"backup"`
-	Bandwidth  QemuDiskBandwidth `json:"bandwidth,omitempty"`
-	Cache      QemuDiskCache     `json:"cache,omitempty"`
-	Discard    bool              `json:"discard"`
-	EmulateSSD bool              `json:"emulatessd"`
-	File       string            `json:"file"`
-	Replicate  bool              `json:"replicate"`
-	Serial     QemuDiskSerial    `json:"serial,omitempty"`
-	Size       uint              `json:"size"` //size is only returned and setting it has no effect
+	AsyncIO       QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup        bool              `json:"backup"`
+	Bandwidth     QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache         QemuDiskCache     `json:"cache,omitempty"`
+	Discard       bool              `json:"discard"`
+	EmulateSSD    bool              `json:"emulatessd"`
+	File          string            `json:"file"`
+	Replicate     bool              `json:"replicate"`
+	Serial        QemuDiskSerial    `json:"serial,omitempty"`
+	Size          uint              `json:"size"` //size is only returned and setting it has no effect
+	WorldWideName QemuWorldWideName `json:"wwn"`
 }
 
 func (passthrough *QemuSataPassthrough) convertDataStructure() *qemuDisk {
 	return &qemuDisk{
-		AsyncIO:    passthrough.AsyncIO,
-		Backup:     passthrough.Backup,
-		Bandwidth:  passthrough.Bandwidth,
-		Cache:      passthrough.Cache,
-		Discard:    passthrough.Discard,
-		EmulateSSD: passthrough.EmulateSSD,
-		File:       passthrough.File,
-		Replicate:  passthrough.Replicate,
-		Serial:     passthrough.Serial,
-		Type:       sata,
+		AsyncIO:       passthrough.AsyncIO,
+		Backup:        passthrough.Backup,
+		Bandwidth:     passthrough.Bandwidth,
+		Cache:         passthrough.Cache,
+		Discard:       passthrough.Discard,
+		EmulateSSD:    passthrough.EmulateSSD,
+		File:          passthrough.File,
+		Replicate:     passthrough.Replicate,
+		Serial:        passthrough.Serial,
+		Type:          sata,
+		WorldWideName: passthrough.WorldWideName,
 	}
 }
 
@@ -237,32 +241,34 @@ func (QemuSataStorage) mapToStruct(param string, LinkedVmId *uint) *QemuSataStor
 	}
 	if tmpDisk.File == "" {
 		return &QemuSataStorage{Disk: &QemuSataDisk{
-			AsyncIO:      tmpDisk.AsyncIO,
-			Backup:       tmpDisk.Backup,
-			Bandwidth:    tmpDisk.Bandwidth,
-			Cache:        tmpDisk.Cache,
-			Discard:      tmpDisk.Discard,
-			EmulateSSD:   tmpDisk.EmulateSSD,
-			Format:       tmpDisk.Format,
-			Id:           tmpDisk.Id,
-			LinkedDiskId: tmpDisk.LinkedDiskId,
-			Replicate:    tmpDisk.Replicate,
-			Serial:       tmpDisk.Serial,
-			Size:         tmpDisk.Size,
-			Storage:      tmpDisk.Storage,
+			AsyncIO:       tmpDisk.AsyncIO,
+			Backup:        tmpDisk.Backup,
+			Bandwidth:     tmpDisk.Bandwidth,
+			Cache:         tmpDisk.Cache,
+			Discard:       tmpDisk.Discard,
+			EmulateSSD:    tmpDisk.EmulateSSD,
+			Format:        tmpDisk.Format,
+			Id:            tmpDisk.Id,
+			LinkedDiskId:  tmpDisk.LinkedDiskId,
+			Replicate:     tmpDisk.Replicate,
+			Serial:        tmpDisk.Serial,
+			Size:          tmpDisk.Size,
+			Storage:       tmpDisk.Storage,
+			WorldWideName: tmpDisk.WorldWideName,
 		}}
 	}
 	return &QemuSataStorage{Passthrough: &QemuSataPassthrough{
-		AsyncIO:    tmpDisk.AsyncIO,
-		Backup:     tmpDisk.Backup,
-		Bandwidth:  tmpDisk.Bandwidth,
-		Cache:      tmpDisk.Cache,
-		Discard:    tmpDisk.Discard,
-		EmulateSSD: tmpDisk.EmulateSSD,
-		File:       tmpDisk.File,
-		Replicate:  tmpDisk.Replicate,
-		Serial:     tmpDisk.Serial,
-		Size:       tmpDisk.Size,
+		AsyncIO:       tmpDisk.AsyncIO,
+		Backup:        tmpDisk.Backup,
+		Bandwidth:     tmpDisk.Bandwidth,
+		Cache:         tmpDisk.Cache,
+		Discard:       tmpDisk.Discard,
+		EmulateSSD:    tmpDisk.EmulateSSD,
+		File:          tmpDisk.File,
+		Replicate:     tmpDisk.Replicate,
+		Serial:        tmpDisk.Serial,
+		Size:          tmpDisk.Size,
+		WorldWideName: tmpDisk.WorldWideName,
 	}}
 }
 

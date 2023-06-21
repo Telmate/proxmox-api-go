@@ -187,8 +187,9 @@ type qemuDisk struct {
 	Serial       QemuDiskSerial
 	Size         uint
 	// TODO custom type
-	Storage string // Only set for Disk
-	Type    qemuDiskType
+	Storage       string // Only set for Disk
+	Type          qemuDiskType
+	WorldWideName QemuWorldWideName
 }
 
 const (
@@ -288,7 +289,9 @@ func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string
 	if disk.Type != virtIO && disk.EmulateSSD {
 		settings = settings + ",ssd=1"
 	}
-
+	if disk.WorldWideName != "" {
+		settings = settings + ",wwn=" + string(disk.WorldWideName)
+	}
 	return
 }
 
@@ -417,6 +420,9 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 	}
 	if value, isSet := settings["ssd"]; isSet {
 		disk.EmulateSSD, _ = strconv.ParseBool(value.(string))
+	}
+	if value, isSet := settings["wwn"]; isSet {
+		disk.WorldWideName = QemuWorldWideName(value.(string))
 	}
 	return &disk
 }
@@ -1007,6 +1013,8 @@ type qemuUpdateChanges struct {
 	Move   []qemuDiskMove
 	Resize []qemuDiskResize
 }
+
+type QemuWorldWideName string
 
 func diskSubtypeSet(set bool) error {
 	if set {
