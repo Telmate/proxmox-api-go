@@ -443,6 +443,9 @@ func (disk *qemuDisk) validate() (err error) {
 	if err = disk.Serial.Validate(); err != nil {
 		return
 	}
+	if err = disk.WorldWideName.Validate(); err != nil {
+		return
+	}
 	if disk.Disk {
 		// disk
 		if err = disk.Format.Validate(); err != nil {
@@ -1015,6 +1018,17 @@ type qemuUpdateChanges struct {
 }
 
 type QemuWorldWideName string
+
+const Error_QemuWorldWideName_Invalid string = "world wide name should be prefixed with 0x followed by 8 hexadecimal values"
+
+var regexp_QemuWorldWideName = regexp.MustCompile(`^0x[0-9A-Fa-f]{16}$`)
+
+func (wwn QemuWorldWideName) Validate() error {
+	if wwn == "" || regexp_QemuWorldWideName.MatchString(string(wwn)) {
+		return nil
+	}
+	return errors.New(Error_QemuWorldWideName_Invalid)
+}
 
 func diskSubtypeSet(set bool) error {
 	if set {
