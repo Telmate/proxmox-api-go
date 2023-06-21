@@ -836,3 +836,25 @@ func Test_QemuStorages_markDiskChanges(t *testing.T) {
 		})
 	}
 }
+
+func Test_QemuWorldWideName_Validate(t *testing.T) {
+	testRunes := struct {
+		legal   []string
+		illegal []string
+	}{
+		legal:   test_data_qemu.QemuWorldWideName_Legal(),
+		illegal: test_data_qemu.QemuWorldWideName_Illegal(),
+	}
+	for _, test := range testRunes.legal {
+		name := "legal:" + test
+		t.Run(name, func(*testing.T) {
+			require.NoError(t, QemuWorldWideName(test).Validate(), name)
+		})
+	}
+	for _, test := range testRunes.illegal {
+		name := "illegal:" + test
+		t.Run(name, func(*testing.T) {
+			require.Error(t, QemuWorldWideName(test).Validate(), name)
+		})
+	}
+}
