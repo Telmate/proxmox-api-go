@@ -1380,7 +1380,10 @@ func FormatDiskParam(disk QemuDevice) string {
 
 	if volume, ok := disk["volume"]; ok && volume != "" {
 		diskConfParam = append(diskConfParam, volume.(string))
-		diskConfParam = append(diskConfParam, fmt.Sprintf("size=%v", disk["size"]))
+		
+		if size, ok := disk["size"]; ok && size != "" {
+			diskConfParam = append(diskConfParam, fmt.Sprintf("size=%v", disk["size"]))
+		}
 	} else {
 		volumeInit := fmt.Sprintf("%v:%v", disk["storage"], DiskSizeGB(disk["size"]))
 		diskConfParam = append(diskConfParam, volumeInit)
