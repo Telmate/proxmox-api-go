@@ -2308,6 +2308,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 	type test struct {
 		name   string
 		input  map[string]interface{}
+		vmr    *VmRef
 		output *ConfigQemu
 		err    error
 	}
@@ -4382,11 +4383,56 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				},
 			},
 		},
+		{name: "Node",
+			tests: []test{
+				{name: "vmr nil",
+					output: &ConfigQemu{},
+				},
+				{name: "vmr empty",
+					vmr:    &VmRef{node: ""},
+					output: &ConfigQemu{},
+				},
+				{name: "vmr populated",
+					vmr:    &VmRef{node: "test"},
+					output: &ConfigQemu{Node: "test"},
+				},
+			},
+		},
+		{name: "Pool",
+			tests: []test{
+				{name: "vmr nil",
+					output: &ConfigQemu{},
+				},
+				{name: "vmr empty",
+					vmr:    &VmRef{pool: ""},
+					output: &ConfigQemu{},
+				},
+				{name: "vmr populated",
+					vmr:    &VmRef{pool: "test"},
+					output: &ConfigQemu{Pool: "test"},
+				},
+			},
+		},
+		{name: "VmID",
+			tests: []test{
+				{name: "vmr nil",
+					output: &ConfigQemu{},
+				},
+				{name: "vmr empty",
+					vmr:    &VmRef{vmId: 0},
+					output: &ConfigQemu{},
+				},
+				{name: "vmr populated",
+					vmr:    &VmRef{vmId: 100},
+					output: &ConfigQemu{VmID: 100},
+				},
+			},
+		},
 	}
 	for _, testType := range tests {
 		for _, test := range testType.tests {
 			t.Run(testType.name+"_"+test.name, func(*testing.T) {
-				output, err := ConfigQemu{}.mapToStruct(nil, test.input)
+				output, err := ConfigQemu{}.mapToStruct(test.vmr, test.input)
 				if err != nil {
 					require.Equal(t, test.err, err, test.name)
 				} else {
