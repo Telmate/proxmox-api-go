@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
@@ -102,12 +103,64 @@ func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
 	return resources
 }
 
+// Enum
+type GuestFeature string
+
+const (
+	GuestFeature_Clone    GuestFeature = "clone"
+	GuestFeature_Copy     GuestFeature = "copy"
+	GuestFeature_Snapshot GuestFeature = "snapshot"
+)
+
+func (GuestFeature) Error() error {
+	return errors.New("value should be one of (" + string(GuestFeature_Clone) + " ," + string(GuestFeature_Copy) + " ," + string(GuestFeature_Snapshot) + ")")
+}
+
+func (GuestFeature) mapToStruct(params map[string]interface{}) bool {
+	if value, isSet := params["hasFeature"]; isSet {
+		return Itob(int(value.(float64)))
+	}
+	return false
+}
+
+func (feature GuestFeature) Validate() error {
+	switch feature {
+	case GuestFeature_Copy, GuestFeature_Clone, GuestFeature_Snapshot:
+		return nil
+	}
+	return GuestFeature("").Error()
+}
+
+type GuestFeatures struct {
+	Clone    bool `json:"clone"`
+	Copy     bool `json:"copy"`
+	Snapshot bool `json:"snapshot"`
+}
+
 type GuestType string
 
 const (
 	GuestLXC  GuestType = "lxc"
 	GuestQemu GuestType = "qemu"
 )
+
+// check if the guest has the specified feature.
+func GuestHasFeature(vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
+	err := client.CheckVmRef(vmr)
+	if err != nil {
+		return false, err
+	}
+	return guestHasFeature(vmr, client, feature)
+}
+
+func guestHasFeature(vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
+	var params map[string]interface{}
+	params, err := client.GetItemConfigMapStringInterface("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/feature?feature=snapshot", "guest", "FEATURES")
+	if err != nil {
+		return false, err
+	}
+	return GuestFeature("").mapToStruct(params), nil
+}
 
 // Check if there are any pending changes that require a reboot to be applied.
 func GuestHasPendingChanges(vmr *VmRef, client *Client) (bool, error) {
@@ -125,6 +178,24 @@ func GuestReboot(vmr *VmRef, client *Client) (err error) {
 		return
 	}
 	_, err = client.StartVm(vmr)
+	return
+}
+
+// List all features the guest has.
+func ListGuestFeatures(vmr *VmRef, client *Client) (features GuestFeatures, err error) {
+	err = client.CheckVmRef(vmr)
+	if err != nil {
+		return
+	}
+	features.Clone, err = guestHasFeature(vmr, client, GuestFeature_Clone)
+	if err != nil {
+		return
+	}
+	features.Copy, err = guestHasFeature(vmr, client, GuestFeature_Copy)
+	if err != nil {
+		return
+	}
+	features.Snapshot, err = guestHasFeature(vmr, client, GuestFeature_Snapshot)
 	return
 }
 
