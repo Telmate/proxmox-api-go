@@ -1,4 +1,4 @@
-package get
+package guest
 
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var get_guestCmd = &cobra.Command{
-	Use:   "guest GUESTID",
+var configCmd = &cobra.Command{
+	Use:   "config GUESTID",
 	Short: "Gets the configuration of the specified guest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
@@ -29,11 +29,11 @@ var get_guestCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		cli.PrintFormattedJson(GetCmd.OutOrStdout(), config)
+		cli.PrintFormattedJson(guestCmd.OutOrStdout(), config)
 		return
 	},
 }
 
 func init() {
-	GetCmd.AddCommand(get_guestCmd)
+	guestCmd.AddCommand(configCmd)
 }
