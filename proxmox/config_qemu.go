@@ -48,7 +48,6 @@ type ConfigQemu struct {
 	Description     string        `json:"description,omitempty"`
 	Disks           *QemuStorages `json:"disks,omitempty"`
 	EFIDisk         QemuDevice    `json:"efidisk,omitempty"`   // TODO should be a struct
-	RNGDrive        QemuDevice    `json:"rng0,omitempty"`      // TODO should be a struct
 	FullClone       *int          `json:"fullclone,omitempty"` // TODO should probably be a bool
 	HaGroup         string        `json:"hagroup,omitempty"`
 	HaState         string        `json:"hastate,omitempty"` // TODO should be custom type with enum
@@ -80,6 +79,7 @@ type ConfigQemu struct {
 	QemuUsbs        QemuDevices   `json:"usb,omitempty"`          // TODO should be a struct
 	QemuVcpus       int           `json:"vcpus,omitempty"`        // TODO should be uint
 	QemuVga         QemuDevice    `json:"vga,omitempty"`          // TODO should be a struct
+	RNGDrive        QemuDevice    `json:"rng0,omitempty"`         // TODO should be a struct
 	Scsihw          string        `json:"scsihw,omitempty"`       // TODO should be custom type with enum
 	Searchdomain    string        `json:"searchdomain,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	Smbios1         string        `json:"smbios1,omitempty"`      // TODO should be custom type with enum?
