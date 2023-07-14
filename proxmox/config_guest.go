@@ -146,7 +146,11 @@ const (
 
 // check if the guest has the specified feature.
 func GuestHasFeature(vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
-	err := client.CheckVmRef(vmr)
+	err := feature.Validate()
+	if err != nil {
+		return false, err
+	}
+	err = client.CheckVmRef(vmr)
 	if err != nil {
 		return false, err
 	}
