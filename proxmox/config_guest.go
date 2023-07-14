@@ -138,11 +138,7 @@ func ListGuests(client *Client) ([]GuestResource, error) {
 }
 
 func pendingGuestConfigFromApi(vmr *VmRef, client *Client) ([]interface{}, error) {
-	err := vmr.nilCheck()
-	if err != nil {
-		return nil, err
-	}
-	if err = client.CheckVmRef(vmr); err != nil {
+	if err := client.CheckVmRef(vmr); err != nil {
 		return nil, err
 	}
 	return client.GetItemConfigInterfaceArray("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/pending", "Guest", "PENDING CONFIG")
