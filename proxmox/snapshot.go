@@ -3,7 +3,9 @@ package proxmox
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
+	"unicode"
 )
 
 type ConfigSnapshot struct {
@@ -50,11 +52,19 @@ func UpdateSnapshotDescription(c *Client, vmr *VmRef, snapshot SnapshotName, des
 	if err != nil {
 		return
 	}
+	err = snapshot.Validate()
+	if err != nil {
+		return
+	}
 	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snapshot)+"/config")
 }
 
 func DeleteSnapshot(c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return
+	}
+	err = snapshot.Validate()
 	if err != nil {
 		return
 	}
@@ -128,3 +138,27 @@ func (raw rawSnapshots) FormatSnapshotsTree() (tree []*Snapshot) {
 // First character must be a letter
 // Must only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_
 type SnapshotName string
+
+const (
+	SnapshotName_Error_IllegalCharacters string = "SnapshotName must only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+	SnapshotName_Error_MaxLength         string = "SnapshotName must be at most 40 characters long"
+	SnapshotName_Error_MinLength         string = "SnapshotName must be at least 3 characters long"
+	SnapshotName_Error_StartNoLetter     string = "SnapshotName must start with a letter"
+)
+
+func (name SnapshotName) Validate() error {
+	regex, _ := regexp.Compile(`^([a-zA-Z])([a-z]|[A-Z]|[0-9]|_|-){2,39}$`)
+	if !regex.Match([]byte(name)) {
+		if len(name) < 3 {
+			return fmt.Errorf(SnapshotName_Error_MinLength)
+		}
+		if len(name) > 40 {
+			return fmt.Errorf(SnapshotName_Error_MaxLength)
+		}
+		if !unicode.IsLetter(rune(name[0])) {
+			return fmt.Errorf(SnapshotName_Error_StartNoLetter)
+		}
+		return fmt.Errorf(SnapshotName_Error_IllegalCharacters)
+	}
+	return nil
+}

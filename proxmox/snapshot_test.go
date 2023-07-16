@@ -2,8 +2,10 @@ package proxmox
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_snapshot"
 	"github.com/stretchr/testify/require"
 )
 
@@ -203,4 +205,39 @@ func test_FormatSnapshotsList_Output() []string {
 		"name":"bb","time":1666361866,"description":"aA1!","ram":true},{
 		"name":"bba","time":1666362071,"parent":"bb"},{
 		"name":"bbb","time":1666362062,"parent":"bb"}]`}
+}
+
+func Test_SnapshotName_Validate(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []string
+		err   error
+	}{
+		// Valid
+		{name: "Valid", input: test_data_snapshot.SnapshotName_Legal()},
+		// Invalid
+		{name: "Invalid SnapshotName_Error_MinLength",
+			input: []string{"", test_data_snapshot.SnapshotName_Min_Illegal()},
+			err:   errors.New(SnapshotName_Error_MinLength),
+		},
+		{name: "Invalid SnapshotName_Error_MaxLength",
+			input: []string{test_data_snapshot.SnapshotName_Max_Illegal()},
+			err:   errors.New(SnapshotName_Error_MaxLength),
+		},
+		{name: "Invalid SnapshotName_Error_StartNoLetter",
+			input: test_data_snapshot.SnapshotName_Start_Illegal(),
+			err:   errors.New(SnapshotName_Error_StartNoLetter),
+		},
+		{name: "Invalid SnapshotName_Error_StartNoLetter",
+			input: test_data_snapshot.SnapshotName_Character_Illegal(),
+			err:   errors.New(SnapshotName_Error_IllegalCharacters),
+		},
+	}
+	for _, test := range tests {
+		for _, snapshot := range test.input {
+			t.Run(test.name+" :"+snapshot, func(*testing.T) {
+				require.Equal(t, SnapshotName(snapshot).Validate(), test.err, test.name+" :"+snapshot)
+			})
+		}
+	}
 }
