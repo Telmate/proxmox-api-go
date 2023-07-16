@@ -36,6 +36,7 @@ func Test_ConfigSnapshot_Validate(t *testing.T) {
 	}
 }
 
+// TODO rename this test
 // Test the formatting logic to build the tree of snapshots
 func Test_FormatSnapshotsTree(t *testing.T) {
 	input := test_FormatSnapshots_Input()
@@ -46,6 +47,7 @@ func Test_FormatSnapshotsTree(t *testing.T) {
 	}
 }
 
+// TODO rename this test
 // Test the formatting logic to build the list of snapshots
 func Test_FormatSnapshotsList(t *testing.T) {
 	input := test_FormatSnapshots_Input()

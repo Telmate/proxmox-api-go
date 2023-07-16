@@ -14,6 +14,7 @@ type ConfigSnapshot struct {
 	VmState     bool         `json:"ram,omitempty"`
 }
 
+// TODO write tests for this
 func (config ConfigSnapshot) mapToApiValues() map[string]interface{} {
 	return map[string]interface{}{
 		"snapname":    config.Name,
