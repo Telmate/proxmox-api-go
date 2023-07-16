@@ -684,7 +684,7 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 
 // DEPRECATED superseded by DeleteSnapshot()
 func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
-	return DeleteSnapshot(c, vmr, snapshotName)
+	return DeleteSnapshot(c, vmr, SnapshotName(snapshotName))
 }
 
 // DEPRECATED superseded by ListSnapshots()

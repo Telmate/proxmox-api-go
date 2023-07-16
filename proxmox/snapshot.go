@@ -7,9 +7,9 @@ import (
 )
 
 type ConfigSnapshot struct {
-	Name        string `json:"name,omitempty"`
-	Description string `json:"description,omitempty"`
-	VmState     bool   `json:"ram,omitempty"`
+	Name        SnapshotName `json:"name,omitempty"`
+	Description string       `json:"description,omitempty"`
+	VmState     bool         `json:"ram,omitempty"`
 }
 
 func (config ConfigSnapshot) mapToApiValues() map[string]interface{} {
@@ -45,20 +45,20 @@ func ListSnapshots(c *Client, vmr *VmRef) (rawSnapshots, error) {
 }
 
 // Can only be used to update the description of an already existing snapshot
-func UpdateSnapshotDescription(c *Client, vmr *VmRef, snapshot, description string) (err error) {
+func UpdateSnapshotDescription(c *Client, vmr *VmRef, snapshot SnapshotName, description string) (err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return
 	}
-	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/config")
+	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snapshot)+"/config")
 }
 
-func DeleteSnapshot(c *Client, vmr *VmRef, snapshot string) (exitStatus string, err error) {
+func DeleteSnapshot(c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return
 	}
-	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + snapshot)
+	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + string(snapshot))
 }
 
 func RollbackSnapshot(c *Client, vmr *VmRef, snapshot string) (exitStatus string, err error) {
@@ -71,12 +71,12 @@ func RollbackSnapshot(c *Client, vmr *VmRef, snapshot string) (exitStatus string
 
 // Used for formatting the output when retrieving snapshots
 type Snapshot struct {
-	Name        string      `json:"name"`
-	SnapTime    uint        `json:"time,omitempty"`
-	Description string      `json:"description,omitempty"`
-	VmState     bool        `json:"ram,omitempty"`
-	Children    []*Snapshot `json:"children,omitempty"`
-	Parent      string      `json:"parent,omitempty"`
+	Name        SnapshotName `json:"name"`
+	SnapTime    uint         `json:"time,omitempty"`
+	Description string       `json:"description,omitempty"`
+	VmState     bool         `json:"ram,omitempty"`
+	Children    []*Snapshot  `json:"children,omitempty"`
+	Parent      string       `json:"parent,omitempty"`
 }
 
 // Formats the taskResponse as a list of snapshots
@@ -88,7 +88,7 @@ func (raw rawSnapshots) FormatSnapshotsList() (list []*Snapshot) {
 			list[i].Description = e.(map[string]interface{})["description"].(string)
 		}
 		if _, isSet := e.(map[string]interface{})["name"]; isSet {
-			list[i].Name = e.(map[string]interface{})["name"].(string)
+			list[i].Name = SnapshotName(e.(map[string]interface{})["name"].(string))
 		}
 		if _, isSet := e.(map[string]interface{})["parent"]; isSet {
 			list[i].Parent = e.(map[string]interface{})["parent"].(string)
@@ -108,7 +108,7 @@ func (raw rawSnapshots) FormatSnapshotsTree() (tree []*Snapshot) {
 	list := raw.FormatSnapshotsList()
 	for _, e := range list {
 		for _, ee := range list {
-			if e.Parent == ee.Name {
+			if e.Parent == string(ee.Name) {
 				ee.Children = append(ee.Children, e)
 				break
 			}
@@ -122,3 +122,9 @@ func (raw rawSnapshots) FormatSnapshotsTree() (tree []*Snapshot) {
 	}
 	return
 }
+
+// Minimum length of 3 characters
+// Maximum length of 40 characters
+// First character must be a letter
+// Must only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_
+type SnapshotName string
