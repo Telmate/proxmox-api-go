@@ -9,6 +9,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_ConfigSnapshot_Validate(t *testing.T) {
+	tests := []struct {
+		name  string
+		input ConfigSnapshot
+		err   bool
+	}{
+		// Valid
+		{name: "Valid ConfigSnapshot",
+			input: ConfigSnapshot{Name: SnapshotName(test_data_snapshot.SnapshotName_Max_Legal())},
+		},
+		// Invalid
+		{name: "Invalid ConfigSnapshot",
+			input: ConfigSnapshot{Name: SnapshotName(test_data_snapshot.SnapshotName_Max_Illegal())},
+			err:   true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			if test.err {
+				require.Error(t, test.input.Validate(), test.name)
+			} else {
+				require.NoError(t, test.input.Validate(), test.name)
+			}
+		})
+	}
+}
+
 // Test the formatting logic to build the tree of snapshots
 func Test_FormatSnapshotsTree(t *testing.T) {
 	input := test_FormatSnapshots_Input()

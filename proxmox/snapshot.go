@@ -23,17 +23,25 @@ func (config ConfigSnapshot) mapToApiValues() map[string]interface{} {
 }
 
 func (config ConfigSnapshot) CreateSnapshot(c *Client, vmr *VmRef) (err error) {
-	params := config.mapToApiValues()
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return
 	}
+	err = config.Validate()
+	if err != nil {
+		return
+	}
+	params := config.mapToApiValues()
 	_, err = c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Snapshot: %v, (params: %v)", err, string(params))
 	}
 	return
+}
+
+func (config ConfigSnapshot) Validate() error {
+	return config.Name.Validate()
 }
 
 type rawSnapshots []interface{}
