@@ -95,7 +95,7 @@ type Snapshot struct {
 	Description string       `json:"description,omitempty"`
 	VmState     bool         `json:"ram,omitempty"`
 	Children    []*Snapshot  `json:"children,omitempty"`
-	Parent      string       `json:"parent,omitempty"`
+	Parent      SnapshotName `json:"parent,omitempty"`
 }
 
 // Formats the taskResponse as a list of snapshots
@@ -110,7 +110,7 @@ func (raw rawSnapshots) FormatSnapshotsList() (list []*Snapshot) {
 			list[i].Name = SnapshotName(e.(map[string]interface{})["name"].(string))
 		}
 		if _, isSet := e.(map[string]interface{})["parent"]; isSet {
-			list[i].Parent = e.(map[string]interface{})["parent"].(string)
+			list[i].Parent = SnapshotName(e.(map[string]interface{})["parent"].(string))
 		}
 		if _, isSet := e.(map[string]interface{})["snaptime"]; isSet {
 			list[i].SnapTime = uint(e.(map[string]interface{})["snaptime"].(float64))
@@ -127,7 +127,7 @@ func (raw rawSnapshots) FormatSnapshotsTree() (tree []*Snapshot) {
 	list := raw.FormatSnapshotsList()
 	for _, e := range list {
 		for _, ee := range list {
-			if e.Parent == string(ee.Name) {
+			if e.Parent == ee.Name {
 				ee.Children = append(ee.Children, e)
 				break
 			}
