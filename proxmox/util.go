@@ -121,7 +121,7 @@ func DiskSizeGB(dcSize interface{}) float64 {
 	switch dcSize := dcSize.(type) {
 	case string:
 		diskString := strings.ToUpper(dcSize)
-		re := regexp.MustCompile("([0-9]+)([A-Z]*)")
+		re := regexp.MustCompile("([0-9]+(?:\.[0-9]+)?)([TGMK]B?)?")
 		diskArray := re.FindStringSubmatch(diskString)
 
 		diskSize, _ = strconv.ParseFloat(diskArray[1], 64)
