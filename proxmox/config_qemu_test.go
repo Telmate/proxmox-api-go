@@ -4371,6 +4371,17 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				}}}},
 			},
 		},
+		// EFI
+		{name: "EFI Disk",
+			input: map[string]interface{}{"efidisk0": "local-lvm:vm-1000-disk-0,efitype=2m,size=4M"},
+			output: &ConfigQemu{EFIDisk: map[string]interface{}{
+				"efitype": "2m",
+				"size":    "4M",
+				"storage": "local-lvm",
+				"file":    "vm-1000-disk-0",
+				"volume":  "local-lvm:vm-1000-disk-0",
+			}},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
