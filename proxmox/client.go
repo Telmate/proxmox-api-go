@@ -501,6 +501,10 @@ func (c *Client) ResetVm(vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(vmr, nil, "reset")
 }
 
+func (c *Client) RebootVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, nil, "reboot")
+}
+
 func (c *Client) PauseVm(vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(vmr, nil, "suspend")
 }
@@ -765,7 +769,7 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitStatus interface{}, err error) {
 	// PUT
 	//disk:virtio0
-	//size:+2G
+	// size:+2G
 	if disk == "" {
 		disk = "virtio0"
 	}
