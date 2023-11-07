@@ -107,6 +107,8 @@ export PM_HTTP_HEADERS=Key,Value,Key1,Value1 (only if required)
 
 ./proxmox-api-go node shutdown proxmox-node-name
 
+./proxmox-api-go unlink 123 proxmox-node-name "virtio1,virtio2,virtioN" [false|true]
+
 ```
 
 ## Proxy server support

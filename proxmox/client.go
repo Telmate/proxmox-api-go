@@ -842,6 +842,25 @@ func (c *Client) MoveQemuDiskToVM(vmrSource *VmRef, disk string, vmrTarget *VmRe
 	return
 }
 
+// Unlink - Unlink (detach) a set of disks from a VM.
+// Reference: https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/unlink
+func (c *Client) Unlink(node string, vmId int, diskIds string, forceRemoval bool) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/unlink", node, vmId)
+	data := ParamsToBody(map[string]interface{}{
+		"idlist": diskIds,
+		"force":  forceRemoval,
+	})
+	resp, err := c.session.Put(url, nil, nil, &data)
+	if err != nil {
+		return c.HandleTaskError(resp), err
+	}
+	json, err := ResponseJSON(resp)
+	if err != nil {
+		return "", err
+	}
+	return c.WaitForCompletion(json)
+}
+
 // GetNextID - Get next free VMID
 func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 	var data map[string]interface{}
