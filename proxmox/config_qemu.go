@@ -581,7 +581,18 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	}
 	memory := 0.0
 	if _, isSet := vmConfig["memory"]; isSet {
-		memory = vmConfig["memory"].(float64)
+		switch vmConfig["memory"].(type) {
+		case float64:
+			memory = vmConfig["memory"].(float64)
+		case string:
+			memory2, err := strconv.ParseFloat(vmConfig["memory"].(string), 64)
+			if err != nil {
+				log.Fatal(err)
+				return nil, err
+			} else {
+				memory = memory2
+			}
+		}
 	}
 	balloon := 0.0
 	if _, isSet := vmConfig["balloon"]; isSet {
