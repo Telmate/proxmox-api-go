@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
-	api_test "github.com/Telmate/proxmox-api-go/test/api"
+	pxapi "github.com/Bluearchive/proxmox-api-go/proxmox"
+	api_test "github.com/Bluearchive/proxmox-api-go/test/api"
 )
 
 func Test_List_Users(t *testing.T) {

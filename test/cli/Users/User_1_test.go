@@ -3,12 +3,12 @@ package cli_user_test
 import (
 	"testing"
 
-	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
-	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
-	"github.com/Telmate/proxmox-api-go/test/cli/Group/group_sub_tests"
-	"github.com/Telmate/proxmox-api-go/test/cli/Users/user_sub_tests"
-	"github.com/Telmate/proxmox-api-go/test/data/test_data_cli"
+	_ "github.com/Bluearchive/proxmox-api-go/cli/command/commands"
+	"github.com/Bluearchive/proxmox-api-go/proxmox"
+	cliTest "github.com/Bluearchive/proxmox-api-go/test/cli"
+	"github.com/Bluearchive/proxmox-api-go/test/cli/Group/group_sub_tests"
+	"github.com/Bluearchive/proxmox-api-go/test/cli/Users/user_sub_tests"
+	"github.com/Bluearchive/proxmox-api-go/test/data/test_data_cli"
 )
 
 func Test_User_1_Cleanup(t *testing.T) {

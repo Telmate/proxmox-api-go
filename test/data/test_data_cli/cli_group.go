@@ -3,7 +3,7 @@ package test_data_cli
 import (
 	"fmt"
 
-	"github.com/Telmate/proxmox-api-go/proxmox"
+	"github.com/Bluearchive/proxmox-api-go/proxmox"
 )
 
 func Group_Get_Empty_testData(testNumber uint) proxmox.ConfigGroup {

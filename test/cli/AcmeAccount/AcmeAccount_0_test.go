@@ -3,8 +3,8 @@ package cli_acmeaccount_test
 import (
 	"testing"
 
-	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
+	_ "github.com/Bluearchive/proxmox-api-go/cli/command/commands"
+	cliTest "github.com/Bluearchive/proxmox-api-go/test/cli"
 )
 
 func Test_AcmeAccount_0_Cleanup(t *testing.T) {

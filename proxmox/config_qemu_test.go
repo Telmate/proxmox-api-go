@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
+	"github.com/Bluearchive/proxmox-api-go/test/data/test_data_qemu"
 	"github.com/stretchr/testify/require"
 )
 

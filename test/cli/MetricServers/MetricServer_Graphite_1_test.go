@@ -3,8 +3,8 @@ package cli_metricservers_test
 import (
 	"testing"
 
-	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
+	_ "github.com/Bluearchive/proxmox-api-go/cli/command/commands"
+	cliTest "github.com/Bluearchive/proxmox-api-go/test/cli"
 )
 
 func Test_MetricServer_Graphite_1_Cleanup(t *testing.T) {
@@ -22,7 +22,7 @@ func Test_MetricServer_Graphite_1_Set_Empty(t *testing.T) {
 	"port": 35466,
 	"server": "192.168.67.4",
 	"type": "graphite",
-	"enable": false, 
+	"enable": false,
 	"graphite": {
 		"protocol": "tcp"
 	}

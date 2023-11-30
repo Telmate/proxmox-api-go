@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/proxmox"
-	cliTest "github.com/Telmate/proxmox-api-go/test/cli"
+	"github.com/Bluearchive/proxmox-api-go/proxmox"
+	cliTest "github.com/Bluearchive/proxmox-api-go/test/cli"
 	"github.com/stretchr/testify/require"
 )
 
