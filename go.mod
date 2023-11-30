@@ -1,4 +1,4 @@
-module github.com/Telmate/proxmox-api-go
+module github.com/Bluearchive/proxmox-api-go
 
 go 1.19
 

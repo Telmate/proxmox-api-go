@@ -1,7 +1,7 @@
 package id
 
 import (
-	"github.com/Telmate/proxmox-api-go/cli/command/get"
+	"github.com/Bluearchive/proxmox-api-go/cli/command/get"
 	"github.com/spf13/cobra"
 )
 

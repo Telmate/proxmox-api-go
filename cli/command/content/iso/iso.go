@@ -1,7 +1,7 @@
 package iso
 
 import (
-	"github.com/Telmate/proxmox-api-go/cli/command/content"
+	"github.com/Bluearchive/proxmox-api-go/cli/command/content"
 	"github.com/spf13/cobra"
 )
 
