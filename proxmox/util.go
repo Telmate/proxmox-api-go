@@ -19,6 +19,15 @@ func inArray(arr []string, str string) bool {
 	return false
 }
 
+func Btoi(b bool) int {
+	switch b {
+	case true:
+		return 1
+	default:
+		return 0
+	}
+}
+
 func Itob(i int) bool {
 	return i == 1
 }
@@ -112,7 +121,7 @@ func DiskSizeGB(dcSize interface{}) float64 {
 	switch dcSize := dcSize.(type) {
 	case string:
 		diskString := strings.ToUpper(dcSize)
-		re := regexp.MustCompile("([0-9]+)([A-Z]*)")
+		re := regexp.MustCompile("([0-9]+(?:\.[0-9]+)?)([TGMK]B?)?")
 		diskArray := re.FindStringSubmatch(diskString)
 
 		diskSize, _ = strconv.ParseFloat(diskArray[1], 64)
@@ -203,4 +212,29 @@ func createHeaderList(header_string string, sess *Session) (*Session, error) {
 		sess.Headers[header_string_split[i]] = []string{header_string_split[i+1]}
 	}
 	return sess, nil
+}
+
+// check if a key exists in a nested array of map[string]interface{}
+func keyExists(array []interface{}, key string) (existence bool) {
+	for i := range array {
+		item := array[i].(map[string]interface{})
+		if _, isSet := item[key]; isSet {
+			return true
+		}
+	}
+	return false
+}
+
+func splitStringOfSettings(settings string) map[string]interface{} {
+	settingValuePairs := strings.Split(settings, ",")
+	settingMap := map[string]interface{}{}
+	for _, e := range settingValuePairs {
+		keyValuePair := strings.SplitN(e, "=", 2)
+		var value string
+		if len(keyValuePair) == 2 {
+			value = keyValuePair[1]
+		}
+		settingMap[keyValuePair[0]] = value
+	}
+	return settingMap
 }

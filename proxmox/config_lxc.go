@@ -473,6 +473,7 @@ func (config ConfigLxc) mapToApiValues() map[string]interface{} {
 		// add mp to lxc parameters
 		mpID := mpConfMap["slot"]
 		mpName := fmt.Sprintf("mp%v", mpID)
+
 		paramMap[mpName] = FormatDiskParam(mpConfMap)
 	}
 

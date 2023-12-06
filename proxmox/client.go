@@ -34,6 +34,10 @@ type Client struct {
 	TaskTimeout int
 }
 
+const (
+	VmRef_Error_Nil string = "vm reference may not be nil"
+)
+
 // VmRef - virtual machine ref parts
 // map[type:qemu node:proxmox1-xx id:qemu/132 diskread:5.57424738e+08 disk:0 netin:5.9297450593e+10 mem:3.3235968e+09 uptime:1.4567097e+07 vmid:132 template:0 maxcpu:2 netout:6.053310416e+09 maxdisk:3.4359738368e+10 maxmem:8.592031744e+09 diskwrite:1.49663619584e+12 status:running cpu:0.00386980694947209 name:appt-app1-dev.xxx.xx]
 type VmRef struct {
@@ -79,6 +83,13 @@ func (vmr *VmRef) HaState() string {
 
 func (vmr *VmRef) HaGroup() string {
 	return vmr.haGroup
+}
+
+func (vmr *VmRef) nilCheck() error {
+	if vmr == nil {
+		return errors.New("vm reference may not be nil")
+	}
+	return nil
 }
 
 func NewVmRef(vmId int) (vmr *VmRef) {
@@ -138,7 +149,7 @@ func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, trie
 		if strings.Contains(statErr.Error(), "500 no such resource") {
 			return statErr
 		}
-		//fmt.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
+		// fmt.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
 		time.Sleep(time.Duration(ii+1) * time.Second)
 	}
 	return statErr
@@ -149,24 +160,30 @@ func (c *Client) GetNodeList() (list map[string]interface{}, err error) {
 	return
 }
 
+const resourceListGuest string = "vm"
+
 // GetResourceList returns a list of all enabled proxmox resources.
 // For resource types that can be in a disabled state, disabled resources
 // will not be returned
-func (c *Client) GetResourceList(resourceType string) (list map[string]interface{}, err error) {
-	var endpoint = "/cluster/resources"
+// TODO this func should not be exported
+func (c *Client) GetResourceList(resourceType string) (list []interface{}, err error) {
+	url := "/cluster/resources"
 	if resourceType != "" {
-		endpoint = fmt.Sprintf("%s?type=%s", endpoint, resourceType)
+		url = url + "?type=" + resourceType
 	}
-	err = c.GetJsonRetryable(endpoint, &list, 3)
-	return
+	return c.GetItemListInterfaceArray(url)
 }
 
-func (c *Client) GetVmList() (list map[string]interface{}, err error) {
-	list, err = c.GetResourceList("vm")
-	return
+// TODO deprecate once nothing uses this anymore, use ListGuests() instead
+func (c *Client) GetVmList() (map[string]interface{}, error) {
+	list, err := c.GetResourceList(resourceListGuest)
+	return map[string]interface{}{"data": list}, err
 }
 
 func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
+	if vmr == nil {
+		return errors.New(VmRef_Error_Nil)
+	}
 	if vmr.node == "" || vmr.vmType == "" {
 		_, err = c.GetVmInfo(vmr)
 	}
@@ -174,13 +191,8 @@ func (c *Client) CheckVmRef(vmr *VmRef) (err error) {
 }
 
 func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error) {
-	var resp map[string]interface{}
-	if resp, err = c.GetVmList(); err != nil {
-		return
-	}
-	vms, ok := resp["data"].([]interface{})
-	if !ok {
-		err = fmt.Errorf("failed to cast response to list, resp: %v", resp)
+	vms, err := c.GetResourceList(resourceListGuest)
+	if err != nil {
 		return
 	}
 	for vmii := range vms {
@@ -212,11 +224,10 @@ func (c *Client) GetVmRefByName(vmName string) (vmr *VmRef, err error) {
 }
 
 func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
-	resp, err := c.GetVmList()
+	vms, err := c.GetResourceList(resourceListGuest)
 	if err != nil {
 		return
 	}
-	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vm["name"] != nil && vm["name"].(string) == vmName {
@@ -235,6 +246,35 @@ func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
 	}
 	if len(vmrs) == 0 {
 		return nil, fmt.Errorf("vm '%s' not found", vmName)
+	} else {
+		return
+	}
+}
+
+func (c *Client) GetVmRefById(vmId int) (vmr *VmRef, err error) {
+	var exist bool = false
+	vms, err := c.GetResourceList(resourceListGuest)
+	if err != nil {
+		return
+	}
+	for vmii := range vms {
+		vm := vms[vmii].(map[string]interface{})
+		if int(vm["vmid"].(float64)) != 0 && int(vm["vmid"].(float64)) == vmId {
+			vmr = NewVmRef(int(vm["vmid"].(float64)))
+			vmr.node = vm["node"].(string)
+			vmr.vmType = vm["type"].(string)
+			vmr.pool = ""
+			if vm["pool"] != nil {
+				vmr.pool = vm["pool"].(string)
+			}
+			if vm["hastate"] != nil {
+				vmr.haState = vm["hastate"].(string)
+			}
+			return
+		}
+	}
+	if !exist {
+		return nil, fmt.Errorf("vm 'id-%d' not found", vmId)
 	} else {
 		return
 	}
@@ -380,7 +420,9 @@ func (c *Client) CreateTemplate(vmr *VmRef) error {
 		return err
 	}
 
-	if exitStatus != "OK" {
+	// Specifically ignore empty exit status for LXCs, since they don't return a task ID
+	// when creating templates in the first place (but still successfully create them).
+	if exitStatus != "OK" && vmr.vmType != "lxc" {
 		return errors.New("Can't convert Vm to template:" + exitStatus)
 	}
 
@@ -443,7 +485,10 @@ func (c *Client) WaitForCompletion(taskResponse map[string]interface{}) (waitExi
 	return "", fmt.Errorf("Wait timeout for:" + taskUpid)
 }
 
-var rxTaskNode = regexp.MustCompile("UPID:(.*?):")
+var (
+	rxTaskNode          = regexp.MustCompile("UPID:(.*?):")
+	rxExitStatusSuccess = regexp.MustCompile(`^(OK|WARNINGS)`)
+)
 
 func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err error) {
 	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
@@ -453,7 +498,7 @@ func (c *Client) GetTaskExitstatus(taskUpid string) (exitStatus interface{}, err
 	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
-	if exitStatus != nil && exitStatus != exitStatusSuccess {
+	if exitStatus != nil && rxExitStatusSuccess.FindString(exitStatus.(string)) == "" {
 		err = fmt.Errorf(exitStatus.(string))
 	}
 	return
@@ -492,6 +537,10 @@ func (c *Client) ResetVm(vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(vmr, nil, "reset")
 }
 
+func (c *Client) RebootVm(vmr *VmRef) (exitStatus string, err error) {
+	return c.StatusChangeVm(vmr, nil, "reboot")
+}
+
 func (c *Client) PauseVm(vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(vmr, nil, "suspend")
 }
@@ -517,7 +566,7 @@ func (c *Client) DeleteVmParams(vmr *VmRef, params map[string]interface{}) (exit
 		return "", err
 	}
 
-	//Remove HA if required
+	// Remove HA if required
 	if vmr.haState != "" {
 		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
 		resp, err := c.session.Delete(url, nil, nil)
@@ -615,7 +664,6 @@ func (c *Client) CreateLxcContainer(node string, vmParams map[string]interface{}
 }
 
 func (c *Client) CloneLxcContainer(vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
-
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc/%s/clone", vmr.node, vmParams["vmid"])
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -676,7 +724,7 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 
 // DEPRECATED superseded by DeleteSnapshot()
 func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
-	return DeleteSnapshot(c, vmr, snapshotName)
+	return DeleteSnapshot(c, vmr, SnapshotName(snapshotName))
 }
 
 // DEPRECATED superseded by ListSnapshots()
@@ -702,7 +750,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 	return RollbackSnapshot(c, vmr, snapshot)
 }
 
-// SetVmConfig - send config options
+// DEPRECATED SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 }
@@ -742,6 +790,7 @@ func (c *Client) MigrateNode(vmr *VmRef, newTargetNode string, online bool) (exi
 }
 
 // ResizeQemuDisk allows the caller to increase the size of a disk by the indicated number of gigabytes
+// TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
 func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
 	size := fmt.Sprintf("+%dG", moreSizeGB)
 	return c.ResizeQemuDiskRaw(vmr, disk, size)
@@ -752,10 +801,11 @@ func (c *Client) ResizeQemuDisk(vmr *VmRef, disk string, moreSizeGB int) (exitSt
 // your desired size with a '+' character it will ADD size to the disk.  If you just specify the size by
 // itself it will do an absolute resizing to the specified size. Permitted suffixes are K, M, G, T
 // to indicate order of magnitude (kilobyte, megabyte, etc). Decrease of disk size is not permitted.
+// TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
 func (c *Client) ResizeQemuDiskRaw(vmr *VmRef, disk string, size string) (exitStatus interface{}, err error) {
 	// PUT
 	//disk:virtio0
-	//size:+2G
+	// size:+2G
 	if disk == "" {
 		disk = "virtio0"
 	}
@@ -792,6 +842,7 @@ func (c *Client) MoveLxcDisk(vmr *VmRef, disk string, storage string) (exitStatu
 	return
 }
 
+// DEPRECATED use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	if disk == "" {
@@ -831,6 +882,25 @@ func (c *Client) MoveQemuDiskToVM(vmrSource *VmRef, disk string, vmrTarget *VmRe
 	return
 }
 
+// Unlink - Unlink (detach) a set of disks from a VM.
+// Reference: https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/unlink
+func (c *Client) Unlink(node string, vmId int, diskIds string, forceRemoval bool) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/unlink", node, vmId)
+	data := ParamsToBody(map[string]interface{}{
+		"idlist": diskIds,
+		"force":  forceRemoval,
+	})
+	resp, err := c.session.Put(url, nil, nil, &data)
+	if err != nil {
+		return c.HandleTaskError(resp), err
+	}
+	json, err := ResponseJSON(resp)
+	if err != nil {
+		return "", err
+	}
+	return c.WaitForCompletion(json)
+}
+
 // GetNextID - Get next free VMID
 func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 	var data map[string]interface{}
@@ -858,11 +928,10 @@ func (c *Client) GetNextID(currentID int) (nextID int, err error) {
 
 // VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false
 func (c *Client) VMIdExists(vmID int) (exists bool, err error) {
-	resp, err := c.GetVmList()
+	vms, err := c.GetResourceList(resourceListGuest)
 	if err != nil {
 		return
 	}
-	vms := resp["data"].([]interface{})
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vmID == int(vm["vmid"].(float64)) {
@@ -879,7 +948,6 @@ func (c *Client) CreateVMDisk(
 	fullDiskName string,
 	diskParams map[string]interface{},
 ) error {
-
 	reqbody := ParamsToBody(diskParams)
 	url := fmt.Sprintf("/nodes/%s/storage/%s/content", nodeName, storageName)
 	resp, err := c.session.Post(url, nil, nil, &reqbody)
@@ -935,7 +1003,6 @@ func (c *Client) createVMDisks(
 // CreateNewDisk - This method allows simpler disk creation for direct client users
 // It should work for any existing container and virtual machine
 func (c *Client) CreateNewDisk(vmr *VmRef, disk string, volume string) (exitStatus interface{}, err error) {
-
 	reqbody := ParamsToBody(map[string]interface{}{disk: volume})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(url, nil, nil, &reqbody)
@@ -1331,6 +1398,47 @@ func (c *Client) Upload(node string, storage string, contentType string, filenam
 	return nil
 }
 
+func (c *Client) UploadLargeFile(node string, storage string, contentType string, filename string, filesize int64, file io.Reader) error {
+	var contentLength int64
+
+	var body io.Reader
+	var mimetype string
+	var err error
+	body, mimetype, contentLength, err = createStreamedUploadBody(contentType, filename, filesize, file)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/nodes/%s/storage/%s/upload", c.session.ApiUrl, node, storage)
+	headers := c.session.Headers.Clone()
+	headers.Add("Content-Type", mimetype)
+	headers.Add("Accept", "application/json")
+	req, err := c.session.NewRequest(http.MethodPost, url, &headers, body)
+	if err != nil {
+		return err
+	}
+
+	req.ContentLength = contentLength
+
+	resp, err := c.session.Do(req)
+	if err != nil {
+		return err
+	}
+
+	taskResponse, err := ResponseJSON(resp)
+	if err != nil {
+		return err
+	}
+	exitStatus, err := c.WaitForCompletion(taskResponse)
+	if err != nil {
+		return err
+	}
+	if exitStatus != exitStatusSuccess {
+		return fmt.Errorf("moving file to destination failed: %v", exitStatus)
+	}
+	return nil
+}
+
 func createUploadBody(contentType string, filename string, r io.Reader) (io.Reader, string, error) {
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
@@ -1475,7 +1583,6 @@ func (c *Client) ReadVMHA(vmr *VmRef) (err error) {
 		}
 	}
 	return
-
 }
 
 func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, err error) {
@@ -1484,7 +1591,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 		return
 	}
 
-	//Remove HA
+	// Remove HA
 	if haState == "" {
 		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
 		resp, err := c.session.Delete(url, nil, nil)
@@ -1501,7 +1608,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 		return nil, err
 	}
 
-	//Activate HA
+	// Activate HA
 	if vmr.haState == "" {
 		paramMap := map[string]interface{}{
 			"sid": vmr.vmId,
@@ -1524,7 +1631,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 		}
 	}
 
-	//Set wanted state
+	// Set wanted state
 	paramMap := map[string]interface{}{
 		"state": haState,
 		"group": haGroup,
@@ -1572,8 +1679,7 @@ func (c *Client) DeletePool(poolid string) error {
 	return c.Delete("/pools/" + poolid)
 }
 
-//permissions check
-
+// permissions check
 func (c *Client) GetUserPermissions(id UserID, path string) (permissions []string, err error) {
 	existence, err := CheckUserExistence(id, c)
 	if err != nil {
@@ -1786,6 +1892,173 @@ func (c *Client) RevertNetwork(node string) (exitStatus string, err error) {
 	return c.DeleteWithTask(url)
 }
 
+// SDN
+
+func (c *Client) ApplySDN() (string, error) {
+	return c.PutWithTask(nil, "/cluster/sdn")
+}
+
+// GetSDNVNets returns a list of all VNet definitions in the "data" element of the returned
+// map.
+func (c *Client) GetSDNVNets(pending bool) (list map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/vnets?pending=%d", Btoi(pending))
+	err = c.GetJsonRetryable(url, &list, 3)
+	return
+}
+
+// CheckSDNVNetExistance returns true if a DNS entry with the provided ID exists, false otherwise.
+func (c *Client) CheckSDNVNetExistance(id string) (existance bool, err error) {
+	list, err := c.GetSDNVNets(true)
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "vnet", id)
+	return
+}
+
+// GetSDNVNet returns details about the DNS entry whose name was provided.
+// An error is returned if the zone doesn't exist.
+// The returned zone can be unmarshalled into a ConfigSDNVNet struct.
+func (c *Client) GetSDNVNet(name string) (dns map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/vnets/%s", name)
+	err = c.GetJsonRetryable(url, &dns, 3)
+	return
+}
+
+// CreateSDNVNet creates a new SDN DNS in the cluster
+func (c *Client) CreateSDNVNet(params map[string]interface{}) error {
+	return c.Post(params, "/cluster/sdn/vnets")
+}
+
+// DeleteSDNVNet deletes an existing SDN DNS in the cluster
+func (c *Client) DeleteSDNVNet(name string) error {
+	return c.Delete(fmt.Sprintf("/cluster/sdn/vnets/%s", name))
+}
+
+// UpdateSDNVNet updates the given DNS with the provided parameters
+func (c *Client) UpdateSDNVNet(id string, params map[string]interface{}) error {
+	return c.Put(params, "/cluster/sdn/vnets/"+id)
+}
+
+// GetSDNSubnets returns a list of all Subnet definitions in the "data" element of the returned
+// map.
+func (c *Client) GetSDNSubnets(vnet string) (list map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/vnets/%s/subnets", vnet)
+	err = c.GetJsonRetryable(url, &list, 3)
+	return
+}
+
+// CheckSDNSubnetExistance returns true if a DNS entry with the provided ID exists, false otherwise.
+func (c *Client) CheckSDNSubnetExistance(vnet, id string) (existance bool, err error) {
+	list, err := c.GetSDNSubnets(vnet)
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "subnet", id)
+	return
+}
+
+// GetSDNSubnet returns details about the Subnet entry whose name was provided.
+// An error is returned if the zone doesn't exist.
+// The returned map["data"] section can be unmarshalled into a ConfigSDNSubnet struct.
+func (c *Client) GetSDNSubnet(vnet, name string) (subnet map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/vnets/%s/subnets/%s", vnet, name)
+	err = c.GetJsonRetryable(url, &subnet, 3)
+	return
+}
+
+// CreateSDNSubnet creates a new SDN DNS in the cluster
+func (c *Client) CreateSDNSubnet(vnet string, params map[string]interface{}) error {
+	return c.Post(params, fmt.Sprintf("/cluster/sdn/vnets/%s/subnets", vnet))
+}
+
+// DeleteSDNSubnet deletes an existing SDN DNS in the cluster
+func (c *Client) DeleteSDNSubnet(vnet, name string) error {
+	return c.Delete(fmt.Sprintf("/cluster/sdn/vnets/%s/subnets/%s", vnet, name))
+}
+
+// UpdateSDNSubnet updates the given DNS with the provided parameters
+func (c *Client) UpdateSDNSubnet(vnet, id string, params map[string]interface{}) error {
+	return c.Put(params, fmt.Sprintf("/cluster/sdn/vnets/%s/subnets/%s", vnet, id))
+}
+
+// GetSDNDNSs returns a list of all DNS definitions in the "data" element of the returned
+// map.
+func (c *Client) GetSDNDNSs(typeFilter string) (list map[string]interface{}, err error) {
+	url := "/cluster/sdn/dns"
+	if typeFilter != "" {
+		url += fmt.Sprintf("&type=%s", typeFilter)
+	}
+	err = c.GetJsonRetryable(url, &list, 3)
+	return
+}
+
+// CheckSDNDNSExistance returns true if a DNS entry with the provided ID exists, false otherwise.
+func (c *Client) CheckSDNDNSExistance(id string) (existance bool, err error) {
+	list, err := c.GetSDNDNSs("")
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "dns", id)
+	return
+}
+
+// GetSDNDNS returns details about the DNS entry whose name was provided.
+// An error is returned if the zone doesn't exist.
+// The returned zone can be unmarshalled into a ConfigSDNDNS struct.
+func (c *Client) GetSDNDNS(name string) (dns map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/dns/%s", name)
+	err = c.GetJsonRetryable(url, &dns, 3)
+	return
+}
+
+// CreateSDNDNS creates a new SDN DNS in the cluster
+func (c *Client) CreateSDNDNS(params map[string]interface{}) error {
+	return c.Post(params, "/cluster/sdn/dns")
+}
+
+// DeleteSDNDNS deletes an existing SDN DNS in the cluster
+func (c *Client) DeleteSDNDNS(name string) error {
+	return c.Delete(fmt.Sprintf("/cluster/sdn/dns/%s", name))
+}
+
+// UpdateSDNDNS updates the given DNS with the provided parameters
+func (c *Client) UpdateSDNDNS(id string, params map[string]interface{}) error {
+	return c.Put(params, "/cluster/sdn/dns/"+id)
+}
+
+// GetSDNZones returns a list of all the SDN zones defined in the cluster.
+func (c *Client) GetSDNZones(pending bool, typeFilter string) (list map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/zones?pending=%d", Btoi(pending))
+	if typeFilter != "" {
+		url += fmt.Sprintf("&type=%s", typeFilter)
+	}
+	err = c.GetJsonRetryable(url, &list, 3)
+	return
+}
+
+// CheckSDNZoneExistance returns true if a zone with the provided ID exists, false otherwise.
+func (c *Client) CheckSDNZoneExistance(id string) (existance bool, err error) {
+	list, err := c.GetSDNZones(true, "")
+	existance = ItemInKeyOfArray(list["data"].([]interface{}), "zone", id)
+	return
+}
+
+// GetSDNZone returns details about the zone whose name was provided.
+// An error is returned if the zone doesn't exist.
+// The returned zone can be unmarshalled into a ConfigSDNZone struct.
+func (c *Client) GetSDNZone(zoneName string) (zone map[string]interface{}, err error) {
+	url := fmt.Sprintf("/cluster/sdn/zones/%s", zoneName)
+	err = c.GetJsonRetryable(url, &zone, 3)
+	return
+}
+
+// CreateSDNZone creates a new SDN zone in the cluster
+func (c *Client) CreateSDNZone(params map[string]interface{}) error {
+	return c.Post(params, "/cluster/sdn/zones")
+}
+
+// DeleteSDNZone deletes an existing SDN zone in the cluster
+func (c *Client) DeleteSDNZone(zoneName string) error {
+	return c.Delete(fmt.Sprintf("/cluster/sdn/zones/%s", zoneName))
+}
+
+// UpdateSDNZone updates the given zone with the provided parameters
+func (c *Client) UpdateSDNZone(id string, params map[string]interface{}) error {
+	return c.Put(params, "/cluster/sdn/zones/"+id)
+}
+
 // Shared
 func (c *Client) GetItemConfigMapStringInterface(url, text, message string) (map[string]interface{}, error) {
 	data, err := c.GetItemConfig(url, text, message)
@@ -1903,7 +2176,11 @@ func (c *Client) GetItemListInterfaceArray(url string) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return list["data"].([]interface{}), nil
+	data, ok := list["data"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to cast response to list, resp: %v", list)
+	}
+	return data, nil
 }
 
 func (c *Client) GetItemList(url string) (list map[string]interface{}, err error) {

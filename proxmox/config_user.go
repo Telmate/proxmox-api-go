@@ -172,6 +172,86 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 	}, "/access/password")
 }
 
+type ApiToken struct {
+	TokenId string `json:"tokenid"`
+	Comment string `json:"comment,omitempty"`
+	Expire  int64  `json:"expire"`
+	Privsep bool   `json:"privsep"`
+}
+type ApiTokenCreateResult struct {
+	Info  map[string]interface{} `json:"info"`
+	Value string                 `json:"value"`
+}
+type ApiTokenCreateResultWrapper struct {
+	Data ApiTokenCreateResult `json:"data"`
+}
+
+// Maps the API values from proxmox to a struct
+func (tokens ApiToken) mapToStruct(params map[string]interface{}) *ApiToken {
+	if _, isSet := params["tokenid"]; isSet {
+		tokens.TokenId = params["tokenid"].(string)
+	}
+	if _, isSet := params["comment"]; isSet {
+		tokens.Comment = params["comment"].(string)
+	}
+	if _, isSet := params["expire"]; isSet {
+		tokens.Expire = int64(params["expire"].(float64))
+	}
+	if _, isSet := params["privsep"]; isSet {
+		tokens.Privsep = false
+		if params["privsep"] == 1 {
+			tokens.Privsep = true
+		}
+	}
+	return &tokens
+}
+
+func (ApiToken) mapToArray(params []interface{}) *[]ApiToken {
+	tokens := make([]ApiToken, len(params))
+	for i, e := range params {
+		tokens[i] = *ApiToken{}.mapToStruct(e.(map[string]interface{}))
+	}
+	return &tokens
+}
+
+func (config ConfigUser) CreateApiToken(client *Client, token ApiToken) (value string, err error) {
+	status, err := client.CreateItemReturnStatus(map[string]interface{}{
+		"comment": token.Comment,
+		"expire":  token.Expire,
+		"privsep": token.Privsep,
+	}, "/access/users/"+config.User.ToString()+"/token/"+token.TokenId)
+	if err != nil {
+		return
+	}
+	var resultWrapper *ApiTokenCreateResultWrapper
+	err = json.Unmarshal([]byte(status), &resultWrapper)
+	value = resultWrapper.Data.Value
+	return
+}
+
+func (config ConfigUser) UpdateApiToken(client *Client, token ApiToken) (err error) {
+	err = client.Put(map[string]interface{}{
+		"comment": token.Comment,
+		"expire":  token.Expire,
+		"privsep": token.Privsep,
+	}, "/access/users/"+config.User.ToString()+"/token/"+token.TokenId)
+	return
+}
+
+func (config ConfigUser) ListApiTokens(client *Client) (tokens *[]ApiToken, err error) {
+	status, err := client.GetItemListInterfaceArray("/access/users/" + config.User.ToString() + "/token")
+	if err != nil {
+		return
+	}
+	tokens = ApiToken{}.mapToArray(status)
+	return
+}
+
+func (config ConfigUser) DeleteApiToken(client *Client, token ApiToken) (err error) {
+	err = client.Delete("/access/users/" + config.User.ToString() + "/token/" + token.TokenId)
+	return
+}
+
 // Validates all items and sub items in the ConfigUser struct
 func (config ConfigUser) Validate() (err error) {
 	err = config.User.Validate()

@@ -18,12 +18,18 @@ var (
 			id := cli.ValidateIntIDset(args, "GuestID")
 			snapName := cli.RequiredIDset(args, 1, "SnapshotName")
 			config := proxmox.ConfigSnapshot{
-				Name:        snapName,
+				Name:        proxmox.SnapshotName(snapName),
 				Description: cli.OptionalIDset(args, 2),
 				VmState:     memory,
 			}
 			memory = false
-			err = config.CreateSnapshot(cli.NewClient(), uint(id))
+			client := cli.NewClient()
+			vmr := proxmox.NewVmRef(id)
+			_, err = client.GetVmInfo(vmr)
+			if err != nil {
+				return
+			}
+			err = config.CreateSnapshot(client, vmr)
 			if err != nil {
 				return
 			}
