@@ -187,8 +187,9 @@ type qemuDisk struct {
 	Serial       QemuDiskSerial
 	Size         uint
 	// TODO custom type
-	Storage string // Only set for Disk
-	Type    qemuDiskType
+	Storage       string // Only set for Disk
+	Type          qemuDiskType
+	WorldWideName QemuWorldWideName
 }
 
 const (
@@ -288,7 +289,9 @@ func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string
 	if disk.Type != virtIO && disk.EmulateSSD {
 		settings = settings + ",ssd=1"
 	}
-
+	if disk.WorldWideName != "" {
+		settings = settings + ",wwn=" + string(disk.WorldWideName)
+	}
 	return
 }
 
@@ -418,6 +421,9 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 	if value, isSet := settings["ssd"]; isSet {
 		disk.EmulateSSD, _ = strconv.ParseBool(value.(string))
 	}
+	if value, isSet := settings["wwn"]; isSet {
+		disk.WorldWideName = QemuWorldWideName(value.(string))
+	}
 	return &disk
 }
 
@@ -435,6 +441,9 @@ func (disk *qemuDisk) validate() (err error) {
 		return
 	}
 	if err = disk.Serial.Validate(); err != nil {
+		return
+	}
+	if err = disk.WorldWideName.Validate(); err != nil {
 		return
 	}
 	if disk.Disk {
@@ -1006,6 +1015,19 @@ func (storages QemuStorages) Validate() (err error) {
 type qemuUpdateChanges struct {
 	Move   []qemuDiskMove
 	Resize []qemuDiskResize
+}
+
+type QemuWorldWideName string
+
+const Error_QemuWorldWideName_Invalid string = "world wide name should be prefixed with 0x followed by 8 hexadecimal values"
+
+var regexp_QemuWorldWideName = regexp.MustCompile(`^0x[0-9A-Fa-f]{16}$`)
+
+func (wwn QemuWorldWideName) Validate() error {
+	if wwn == "" || regexp_QemuWorldWideName.MatchString(string(wwn)) {
+		return nil
+	}
+	return errors.New(Error_QemuWorldWideName_Invalid)
 }
 
 func diskSubtypeSet(set bool) error {
