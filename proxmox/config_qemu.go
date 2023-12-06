@@ -790,6 +790,15 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 		}
 	}
 
+	// efidisk
+	if efidisk, isSet := params["efidisk0"].(string); isSet {
+		efiDiskConfMap := ParsePMConf(efidisk, "volume")
+		storageName, fileName := ParseSubConf(efiDiskConfMap["volume"].(string), ":")
+		efiDiskConfMap["storage"] = storageName
+		efiDiskConfMap["file"] = fileName
+		config.EFIDisk = efiDiskConfMap
+	}
+
 	return &config, nil
 }
 
@@ -1208,7 +1217,26 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if err != nil {
 		return
 	}
+
+	if config.EFIDisk != nil {
+		storageContent, err := client.GetStorageContent(vmr, config.EFIDisk["storage"].(string))
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+
+		contents := storageContent["data"].([]interface{})
+		for content := range contents {
+			storageContentMap := contents[content].(map[string]interface{})
+			if storageContentMap["volid"] == config.EFIDisk["volume"].(string) {
+				config.EFIDisk["format"] = storageContentMap["format"].(string)
+				break
+			}
+		}
+	}
+
 	config.defaults()
+
 	// HAstate is return by the api for a vm resource type but not the HAgroup
 	err = client.ReadVMHA(vmr)
 	if err == nil {
