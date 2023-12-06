@@ -921,6 +921,34 @@ func main() {
 		failError(err)
 		fmt.Println(string(dnsList))
 
+	case "unlink":
+		if len(flag.Args()) < 4 {
+			failError(fmt.Errorf("error: invoke with <vmID> <node> <diskID [<forceRemoval: false|true>]"))
+		}
+
+		vmIdUnparsed := flag.Args()[1]
+		node := flag.Args()[2]
+		vmId, err := strconv.Atoi(vmIdUnparsed)
+		if err != nil {
+			failError(fmt.Errorf("Failed to convert vmId: %s to a string, error: %+v", vmIdUnparsed, err))
+		}
+
+		disks := flag.Args()[3]
+		forceRemoval := false
+		if len(flag.Args()) > 4 {
+			forceRemovalUnparsed := flag.Args()[4]
+			forceRemoval, err = strconv.ParseBool(forceRemovalUnparsed)
+			if err != nil {
+				failError(fmt.Errorf("Failed to convert <forceRemoval>: %s to a bool, error: %+v", forceRemovalUnparsed, err))
+			}
+		}
+
+		exitStatus, err := c.Unlink(node, vmId, disks, forceRemoval)
+		if err != nil {
+			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
+		}
+		log.Printf("Unlinked disks: %s from vmId: %d. Disks removed: %t", disks, vmId, forceRemoval)
+
 	default:
 		fmt.Printf("unknown action, try start|stop vmid\n")
 	}
