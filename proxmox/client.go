@@ -251,6 +251,35 @@ func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
 	}
 }
 
+func (c *Client) GetVmRefById(vmId int) (vmr *VmRef, err error) {
+	var exist bool = false
+	vms, err := c.GetResourceList(resourceListGuest)
+	if err != nil {
+		return
+	}
+	for vmii := range vms {
+		vm := vms[vmii].(map[string]interface{})
+		if int(vm["vmid"].(float64)) != 0 && int(vm["vmid"].(float64)) == vmId {
+			vmr = NewVmRef(int(vm["vmid"].(float64)))
+			vmr.node = vm["node"].(string)
+			vmr.vmType = vm["type"].(string)
+			vmr.pool = ""
+			if vm["pool"] != nil {
+				vmr.pool = vm["pool"].(string)
+			}
+			if vm["hastate"] != nil {
+				vmr.haState = vm["hastate"].(string)
+			}
+			return
+		}
+	}
+	if !exist {
+		return nil, fmt.Errorf("vm 'id-%d' not found", vmId)
+	} else {
+		return
+	}
+}
+
 func (c *Client) GetVmState(vmr *VmRef) (vmState map[string]interface{}, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
