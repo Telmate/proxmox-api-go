@@ -14,7 +14,7 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			id := cli.ValidateIntIDset(args, "GuestID")
 			snapName := cli.RequiredIDset(args, 1, "SnapshotName")
-			_, err = proxmox.DeleteSnapshot(cli.NewClient(), proxmox.NewVmRef(id), snapName)
+			_, err = proxmox.DeleteSnapshot(cli.NewClient(), proxmox.NewVmRef(id), proxmox.SnapshotName(snapName))
 			if err != nil {
 				return
 			}

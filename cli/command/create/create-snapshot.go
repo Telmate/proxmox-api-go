@@ -18,7 +18,7 @@ var (
 			id := cli.ValidateIntIDset(args, "GuestID")
 			snapName := cli.RequiredIDset(args, 1, "SnapshotName")
 			config := proxmox.ConfigSnapshot{
-				Name:        snapName,
+				Name:        proxmox.SnapshotName(snapName),
 				Description: cli.OptionalIDset(args, 2),
 				VmState:     memory,
 			}
