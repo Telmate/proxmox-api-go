@@ -517,7 +517,16 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 		config.Hookscript = params["hookscript"].(string)
 	}
 	if _, isSet := params["memory"]; isSet {
-		config.Memory = int(params["memory"].(float64))
+		switch params["memory"].(type) {
+		case float64:
+			config.Memory = int(params["memory"].(float64))
+		case string:
+			mem, err := strconv.ParseFloat(params["memory"].(string), 64)
+			if err != nil {
+				return nil, err
+			}
+			config.Memory = int(mem)
+		}
 	}
 	if _, isSet := params["name"]; isSet {
 		config.Name = params["name"].(string)
