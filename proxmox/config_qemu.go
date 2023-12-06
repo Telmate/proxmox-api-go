@@ -1222,6 +1222,218 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	if vmConfig["lock"] != nil {
 		return nil, fmt.Errorf("vm locked, could not obtain config")
 	}
+
+	// vmConfig Sample: map[ cpu:host
+	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
+	// ide2:local:iso/xxx-xx.iso,media=cdrom memory:2048
+	// smbios1:uuid=8b3bf833-aad8-4545-xxx-xxxxxxx digest:aa6ce5xxxxx1b9ce33e4aaeff564d4 sockets:1
+	// name:terraform-ubuntu1404-template bootdisk:virtio0
+	// virtio0:ProxmoxxxxISCSI:vm-1014-disk-2,size=4G
+	// description:Base image
+	// cores:2 ostype:l26
+
+	name := ""
+	if _, isSet := vmConfig["name"]; isSet {
+		name = vmConfig["name"].(string)
+	}
+	description := ""
+	if _, isSet := vmConfig["description"]; isSet {
+		description = vmConfig["description"].(string)
+	}
+	tags := ""
+	if _, isSet := vmConfig["tags"]; isSet {
+		tags = vmConfig["tags"].(string)
+	}
+	args := ""
+	if _, isSet := vmConfig["args"]; isSet {
+		args = vmConfig["args"].(string)
+	}
+
+	bios := "seabios"
+	if _, isSet := vmConfig["bios"]; isSet {
+		bios = vmConfig["bios"].(string)
+	}
+	onboot := true
+	if _, isSet := vmConfig["onboot"]; isSet {
+		onboot = Itob(int(vmConfig["onboot"].(float64)))
+	}
+	startup := ""
+	if _, isSet := vmConfig["startup"]; isSet {
+		startup = vmConfig["startup"].(string)
+	}
+	tablet := true
+	if _, isSet := vmConfig["tablet"]; isSet {
+		tablet = Itob(int(vmConfig["tablet"].(float64)))
+	}
+
+	agent := 0
+	if _, isSet := vmConfig["agent"]; isSet {
+		switch vmConfig["agent"].(type) {
+		case float64:
+			agent = int(vmConfig["agent"].(float64))
+		case string:
+			AgentConfList := strings.Split(vmConfig["agent"].(string), ",")
+			agent, _ = strconv.Atoi(AgentConfList[0])
+		}
+
+	}
+	ostype := "other"
+	if _, isSet := vmConfig["ostype"]; isSet {
+		ostype = vmConfig["ostype"].(string)
+	}
+	memory := 0.0
+	if _, isSet := vmConfig["memory"]; isSet {
+		switch vmConfig["memory"].(type) {
+		case float64:
+			memory = vmConfig["memory"].(float64)
+		case string:
+			memory2, err := strconv.ParseFloat(vmConfig["memory"].(string), 64)
+			if err != nil {
+				log.Fatal(err)
+				return nil, err
+			} else {
+				memory = memory2
+			}
+		}
+	}
+	balloon := 0.0
+	if _, isSet := vmConfig["balloon"]; isSet {
+		balloon = vmConfig["balloon"].(float64)
+	}
+	cores := 1.0
+	if _, isSet := vmConfig["cores"]; isSet {
+		cores = vmConfig["cores"].(float64)
+	}
+	vcpus := 0.0
+	if _, isSet := vmConfig["vcpus"]; isSet {
+		vcpus = vmConfig["vcpus"].(float64)
+	}
+	sockets := 1.0
+	if _, isSet := vmConfig["sockets"]; isSet {
+		sockets = vmConfig["sockets"].(float64)
+	}
+	cpu := "host"
+	if _, isSet := vmConfig["cpu"]; isSet {
+		cpu = vmConfig["cpu"].(string)
+	}
+	numa := false
+	if _, isSet := vmConfig["numa"]; isSet {
+		numa = Itob(int(vmConfig["numa"].(float64)))
+	}
+	//Can be network,disk,cpu,memory,usb
+	hotplug := "network,disk,usb"
+	if _, isSet := vmConfig["hotplug"]; isSet {
+		hotplug = vmConfig["hotplug"].(string)
+	}
+	//boot by default from hard disk (c), CD-ROM (d), network (n).
+	boot := "cdn"
+	if _, isSet := vmConfig["boot"]; isSet {
+		boot = vmConfig["boot"].(string)
+	}
+	bootdisk := ""
+	if _, isSet := vmConfig["bootdisk"]; isSet {
+		bootdisk = vmConfig["bootdisk"].(string)
+	}
+	kvm := true
+	if _, isSet := vmConfig["kvm"]; isSet {
+		kvm = Itob(int(vmConfig["kvm"].(float64)))
+	}
+	scsihw := "lsi"
+	if _, isSet := vmConfig["scsihw"]; isSet {
+		scsihw = vmConfig["scsihw"].(string)
+	}
+	hookscript := ""
+	if _, isSet := vmConfig["hookscript"]; isSet {
+		hookscript = vmConfig["hookscript"].(string)
+	}
+
+	config = &ConfigQemu{
+		Name:            name,
+		Description:     strings.TrimSpace(description),
+		Tags:            strings.TrimSpace(tags),
+		Args:            strings.TrimSpace(args),
+		Bios:            bios,
+		EFIDisk:         QemuDevice{},
+		Onboot:          &onboot,
+		Startup:         startup,
+		Tablet:          &tablet,
+		Agent:           agent,
+		QemuOs:          ostype,
+		Memory:          int(memory),
+		QemuCores:       int(cores),
+		QemuSockets:     int(sockets),
+		QemuCpu:         cpu,
+		QemuNuma:        &numa,
+		QemuKVM:         &kvm,
+		Hotplug:         hotplug,
+		Boot:            boot,
+		BootDisk:        bootdisk,
+		Scsihw:          scsihw,
+		Hookscript:      hookscript,
+		QemuDisks:       QemuDevices{},
+		QemuUnusedDisks: QemuDevices{},
+		QemuVga:         QemuDevice{},
+		QemuNetworks:    QemuDevices{},
+		QemuSerials:     QemuDevices{},
+		QemuPCIDevices:  QemuDevices{},
+		QemuUsbs:        QemuDevices{},
+		Ipconfig:        IpconfigMap{},
+	}
+
+	if balloon >= 1 {
+		config.Balloon = int(balloon)
+	}
+	if vcpus >= 1 {
+		config.QemuVcpus = int(vcpus)
+	}
+
+	if vmConfig["ide2"] != nil {
+		isoMatch := rxIso.FindStringSubmatch(vmConfig["ide2"].(string))
+		config.QemuIso = isoMatch[1]
+	}
+
+	// Add Cloud-Init options
+	if _, isSet := vmConfig["ciuser"]; isSet {
+		config.CIuser = vmConfig["ciuser"].(string)
+	}
+	if _, isSet := vmConfig["cipassword"]; isSet {
+		config.CIpassword = vmConfig["cipassword"].(string)
+	}
+	if _, isSet := vmConfig["cicustom"]; isSet {
+		config.CIcustom = vmConfig["cicustom"].(string)
+	}
+	if _, isSet := vmConfig["searchdomain"]; isSet {
+		config.Searchdomain = vmConfig["searchdomain"].(string)
+	}
+	if _, isSet := vmConfig["nameserver"]; isSet {
+		config.Nameserver = vmConfig["nameserver"].(string)
+	}
+	if _, isSet := vmConfig["sshkeys"]; isSet {
+		config.Sshkeys, _ = url.PathUnescape(vmConfig["sshkeys"].(string))
+	}
+
+	ipconfigNames := []string{}
+
+	for k := range vmConfig {
+		if ipconfigName := rxIpconfigName.FindStringSubmatch(k); len(ipconfigName) > 0 {
+			ipconfigNames = append(ipconfigNames, ipconfigName[0])
+		}
+	}
+
+	for _, ipconfigName := range ipconfigNames {
+		ipConfStr := vmConfig[ipconfigName]
+		id := rxDeviceID.FindStringSubmatch(ipconfigName)
+		ipconfigID, _ := strconv.Atoi(id[0])
+		config.Ipconfig[ipconfigID] = ipConfStr
+	}
+
+	// Add disks.
+	diskNames := []string{}
+
+	for k := range vmConfig {
+		if diskName := rxDiskName.FindStringSubmatch(k); len(diskName) > 0 {
+			diskNames = append(diskNames, diskName[0])
+		}
 	config, err = ConfigQemu{}.mapToStruct(vmConfig)
 	if err != nil {
 		return
