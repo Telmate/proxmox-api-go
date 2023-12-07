@@ -930,7 +930,7 @@ func main() {
 		node := flag.Args()[2]
 		vmId, err := strconv.Atoi(vmIdUnparsed)
 		if err != nil {
-			failError(fmt.Errorf("Failed to convert vmId: %s to a string, error: %+v", vmIdUnparsed, err))
+			failError(fmt.Errorf("failed to convert vmId: %s to a string, error: %+v", vmIdUnparsed, err))
 		}
 
 		disks := flag.Args()[3]
@@ -939,7 +939,7 @@ func main() {
 			forceRemovalUnparsed := flag.Args()[4]
 			forceRemoval, err = strconv.ParseBool(forceRemovalUnparsed)
 			if err != nil {
-				failError(fmt.Errorf("Failed to convert <forceRemoval>: %s to a bool, error: %+v", forceRemovalUnparsed, err))
+				failError(fmt.Errorf("failed to convert <forceRemoval>: %s to a bool, error: %+v", forceRemovalUnparsed, err))
 			}
 		}
 
