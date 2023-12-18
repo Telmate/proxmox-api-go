@@ -482,7 +482,7 @@ func Test_UserID_mapToStruct(t *testing.T) {
 }
 
 // TODO improve test when a validation function for the UserID exists
-func Test_UserID_ToString(t *testing.T) {
+func Test_UserID_String(t *testing.T) {
 	testData := []struct {
 		input  UserID
 		Output string
@@ -499,7 +499,7 @@ func Test_UserID_ToString(t *testing.T) {
 		{input: UserID{}},
 	}
 	for _, e := range testData {
-		require.Equal(t, e.Output, e.input.ToString())
+		require.Equal(t, e.Output, e.input.String())
 	}
 }
 

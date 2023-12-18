@@ -497,7 +497,7 @@ func main() {
 			User:     userId,
 		}.UpdateUserPassword(c)
 		failError(err)
-		fmt.Printf("Password of User %s updated\n", userId.ToString())
+		fmt.Printf("Password of User %s updated\n", userId.String())
 
 	case "setUser":
 		var password proxmox.UserPassword
@@ -509,7 +509,7 @@ func main() {
 			password = proxmox.UserPassword(flag.Args()[2])
 		}
 		failError(config.SetUser(userId, password, c))
-		log.Printf("User %s has been configured\n", userId.ToString())
+		log.Printf("User %s has been configured\n", userId.String())
 
 	case "deleteUser":
 		if len(flag.Args()) < 2 {
@@ -520,7 +520,7 @@ func main() {
 		failError(err)
 		err = proxmox.ConfigUser{User: userId}.DeleteUser(c)
 		failError(err)
-		fmt.Printf("User %s removed\n", userId.ToString())
+		fmt.Printf("User %s removed\n", userId.String())
 
 	//ACME Account
 	case "getAcmeAccountList":

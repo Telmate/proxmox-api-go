@@ -1688,7 +1688,7 @@ func (c *Client) GetUserPermissions(id UserID, path string) (permissions []strin
 	if !existence {
 		return nil, fmt.Errorf("cannot get user (%s) permissions, the user does not exist", id)
 	}
-	permlist, err := c.GetItemList("/access/permissions?userid=" + id.ToString() + "&path=" + path)
+	permlist, err := c.GetItemList("/access/permissions?userid=" + id.String() + "&path=" + path)
 	failError(err)
 	data := permlist["data"].(map[string]interface{})
 	for pth, prm := range data {
