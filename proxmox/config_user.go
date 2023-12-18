@@ -340,7 +340,7 @@ func (id UserID) String() string {
 	return id.Name + "@" + id.Realm
 }
 
-// use String() instead
+// deprecated use String() instead
 func (id UserID) ToString() string {
 	return id.String()
 }
