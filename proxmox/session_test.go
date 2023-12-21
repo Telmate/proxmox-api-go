@@ -29,6 +29,12 @@ func TestParamsTo(t *testing.T) {
 			"comment": "",
 		},
 		output: []string{"poolid=test"},
+	}, {
+		name: "array",
+		input: map[string]interface{}{
+			"command": []string{"bash", "-c", "echo test"},
+		},
+		output: []string{"command=bash&command=-c&command=echo+test"},
 	}}
 
 	for _, test := range tests {

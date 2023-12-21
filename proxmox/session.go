@@ -109,6 +109,11 @@ func ParamsToValuesWithAllEmpty(params map[string]interface{}, allowedEmpty []st
 			} else {
 				v = "0"
 			}
+		case []string:
+			for _, v := range intrV {
+				vals.Add(k, fmt.Sprintf("%v", v))
+			}
+			continue
 		default:
 			v = fmt.Sprintf("%v", intrV)
 		}
