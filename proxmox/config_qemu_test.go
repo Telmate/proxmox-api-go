@@ -2348,6 +2348,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  map[string]interface{}
+		vmr    *VmRef
 		output *ConfigQemu
 		err    error
 	}{
@@ -4514,10 +4515,46 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				"volume":  "local-lvm:vm-1000-disk-0",
 			}},
 		},
+		// Node
+		{name: "Node vmr nil",
+			output: &ConfigQemu{},
+		},
+		{name: "Node vmr empty",
+			vmr:    &VmRef{node: ""},
+			output: &ConfigQemu{},
+		},
+		{name: "Node vmr populated",
+			vmr:    &VmRef{node: "test"},
+			output: &ConfigQemu{Node: "test"},
+		},
+		// Pool
+		{name: "Pool vmr nil",
+			output: &ConfigQemu{},
+		},
+		{name: "Pool vmr empty",
+			vmr:    &VmRef{pool: ""},
+			output: &ConfigQemu{},
+		},
+		{name: "Pool vmr populated",
+			vmr:    &VmRef{pool: "test"},
+			output: &ConfigQemu{Pool: "test"},
+		},
+		// VmID
+		{name: "VmID vmr nil",
+			output: &ConfigQemu{},
+		},
+		{name: "VmID vmr empty",
+			vmr:    &VmRef{vmId: 0},
+			output: &ConfigQemu{},
+		},
+		{name: "VmID vmr populated",
+			vmr:    &VmRef{vmId: 100},
+			output: &ConfigQemu{VmID: 100},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			output, err := ConfigQemu{}.mapToStruct(test.input)
+			output, err := ConfigQemu{}.mapToStruct(test.vmr, test.input)
 			if err != nil {
 				require.Equal(t, test.err, err, test.name)
 			} else {

@@ -457,7 +457,7 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	return
 }
 
-func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error) {
+func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*ConfigQemu, error) {
 	// vmConfig Sample: map[ cpu:host
 	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
 	// ide2:local:iso/xxx-xx.iso,media=cdrom memory:2048
@@ -468,6 +468,12 @@ func (ConfigQemu) mapToStruct(params map[string]interface{}) (*ConfigQemu, error
 	// cores:2 ostype:l26
 
 	config := ConfigQemu{}
+
+	if vmr != nil {
+		config.Node = vmr.node
+		config.Pool = vmr.pool
+		config.VmID = vmr.vmId
+	}
 
 	if _, isSet := params["agent"]; isSet {
 		switch params["agent"].(type) {
@@ -1223,7 +1229,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 		return nil, fmt.Errorf("vm locked, could not obtain config")
 	}
 
-	config, err = ConfigQemu{}.mapToStruct(vmConfig)
+	config, err = ConfigQemu{}.mapToStruct(vmr, vmConfig)
 	if err != nil {
 		return
 	}
