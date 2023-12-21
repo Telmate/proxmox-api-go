@@ -45,10 +45,10 @@ func (config ConfigUser) DeleteUser(client *Client) (err error) {
 		return
 	}
 	if !existence {
-		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", config.User.ToString())
+		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", config.User.String())
 	}
 	// Proxmox silently fails a user delete if the users does not exist
-	return client.Delete("/access/users/" + config.User.ToString())
+	return client.Delete("/access/users/" + config.User.String())
 }
 
 // Maps the struct to the API values proxmox understands
@@ -65,7 +65,7 @@ func (config ConfigUser) mapToApiValues(create bool) (params map[string]interfac
 	}
 	if create {
 		params["password"] = config.Password
-		params["userid"] = config.User.ToString()
+		params["userid"] = config.User.String()
 	}
 	return
 }
@@ -150,7 +150,7 @@ func (config *ConfigUser) SetUser(userId UserID, password UserPassword, client *
 
 func (config *ConfigUser) UpdateUser(client *Client) (err error) {
 	params := config.mapToApiValues(false)
-	err = client.Put(params, "/access/users/"+config.User.ToString())
+	err = client.Put(params, "/access/users/"+config.User.String())
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating User: %v, (params: %v)", err, string(params))
@@ -167,7 +167,7 @@ func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
 		return err
 	}
 	return client.Put(map[string]interface{}{
-		"userid":   config.User.ToString(),
+		"userid":   config.User.String(),
 		"password": config.Password,
 	}, "/access/password")
 }
@@ -219,7 +219,7 @@ func (config ConfigUser) CreateApiToken(client *Client, token ApiToken) (value s
 		"comment": token.Comment,
 		"expire":  token.Expire,
 		"privsep": token.Privsep,
-	}, "/access/users/"+config.User.ToString()+"/token/"+token.TokenId)
+	}, "/access/users/"+config.User.String()+"/token/"+token.TokenId)
 	if err != nil {
 		return
 	}
@@ -234,12 +234,12 @@ func (config ConfigUser) UpdateApiToken(client *Client, token ApiToken) (err err
 		"comment": token.Comment,
 		"expire":  token.Expire,
 		"privsep": token.Privsep,
-	}, "/access/users/"+config.User.ToString()+"/token/"+token.TokenId)
+	}, "/access/users/"+config.User.String()+"/token/"+token.TokenId)
 	return
 }
 
 func (config ConfigUser) ListApiTokens(client *Client) (tokens *[]ApiToken, err error) {
-	status, err := client.GetItemListInterfaceArray("/access/users/" + config.User.ToString() + "/token")
+	status, err := client.GetItemListInterfaceArray("/access/users/" + config.User.String() + "/token")
 	if err != nil {
 		return
 	}
@@ -248,7 +248,7 @@ func (config ConfigUser) ListApiTokens(client *Client) (tokens *[]ApiToken, err 
 }
 
 func (config ConfigUser) DeleteApiToken(client *Client, token ApiToken) (err error) {
-	err = client.Delete("/access/users/" + config.User.ToString() + "/token/" + token.TokenId)
+	err = client.Delete("/access/users/" + config.User.String() + "/token/" + token.TokenId)
 	return
 }
 
@@ -333,11 +333,16 @@ func (UserID) mapToStruct(userId string) UserID {
 
 // Converts the userID to "username@realm"
 // Returns an empty string when either the Name or Realm is empty
-func (id UserID) ToString() string {
+func (id UserID) String() string {
 	if id.Name == "" || id.Realm == "" {
 		return ""
 	}
 	return id.Name + "@" + id.Realm
+}
+
+// deprecated use String() instead
+func (id UserID) ToString() string {
+	return id.String()
 }
 
 // TODO improve when Name and Realm have their own types
@@ -369,9 +374,9 @@ func CheckUserExistence(userId UserID, client *Client) (existence bool, err erro
 	}
 	// This should be the case where you have an API Token with privilege separation but no permissions attached
 	if len(list) == 0 {
-		return false, fmt.Errorf("user %s has valid credentials but cannot retrieve user list, check privilege separation of api token", userId.ToString())
+		return false, fmt.Errorf("user %s has valid credentials but cannot retrieve user list, check privilege separation of api token", userId.String())
 	}
-	existence = ItemInKeyOfArray(list, "userid", userId.ToString())
+	existence = ItemInKeyOfArray(list, "userid", userId.String())
 	return
 }
 
@@ -403,7 +408,7 @@ func listUsersFull(client *Client) ([]interface{}, error) {
 }
 
 func NewConfigUserFromApi(userId UserID, client *Client) (*ConfigUser, error) {
-	userConfig, err := client.GetItemConfigMapStringInterface("/access/users/"+userId.ToString(), "user", "CONFIG")
+	userConfig, err := client.GetItemConfigMapStringInterface("/access/users/"+userId.String(), "user", "CONFIG")
 	if err != nil {
 		return nil, err
 	}
@@ -451,5 +456,5 @@ func NewUserIDs(userIds string) (*[]UserID, error) {
 
 // URL for updating users
 func updateUser(user UserID, params map[string]interface{}, client *Client) error {
-	return client.Put(params, "/access/users/"+user.ToString())
+	return client.Put(params, "/access/users/"+user.String())
 }

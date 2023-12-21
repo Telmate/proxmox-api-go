@@ -11,8 +11,8 @@ import (
 func Cleanup(t *testing.T, user proxmox.UserID) {
 	Test := cliTest.Test{
 		ReqErr:      true,
-		ErrContains: user.ToString(),
-		Args:        []string{"-i", "delete", "user", user.ToString()},
+		ErrContains: user.String(),
+		Args:        []string{"-i", "delete", "user", user.String()},
 	}
 	Test.StandardTest(t)
 }
@@ -20,15 +20,15 @@ func Cleanup(t *testing.T, user proxmox.UserID) {
 // Default DELETE test for User
 func Delete(t *testing.T, user proxmox.UserID) {
 	Test := cliTest.Test{
-		Contains: []string{user.ToString()},
-		Args:     []string{"-i", "delete", "user", user.ToString()},
+		Contains: []string{user.String()},
+		Args:     []string{"-i", "delete", "user", user.String()},
 	}
 	Test.StandardTest(t)
 }
 
 // Default SET test for User
 func Set(t *testing.T, user proxmox.ConfigUser) {
-	userID := user.User.ToString()
+	userID := user.User.String()
 	user.User = proxmox.UserID{}
 	Test := cliTest.Test{
 		InputJson: user,

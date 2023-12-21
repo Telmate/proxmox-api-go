@@ -261,7 +261,7 @@ func (group GroupName) removeAllUsersFromGroupExcept(allUsers []interface{}, mem
 		}
 		var userInMembers bool
 		for _, ee := range *members {
-			if params["userid"] == ee.ToString() {
+			if params["userid"] == ee.String() {
 				userInMembers = true
 				break
 			}
@@ -324,7 +324,7 @@ func (group GroupName) usersToAddToGroup(allUsers []interface{}, members *[]User
 			continue
 		}
 		for ii, ee := range *members {
-			if params["userid"] == ee.ToString() {
+			if params["userid"] == ee.String() {
 				var groups []GroupName
 				if _, isSet := params["groups"]; isSet {
 					groups = GroupName("").csvToArray(params["groups"].(string))
@@ -350,7 +350,7 @@ func (group GroupName) usersToRemoveFromGroup(allUsers []interface{}, members *[
 			continue
 		}
 		for ii, ee := range *members {
-			if params["userid"] == ee.ToString() {
+			if params["userid"] == ee.String() {
 				var groups []GroupName
 				if _, isSet := params["groups"]; isSet {
 					groups = GroupName("").csvToArray(params["groups"].(string))
