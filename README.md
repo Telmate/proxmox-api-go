@@ -4,6 +4,10 @@ Proxmox API in golang. For /api2/json. Work in progress.
 
 Starting with Proxmox 5.2 you can use cloud-init options.
 
+## Contributing
+
+Want to help with the project please refer to our [style-guide](docs/style-guide/style-guide.md).
+
 ## Build
 
 ```sh
