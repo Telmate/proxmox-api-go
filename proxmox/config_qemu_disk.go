@@ -321,12 +321,17 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 			}
 			if len(pathParts) > 1 {
 				diskNameAndFormat := strings.Split(pathParts[len(pathParts)-1], ".")
-				if len(diskNameAndFormat) == 2 {
-					disk.Format = QemuDiskFormat(diskNameAndFormat[1])
+				if len(diskNameAndFormat) > 0 {
 					tmp := strings.Split(diskNameAndFormat[0], "-")
 					if len(tmp) > 1 {
 						tmpDiskId, _ := strconv.Atoi(tmp[len(tmp)-1])
 						disk.Id = uint(tmpDiskId)
+					}
+					// set disk format, default to raw
+					if len(diskNameAndFormat) == 2 {
+						disk.Format = QemuDiskFormat(diskNameAndFormat[1])
+					} else {
+						disk.Format = QemuDiskFormat_Raw
 					}
 				}
 			}
