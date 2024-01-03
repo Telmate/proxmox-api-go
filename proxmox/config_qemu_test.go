@@ -2490,7 +2490,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks Ide Disk Format default",
-			input: map[string]interface{}{"ide2": "test:100/vm-100-disk-2"},
+			input: map[string]interface{}{"ide2": "test:vm-100-disk-2"},
 			output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 				Backup:    true,
 				Format:    QemuDiskFormat_Raw,
@@ -2500,7 +2500,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks Ide Disk Format raw",
-			input: map[string]interface{}{"ide3": "test:100/vm-100-disk-2.raw"},
+			input: map[string]interface{}{"ide3": "test:vm-100-disk-2.raw"},
 			output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 				Backup:    true,
 				Format:    QemuDiskFormat_Raw,
@@ -3024,7 +3024,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks Sata Disk Format default",
-			input: map[string]interface{}{"sata0": "test:100/vm-100-disk-2"},
+			input: map[string]interface{}{"sata0": "test:vm-100-disk-2"},
 			output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 				Backup:    true,
 				Format:    QemuDiskFormat_Raw,
@@ -3034,7 +3034,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks Sata Disk Format raw",
-			input: map[string]interface{}{"sata1": "test:100/vm-100-disk-2.raw"},
+			input: map[string]interface{}{"sata1": "test:vm-100-disk-2.raw"},
 			output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 				Backup:    true,
 				Format:    QemuDiskFormat_Raw,
@@ -3566,7 +3566,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks Scsi Disk Format default",
-			input: map[string]interface{}{"scsi6": "test:100/vm-100-disk-2"},
+			input: map[string]interface{}{"scsi6": "test:vm-100-disk-2"},
 			output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Disk: &QemuScsiDisk{
 				Backup:    true,
 				Format:    QemuDiskFormat_Raw,
@@ -3576,7 +3576,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks Scsi Disk Format raw",
-			input: map[string]interface{}{"scsi7": "test:100/vm-100-disk-2.raw"},
+			input: map[string]interface{}{"scsi7": "test:vm-100-disk-2.raw"},
 			output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{
 				Backup:    true,
 				Format:    QemuDiskFormat_Raw,
@@ -4144,7 +4144,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks VirtIO Disk Format default",
-			input: map[string]interface{}{"virtio7": "test:100/vm-100-disk-2"},
+			input: map[string]interface{}{"virtio7": "test:vm-100-disk-2"},
 			output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 				Backup:    true,
 				Format:    QemuDiskFormat_Raw,
@@ -4154,7 +4154,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks VirtIO Disk Format raw",
-			input: map[string]interface{}{"virtio8": "test:100/vm-100-disk-2.raw"},
+			input: map[string]interface{}{"virtio8": "test:vm-100-disk-2.raw"},
 			output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 				Backup:    true,
 				Format:    QemuDiskFormat_Raw,

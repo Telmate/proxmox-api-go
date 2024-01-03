@@ -304,6 +304,7 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 	} else {
 		// storage:110/base-110-disk-1.qcow2/100/vm-100-disk-0.qcow2
 		// storage:100/vm-100-disk-0.qcow2
+		// storage:vm-100-disk-0
 		diskAndPath := strings.Split(diskData, ":")
 		disk.Storage = diskAndPath[0]
 		if len(diskAndPath) == 2 {
@@ -319,20 +320,18 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 					disk.LinkedDiskId = &tmpDiskIdPointer
 				}
 			}
-			if len(pathParts) > 1 {
-				diskNameAndFormat := strings.Split(pathParts[len(pathParts)-1], ".")
-				if len(diskNameAndFormat) > 0 {
-					tmp := strings.Split(diskNameAndFormat[0], "-")
-					if len(tmp) > 1 {
-						tmpDiskId, _ := strconv.Atoi(tmp[len(tmp)-1])
-						disk.Id = uint(tmpDiskId)
-					}
-					// set disk format, default to raw
-					if len(diskNameAndFormat) == 2 {
-						disk.Format = QemuDiskFormat(diskNameAndFormat[1])
-					} else {
-						disk.Format = QemuDiskFormat_Raw
-					}
+			diskNameAndFormat := strings.Split(pathParts[len(pathParts)-1], ".")
+			if len(diskNameAndFormat) > 0 {
+				tmp := strings.Split(diskNameAndFormat[0], "-")
+				if len(tmp) > 1 {
+					tmpDiskId, _ := strconv.Atoi(tmp[len(tmp)-1])
+					disk.Id = uint(tmpDiskId)
+				}
+				// set disk format, default to raw
+				if len(diskNameAndFormat) == 2 {
+					disk.Format = QemuDiskFormat(diskNameAndFormat[1])
+				} else {
+					disk.Format = QemuDiskFormat_Raw
 				}
 			}
 		}
