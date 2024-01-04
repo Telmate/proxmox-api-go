@@ -60,7 +60,7 @@ type ConfigQemu struct {
 	Memory          int           `json:"memory,omitempty"`     // TODO should be uint
 	Name            string        `json:"name,omitempty"`       // TODO should be custom type as there are character and length limitations
 	Nameserver      string        `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
-	Node            string        `json:"node,omitempty"`
+	Node            string        `json:"node,omitempty"`       // Only returned setting it has no effect, set node in the VmRef instead
 	Onboot          *bool         `json:"onboot,omitempty"`
 	Pool            string        `json:"pool,omitempty"`    // TODO should be custom type as there are character and length limitations
 	QemuCores       int           `json:"cores,omitempty"`   // TODO should be uint
@@ -834,6 +834,7 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 	}
 	vmr.SetVmType("qemu")
 	config.VmID = vmr.vmId
+	config.Node = vmr.node
 	return
 }
 

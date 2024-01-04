@@ -9,6 +9,13 @@ import (
 	"strings"
 )
 
+type diskSyntaxEnum bool
+
+const (
+	diskSyntaxFile   diskSyntaxEnum = false
+	diskSyntaxVolume diskSyntaxEnum = true
+)
+
 type IsoFile struct {
 	File    string `json:"file"`
 	Storage string `json:"storage"`
@@ -178,6 +185,7 @@ type qemuDisk struct {
 	EmulateSSD bool // Only set for ide,sata,scsi
 	// TODO custom type
 	File         string         // Only set for Passthrough.
+	fileSyntax   diskSyntaxEnum // private enum to determine the syntax of the file path, as this changes depending on the type of backing storage. ie nfs, lvm, local, etc.
 	Format       QemuDiskFormat // Only set for Disk
 	Id           uint           // Only set for Disk
 	IOThread     bool           // Only set for scsi,virtio
@@ -199,21 +207,48 @@ const (
 	Error_QemuDisk_Storage           string = "storage may not be empty"
 )
 
+// create the disk string for the api
+func (disk qemuDisk) formatDisk(vmID, LinkedVmId uint, currentStorage string, currentFormat QemuDiskFormat, syntax diskSyntaxEnum) (settings string) {
+	tmpId := strconv.Itoa(int(vmID))
+	// vm-100-disk-0
+	settings = "vm-" + tmpId + "-disk-" + strconv.Itoa(int(disk.Id))
+	switch syntax {
+	case diskSyntaxFile:
+		// format is ignored when syntax is diskSyntaxVolume
+		// normal disk syntax
+		// 100/vm-100-disk-0.raw
+		settings = tmpId + "/" + settings + "." + string(disk.Format)
+		if disk.LinkedDiskId != nil && disk.Storage == currentStorage && disk.Format == currentFormat {
+			// linked clone disk syntax
+			// 110/base-110-disk-1.raw/100/vm-100-disk-0.raw
+			tmpId = strconv.Itoa(int(LinkedVmId))
+			settings = tmpId + "/base-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.LinkedDiskId)) + "." + string(disk.Format) + "/" + settings
+		}
+	case diskSyntaxVolume:
+		// normal disk syntax
+		// vm-100-disk-0
+		if disk.LinkedDiskId != nil && disk.Storage == currentStorage {
+			// linked clone disk syntax
+			// base-110-disk-1/vm-100-disk-0
+			tmpId = strconv.Itoa(int(LinkedVmId))
+			settings = "base-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.LinkedDiskId)) + "/" + settings
+		}
+	}
+	// storage:100/vm-100-disk-0.raw
+	// storage:110/base-110-disk-1.raw/100/vm-100-disk-0.raw
+	// storage:vm-100-disk-0
+	// storage:base-110-disk-1/vm-100-disk-0
+	settings = disk.Storage + ":" + settings
+	return
+}
+
 // Maps all the disk related settings to api values proxmox understands.
-func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string, currentFormat QemuDiskFormat, create bool) (settings string) {
+func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string, currentFormat QemuDiskFormat, syntax diskSyntaxEnum, create bool) (settings string) {
 	if disk.Storage != "" {
 		if create {
 			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
 		} else {
-			tmpId := strconv.Itoa(int(vmID))
-			settings = tmpId + "/vm-" + tmpId + "-disk-" + strconv.Itoa(int(disk.Id)) + "." + string(disk.Format)
-			// storage:100/vm-100-disk-0.raw
-			if disk.LinkedDiskId != nil && disk.Storage == currentStorage && disk.Format == currentFormat {
-				// storage:110/base-110-disk-1.raw/100/vm-100-disk-0.raw
-				tmpId = strconv.Itoa(int(LinkedVmId))
-				settings = tmpId + "/base-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.LinkedDiskId)) + "." + string(disk.Format) + "/" + settings
-			}
-			settings = disk.Storage + ":" + settings
+			settings = disk.formatDisk(vmID, LinkedVmId, currentStorage, currentFormat, syntax)
 		}
 	}
 
@@ -302,35 +337,7 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 	if diskData[0:1] == "/" {
 		disk.File = diskData
 	} else {
-		// storage:110/base-110-disk-1.qcow2/100/vm-100-disk-0.qcow2
-		// storage:100/vm-100-disk-0.qcow2
-		diskAndPath := strings.Split(diskData, ":")
-		disk.Storage = diskAndPath[0]
-		if len(diskAndPath) == 2 {
-			pathParts := strings.Split(diskAndPath[1], "/")
-			if len(pathParts) == 4 {
-				var tmpDiskId int
-				tmpVmId, _ := strconv.Atoi(pathParts[0])
-				*linkedVmId = uint(tmpVmId)
-				tmp := strings.Split(strings.Split(pathParts[1], ".")[0], "-")
-				if len(tmp) > 1 {
-					tmpDiskId, _ = strconv.Atoi(tmp[len(tmp)-1])
-					tmpDiskIdPointer := uint(tmpDiskId)
-					disk.LinkedDiskId = &tmpDiskIdPointer
-				}
-			}
-			if len(pathParts) > 1 {
-				diskNameAndFormat := strings.Split(pathParts[len(pathParts)-1], ".")
-				if len(diskNameAndFormat) == 2 {
-					disk.Format = QemuDiskFormat(diskNameAndFormat[1])
-					tmp := strings.Split(diskNameAndFormat[0], "-")
-					if len(tmp) > 1 {
-						tmpDiskId, _ := strconv.Atoi(tmp[len(tmp)-1])
-						disk.Id = uint(tmpDiskId)
-					}
-				}
-			}
-		}
+		disk.Id, disk.Storage, disk.Format, disk.LinkedDiskId, disk.fileSyntax = qemuDisk{}.parseDisk(diskData, linkedVmId)
 	}
 
 	if len(settings) == 0 {
@@ -425,6 +432,73 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 		disk.WorldWideName = QemuWorldWideName(value.(string))
 	}
 	return &disk
+}
+
+// parse and extract the values from the disk data
+// storage:110/base-110-disk-1.qcow2/100/vm-100-disk-0.qcow2
+// storage:100/vm-100-disk-0.qcow2
+// storage:base-110-disk-1/vm-100-disk-0
+// storage:vm-100-disk-0
+func (qemuDisk) parseDisk(diskData string, linkedVmId *uint) (diskId uint, storage string, format QemuDiskFormat, linkedDiskId *uint, syntax diskSyntaxEnum) {
+	parts := strings.Split(diskData, ":")
+	storage = parts[0]
+
+	if len(parts) != 2 {
+		return
+	}
+
+	pathParts := strings.Split(parts[1], "/")
+	switch len(pathParts) {
+	case 1:
+		syntax = diskSyntaxVolume
+	case 2:
+		if _, err := strconv.Atoi(pathParts[0]); err != nil { // linked clone
+			tmp := strings.Split(strings.Split(pathParts[0], ".")[0], "-")
+			if len(tmp) > 1 {
+				if tmpVmId, err := strconv.Atoi(tmp[1]); err == nil {
+					*linkedVmId = uint(tmpVmId)
+				}
+				if tmpDiskId, err := strconv.Atoi(tmp[len(tmp)-1]); err == nil {
+					tmpDiskIdPointer := uint(tmpDiskId)
+					linkedDiskId = &tmpDiskIdPointer
+				}
+				syntax = diskSyntaxVolume
+			}
+		} else {
+			syntax = diskSyntaxFile
+		}
+	case 4: // Linked Clone
+		if tmpVmId, err := strconv.Atoi(pathParts[0]); err == nil {
+			*linkedVmId = uint(tmpVmId)
+		}
+		tmp := strings.Split(strings.Split(pathParts[1], ".")[0], "-")
+		if len(tmp) > 1 {
+			if tmpDiskId, err := strconv.Atoi(tmp[len(tmp)-1]); err == nil {
+				tmpDiskIdPointer := uint(tmpDiskId)
+				linkedDiskId = &tmpDiskIdPointer
+			}
+		}
+		syntax = diskSyntaxFile
+	}
+
+	diskNameAndFormat := strings.Split(pathParts[len(pathParts)-1], ".")
+	if len(diskNameAndFormat) > 0 {
+		tmp := strings.Split(diskNameAndFormat[0], "-")
+		if len(tmp) > 1 {
+			if tmpDiskId, err := strconv.Atoi(tmp[len(tmp)-1]); err == nil {
+				diskId = uint(tmpDiskId)
+			}
+		}
+
+		// set disk format, default to raw
+		if len(diskNameAndFormat) == 2 {
+			format = QemuDiskFormat(diskNameAndFormat[1])
+		} else {
+			format = QemuDiskFormat_Raw
+		}
+	}
+
+	return
 }
 
 func (disk *qemuDisk) validate() (err error) {
@@ -869,20 +943,20 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, li
 	if storage.Disk != nil {
 		if currentStorage == nil || currentStorage.Disk == nil {
 			// Create
-			params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", true)
+			params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", false, true)
 		} else {
 			if storage.Disk.Size >= currentStorage.Disk.Size {
 				// Update
 				storage.Disk.Id = currentStorage.Disk.Id
 				storage.Disk.LinkedDiskId = currentStorage.Disk.LinkedDiskId
-				disk := storage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, false)
-				if disk != currentStorage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, false) {
+				disk := storage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, currentStorage.Disk.fileSyntax, false)
+				if disk != currentStorage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, currentStorage.Disk.fileSyntax, false) {
 					params[string(id)] = disk
 				}
 			} else {
 				// Delete and Create
 				// creating a disk on top of an existing disk is the same as detaching the disk and creating a new one.
-				params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", true)
+				params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", false, true)
 			}
 		}
 		return delete
@@ -894,11 +968,11 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, li
 	if storage.Passthrough != nil {
 		if currentStorage == nil || currentStorage.Passthrough == nil {
 			// Create
-			params[string(id)] = storage.Passthrough.mapToApiValues(0, 0, "", "", false)
+			params[string(id)] = storage.Passthrough.mapToApiValues(0, 0, "", "", false, false)
 		} else {
 			// Update
-			passthrough := storage.Passthrough.mapToApiValues(0, 0, "", "", false)
-			if passthrough != currentStorage.Passthrough.mapToApiValues(0, 0, "", "", false) {
+			passthrough := storage.Passthrough.mapToApiValues(0, 0, "", "", false, false)
+			if passthrough != currentStorage.Passthrough.mapToApiValues(0, 0, "", "", false, false) {
 				params[string(id)] = passthrough
 			}
 		}

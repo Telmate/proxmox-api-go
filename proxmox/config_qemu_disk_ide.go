@@ -19,6 +19,7 @@ type QemuIdeDisk struct {
 	Serial        QemuDiskSerial    `json:"serial,omitempty"`
 	Size          uint              `json:"size"`
 	Storage       string            `json:"storage"`
+	syntax        diskSyntaxEnum
 	WorldWideName QemuWorldWideName `json:"wwn"`
 }
 
@@ -31,6 +32,7 @@ func (disk *QemuIdeDisk) convertDataStructure() *qemuDisk {
 		Discard:       disk.Discard,
 		Disk:          true,
 		EmulateSSD:    disk.EmulateSSD,
+		fileSyntax:    disk.syntax,
 		Format:        disk.Format,
 		Id:            disk.Id,
 		LinkedDiskId:  disk.LinkedDiskId,
@@ -242,6 +244,7 @@ func (QemuIdeStorage) mapToStruct(param string, LinkedVmId *uint) *QemuIdeStorag
 			Serial:        tmpDisk.Serial,
 			Size:          tmpDisk.Size,
 			Storage:       tmpDisk.Storage,
+			syntax:        tmpDisk.fileSyntax,
 			WorldWideName: tmpDisk.WorldWideName,
 		}}
 	}

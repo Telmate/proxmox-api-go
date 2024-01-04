@@ -21,6 +21,7 @@ type QemuScsiDisk struct {
 	Serial        QemuDiskSerial    `json:"serial,omitempty"`
 	Size          uint              `json:"size"`
 	Storage       string            `json:"storage"`
+	syntax        diskSyntaxEnum
 	WorldWideName QemuWorldWideName `json:"wwn"`
 }
 
@@ -42,6 +43,7 @@ func (disk *QemuScsiDisk) convertDataStructure() *qemuDisk {
 		Serial:        disk.Serial,
 		Size:          disk.Size,
 		Storage:       disk.Storage,
+		fileSyntax:    disk.syntax,
 		Type:          scsi,
 		WorldWideName: disk.WorldWideName,
 	}
@@ -414,6 +416,7 @@ func (QemuScsiStorage) mapToStruct(param string, LinkedVmId *uint) *QemuScsiStor
 			Serial:        tmpDisk.Serial,
 			Size:          tmpDisk.Size,
 			Storage:       tmpDisk.Storage,
+			syntax:        tmpDisk.fileSyntax,
 			WorldWideName: tmpDisk.WorldWideName,
 		}}
 	}
