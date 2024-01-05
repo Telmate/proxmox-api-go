@@ -299,17 +299,17 @@ func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string
 	}
 
 	if disk.Bandwidth.MBps.ReadLimit.Concurrent != 0 {
-		settings = settings + fmt.Sprintf(",mbps_rd=%.2f", disk.Bandwidth.MBps.ReadLimit.Concurrent)
+		settings = settings + ",mbps_rd=" + floatToTrimmedString(float64(disk.Bandwidth.MBps.ReadLimit.Concurrent), 2)
 	}
 	if disk.Bandwidth.MBps.ReadLimit.Burst != 0 {
-		settings = settings + fmt.Sprintf(",mbps_rd_max=%.2f", disk.Bandwidth.MBps.ReadLimit.Burst)
+		settings = settings + ",mbps_rd_max=" + floatToTrimmedString(float64(disk.Bandwidth.MBps.ReadLimit.Burst), 2)
 	}
 
 	if disk.Bandwidth.MBps.WriteLimit.Concurrent != 0 {
-		settings = settings + fmt.Sprintf(",mbps_wr=%.2f", disk.Bandwidth.MBps.WriteLimit.Concurrent)
+		settings = settings + ",mbps_wr=" + floatToTrimmedString(float64(disk.Bandwidth.MBps.WriteLimit.Concurrent), 2)
 	}
 	if disk.Bandwidth.MBps.WriteLimit.Burst != 0 {
-		settings = settings + fmt.Sprintf(",mbps_wr_max=%.2f", disk.Bandwidth.MBps.WriteLimit.Burst)
+		settings = settings + ",mbps_wr_max=" + floatToTrimmedString(float64(disk.Bandwidth.MBps.WriteLimit.Burst), 2)
 	}
 
 	if !disk.Replicate {
