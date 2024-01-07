@@ -111,7 +111,14 @@ func (qemuCdRom) mapToStruct(diskData string, settings map[string]interface{}) *
 	tmpStorage := strings.Split(diskData, ":")
 	if len(tmpStorage) > 1 {
 		tmpFile := strings.Split(diskData, "/")
-		if len(tmpFile) == 2 {
+		switch len(tmpFile) {
+		case 1:
+			return &qemuCdRom{
+				Storage: tmpStorage[0],
+				File:    tmpStorage[1],
+				Format:  QemuDiskFormat_Raw,
+			}
+		case 2:
 			tmpFileType := strings.Split(tmpFile[1], ".")
 			if len(tmpFileType) > 1 {
 				fileType := QemuDiskFormat(tmpFileType[len(tmpFileType)-1])
