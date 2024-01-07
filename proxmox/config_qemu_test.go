@@ -3001,8 +3001,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks Ide CloudInit lvm",
-			input: map[string]interface{}{"ide0": "Test:vm-100-cloudinit,media=cdrom"},
-			output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{
+			input: map[string]interface{}{"ide3": "Test:vm-100-cloudinit,media=cdrom"},
+			output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{
 				Format:  QemuDiskFormat_Raw,
 				Storage: "Test",
 			}}}}},
@@ -3540,8 +3540,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		},
 		// Disks Sata CloudInit
 		{name: "Disks Sata CloudInit file",
-			input: map[string]interface{}{"sata0": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
-			output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{
+			input: map[string]interface{}{"sata4": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
+			output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{
 				Format:  QemuDiskFormat_Raw,
 				Storage: "Test",
 			}}}}},
@@ -4097,8 +4097,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks Scsi CloudInit lvm",
-			input: map[string]interface{}{"scsi0": "Test:vm-100-cloudinit,media=cdrom"},
-			output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{
+			input: map[string]interface{}{"scsi23": "Test:vm-100-cloudinit,media=cdrom"},
+			output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_23: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{
 				Format:  QemuDiskFormat_Raw,
 				Storage: "Test",
 			}}}}},
@@ -4689,8 +4689,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			}}}}},
 		},
 		{name: "Disks VirtIO CloudInit lvm",
-			input: map[string]interface{}{"virtio0": "Test:vm-100-cloudinit,media=cdrom"},
-			output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{
+			input: map[string]interface{}{"virtio7": "Test:vm-100-cloudinit,media=cdrom"},
+			output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{
 				Format:  QemuDiskFormat_Raw,
 				Storage: "Test",
 			}}}}},
