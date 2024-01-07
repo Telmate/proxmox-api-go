@@ -95,11 +95,11 @@ type qemuCdRom struct {
 }
 
 func (qemuCdRom) mapToStruct(diskData string, settings map[string]interface{}) *qemuCdRom {
-	var isCdRom bool
 	if setting, isSet := settings["media"]; isSet {
-		isCdRom = setting.(string) == "cdrom"
-	}
-	if !isCdRom {
+		if setting.(string) != "cdrom" {
+			return nil
+		}
+	} else {
 		return nil
 	}
 	if _, isSet := settings["none"]; isSet {
