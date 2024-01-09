@@ -225,6 +225,15 @@ func keyExists(array []interface{}, key string) (existence bool) {
 	return false
 }
 
+// converts a float to a string with x number of decimals, and trims trailing zeros and the decimal point
+func floatToTrimmedString(f float64, maxDecimals uint8) (s string) {
+	s = strings.TrimRight(strconv.FormatFloat(f, 'f', int(maxDecimals), 64), "0")
+	if s[len(s)-1:] == "." {
+		return s[:len(s)-1]
+	}
+	return
+}
+
 func splitStringOfSettings(settings string) map[string]interface{} {
 	settingValuePairs := strings.Split(settings, ",")
 	settingMap := map[string]interface{}{}
