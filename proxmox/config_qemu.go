@@ -852,6 +852,10 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 	var exitStatus string
 
 	if currentConfig != nil {
+		// Ugly hack to update config if we clone a template with CloudInit drive and we don't have it in our configuration
+		if currentConfig.Disks.Ide.Disk_2.CloudInit != nil && newConfig.Disks.Ide.Disk_2.CloudInit == nil {
+			newConfig.Disks.Ide.Disk_2 = currentConfig.Disks.Ide.Disk_2
+		}
 		// Update
 		if newConfig.Disks != nil && currentConfig.Disks != nil {
 			markedDisks := newConfig.Disks.markDiskChanges(*currentConfig.Disks)
