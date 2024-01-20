@@ -522,6 +522,9 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	if _, isSet := params["hookscript"]; isSet {
 		config.Hookscript = params["hookscript"].(string)
 	}
+	if _, isSet := params["machine"]; isSet {
+		config.Machine = params["machine"].(string)
+	}
 	if _, isSet := params["memory"]; isSet {
 		switch params["memory"].(type) {
 		case float64:
