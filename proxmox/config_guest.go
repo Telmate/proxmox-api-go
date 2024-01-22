@@ -177,10 +177,23 @@ func GuestHasPendingChanges(vmr *VmRef, client *Client) (bool, error) {
 
 // Reboot the specified guest
 func GuestReboot(vmr *VmRef, client *Client) (err error) {
-	_, err = client.ShutdownVm(vmr)
-	if err != nil {
+	_, err = client.RebootVm(vmr)
+	return
+}
+
+func GuestShutdown(vmr *VmRef, client *Client, force bool) (err error) {
+	if err = client.CheckVmRef(vmr); err != nil {
 		return
 	}
+	var params map[string]interface{}
+	if force {
+		params = map[string]interface{}{"forceStop": force}
+	}
+	_, err = client.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/shutdown")
+	return
+}
+
+func GuestStart(vmr *VmRef, client *Client) (err error) {
 	_, err = client.StartVm(vmr)
 	return
 }
