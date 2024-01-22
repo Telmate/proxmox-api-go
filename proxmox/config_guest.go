@@ -172,7 +172,7 @@ func GuestHasPendingChanges(vmr *VmRef, client *Client) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return keyExists(params, "pending"), nil
+	return keyExists(params, "pending") || keyExists(params, "delete"), nil
 }
 
 // Reboot the specified guest

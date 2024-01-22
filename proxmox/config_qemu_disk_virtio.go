@@ -70,6 +70,16 @@ type QemuVirtIODisks struct {
 	Disk_15 *QemuVirtIOStorage `json:"15,omitempty"`
 }
 
+func (q QemuVirtIODisks) listCloudInitDisk() string {
+	diskMap := q.mapToIntMap()
+	for i := range diskMap {
+		if diskMap[i] != nil && diskMap[i].CloudInit != nil {
+			return "virtio" + strconv.Itoa(int(i))
+		}
+	}
+	return ""
+}
+
 func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, vmID, linkedVmId uint, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuVirtIODisks{}
 	if currentDisks != nil {

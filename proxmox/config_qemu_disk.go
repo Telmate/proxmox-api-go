@@ -1002,6 +1002,40 @@ type QemuStorages struct {
 	VirtIO *QemuVirtIODisks `json:"virtio,omitempty"`
 }
 
+// Return the cloud init disk that should be removed.
+func (newStorages QemuStorages) cloudInitRemove(currentStorages QemuStorages) string {
+	newCloudInit := newStorages.listCloudInitDisk()
+	currentCloudInit := currentStorages.listCloudInitDisk()
+	if newCloudInit != "" && currentCloudInit != "" && newCloudInit != currentCloudInit {
+		return currentCloudInit
+	}
+	return ""
+}
+
+func (q QemuStorages) listCloudInitDisk() string {
+	if q.Ide != nil {
+		if disk := q.Ide.listCloudInitDisk(); disk != "" {
+			return disk
+		}
+	}
+	if q.Sata != nil {
+		if disk := q.Sata.listCloudInitDisk(); disk != "" {
+			return disk
+		}
+	}
+	if q.Scsi != nil {
+		if disk := q.Scsi.listCloudInitDisk(); disk != "" {
+			return disk
+		}
+	}
+	if q.VirtIO != nil {
+		if disk := q.VirtIO.listCloudInitDisk(); disk != "" {
+			return disk
+		}
+	}
+	return ""
+}
+
 func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, vmID, linkedVmId uint, params map[string]interface{}) (delete string) {
 	if storages.Ide != nil {
 		delete = storages.Ide.mapToApiValues(currentStorages.Ide, vmID, linkedVmId, params, delete)
