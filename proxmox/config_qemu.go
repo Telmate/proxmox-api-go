@@ -858,8 +858,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 	var params map[string]interface{}
 	var exitStatus string
 
-	if currentConfig != nil {
-		// Update
+	if currentConfig != nil { // Update
 		url := "/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/config"
 		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 		stopped := false
@@ -867,15 +866,13 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		var markedDisks qemuUpdateChanges
 		if newConfig.Disks != nil && currentConfig.Disks != nil {
 			markedDisks = *newConfig.Disks.markDiskChanges(*currentConfig.Disks)
-			// move disk to different storage or change disk format
-			for _, e := range markedDisks.Move {
+			for _, e := range markedDisks.Move { // move disk to different storage or change disk format
 				_, err = e.move(true, vmr, client)
 				if err != nil {
 					return
 				}
 			}
-			// increase Disks in size
-			for _, e := range markedDisks.Resize {
+			for _, e := range markedDisks.Resize { // increase Disks in size
 				_, err = e.resize(vmr, client)
 				if err != nil {
 					return false, err
@@ -908,16 +905,14 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		}
 
 		// TODO GuestHasPendingChanges() has the current vm config technically. We can use this to avoid an extra API call.
-		// Moving disks changes the disk id. we need to get the config again if any disk was moved.
-		if len(markedDisks.Move) != 0 {
+		if len(markedDisks.Move) != 0 { // Moving disks changes the disk id. we need to get the config again if any disk was moved.
 			currentConfig, err = NewConfigQemuFromApi(vmr, client)
 			if err != nil {
 				return
 			}
 		}
 
-		// Migrate VM
-		if newConfig.Node != currentConfig.Node {
+		if newConfig.Node != currentConfig.Node { // Migrate VM
 			vmr.SetNode(currentConfig.Node)
 			_, err = client.MigrateNode(vmr, newConfig.Node, true)
 			if err != nil {
@@ -963,9 +958,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 				return rebootRequired, nil
 			}
 		}
-	} else {
-		// Create
-
+	} else { // Create
 		_, params, err = newConfig.mapToApiValues(ConfigQemu{})
 		if err != nil {
 			return
