@@ -90,6 +90,10 @@ type ConfigQemu struct {
 	VmID            int           `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
 }
 
+const (
+	ConfigQemu_Error_UnableToUpdateWithoutReboot string = "unable to update vm without rebooting"
+)
+
 // Create - Tell Proxmox API to make the VM
 func (config ConfigQemu) Create(vmr *VmRef, client *Client) (err error) {
 	_, err = config.setAdvanced(nil, false, vmr, client)
@@ -854,35 +858,61 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 	var params map[string]interface{}
 	var exitStatus string
 
-	if currentConfig != nil {
-		// Update
+	if currentConfig != nil { // Update
+		url := "/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/config"
+		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
+		stopped := false
+
+		var markedDisks qemuUpdateChanges
 		if newConfig.Disks != nil && currentConfig.Disks != nil {
-			markedDisks := newConfig.Disks.markDiskChanges(*currentConfig.Disks)
-			// move disk to different storage or change disk format
-			for _, e := range markedDisks.Move {
+			markedDisks = *newConfig.Disks.markDiskChanges(*currentConfig.Disks)
+			for _, e := range markedDisks.Move { // move disk to different storage or change disk format
 				_, err = e.move(true, vmr, client)
 				if err != nil {
 					return
 				}
 			}
-			// increase Disks in size
-			for _, e := range markedDisks.Resize {
+			for _, e := range markedDisks.Resize { // increase Disks in size
 				_, err = e.resize(vmr, client)
 				if err != nil {
-					return
+					return false, err
 				}
 			}
-			// Moving disks changes the disk id. we need to get the config again if any disk was moved
-			if len(markedDisks.Move) != 0 {
-				currentConfig, err = NewConfigQemuFromApi(vmr, client)
-				if err != nil {
-					return
+			itemsToDeleteBeforeUpdate = newConfig.Disks.cloudInitRemove(*currentConfig.Disks)
+		}
+
+		if itemsToDeleteBeforeUpdate != "" {
+			err = client.Put(map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, url)
+			if err != nil {
+				return false, fmt.Errorf("error updating VM: %v", err)
+			}
+			// Deleteing these items can create pending changes
+			rebootRequired, err = GuestHasPendingChanges(vmr, client)
+			if err != nil {
+				return
+			}
+			if rebootRequired { // shutdown vm if reboot is required
+				if rebootIfNeeded {
+					if err = GuestShutdown(vmr, client, true); err != nil {
+						return
+					}
+					stopped = true
+					rebootRequired = false
+				} else {
+					return rebootRequired, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
 				}
 			}
 		}
 
-		// Migrate VM
-		if newConfig.Node != currentConfig.Node {
+		// TODO GuestHasPendingChanges() has the current vm config technically. We can use this to avoid an extra API call.
+		if len(markedDisks.Move) != 0 { // Moving disks changes the disk id. we need to get the config again if any disk was moved.
+			currentConfig, err = NewConfigQemuFromApi(vmr, client)
+			if err != nil {
+				return
+			}
+		}
+
+		if newConfig.Node != currentConfig.Node { // Migrate VM
 			vmr.SetNode(currentConfig.Node)
 			_, err = client.MigrateNode(vmr, newConfig.Node, true)
 			if err != nil {
@@ -896,27 +926,39 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		if err != nil {
 			return
 		}
-		exitStatus, err = client.PutWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
+		exitStatus, err = client.PutWithTask(params, url)
 		if err != nil {
 			return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}
 
-		if !rebootRequired {
+		if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped
 			rebootRequired, err = GuestHasPendingChanges(vmr, client)
 			if err != nil {
 				return
 			}
 		}
 
-		if rebootRequired && rebootIfNeeded {
-			if err = GuestReboot(vmr, client); err != nil {
-				return
+		if stopped { // start vm if it was stopped
+			if rebootIfNeeded {
+				if err = GuestStart(vmr, client); err != nil {
+					return
+				}
+				stopped = false
+				rebootRequired = false
+			} else {
+				return true, nil
 			}
-			rebootRequired = false
+		} else if rebootRequired { // reboot vm if it is running
+			if rebootIfNeeded {
+				if err = GuestReboot(vmr, client); err != nil {
+					return
+				}
+				rebootRequired = false
+			} else {
+				return rebootRequired, nil
+			}
 		}
-	} else {
-		// Create
-
+	} else { // Create
 		_, params, err = newConfig.mapToApiValues(ConfigQemu{})
 		if err != nil {
 			return

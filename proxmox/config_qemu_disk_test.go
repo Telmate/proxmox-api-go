@@ -834,6 +834,69 @@ func Test_qemuDiskShort_Validate(t *testing.T) {
 	}
 }
 
+func Test_QemuStorages_cloudInitRemove(t *testing.T) {
+	type testInput struct {
+		currentStorages QemuStorages
+		newStorages     QemuStorages
+	}
+	tests := []struct {
+		name   string
+		input  testInput
+		output string
+	}{
+		{name: "Different Slot, Different Type",
+			input: testInput{
+				currentStorages: QemuStorages{
+					Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+				newStorages: QemuStorages{
+					Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+			},
+			output: "sata2",
+		},
+		{name: "Different Slot, Same Type",
+			input: testInput{
+				currentStorages: QemuStorages{
+					Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+				newStorages: QemuStorages{
+					Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+			},
+			output: "ide1",
+		},
+		{name: "Same Slot",
+			input: testInput{
+				currentStorages: QemuStorages{
+					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+				newStorages: QemuStorages{
+					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+			},
+			output: "",
+		},
+		{name: "Same Slot, CloudInit Disk",
+			input: testInput{
+				currentStorages: QemuStorages{
+					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+				newStorages: QemuStorages{
+					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+			},
+			output: "",
+		},
+		{name: "Same Slot, Disk CloudInit",
+			input: testInput{
+				currentStorages: QemuStorages{
+					Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+				newStorages: QemuStorages{
+					Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
+			},
+			output: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, test.input.newStorages.cloudInitRemove(test.input.currentStorages), test.name)
+		})
+	}
+}
+
 func Test_QemuStorages_markDiskChanges(t *testing.T) {
 	format_Raw := QemuDiskFormat_Raw
 	tests := []struct {

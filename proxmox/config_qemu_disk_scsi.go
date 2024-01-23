@@ -87,6 +87,16 @@ type QemuScsiDisks struct {
 	Disk_30 *QemuScsiStorage `json:"30,omitempty"`
 }
 
+func (q QemuScsiDisks) listCloudInitDisk() string {
+	diskMap := q.mapToIntMap()
+	for i := range diskMap {
+		if diskMap[i] != nil && diskMap[i].CloudInit != nil {
+			return "scsi" + strconv.Itoa(int(i))
+		}
+	}
+	return ""
+}
+
 func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID, linkedVmId uint, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuScsiDisks{}
 	if currentDisks != nil {
