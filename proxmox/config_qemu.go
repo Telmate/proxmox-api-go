@@ -872,11 +872,8 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 					return
 				}
 			}
-			for _, e := range markedDisks.Resize { // increase Disks in size
-				_, err = e.resize(vmr, client)
-				if err != nil {
-					return false, err
-				}
+			if err = resizeDisks(vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
+				return false, err
 			}
 			itemsToDeleteBeforeUpdate = newConfig.Disks.cloudInitRemove(*currentConfig.Disks)
 		}

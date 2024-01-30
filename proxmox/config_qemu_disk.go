@@ -1160,3 +1160,14 @@ func MoveQemuDisk(format *QemuDiskFormat, diskId QemuDiskId, storage string, del
 	_, err = disk.move(deleteAfterMove, vmr, client)
 	return
 }
+
+// increase Disks in size
+func resizeDisks(vmr *VmRef, client *Client, disks []qemuDiskResize) (err error) {
+	for _, e := range disks {
+		_, err = e.resize(vmr, client)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
