@@ -253,7 +253,11 @@ func (disk qemuDisk) formatDisk(vmID, LinkedVmId uint, currentStorage string, cu
 func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string, currentFormat QemuDiskFormat, syntax diskSyntaxEnum, create bool) (settings string) {
 	if disk.Storage != "" {
 		if create {
-			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
+			if disk.Size%gibibyte == 0 {
+				settings = disk.Storage + ":" + strconv.FormatInt(int64(disk.Size/gibibyte), 10)
+			} else {
+				settings = disk.Storage + ":0"
+			}
 		} else {
 			settings = disk.formatDisk(vmID, LinkedVmId, currentStorage, currentFormat, syntax)
 		}
@@ -421,16 +425,7 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 		disk.Serial = QemuDiskSerial(value.(string))
 	}
 	if value, isSet := settings["size"]; isSet {
-		sizeString := value.(string)
-		if len(sizeString) > 1 {
-			diskSize, _ := strconv.Atoi(sizeString[0 : len(sizeString)-1])
-			switch sizeString[len(sizeString)-1:] {
-			case "G":
-				disk.Size = uint(diskSize)
-			case "T":
-				disk.Size = uint(diskSize * 1024)
-			}
-		}
+		disk.Size = kibibyteParse(value.(string))
 	}
 	if value, isSet := settings["ssd"]; isSet {
 		disk.EmulateSSD, _ = strconv.ParseBool(value.(string))
