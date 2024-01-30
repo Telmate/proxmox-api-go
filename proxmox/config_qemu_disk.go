@@ -806,7 +806,7 @@ func (disk *qemuDiskMark) markChanges(currentDisk *qemuDiskMark, id QemuDiskId, 
 		if disk.Size > currentDisk.Size {
 			changes.Resize = append(changes.Resize, qemuDiskResize{
 				Id:              id,
-				SizeInGigaBytes: disk.Size,
+				SizeInKibibytes: disk.Size,
 			})
 		}
 		if disk.Storage != currentDisk.Storage || disk.Format != currentDisk.Format {
@@ -845,13 +845,13 @@ func (serial QemuDiskSerial) Validate() error {
 
 type qemuDiskResize struct {
 	Id              QemuDiskId
-	SizeInGigaBytes uint
+	SizeInKibibytes uint
 }
 
 // Increase the disk size to the specified amount in gigabytes
 // Decrease of disk size is not permitted.
 func (disk qemuDiskResize) resize(vmr *VmRef, client *Client) (exitStatus string, err error) {
-	return client.PutWithTask(map[string]interface{}{"disk": disk.Id, "size": strconv.Itoa(int(disk.SizeInGigaBytes)) + "G"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
+	return client.PutWithTask(map[string]interface{}{"disk": disk.Id, "size": strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
 }
 
 type qemuDiskMove struct {
