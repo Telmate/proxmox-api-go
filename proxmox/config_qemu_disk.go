@@ -19,8 +19,8 @@ const (
 type IsoFile struct {
 	File    string `json:"file"`
 	Storage string `json:"storage"`
-	// Size can only be retrieved, setting it has no effect
-	Size string `json:"size"`
+	// SizeInKibibytes can only be retrieved, setting it has no effect
+	SizeInKibibytes string `json:"size"`
 }
 
 const (
@@ -62,9 +62,9 @@ func (QemuCdRom) mapToStruct(settings qemuCdRom) *QemuCdRom {
 	if settings.File != "" {
 		return &QemuCdRom{
 			Iso: &IsoFile{
-				Storage: settings.Storage,
-				File:    settings.File,
-				Size:    settings.Size,
+				Storage:         settings.Storage,
+				File:            settings.File,
+				SizeInKibibytes: settings.SizeInKibibytes,
 			},
 		}
 	}
@@ -87,11 +87,11 @@ func (cdRom QemuCdRom) Validate() error {
 type qemuCdRom struct {
 	CdRom bool
 	// "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"
-	Passthrough bool
-	Storage     string
-	Format      QemuDiskFormat // Only set for Cloud-init drives
-	File        string
-	Size        string
+	Passthrough     bool
+	Storage         string
+	Format          QemuDiskFormat // Only set for Cloud-init drives
+	File            string
+	SizeInKibibytes string
 }
 
 func (qemuCdRom) mapToStruct(diskData string, settings map[string]interface{}) *qemuCdRom {
@@ -125,10 +125,10 @@ func (qemuCdRom) mapToStruct(diskData string, settings map[string]interface{}) *
 				if fileType == "iso" {
 					if setting, isSet := settings["size"]; isSet {
 						return &qemuCdRom{
-							CdRom:   true,
-							Storage: tmpStorage[0],
-							File:    tmpFile[1],
-							Size:    setting.(string),
+							CdRom:           true,
+							Storage:         tmpStorage[0],
+							File:            tmpFile[1],
+							SizeInKibibytes: setting.(string),
 						}
 					}
 				} else {
@@ -191,16 +191,16 @@ type qemuDisk struct {
 	Disk       bool // true = disk, false = passthrough
 	EmulateSSD bool // Only set for ide,sata,scsi
 	// TODO custom type
-	File         string         // Only set for Passthrough.
-	fileSyntax   diskSyntaxEnum // private enum to determine the syntax of the file path, as this changes depending on the type of backing storage. ie nfs, lvm, local, etc.
-	Format       QemuDiskFormat // Only set for Disk
-	Id           uint           // Only set for Disk
-	IOThread     bool           // Only set for scsi,virtio
-	LinkedDiskId *uint          // Only set for Disk
-	ReadOnly     bool           // Only set for scsi,virtio
-	Replicate    bool
-	Serial       QemuDiskSerial
-	Size         uint
+	File            string         // Only set for Passthrough.
+	fileSyntax      diskSyntaxEnum // private enum to determine the syntax of the file path, as this changes depending on the type of backing storage. ie nfs, lvm, local, etc.
+	Format          QemuDiskFormat // Only set for Disk
+	Id              uint           // Only set for Disk
+	IOThread        bool           // Only set for scsi,virtio
+	LinkedDiskId    *uint          // Only set for Disk
+	ReadOnly        bool           // Only set for scsi,virtio
+	Replicate       bool
+	Serial          QemuDiskSerial
+	SizeInKibibytes uint
 	// TODO custom type
 	Storage       string // Only set for Disk
 	Type          qemuDiskType
@@ -253,8 +253,8 @@ func (disk qemuDisk) formatDisk(vmID, LinkedVmId uint, currentStorage string, cu
 func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string, currentFormat QemuDiskFormat, syntax diskSyntaxEnum, create bool) (settings string) {
 	if disk.Storage != "" {
 		if create {
-			if disk.Size%gibibyte == 0 {
-				settings = disk.Storage + ":" + strconv.FormatInt(int64(disk.Size/gibibyte), 10)
+			if disk.SizeInKibibytes%gibibyte == 0 {
+				settings = disk.Storage + ":" + strconv.FormatInt(int64(disk.SizeInKibibytes/gibibyte), 10)
 			} else {
 				settings = disk.Storage + ":0"
 			}
@@ -425,7 +425,7 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 		disk.Serial = QemuDiskSerial(value.(string))
 	}
 	if value, isSet := settings["size"]; isSet {
-		disk.Size = kibibyteParse(value.(string))
+		disk.SizeInKibibytes = kibibyteParse(value.(string))
 	}
 	if value, isSet := settings["ssd"]; isSet {
 		disk.EmulateSSD, _ = strconv.ParseBool(value.(string))
@@ -527,7 +527,7 @@ func (disk *qemuDisk) validate() (err error) {
 		if err = disk.Format.Validate(); err != nil {
 			return
 		}
-		if disk.Size == 0 {
+		if disk.SizeInKibibytes == 0 {
 			return errors.New(Error_QemuDisk_Size)
 		}
 		if disk.Storage == "" {
@@ -947,7 +947,7 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, li
 			// Create
 			params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", false, true)
 		} else {
-			if storage.Disk.Size >= currentStorage.Disk.Size {
+			if storage.Disk.SizeInKibibytes >= currentStorage.Disk.SizeInKibibytes {
 				// Update
 				storage.Disk.Id = currentStorage.Disk.Id
 				storage.Disk.LinkedDiskId = currentStorage.Disk.LinkedDiskId
