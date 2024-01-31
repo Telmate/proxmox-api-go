@@ -158,10 +158,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if config.QemuVcpus >= 1 {
 		params["vcpus"] = config.QemuVcpus
 	}
-
-	if vmr.pool != "" {
-		params["pool"] = vmr.pool
-	}
 	if config.Boot != "" {
 		params["boot"] = config.Boot
 	}
@@ -365,9 +361,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	}
 	if config.QemuOs != "" {
 		params["ostype"] = config.QemuOs
-	}
-	if config.Pool != "" {
-		params["pool"] = config.Pool
 	}
 	if config.Scsihw != "" {
 		params["scsihw"] = config.Scsihw

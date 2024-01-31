@@ -380,10 +380,6 @@ func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 		paramMap["hostname"] = config.Hostname
 	}
 
-	if config.Pool != "" {
-		paramMap["pool"] = config.Pool
-	}
-
 	if config.Snapname != "" {
 		paramMap["snapname"] = config.Snapname
 	}
