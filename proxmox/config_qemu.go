@@ -935,6 +935,10 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			}
 		}
 
+		if err = resizeNewDisks(vmr, client, newConfig.Disks, currentConfig.Disks); err != nil {
+			return
+		}
+
 		if stopped { // start vm if it was stopped
 			if rebootIfNeeded {
 				if err = GuestStart(vmr, client); err != nil {
@@ -963,6 +967,9 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		exitStatus, err = client.CreateQemuVm(vmr.node, params)
 		if err != nil {
 			return false, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		}
+		if err = resizeNewDisks(vmr, client, newConfig.Disks, nil); err != nil {
+			return
 		}
 	}
 

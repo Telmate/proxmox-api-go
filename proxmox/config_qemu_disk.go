@@ -1203,3 +1203,17 @@ func resizeDisks(vmr *VmRef, client *Client, disks []qemuDiskResize) (err error)
 	}
 	return
 }
+
+// Resize newly created disks
+func resizeNewDisks(vmr *VmRef, client *Client, newDisks, currentDisks *QemuStorages) (err error) {
+	if newDisks == nil {
+		return
+	}
+	resize := newDisks.selectInitialResize(currentDisks)
+	if len(resize) > 0 {
+		if err = resizeDisks(vmr, client, resize); err != nil {
+			return
+		}
+	}
+	return
+}
