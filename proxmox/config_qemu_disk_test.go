@@ -1049,6 +1049,183 @@ func Test_QemuStorages_markDiskChanges(t *testing.T) {
 	}
 }
 
+func Test_QemuStorages_selectInitialResize(t *testing.T) {
+	type testInput struct {
+		currentStorages *QemuStorages
+		newStorages     QemuStorages
+	}
+	tests := []struct {
+		name   string
+		input  testInput
+		output []qemuDiskResize
+	}{
+		{name: "Disks Resize Down Gibibytes",
+			input: testInput{currentStorages: &QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 10485761}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 1048577}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 70254593}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 872415233}}},
+			}, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 10485760}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 1048576}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 70254592}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 872415232}}},
+			}},
+		},
+		{name: "Disks Resize Down Kibibytes",
+			input: testInput{currentStorages: &QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 94384}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 75}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 8584654835893}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 19695729}}},
+			}, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 943}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 7}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 8584654835}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 19695}}},
+			}},
+			output: []qemuDiskResize{
+				{Id: "ide1", SizeInKibibytes: 943},
+				{Id: "sata2", SizeInKibibytes: 7},
+				{Id: "scsi3", SizeInKibibytes: 8584654835},
+				{Id: "virtio4", SizeInKibibytes: 19695},
+			},
+		},
+		{name: "Disks Resize Up",
+			input: testInput{currentStorages: &QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 943}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 7}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 8584654835}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 19695}}},
+			}, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 94384}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 75}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 8584654835893}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 19695729}}},
+			}},
+		},
+		{name: "Disks Same",
+			input: testInput{currentStorages: &QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 94384}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 75}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 8584654835893}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 19695729}}},
+			}, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 94384}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 75}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 8584654835893}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 19695729}}},
+			}},
+		},
+		{name: "Don't resize cause whole x gibibyte",
+			input: testInput{currentStorages: nil, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 1048576}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 10485760}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 47185920}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 480247808}}},
+			}},
+		},
+		{name: "newStorages empty",
+			input: testInput{currentStorages: &QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 94384}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 75}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 8584654835893}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 19695729}}},
+			}, newStorages: QemuStorages{}},
+		},
+		{name: "No current disks 1 x kibibyte",
+			input: testInput{currentStorages: nil, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 7867}}},
+				Sata:   &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{Size: 985947483}}},
+				Scsi:   &QemuScsiDisks{Disk_2: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 577564}}},
+				VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 323}}},
+			}},
+			output: []qemuDiskResize{
+				{Id: "ide0", SizeInKibibytes: 7867},
+				{Id: "sata1", SizeInKibibytes: 985947483},
+				{Id: "scsi2", SizeInKibibytes: 577564},
+				{Id: "virtio3", SizeInKibibytes: 323},
+			},
+		},
+		{name: "No current disks 2 x kibibyte",
+			input: testInput{currentStorages: &QemuStorages{}, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 7867}}},
+				Sata:   &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Size: 985947483}}},
+				Scsi:   &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 577564}}},
+				VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 323}}},
+			}},
+			output: []qemuDiskResize{
+				{Id: "ide1", SizeInKibibytes: 7867},
+				{Id: "sata2", SizeInKibibytes: 985947483},
+				{Id: "scsi3", SizeInKibibytes: 577564},
+				{Id: "virtio4", SizeInKibibytes: 323},
+			},
+		},
+		{name: "No current disks 3 x kibibyte",
+			input: testInput{currentStorages: &QemuStorages{
+				Ide:    &QemuIdeDisks{},
+				Sata:   &QemuSataDisks{},
+				Scsi:   &QemuScsiDisks{},
+				VirtIO: &QemuVirtIODisks{},
+			}, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 7867}}},
+				Sata:   &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{Size: 985947483}}},
+				Scsi:   &QemuScsiDisks{Disk_4: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 577564}}},
+				VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 323}}},
+			}},
+			output: []qemuDiskResize{
+				{Id: "ide2", SizeInKibibytes: 7867},
+				{Id: "sata3", SizeInKibibytes: 985947483},
+				{Id: "scsi4", SizeInKibibytes: 577564},
+				{Id: "virtio5", SizeInKibibytes: 323},
+			},
+		},
+		{name: "No current disks 4 x kibibyte",
+			input: testInput{currentStorages: &QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_3: &QemuIdeStorage{}},
+				Sata:   &QemuSataDisks{Disk_4: &QemuSataStorage{}},
+				Scsi:   &QemuScsiDisks{Disk_5: &QemuScsiStorage{}},
+				VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{}},
+			}, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 7867}}},
+				Sata:   &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{Size: 985947483}}},
+				Scsi:   &QemuScsiDisks{Disk_5: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 577564}}},
+				VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 323}}},
+			}},
+			output: []qemuDiskResize{
+				{Id: "ide3", SizeInKibibytes: 7867},
+				{Id: "sata4", SizeInKibibytes: 985947483},
+				{Id: "scsi5", SizeInKibibytes: 577564},
+				{Id: "virtio6", SizeInKibibytes: 323},
+			},
+		},
+		{name: "No current disks 5 x kibibyte",
+			input: testInput{currentStorages: &QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}},
+				Sata:   &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{}}},
+				Scsi:   &QemuScsiDisks{Disk_6: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{}}},
+				VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}},
+			}, newStorages: QemuStorages{
+				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{Size: 7867}}},
+				Sata:   &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{Size: 985947483}}},
+				Scsi:   &QemuScsiDisks{Disk_6: &QemuScsiStorage{Disk: &QemuScsiDisk{Size: 577564}}},
+				VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Size: 323}}},
+			}},
+			output: []qemuDiskResize{
+				{Id: "ide0", SizeInKibibytes: 7867},
+				{Id: "sata5", SizeInKibibytes: 985947483},
+				{Id: "scsi6", SizeInKibibytes: 577564},
+				{Id: "virtio7", SizeInKibibytes: 323},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.newStorages.selectInitialResize(test.input.currentStorages), test.name)
+		})
+	}
+}
+
 func Test_QemuWorldWideName_Validate(t *testing.T) {
 	testRunes := struct {
 		legal   []string

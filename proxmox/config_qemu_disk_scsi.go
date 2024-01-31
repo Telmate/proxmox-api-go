@@ -291,6 +291,24 @@ func (disks QemuScsiDisks) markDiskChanges(currentDisks *QemuScsiDisks, changes 
 	}
 }
 
+func (disks QemuScsiDisks) selectInitialResize(currentDisks *QemuScsiDisks) (resize []qemuDiskResize) {
+	tmpCurrentDisks := QemuScsiDisks{}
+	if currentDisks != nil {
+		tmpCurrentDisks = *currentDisks
+	}
+	diskMap := disks.mapToIntMap()
+	currentDiskMap := tmpCurrentDisks.mapToIntMap()
+	for i := range diskMap {
+		if diskMap[i] != nil && diskMap[i].Disk != nil && diskMap[i].Disk.Size%gibibyte != 0 && (currentDiskMap[i] == nil || currentDiskMap[i].Disk == nil || diskMap[i].Disk.Size < currentDiskMap[i].Disk.Size) {
+			resize = append(resize, qemuDiskResize{
+				Id:             QemuDiskId("scsi" + strconv.Itoa(int(i))),
+				SizeInKibibytes: diskMap[i].Disk.Size,
+			})
+		}
+	}
+	return resize
+}
+
 func (disks QemuScsiDisks) Validate() (err error) {
 	_, err = disks.validate()
 	return

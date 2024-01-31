@@ -125,6 +125,26 @@ func (disks QemuIdeDisks) markDiskChanges(currentDisks *QemuIdeDisks, changes *q
 	}
 }
 
+func (disks QemuIdeDisks) selectInitialResize(currentDisks *QemuIdeDisks) (resize []qemuDiskResize) {
+	tmpCurrentDisks := QemuIdeDisks{}
+	if currentDisks != nil {
+		tmpCurrentDisks = *currentDisks
+	}
+	diskMap := disks.mapToIntMap()
+	currentDiskMap := tmpCurrentDisks.mapToIntMap()
+	for i := range diskMap {
+		if diskMap[i] != nil && diskMap[i].Disk != nil && diskMap[i].Disk.Size%gibibyte != 0 && (currentDiskMap[i] == nil || currentDiskMap[i].Disk == nil || diskMap[i].Disk.Size < currentDiskMap[i].Disk.Size) {
+			aaa := diskMap[i].Disk.Size % gibibyte
+			_ = aaa
+			resize = append(resize, qemuDiskResize{
+				Id:              QemuDiskId("ide" + strconv.Itoa(int(i))),
+				SizeInKibibytes: diskMap[i].Disk.Size,
+			})
+		}
+	}
+	return resize
+}
+
 func (disks QemuIdeDisks) Validate() (err error) {
 	_, err = disks.validate()
 	return

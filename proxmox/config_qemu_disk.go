@@ -1078,6 +1078,38 @@ func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages) *qemu
 	return changes
 }
 
+// Select all new disks that do not have their size in gibigytes for resizing to the specified size
+func (newStorages QemuStorages) selectInitialResize(currentStorages *QemuStorages) (resize []qemuDiskResize) {
+	if currentStorages == nil {
+		if newStorages.Ide != nil {
+			resize = newStorages.Ide.selectInitialResize(nil)
+		}
+		if newStorages.Sata != nil {
+			resize = append(resize, newStorages.Sata.selectInitialResize(nil)...)
+		}
+		if newStorages.Scsi != nil {
+			resize = append(resize, newStorages.Scsi.selectInitialResize(nil)...)
+		}
+		if newStorages.VirtIO != nil {
+			resize = append(resize, newStorages.VirtIO.selectInitialResize(nil)...)
+		}
+		return
+	}
+	if newStorages.Ide != nil {
+		resize = newStorages.Ide.selectInitialResize(currentStorages.Ide)
+	}
+	if newStorages.Sata != nil {
+		resize = append(resize, newStorages.Sata.selectInitialResize(currentStorages.Sata)...)
+	}
+	if newStorages.Scsi != nil {
+		resize = append(resize, newStorages.Scsi.selectInitialResize(currentStorages.Scsi)...)
+	}
+	if newStorages.VirtIO != nil {
+		resize = append(resize, newStorages.VirtIO.selectInitialResize(currentStorages.VirtIO)...)
+	}
+	return
+}
+
 func (storages QemuStorages) Validate() (err error) {
 	var numberOfCloudInitDevices uint8
 	var CloudInit uint8
