@@ -200,7 +200,7 @@ type qemuDisk struct {
 	ReadOnly        bool           // Only set for scsi,virtio
 	Replicate       bool
 	Serial          QemuDiskSerial
-	SizeInKibibytes uint
+	SizeInKibibytes QemuDiskSize
 	// TODO custom type
 	Storage       string // Only set for Disk
 	Type          qemuDiskType
@@ -210,7 +210,6 @@ type qemuDisk struct {
 const (
 	Error_QemuDisk_File              string = "file may not be empty"
 	Error_QemuDisk_MutuallyExclusive string = "settings cdrom,cloudinit,disk,passthrough are mutually exclusive"
-	Error_QemuDisk_Size              string = "size must be greater then 0"
 	Error_QemuDisk_Storage           string = "storage may not be empty"
 )
 
@@ -425,7 +424,7 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 		disk.Serial = QemuDiskSerial(value.(string))
 	}
 	if value, isSet := settings["size"]; isSet {
-		disk.SizeInKibibytes = kibibyteParse(value.(string))
+		disk.SizeInKibibytes = QemuDiskSize(0).parse(value.(string))
 	}
 	if value, isSet := settings["ssd"]; isSet {
 		disk.EmulateSSD, _ = strconv.ParseBool(value.(string))
@@ -527,8 +526,8 @@ func (disk *qemuDisk) validate() (err error) {
 		if err = disk.Format.Validate(); err != nil {
 			return
 		}
-		if disk.SizeInKibibytes == 0 {
-			return errors.New(Error_QemuDisk_Size)
+		if err = disk.SizeInKibibytes.Validate(); err != nil {
+			return
 		}
 		if disk.Storage == "" {
 			return errors.New(Error_QemuDisk_Storage)
@@ -790,7 +789,7 @@ func (id QemuDiskId) Validate() error {
 type qemuDiskMark struct {
 	Format  QemuDiskFormat
 	Id      QemuDiskId
-	Size    uint
+	Size    QemuDiskSize
 	Storage string
 	Type    qemuDiskType
 }
@@ -843,9 +842,43 @@ func (serial QemuDiskSerial) Validate() error {
 	return nil
 }
 
+// Amount of Kibibytes the disk should be.
+// Disk size must be greater then 4096.
+type QemuDiskSize uint
+
+const (
+	QemuDiskSize_Error_Minimum string       = "disk size must be greater then 4096"
+	qemuDiskSize_Minimum       QemuDiskSize = 4097
+	mebibyte                   QemuDiskSize = 1024
+	gibibyte                   QemuDiskSize = 1048576
+	tebibyte                   QemuDiskSize = 1073741824
+)
+
+func (QemuDiskSize) parse(rawSize string) (size QemuDiskSize) {
+	tmpSize, _ := strconv.ParseInt(rawSize[:len(rawSize)-1], 10, 0)
+	switch rawSize[len(rawSize)-1:] {
+	case "T":
+		size = QemuDiskSize(tmpSize) * tebibyte
+	case "G":
+		size = QemuDiskSize(tmpSize) * gibibyte
+	case "M":
+		size = QemuDiskSize(tmpSize) * mebibyte
+	case "K":
+		size = QemuDiskSize(tmpSize)
+	}
+	return
+}
+
+func (size QemuDiskSize) Validate() error {
+	if size < qemuDiskSize_Minimum {
+		return errors.New(QemuDiskSize_Error_Minimum)
+	}
+	return nil
+}
+
 type qemuDiskResize struct {
 	Id              QemuDiskId
-	SizeInKibibytes uint
+	SizeInKibibytes QemuDiskSize
 }
 
 // Increase the disk size to the specified amount in gigabytes

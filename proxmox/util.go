@@ -234,21 +234,6 @@ func floatToTrimmedString(f float64, maxDecimals uint8) (s string) {
 	return
 }
 
-func kibibyteParse(rawSize string) (size uint) {
-	tmpSize, _ := strconv.ParseInt(rawSize[:len(rawSize)-1], 10, 0)
-	switch rawSize[len(rawSize)-1:] {
-	case "T":
-		size = uint(tmpSize) * tebibyte
-	case "G":
-		size = uint(tmpSize) * gibibyte
-	case "M":
-		size = uint(tmpSize) * mebibyte
-	case "K":
-		size = uint(tmpSize)
-	}
-	return
-}
-
 func splitStringOfSettings(settings string) map[string]interface{} {
 	settingValuePairs := strings.Split(settings, ",")
 	settingMap := map[string]interface{}{}

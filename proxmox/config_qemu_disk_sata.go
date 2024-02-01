@@ -17,7 +17,7 @@ type QemuSataDisk struct {
 	LinkedDiskId    *uint             `json:"linked"` //LinkedClone is only returned and setting it has no effect
 	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
-	SizeInKibibytes uint              `json:"size"`
+	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Storage         string            `json:"storage"`
 	syntax          diskSyntaxEnum
 	WorldWideName   QemuWorldWideName `json:"wwn"`
@@ -188,7 +188,7 @@ type QemuSataPassthrough struct {
 	File            string            `json:"file"`
 	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
-	SizeInKibibytes uint              `json:"size"` //size is only returned and setting it has no effect
+	SizeInKibibytes QemuDiskSize      `json:"size"` //size is only returned and setting it has no effect
 	WorldWideName   QemuWorldWideName `json:"wwn"`
 }
 

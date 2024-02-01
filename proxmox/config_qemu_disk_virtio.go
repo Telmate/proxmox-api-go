@@ -18,7 +18,7 @@ type QemuVirtIODisk struct {
 	ReadOnly        bool              `json:"readonly"`
 	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
-	SizeInKibibytes uint              `json:"size"`
+	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Storage         string            `json:"storage"`
 	syntax          diskSyntaxEnum
 	WorldWideName   QemuWorldWideName `json:"wwn"`
@@ -251,7 +251,7 @@ type QemuVirtIOPassthrough struct {
 	ReadOnly        bool              `json:"readonly"`
 	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
-	SizeInKibibytes uint              `json:"size"` //size is only returned and setting it has no effect
+	SizeInKibibytes QemuDiskSize      `json:"size"` //size is only returned and setting it has no effect
 	WorldWideName   QemuWorldWideName `json:"wwn"`
 }
 
