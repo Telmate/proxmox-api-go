@@ -91,7 +91,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 33554433,
 				Storage:         "Test",
 			}}}}},
-			output: map[string]interface{}{"ide0": "Test:0,backup=0,replicate=0"},
+			output: map[string]interface{}{"ide0": "Test:0.001,backup=0,replicate=0"},
 		},
 		{name: "Create Disks.Ide.Disk_X.Disk.AsyncIO",
 			config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{AsyncIO: QemuDiskAsyncIO_Native}}}}},
@@ -390,7 +390,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 16777217,
 				Storage:         "Test",
 			}}}}},
-			output: map[string]interface{}{"sata0": "Test:0,backup=0,replicate=0"},
+			output: map[string]interface{}{"sata0": "Test:0.001,backup=0,replicate=0"},
 		},
 		{name: "Create Disks.Sata.Disk_X.Disk.AsyncIO",
 			config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{AsyncIO: QemuDiskAsyncIO_Native}}}}},
@@ -691,7 +691,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 76546049,
 				Storage:         "Test",
 			}}}}},
-			output: map[string]interface{}{"scsi0": "Test:0,backup=0,replicate=0"},
+			output: map[string]interface{}{"scsi0": "Test:0.001,backup=0,replicate=0"},
 		},
 		{name: "Create Disks.Scsi.Disk_X.Disk.AsyncIO",
 			config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Disk: &QemuScsiDisk{AsyncIO: QemuDiskAsyncIO_Native}}}}},
@@ -1009,7 +1009,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 8238661633,
 				Storage:         "Test",
 			}}}}},
-			output: map[string]interface{}{"virtio0": "Test:0,backup=0,replicate=0"},
+			output: map[string]interface{}{"virtio0": "Test:0.001,backup=0,replicate=0"},
 		},
 		{name: "Create Disks.VirtIO.Disk_X.Disk.AsyncIO",
 			config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{AsyncIO: QemuDiskAsyncIO_Native}}}}},
@@ -1562,7 +1562,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"ide2": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"ide2": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk RESIZE DOWN Kibibyte File LinkedClone",
 			currentConfig: ConfigQemu{
@@ -1579,7 +1579,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"ide2": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"ide2": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk RESIZE DOWN Kibibyte Volume",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -1593,7 +1593,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"ide2": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"ide2": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk RESIZE DOWN Kibibyte Volume LinkedClone",
 			currentConfig: ConfigQemu{
@@ -1610,7 +1610,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"ide2": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"ide2": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Ide.Disk_X.Disk RESIZE UP File",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -2051,7 +2051,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"sata0": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"sata0": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk RESIZE DOWN Kibibyte File LinkedClone",
 			currentConfig: ConfigQemu{
@@ -2068,7 +2068,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"sata0": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"sata0": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk RESIZE DOWN Kibibyte Volume",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -2081,7 +2081,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"sata0": "test:0,backup=0,replicate=0"},
+			output: map[string]interface{}{"sata0": "test:0.001,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk RESIZE DOWN Kibibyte Volume LinkedClone",
 			currentConfig: ConfigQemu{
@@ -2097,7 +2097,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"sata0": "test:0,backup=0,replicate=0"},
+			output: map[string]interface{}{"sata0": "test:0.001,backup=0,replicate=0"},
 		},
 		{name: "Update Disk.Sata.Disk_X.Disk RESIZE UP File",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -2536,7 +2536,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"scsi18": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"scsi18": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk RESIZE DOWN Kibibyte File LinkedClone",
 			currentConfig: ConfigQemu{
@@ -2553,7 +2553,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"scsi18": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"scsi18": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk RESIZE DOWN Kibibyte Volume",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -2567,7 +2567,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"scsi18": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"scsi18": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk RESIZE DOWN Kibibyte Volume LinkedClone",
 			currentConfig: ConfigQemu{
@@ -2584,7 +2584,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"scsi18": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"scsi18": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.Scsi.Disk_X.Disk RESIZE UP File",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -3029,7 +3029,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"virtio2": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"virtio2": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk RESIZE DOWN Kibibyte File LinkedClone",
 			currentConfig: ConfigQemu{
@@ -3046,7 +3046,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"virtio2": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"virtio2": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk RESIZE DOWN Kibibyte Volume",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
@@ -3060,7 +3060,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"virtio2": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"virtio2": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk RESIZE DOWN Kibibyte Volume LinkedClone",
 			currentConfig: ConfigQemu{
@@ -3077,7 +3077,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 				SizeInKibibytes: 9437185,
 				Storage:         "test",
 			}}}}},
-			output: map[string]interface{}{"virtio2": "test:0,backup=0,format=raw,replicate=0"},
+			output: map[string]interface{}{"virtio2": "test:0.001,backup=0,format=raw,replicate=0"},
 		},
 		{name: "Update Disk.VirtIO.Disk_X.Disk RESIZE UP File",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{

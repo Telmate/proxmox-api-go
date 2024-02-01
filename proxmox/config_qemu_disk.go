@@ -256,7 +256,7 @@ func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string
 			if disk.SizeInKibibytes%gibibyte == 0 {
 				settings = disk.Storage + ":" + strconv.FormatInt(int64(disk.SizeInKibibytes/gibibyte), 10)
 			} else {
-				settings = disk.Storage + ":0"
+				settings = disk.Storage + ":0.001"
 			}
 		} else {
 			settings = disk.formatDisk(vmID, LinkedVmId, currentStorage, currentFormat, syntax)
