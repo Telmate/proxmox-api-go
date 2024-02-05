@@ -19,8 +19,8 @@ const (
 type IsoFile struct {
 	File    string `json:"file"`
 	Storage string `json:"storage"`
-	// Size can only be retrieved, setting it has no effect
-	Size string `json:"size"`
+	// SizeInKibibytes can only be retrieved, setting it has no effect
+	SizeInKibibytes string `json:"size"`
 }
 
 const (
@@ -62,9 +62,9 @@ func (QemuCdRom) mapToStruct(settings qemuCdRom) *QemuCdRom {
 	if settings.File != "" {
 		return &QemuCdRom{
 			Iso: &IsoFile{
-				Storage: settings.Storage,
-				File:    settings.File,
-				Size:    settings.Size,
+				Storage:         settings.Storage,
+				File:            settings.File,
+				SizeInKibibytes: settings.SizeInKibibytes,
 			},
 		}
 	}
@@ -87,11 +87,11 @@ func (cdRom QemuCdRom) Validate() error {
 type qemuCdRom struct {
 	CdRom bool
 	// "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"
-	Passthrough bool
-	Storage     string
-	Format      QemuDiskFormat // Only set for Cloud-init drives
-	File        string
-	Size        string
+	Passthrough     bool
+	Storage         string
+	Format          QemuDiskFormat // Only set for Cloud-init drives
+	File            string
+	SizeInKibibytes string
 }
 
 func (qemuCdRom) mapToStruct(diskData string, settings map[string]interface{}) *qemuCdRom {
@@ -125,10 +125,10 @@ func (qemuCdRom) mapToStruct(diskData string, settings map[string]interface{}) *
 				if fileType == "iso" {
 					if setting, isSet := settings["size"]; isSet {
 						return &qemuCdRom{
-							CdRom:   true,
-							Storage: tmpStorage[0],
-							File:    tmpFile[1],
-							Size:    setting.(string),
+							CdRom:           true,
+							Storage:         tmpStorage[0],
+							File:            tmpFile[1],
+							SizeInKibibytes: setting.(string),
 						}
 					}
 				} else {
@@ -191,16 +191,16 @@ type qemuDisk struct {
 	Disk       bool // true = disk, false = passthrough
 	EmulateSSD bool // Only set for ide,sata,scsi
 	// TODO custom type
-	File         string         // Only set for Passthrough.
-	fileSyntax   diskSyntaxEnum // private enum to determine the syntax of the file path, as this changes depending on the type of backing storage. ie nfs, lvm, local, etc.
-	Format       QemuDiskFormat // Only set for Disk
-	Id           uint           // Only set for Disk
-	IOThread     bool           // Only set for scsi,virtio
-	LinkedDiskId *uint          // Only set for Disk
-	ReadOnly     bool           // Only set for scsi,virtio
-	Replicate    bool
-	Serial       QemuDiskSerial
-	Size         uint
+	File            string         // Only set for Passthrough.
+	fileSyntax      diskSyntaxEnum // private enum to determine the syntax of the file path, as this changes depending on the type of backing storage. ie nfs, lvm, local, etc.
+	Format          QemuDiskFormat // Only set for Disk
+	Id              uint           // Only set for Disk
+	IOThread        bool           // Only set for scsi,virtio
+	LinkedDiskId    *uint          // Only set for Disk
+	ReadOnly        bool           // Only set for scsi,virtio
+	Replicate       bool
+	Serial          QemuDiskSerial
+	SizeInKibibytes QemuDiskSize
 	// TODO custom type
 	Storage       string // Only set for Disk
 	Type          qemuDiskType
@@ -210,7 +210,6 @@ type qemuDisk struct {
 const (
 	Error_QemuDisk_File              string = "file may not be empty"
 	Error_QemuDisk_MutuallyExclusive string = "settings cdrom,cloudinit,disk,passthrough are mutually exclusive"
-	Error_QemuDisk_Size              string = "size must be greater then 0"
 	Error_QemuDisk_Storage           string = "storage may not be empty"
 )
 
@@ -253,7 +252,11 @@ func (disk qemuDisk) formatDisk(vmID, LinkedVmId uint, currentStorage string, cu
 func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string, currentFormat QemuDiskFormat, syntax diskSyntaxEnum, create bool) (settings string) {
 	if disk.Storage != "" {
 		if create {
-			settings = disk.Storage + ":" + strconv.Itoa(int(disk.Size))
+			if disk.SizeInKibibytes%gibibyte == 0 {
+				settings = disk.Storage + ":" + strconv.FormatInt(int64(disk.SizeInKibibytes/gibibyte), 10)
+			} else {
+				settings = disk.Storage + ":0.001"
+			}
 		} else {
 			settings = disk.formatDisk(vmID, LinkedVmId, currentStorage, currentFormat, syntax)
 		}
@@ -421,16 +424,7 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 		disk.Serial = QemuDiskSerial(value.(string))
 	}
 	if value, isSet := settings["size"]; isSet {
-		sizeString := value.(string)
-		if len(sizeString) > 1 {
-			diskSize, _ := strconv.Atoi(sizeString[0 : len(sizeString)-1])
-			switch sizeString[len(sizeString)-1:] {
-			case "G":
-				disk.Size = uint(diskSize)
-			case "T":
-				disk.Size = uint(diskSize * 1024)
-			}
-		}
+		disk.SizeInKibibytes = QemuDiskSize(0).parse(value.(string))
 	}
 	if value, isSet := settings["ssd"]; isSet {
 		disk.EmulateSSD, _ = strconv.ParseBool(value.(string))
@@ -532,8 +526,8 @@ func (disk *qemuDisk) validate() (err error) {
 		if err = disk.Format.Validate(); err != nil {
 			return
 		}
-		if disk.Size == 0 {
-			return errors.New(Error_QemuDisk_Size)
+		if err = disk.SizeInKibibytes.Validate(); err != nil {
+			return
 		}
 		if disk.Storage == "" {
 			return errors.New(Error_QemuDisk_Storage)
@@ -795,7 +789,7 @@ func (id QemuDiskId) Validate() error {
 type qemuDiskMark struct {
 	Format  QemuDiskFormat
 	Id      QemuDiskId
-	Size    uint
+	Size    QemuDiskSize
 	Storage string
 	Type    qemuDiskType
 }
@@ -811,7 +805,7 @@ func (disk *qemuDiskMark) markChanges(currentDisk *qemuDiskMark, id QemuDiskId, 
 		if disk.Size > currentDisk.Size {
 			changes.Resize = append(changes.Resize, qemuDiskResize{
 				Id:              id,
-				SizeInGigaBytes: disk.Size,
+				SizeInKibibytes: disk.Size,
 			})
 		}
 		if disk.Storage != currentDisk.Storage || disk.Format != currentDisk.Format {
@@ -848,15 +842,49 @@ func (serial QemuDiskSerial) Validate() error {
 	return nil
 }
 
+// Amount of Kibibytes the disk should be.
+// Disk size must be greater then 4096.
+type QemuDiskSize uint
+
+const (
+	QemuDiskSize_Error_Minimum string       = "disk size must be greater then 4096"
+	qemuDiskSize_Minimum       QemuDiskSize = 4097
+	mebibyte                   QemuDiskSize = 1024
+	gibibyte                   QemuDiskSize = 1048576
+	tebibyte                   QemuDiskSize = 1073741824
+)
+
+func (QemuDiskSize) parse(rawSize string) (size QemuDiskSize) {
+	tmpSize, _ := strconv.ParseInt(rawSize[:len(rawSize)-1], 10, 0)
+	switch rawSize[len(rawSize)-1:] {
+	case "T":
+		size = QemuDiskSize(tmpSize) * tebibyte
+	case "G":
+		size = QemuDiskSize(tmpSize) * gibibyte
+	case "M":
+		size = QemuDiskSize(tmpSize) * mebibyte
+	case "K":
+		size = QemuDiskSize(tmpSize)
+	}
+	return
+}
+
+func (size QemuDiskSize) Validate() error {
+	if size < qemuDiskSize_Minimum {
+		return errors.New(QemuDiskSize_Error_Minimum)
+	}
+	return nil
+}
+
 type qemuDiskResize struct {
 	Id              QemuDiskId
-	SizeInGigaBytes uint
+	SizeInKibibytes QemuDiskSize
 }
 
 // Increase the disk size to the specified amount in gigabytes
 // Decrease of disk size is not permitted.
 func (disk qemuDiskResize) resize(vmr *VmRef, client *Client) (exitStatus string, err error) {
-	return client.PutWithTask(map[string]interface{}{"disk": disk.Id, "size": strconv.Itoa(int(disk.SizeInGigaBytes)) + "G"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
+	return client.PutWithTask(map[string]interface{}{"disk": disk.Id, "size": strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
 }
 
 type qemuDiskMove struct {
@@ -952,7 +980,7 @@ func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, li
 			// Create
 			params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", false, true)
 		} else {
-			if storage.Disk.Size >= currentStorage.Disk.Size {
+			if storage.Disk.SizeInKibibytes >= currentStorage.Disk.SizeInKibibytes {
 				// Update
 				storage.Disk.Id = currentStorage.Disk.Id
 				storage.Disk.LinkedDiskId = currentStorage.Disk.LinkedDiskId
@@ -1083,6 +1111,38 @@ func (storages QemuStorages) markDiskChanges(currentStorages QemuStorages) *qemu
 	return changes
 }
 
+// Select all new disks that do not have their size in gibigytes for resizing to the specified size
+func (newStorages QemuStorages) selectInitialResize(currentStorages *QemuStorages) (resize []qemuDiskResize) {
+	if currentStorages == nil {
+		if newStorages.Ide != nil {
+			resize = newStorages.Ide.selectInitialResize(nil)
+		}
+		if newStorages.Sata != nil {
+			resize = append(resize, newStorages.Sata.selectInitialResize(nil)...)
+		}
+		if newStorages.Scsi != nil {
+			resize = append(resize, newStorages.Scsi.selectInitialResize(nil)...)
+		}
+		if newStorages.VirtIO != nil {
+			resize = append(resize, newStorages.VirtIO.selectInitialResize(nil)...)
+		}
+		return
+	}
+	if newStorages.Ide != nil {
+		resize = newStorages.Ide.selectInitialResize(currentStorages.Ide)
+	}
+	if newStorages.Sata != nil {
+		resize = append(resize, newStorages.Sata.selectInitialResize(currentStorages.Sata)...)
+	}
+	if newStorages.Scsi != nil {
+		resize = append(resize, newStorages.Scsi.selectInitialResize(currentStorages.Scsi)...)
+	}
+	if newStorages.VirtIO != nil {
+		resize = append(resize, newStorages.VirtIO.selectInitialResize(currentStorages.VirtIO)...)
+	}
+	return
+}
+
 func (storages QemuStorages) Validate() (err error) {
 	var numberOfCloudInitDevices uint8
 	var CloudInit uint8
@@ -1163,5 +1223,30 @@ func MoveQemuDisk(format *QemuDiskFormat, diskId QemuDiskId, storage string, del
 		return
 	}
 	_, err = disk.move(deleteAfterMove, vmr, client)
+	return
+}
+
+// increase Disks in size
+func resizeDisks(vmr *VmRef, client *Client, disks []qemuDiskResize) (err error) {
+	for _, e := range disks {
+		_, err = e.resize(vmr, client)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+// Resize newly created disks
+func resizeNewDisks(vmr *VmRef, client *Client, newDisks, currentDisks *QemuStorages) (err error) {
+	if newDisks == nil {
+		return
+	}
+	resize := newDisks.selectInitialResize(currentDisks)
+	if len(resize) > 0 {
+		if err = resizeDisks(vmr, client, resize); err != nil {
+			return
+		}
+	}
 	return
 }

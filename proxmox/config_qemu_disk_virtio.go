@@ -6,44 +6,44 @@ import (
 )
 
 type QemuVirtIODisk struct {
-	AsyncIO       QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup        bool              `json:"backup"`
-	Bandwidth     QemuDiskBandwidth `json:"bandwidth,omitempty"`
-	Cache         QemuDiskCache     `json:"cache,omitempty"`
-	Discard       bool              `json:"discard"`
-	Format        QemuDiskFormat    `json:"format"`
-	Id            uint              `json:"id"` //Id is only returned and setting it has no effect
-	IOThread      bool              `json:"iothread"`
-	LinkedDiskId  *uint             `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
-	ReadOnly      bool              `json:"readonly"`
-	Replicate     bool              `json:"replicate"`
-	Serial        QemuDiskSerial    `json:"serial,omitempty"`
-	Size          uint              `json:"size"`
-	Storage       string            `json:"storage"`
-	syntax        diskSyntaxEnum
-	WorldWideName QemuWorldWideName `json:"wwn"`
+	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup          bool              `json:"backup"`
+	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache           QemuDiskCache     `json:"cache,omitempty"`
+	Discard         bool              `json:"discard"`
+	Format          QemuDiskFormat    `json:"format"`
+	Id              uint              `json:"id"` //Id is only returned and setting it has no effect
+	IOThread        bool              `json:"iothread"`
+	LinkedDiskId    *uint             `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
+	ReadOnly        bool              `json:"readonly"`
+	Replicate       bool              `json:"replicate"`
+	Serial          QemuDiskSerial    `json:"serial,omitempty"`
+	SizeInKibibytes QemuDiskSize      `json:"size"`
+	Storage         string            `json:"storage"`
+	syntax          diskSyntaxEnum
+	WorldWideName   QemuWorldWideName `json:"wwn"`
 }
 
 func (disk *QemuVirtIODisk) convertDataStructure() *qemuDisk {
 	return &qemuDisk{
-		AsyncIO:       disk.AsyncIO,
-		Backup:        disk.Backup,
-		Bandwidth:     disk.Bandwidth,
-		Cache:         disk.Cache,
-		Discard:       disk.Discard,
-		Disk:          true,
-		fileSyntax:    disk.syntax,
-		Format:        disk.Format,
-		Id:            disk.Id,
-		IOThread:      disk.IOThread,
-		LinkedDiskId:  disk.LinkedDiskId,
-		ReadOnly:      disk.ReadOnly,
-		Replicate:     disk.Replicate,
-		Serial:        disk.Serial,
-		Size:          disk.Size,
-		Storage:       disk.Storage,
-		Type:          virtIO,
-		WorldWideName: disk.WorldWideName,
+		AsyncIO:         disk.AsyncIO,
+		Backup:          disk.Backup,
+		Bandwidth:       disk.Bandwidth,
+		Cache:           disk.Cache,
+		Discard:         disk.Discard,
+		Disk:            true,
+		fileSyntax:      disk.syntax,
+		Format:          disk.Format,
+		Id:              disk.Id,
+		IOThread:        disk.IOThread,
+		LinkedDiskId:    disk.LinkedDiskId,
+		ReadOnly:        disk.ReadOnly,
+		Replicate:       disk.Replicate,
+		Serial:          disk.Serial,
+		SizeInKibibytes: disk.SizeInKibibytes,
+		Storage:         disk.Storage,
+		Type:            virtIO,
+		WorldWideName:   disk.WorldWideName,
 	}
 }
 
@@ -199,6 +199,24 @@ func (disks QemuVirtIODisks) markDiskChanges(currentDisks *QemuVirtIODisks, chan
 	}
 }
 
+func (disks QemuVirtIODisks) selectInitialResize(currentDisks *QemuVirtIODisks) (resize []qemuDiskResize) {
+	tmpCurrentDisks := QemuVirtIODisks{}
+	if currentDisks != nil {
+		tmpCurrentDisks = *currentDisks
+	}
+	diskMap := disks.mapToIntMap()
+	currentDiskMap := tmpCurrentDisks.mapToIntMap()
+	for i := range diskMap {
+		if diskMap[i] != nil && diskMap[i].Disk != nil && diskMap[i].Disk.SizeInKibibytes%gibibyte != 0 && (currentDiskMap[i] == nil || currentDiskMap[i].Disk == nil || diskMap[i].Disk.SizeInKibibytes < currentDiskMap[i].Disk.SizeInKibibytes) {
+			resize = append(resize, qemuDiskResize{
+				Id:              QemuDiskId("virtio" + strconv.Itoa(int(i))),
+				SizeInKibibytes: diskMap[i].Disk.SizeInKibibytes,
+			})
+		}
+	}
+	return resize
+}
+
 func (disks QemuVirtIODisks) Validate() (err error) {
 	_, err = disks.validate()
 	return
@@ -223,18 +241,18 @@ func (disks QemuVirtIODisks) validate() (numberOfCloudInitDevices uint8, err err
 }
 
 type QemuVirtIOPassthrough struct {
-	AsyncIO       QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup        bool              `json:"backup"`
-	Bandwidth     QemuDiskBandwidth `json:"bandwidth,omitempty"`
-	Cache         QemuDiskCache     `json:"cache,omitempty"`
-	Discard       bool              `json:"discard"`
-	File          string            `json:"file"`
-	IOThread      bool              `json:"iothread"`
-	ReadOnly      bool              `json:"readonly"`
-	Replicate     bool              `json:"replicate"`
-	Serial        QemuDiskSerial    `json:"serial,omitempty"`
-	Size          uint              `json:"size"` //size is only returned and setting it has no effect
-	WorldWideName QemuWorldWideName `json:"wwn"`
+	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
+	Backup          bool              `json:"backup"`
+	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	Cache           QemuDiskCache     `json:"cache,omitempty"`
+	Discard         bool              `json:"discard"`
+	File            string            `json:"file"`
+	IOThread        bool              `json:"iothread"`
+	ReadOnly        bool              `json:"readonly"`
+	Replicate       bool              `json:"replicate"`
+	Serial          QemuDiskSerial    `json:"serial,omitempty"`
+	SizeInKibibytes QemuDiskSize      `json:"size"` //size is only returned and setting it has no effect
+	WorldWideName   QemuWorldWideName `json:"wwn"`
 }
 
 func (passthrough *QemuVirtIOPassthrough) convertDataStructure() *qemuDisk {
@@ -291,7 +309,7 @@ func (storage *QemuVirtIOStorage) convertDataStructureMark() *qemuDiskMark {
 	if storage.Disk != nil {
 		return &qemuDiskMark{
 			Format:  storage.Disk.Format,
-			Size:    storage.Disk.Size,
+			Size:    storage.Disk.SizeInKibibytes,
 			Storage: storage.Disk.Storage,
 			Type:    ide,
 		}
@@ -317,37 +335,37 @@ func (QemuVirtIOStorage) mapToStruct(param string, LinkedVmId *uint) *QemuVirtIO
 	}
 	if tmpDisk.File == "" {
 		return &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
-			AsyncIO:       tmpDisk.AsyncIO,
-			Backup:        tmpDisk.Backup,
-			Bandwidth:     tmpDisk.Bandwidth,
-			Cache:         tmpDisk.Cache,
-			Discard:       tmpDisk.Discard,
-			Format:        tmpDisk.Format,
-			Id:            tmpDisk.Id,
-			IOThread:      tmpDisk.IOThread,
-			LinkedDiskId:  tmpDisk.LinkedDiskId,
-			ReadOnly:      tmpDisk.ReadOnly,
-			Replicate:     tmpDisk.Replicate,
-			Serial:        tmpDisk.Serial,
-			Size:          tmpDisk.Size,
-			Storage:       tmpDisk.Storage,
-			syntax:        tmpDisk.fileSyntax,
-			WorldWideName: tmpDisk.WorldWideName,
+			AsyncIO:         tmpDisk.AsyncIO,
+			Backup:          tmpDisk.Backup,
+			Bandwidth:       tmpDisk.Bandwidth,
+			Cache:           tmpDisk.Cache,
+			Discard:         tmpDisk.Discard,
+			Format:          tmpDisk.Format,
+			Id:              tmpDisk.Id,
+			IOThread:        tmpDisk.IOThread,
+			LinkedDiskId:    tmpDisk.LinkedDiskId,
+			ReadOnly:        tmpDisk.ReadOnly,
+			Replicate:       tmpDisk.Replicate,
+			Serial:          tmpDisk.Serial,
+			SizeInKibibytes: tmpDisk.SizeInKibibytes,
+			Storage:         tmpDisk.Storage,
+			syntax:          tmpDisk.fileSyntax,
+			WorldWideName:   tmpDisk.WorldWideName,
 		}}
 	}
 	return &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
-		AsyncIO:       tmpDisk.AsyncIO,
-		Backup:        tmpDisk.Backup,
-		Bandwidth:     tmpDisk.Bandwidth,
-		Cache:         tmpDisk.Cache,
-		Discard:       tmpDisk.Discard,
-		File:          tmpDisk.File,
-		IOThread:      tmpDisk.IOThread,
-		ReadOnly:      tmpDisk.ReadOnly,
-		Replicate:     tmpDisk.Replicate,
-		Serial:        tmpDisk.Serial,
-		Size:          tmpDisk.Size,
-		WorldWideName: tmpDisk.WorldWideName,
+		AsyncIO:         tmpDisk.AsyncIO,
+		Backup:          tmpDisk.Backup,
+		Bandwidth:       tmpDisk.Bandwidth,
+		Cache:           tmpDisk.Cache,
+		Discard:         tmpDisk.Discard,
+		File:            tmpDisk.File,
+		IOThread:        tmpDisk.IOThread,
+		ReadOnly:        tmpDisk.ReadOnly,
+		Replicate:       tmpDisk.Replicate,
+		Serial:          tmpDisk.Serial,
+		SizeInKibibytes: tmpDisk.SizeInKibibytes,
+		WorldWideName:   tmpDisk.WorldWideName,
 	}}
 }
 

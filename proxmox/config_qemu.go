@@ -865,11 +865,8 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 					return
 				}
 			}
-			for _, e := range markedDisks.Resize { // increase Disks in size
-				_, err = e.resize(vmr, client)
-				if err != nil {
-					return false, err
-				}
+			if err = resizeDisks(vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
+				return false, err
 			}
 			itemsToDeleteBeforeUpdate = newConfig.Disks.cloudInitRemove(*currentConfig.Disks)
 		}
@@ -931,6 +928,10 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			}
 		}
 
+		if err = resizeNewDisks(vmr, client, newConfig.Disks, currentConfig.Disks); err != nil {
+			return
+		}
+
 		if stopped { // start vm if it was stopped
 			if rebootIfNeeded {
 				if err = GuestStart(vmr, client); err != nil {
@@ -959,6 +960,9 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		exitStatus, err = client.CreateQemuVm(vmr.node, params)
 		if err != nil {
 			return false, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		}
+		if err = resizeNewDisks(vmr, client, newConfig.Disks, nil); err != nil {
+			return
 		}
 	}
 
