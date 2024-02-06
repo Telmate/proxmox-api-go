@@ -15,9 +15,17 @@ import (
 	"github.com/Telmate/proxmox-api-go/cli"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 	"github.com/Telmate/proxmox-api-go/proxmox"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+    err := godotenv.Load()
+    if err != nil {
+        log.Fatalf("Error loading .env file: %v", err)
+    }
+
 	if os.Getenv("NEW_CLI") == "true" {
 		err := cli.Execute()
 		if err != nil {
