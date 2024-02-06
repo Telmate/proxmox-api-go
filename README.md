@@ -16,13 +16,21 @@ go build -o proxmox-api-go
 
 ## Run
 
-```sh
-export PM_API_URL="https://xxxx.com:8006/api2/json"
-export PM_USER=user@pam
-export PM_PASS=password
-export PM_OTP=otpcode (only if required)
-export PM_HTTP_HEADERS=Key,Value,Key1,Value1 (only if required)
+Create a local `.env` file in the root directory of the project and add the following environment variables:
 
+```sh
+PM_API_URL="https://xxxx.com:8006/api2/json"
+PM_USER=user@pam
+PM_PASS=password
+PM_OTP=otpcode (only if required)
+PM_HTTP_HEADERS=Key,Value,Key1,Value1 (only if required)
+```
+
+**Note**: Do not commit your local `.env` file to version control to keep your credentials secure.
+
+Run commands (examples, not a complete list):
+
+```sh
 ./proxmox-api-go installQemu proxmox-node-name < qemu1.json
 
 ./proxmox-api-go createQemu 123 proxmox-node-name < qemu1.json
