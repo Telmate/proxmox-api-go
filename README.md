@@ -28,6 +28,16 @@ PM_HTTP_HEADERS=Key,Value,Key1,Value1 (only if required)
 
 **Note**: Do not commit your local `.env` file to version control to keep your credentials secure.
 
+Or export the environment variables:
+
+```sh
+export PM_API_URL="https://xxxx.com:8006/api2/json"
+export PM_USER=user@pam
+export PM_PASS=password
+export PM_OTP=otpcode (only if required)
+export PM_HTTP_HEADERS=Key,Value,Key1,Value1 (only if required)
+```
+
 Run commands (examples, not a complete list):
 
 ```sh
