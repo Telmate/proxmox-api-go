@@ -15,39 +15,88 @@ import (
 	"github.com/Telmate/proxmox-api-go/cli"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
 	"github.com/Telmate/proxmox-api-go/proxmox"
+
+	"github.com/joho/godotenv"
 )
 
+type AppConfig struct {
+	APIURL      string
+	HTTPHeaders string
+	User        string
+	Password    string
+	OTP         string
+	NewCLI      bool
+}
+
+func loadAppConfig() AppConfig {
+	newCLI := os.Getenv("NEW_CLI") == "true"
+
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: Failed to load .env file: %v", err)
+	}
+
+	return AppConfig{
+		APIURL:      os.Getenv("PM_API_URL"),
+		HTTPHeaders: os.Getenv("PM_HTTP_HEADERS"),
+		User:        os.Getenv("PM_USER"),
+		Password:    os.Getenv("PM_PASS"),
+		OTP:         os.Getenv("PM_OTP"),
+		NewCLI:      newCLI,
+	}
+}
+
+func initializeProxmoxClient(config AppConfig, insecure bool, proxyURL string, taskTimeout int) (*proxmox.Client, error) {
+	tlsconf := &tls.Config{InsecureSkipVerify: insecure}
+	if !insecure {
+		tlsconf = nil
+	}
+
+	client, err := proxmox.NewClient(config.APIURL, nil, config.HTTPHeaders, tlsconf, proxyURL, taskTimeout)
+	if err != nil {
+		return nil, err
+	}
+
+	if userRequiresAPIToken(config.User) {
+		client.SetAPIToken(config.User, config.Password)
+		_, err := client.GetVersion()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err = client.Login(config.User, config.Password, config.OTP)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return client, nil
+}
+
 func main() {
-	if os.Getenv("NEW_CLI") == "true" {
+
+	config := loadAppConfig()
+
+	if config.NewCLI {
 		err := cli.Execute()
 		if err != nil {
 			failError(err)
 		}
 		os.Exit(0)
 	}
+
+	// Command-line flags
 	insecure := flag.Bool("insecure", false, "TLS insecure mode")
 	proxmox.Debug = flag.Bool("debug", false, "debug mode")
 	fConfigFile := flag.String("file", "", "file to get the config from")
-	taskTimeout := flag.Int("timeout", 300, "api task timeout in seconds")
-	proxyURL := flag.String("proxy", "", "proxy url to connect to")
-	fvmid := flag.Int("vmid", -1, "custom vmid (instead of auto)")
+	taskTimeout := flag.Int("timeout", 300, "API task timeout in seconds")
+	proxyURL := flag.String("proxy", "", "proxy URL to connect to")
+	fvmid := flag.Int("vmid", -1, "custom VMID (instead of auto)")
 	flag.Parse()
-	tlsconf := &tls.Config{InsecureSkipVerify: true}
-	if !*insecure {
-		tlsconf = nil
-	}
-	c, err := proxmox.NewClient(os.Getenv("PM_API_URL"), nil, os.Getenv("PM_HTTP_HEADERS"), tlsconf, *proxyURL, *taskTimeout)
-	failError(err)
-	if userRequiresAPIToken(os.Getenv("PM_USER")) {
-		c.SetAPIToken(os.Getenv("PM_USER"), os.Getenv("PM_PASS"))
-		// As test, get the version of the server
-		_, err := c.GetVersion()
-		if err != nil {
-			log.Fatalf("login error: %s", err)
-		}
-	} else {
-		err = c.Login(os.Getenv("PM_USER"), os.Getenv("PM_PASS"), os.Getenv("PM_OTP"))
-		failError(err)
+
+	// Initialize Proxmox client
+	c, err := initializeProxmoxClient(config, *insecure, *proxyURL, *taskTimeout)
+	if err != nil {
+		log.Fatalf("Failed to initialize Proxmox client: %v", err)
 	}
 
 	vmid := *fvmid

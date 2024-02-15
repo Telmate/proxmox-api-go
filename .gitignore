@@ -1,3 +1,4 @@
 proxmox-api-go
 .vagrant/
 .vscode
+.env
