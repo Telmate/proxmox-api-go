@@ -29,7 +29,7 @@ var (
 			if err != nil {
 				return
 			}
-			err = config.CreateSnapshot(client, vmr)
+			err = config.Create(client, vmr)
 			if err != nil {
 				return
 			}

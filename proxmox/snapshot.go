@@ -23,7 +23,8 @@ func (config ConfigSnapshot) mapToApiValues() map[string]interface{} {
 	}
 }
 
-func (config ConfigSnapshot) CreateSnapshot(c *Client, vmr *VmRef) (err error) {
+// Creates a snapshot and validates the input
+func (config ConfigSnapshot) Create(c *Client, vmr *VmRef) (err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return
@@ -32,13 +33,23 @@ func (config ConfigSnapshot) CreateSnapshot(c *Client, vmr *VmRef) (err error) {
 	if err != nil {
 		return
 	}
+	return config.Create_Unsafe(c, vmr)
+}
+
+// Create a snapshot without validating the input, use ConfigSnapshot.Create() to validate the input.
+func (config ConfigSnapshot) Create_Unsafe(c *Client, vmr *VmRef) error {
 	params := config.mapToApiValues()
-	_, err = c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
+	_, err := c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Snapshot: %v, (params: %v)", err, string(params))
 	}
-	return
+	return nil
+}
+
+// deprecated use ConfigSnapshot.Create() instead
+func (config ConfigSnapshot) CreateSnapshot(c *Client, vmr *VmRef) error {
+	return config.Create(c, vmr)
 }
 
 func (config ConfigSnapshot) Validate() error {
