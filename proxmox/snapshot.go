@@ -68,16 +68,9 @@ func UpdateSnapshotDescription(c *Client, vmr *VmRef, snapshot SnapshotName, des
 	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snapshot)+"/config")
 }
 
+// Deletes a snapshot, same as SnapshotName.Delete()
 func DeleteSnapshot(c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	err = snapshot.Validate()
-	if err != nil {
-		return
-	}
-	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + string(snapshot))
+	return snapshot.Delete(c, vmr)
 }
 
 func RollbackSnapshot(c *Client, vmr *VmRef, snapshot string) (exitStatus string, err error) {
@@ -154,6 +147,18 @@ const (
 	SnapshotName_Error_MinLength         string = "SnapshotName must be at least 3 characters long"
 	SnapshotName_Error_StartNoLetter     string = "SnapshotName must start with a letter"
 )
+
+func (snap SnapshotName) Delete(c *Client, vmr *VmRef) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return
+	}
+	err = snap.Validate()
+	if err != nil {
+		return
+	}
+	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + string(snap))
+}
 
 func (name SnapshotName) Validate() error {
 	regex, _ := regexp.Compile(`^([a-zA-Z])([a-z]|[A-Z]|[0-9]|_|-){2,39}$`)
