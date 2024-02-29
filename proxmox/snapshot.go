@@ -156,7 +156,7 @@ const (
 	SnapshotName_Error_StartNoLetter     string = "SnapshotName must start with a letter"
 )
 
-// Deletes the specified snapshot
+// Deletes the specified snapshot, validates the input
 func (snap SnapshotName) Delete(c *Client, vmr *VmRef) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
@@ -166,15 +166,25 @@ func (snap SnapshotName) Delete(c *Client, vmr *VmRef) (exitStatus string, err e
 	if err != nil {
 		return
 	}
+	return snap.Delete_Unsafe(c, vmr)
+}
+
+// Deletes the specified snapshot without validating the input, use SnapshotName.Delete() to validate the input.
+func (snap SnapshotName) Delete_Unsafe(c *Client, vmr *VmRef) (exitStatus string, err error) {
 	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + string(snap))
 }
 
-// Rollback to the specified snapshot
+// Rollback to the specified snapshot, validates the input
 func (snap SnapshotName) Rollback(c *Client, vmr *VmRef) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
 		return
 	}
+	return snap.Rollback_Unsafe(c, vmr)
+}
+
+// Rollback to the specified snapshot without validating the input, use SnapshotName.Rollback() to validate the input.
+func (snap SnapshotName) Rollback_Unsafe(c *Client, vmr *VmRef) (exitStatus string, err error) {
 	return c.PostWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback")
 }
 
