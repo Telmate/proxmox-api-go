@@ -66,17 +66,9 @@ func ListSnapshots(c *Client, vmr *VmRef) (rawSnapshots, error) {
 	return c.GetItemConfigInterfaceArray("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/", "Guest", "SNAPSHOTS")
 }
 
-// Can only be used to update the description of an already existing snapshot
+// Updates the description of the specified snapshot, same as SnapshotName.UpdateDescription()
 func UpdateSnapshotDescription(c *Client, vmr *VmRef, snapshot SnapshotName, description string) (err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	err = snapshot.Validate()
-	if err != nil {
-		return
-	}
-	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snapshot)+"/config")
+	return snapshot.UpdateDescription(c, vmr, description)
 }
 
 // Deletes a snapshot, same as SnapshotName.Delete()
@@ -166,6 +158,7 @@ func (snap SnapshotName) Delete(c *Client, vmr *VmRef) (exitStatus string, err e
 	if err != nil {
 		return
 	}
+	// TODO check if snapshot exists
 	return snap.Delete_Unsafe(c, vmr)
 }
 
@@ -180,12 +173,32 @@ func (snap SnapshotName) Rollback(c *Client, vmr *VmRef) (exitStatus string, err
 	if err != nil {
 		return
 	}
+	// TODO check if snapshot exists
 	return snap.Rollback_Unsafe(c, vmr)
 }
 
 // Rollback to the specified snapshot without validating the input, use SnapshotName.Rollback() to validate the input.
 func (snap SnapshotName) Rollback_Unsafe(c *Client, vmr *VmRef) (exitStatus string, err error) {
 	return c.PostWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback")
+}
+
+// Updates the description of the specified snapshot, validates the input
+func (snap SnapshotName) UpdateDescription(c *Client, vmr *VmRef, description string) (err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return
+	}
+	err = snap.Validate()
+	if err != nil {
+		return
+	}
+	// TODO check if snapshot exists
+	return snap.UpdateDescription_Unsafe(c, vmr, description)
+}
+
+// Updates the description of the specified snapshot without validating the input, use SnapshotName.UpdateDescription() to validate the input.
+func (snap SnapshotName) UpdateDescription_Unsafe(c *Client, vmr *VmRef, description string) error {
+	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snap)+"/config")
 }
 
 func (name SnapshotName) Validate() error {
