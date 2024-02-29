@@ -14,7 +14,7 @@ var update_snapshotCmd = &cobra.Command{
 		id := cli.ValidateIntIDset(args, "GuestID")
 		snapName := cli.RequiredIDset(args, 1, "SnapshotName")
 		des := cli.OptionalIDset(args, 2)
-		err = proxmox.UpdateSnapshotDescription(cli.NewClient(), proxmox.NewVmRef(id), proxmox.SnapshotName(snapName), des)
+		err = proxmox.SnapshotName(snapName).UpdateDescription(cli.NewClient(), proxmox.NewVmRef(id), des)
 		if err != nil {
 			return
 		}
