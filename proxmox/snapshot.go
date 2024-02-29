@@ -73,12 +73,9 @@ func DeleteSnapshot(c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus st
 	return snapshot.Delete(c, vmr)
 }
 
-func RollbackSnapshot(c *Client, vmr *VmRef, snapshot string) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	return c.PostWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/rollback")
+// Rollback to a snapshot, same as SnapshotName.Rollback()
+func RollbackSnapshot(c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
+	return snapshot.Rollback(c, vmr)
 }
 
 // Used for formatting the output when retrieving snapshots
@@ -148,6 +145,7 @@ const (
 	SnapshotName_Error_StartNoLetter     string = "SnapshotName must start with a letter"
 )
 
+// Deletes the specified snapshot
 func (snap SnapshotName) Delete(c *Client, vmr *VmRef) (exitStatus string, err error) {
 	err = c.CheckVmRef(vmr)
 	if err != nil {
@@ -158,6 +156,15 @@ func (snap SnapshotName) Delete(c *Client, vmr *VmRef) (exitStatus string, err e
 		return
 	}
 	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + string(snap))
+}
+
+// Rollback to the specified snapshot
+func (snap SnapshotName) Rollback(c *Client, vmr *VmRef) (exitStatus string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return
+	}
+	return c.PostWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback")
 }
 
 func (name SnapshotName) Validate() error {
