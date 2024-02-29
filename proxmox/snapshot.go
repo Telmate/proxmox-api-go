@@ -173,6 +173,9 @@ func (snap SnapshotName) Rollback(c *Client, vmr *VmRef) (exitStatus string, err
 	if err != nil {
 		return
 	}
+	if err = snap.Validate(); err != nil {
+		return
+	}
 	// TODO check if snapshot exists
 	return snap.Rollback_Unsafe(c, vmr)
 }
