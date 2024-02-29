@@ -25,12 +25,10 @@ func (config ConfigSnapshot) mapToApiValues() map[string]interface{} {
 
 // Creates a snapshot and validates the input
 func (config ConfigSnapshot) Create(c *Client, vmr *VmRef) (err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
+	if err = c.CheckVmRef(vmr); err != nil {
 		return
 	}
-	err = config.Validate()
-	if err != nil {
+	if err = config.Validate(); err != nil {
 		return
 	}
 	return config.Create_Unsafe(c, vmr)
@@ -59,8 +57,7 @@ func (config ConfigSnapshot) Validate() error {
 type rawSnapshots []interface{}
 
 func ListSnapshots(c *Client, vmr *VmRef) (rawSnapshots, error) {
-	err := c.CheckVmRef(vmr)
-	if err != nil {
+	if err := c.CheckVmRef(vmr); err != nil {
 		return nil, err
 	}
 	return c.GetItemConfigInterfaceArray("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/", "Guest", "SNAPSHOTS")
@@ -150,12 +147,10 @@ const (
 
 // Deletes the specified snapshot, validates the input
 func (snap SnapshotName) Delete(c *Client, vmr *VmRef) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
+	if err = c.CheckVmRef(vmr); err != nil {
 		return
 	}
-	err = snap.Validate()
-	if err != nil {
+	if err = snap.Validate(); err != nil {
 		return
 	}
 	// TODO check if snapshot exists
@@ -169,8 +164,7 @@ func (snap SnapshotName) Delete_Unsafe(c *Client, vmr *VmRef) (exitStatus string
 
 // Rollback to the specified snapshot, validates the input
 func (snap SnapshotName) Rollback(c *Client, vmr *VmRef) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
+	if err = c.CheckVmRef(vmr); err != nil {
 		return
 	}
 	if err = snap.Validate(); err != nil {
@@ -187,12 +181,10 @@ func (snap SnapshotName) Rollback_Unsafe(c *Client, vmr *VmRef) (exitStatus stri
 
 // Updates the description of the specified snapshot, validates the input
 func (snap SnapshotName) UpdateDescription(c *Client, vmr *VmRef, description string) (err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
+	if err = c.CheckVmRef(vmr); err != nil {
 		return
 	}
-	err = snap.Validate()
-	if err != nil {
+	if err = snap.Validate(); err != nil {
 		return
 	}
 	// TODO check if snapshot exists
