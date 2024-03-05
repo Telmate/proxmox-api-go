@@ -114,7 +114,7 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 		return nil, err
 	}
 	if err_s == nil {
-		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout, versionMutex: &sync.Mutex{}, permissionMutex: &sync.Mutex{}}
+		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout, versionMutex: &sync.Mutex{}, permissionMutex: &sync.Mutex{}, permissions: make(map[permissionPath]privileges)}
 	}
 
 	return client, err_s
