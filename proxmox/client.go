@@ -2293,7 +2293,7 @@ func (c *Client) insertCachedPermission(path permissionPath) error {
 		c.permissionMutex.Unlock()
 		return nil
 	}
-	return errors.New("permission not found")
+	return nil
 }
 
 // get the users permissions from the cache and decodes them for the SDK
