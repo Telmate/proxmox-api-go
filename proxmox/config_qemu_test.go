@@ -5812,6 +5812,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 	}
 }
 func Test_ConfigQemu_Validate(t *testing.T) {
+	PointerHaState := func(i HaState) *HaState { return &i } // TODO remove when we have a generic pointer function
 	BandwidthValid0 := QemuDiskBandwidth{
 		MBps: QemuDiskBandwidthMBps{
 			ReadLimit: QemuDiskBandwidthMBpsLimit{
@@ -6014,6 +6015,18 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					WorldWideName: "0x5004A3B2C1D0E0F1",
 				}}},
 			}},
+		},
+		// Valid HA
+		{name: "Valid HA",
+			input: ConfigQemu{HA: &GuestHA{
+				Group:       "test",
+				Reallocates: 10,
+				Restarts:    0,
+				State:       PointerHaState("started"),
+			}},
+		},
+		{name: "Valid HA Minimum",
+			input: ConfigQemu{HA: &GuestHA{}},
 		},
 		// Invalid
 		// Invalid Disks Mutually exclusive Ide
@@ -7094,14 +7107,27 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}},
 			err:   errors.New(Error_QemuWorldWideName_Invalid),
 		},
+		// Invalid HA
+		{name: "Invalid HA Group",
+			input: ConfigQemu{HA: &GuestHA{Group: "^$#&@bdsh"}},
+			err:   errors.New(HaGroupName_Error_Illegal_Start),
+		},
+		{name: "Invalid HA Reallocates",
+			input: ConfigQemu{HA: &GuestHA{Reallocates: 11}},
+			err:   errors.New(HaRelocate_Error_UpperBound),
+		},
+		{name: "Invalid HA Restart",
+			input: ConfigQemu{HA: &GuestHA{Restarts: 11}},
+			err:   errors.New(HaRestart_Error_UpperBound),
+		},
+		{name: "Invalid HA State",
+			input: ConfigQemu{HA: &GuestHA{State: PointerHaState("invalid")}},
+			err:   errors.New(HaState_Error_Invalid),
+		},
 	}
 	for _, test := range testData {
 		t.Run(test.name, func(*testing.T) {
-			if test.err != nil {
-				require.Equal(t, test.input.Validate(), test.err, test.name)
-			} else {
-				require.NoError(t, test.input.Validate(), test.name)
-			}
+			require.Equal(t, test.err, test.input.Validate(), test.name)
 		})
 	}
 }
