@@ -42,6 +42,10 @@ const (
 )
 
 const (
+	noSuchResource = "500 no such resource"
+)
+
+const (
 	VmRef_Error_Nil string = "vm reference may not be nil"
 )
 
@@ -52,8 +56,8 @@ type VmRef struct {
 	node    string
 	pool    string
 	vmType  string
-	haState string
-	haGroup string
+	haState HaState
+	haGroup HaGroupName
 }
 
 func (vmr *VmRef) SetNode(node string) {
@@ -84,11 +88,11 @@ func (vmr *VmRef) Pool() string {
 	return vmr.pool
 }
 
-func (vmr *VmRef) HaState() string {
+func (vmr *VmRef) HaState() HaState {
 	return vmr.haState
 }
 
-func (vmr *VmRef) HaGroup() string {
+func (vmr *VmRef) HaGroup() HaGroupName {
 	return vmr.haGroup
 }
 
@@ -159,7 +163,7 @@ func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, trie
 		if statErr == nil {
 			return nil
 		}
-		if strings.Contains(statErr.Error(), "500 no such resource") {
+		if strings.Contains(statErr.Error(), noSuchResource) {
 			return statErr
 		}
 		// fmt.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
@@ -219,7 +223,7 @@ func (c *Client) GetVmInfo(vmr *VmRef) (vmInfo map[string]interface{}, err error
 				vmr.pool = vmInfo["pool"].(string)
 			}
 			if vmInfo["hastate"] != nil {
-				vmr.haState = vmInfo["hastate"].(string)
+				vmr.haState = HaState(vmInfo["hastate"].(string))
 			}
 			return
 		}
@@ -252,7 +256,7 @@ func (c *Client) GetVmRefsByName(vmName string) (vmrs []*VmRef, err error) {
 				vmr.pool = vm["pool"].(string)
 			}
 			if vm["hastate"] != nil {
-				vmr.haState = vm["hastate"].(string)
+				vmr.haState = HaState(vm["hastate"].(string))
 			}
 			vmrs = append(vmrs, vmr)
 		}
@@ -281,7 +285,7 @@ func (c *Client) GetVmRefById(vmId int) (vmr *VmRef, err error) {
 				vmr.pool = vm["pool"].(string)
 			}
 			if vm["hastate"] != nil {
-				vmr.haState = vm["hastate"].(string)
+				vmr.haState = HaState(vm["hastate"].(string))
 			}
 			return
 		}
@@ -1588,17 +1592,17 @@ func (c *Client) ReadVMHA(vmr *VmRef) (err error) {
 		list = list["data"].(map[string]interface{})
 		for elem, value := range list {
 			if elem == "group" {
-				vmr.haGroup = value.(string)
+				vmr.haGroup = HaGroupName(value.(string))
 			}
 			if elem == "state" {
-				vmr.haState = value.(string)
+				vmr.haState = HaState(value.(string))
 			}
 		}
 	}
 	return
 }
 
-func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, err error) {
+func (c *Client) UpdateVMHA(vmr *VmRef, haState HaState, haGroup HaGroupName) (exitStatus interface{}, err error) {
 	// Same hastate & hagroup
 	if vmr.haState == haState && vmr.haGroup == haGroup {
 		return

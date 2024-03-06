@@ -6,12 +6,12 @@ import (
 )
 
 type HAGroup struct {
-	Comment    string   // Description.
-	Group      string   // The HA group identifier.
-	Nodes      []string // List of cluster node names with optional priority. LIKE: <node>[:<pri>]{,<node>[:<pri>]}*
-	NoFailback bool     // The CRM tries to run services on the node with the highest priority. If a node with higher priority comes online, the CRM migrates the service to that node. Enabling nofailback prevents that behavior.
-	Restricted bool     // Resources bound to restricted groups may only run on nodes defined by the group.
-	Type       string   // Group type
+	Comment    string      // Description.
+	Group      HaGroupName // The HA group identifier.
+	Nodes      []string    // List of cluster node names with optional priority. LIKE: <node>[:<pri>]{,<node>[:<pri>]}*
+	NoFailback bool        // The CRM tries to run services on the node with the highest priority. If a node with higher priority comes online, the CRM migrates the service to that node. Enabling nofailback prevents that behavior.
+	Restricted bool        // Resources bound to restricted groups may only run on nodes defined by the group.
+	Type       string      // Group type
 }
 
 func (c *Client) GetHAGroupList() (haGroups []HAGroup, err error) {
@@ -28,7 +28,7 @@ func (c *Client) GetHAGroupList() (haGroups []HAGroup, err error) {
 
 		haGroups = append(haGroups, HAGroup{
 			Comment:    itemMap["comment"].(string),
-			Group:      itemMap["group"].(string),
+			Group:      HaGroupName(itemMap["group"].(string)),
 			Nodes:      strings.Split(itemMap["nodes"].(string), ","),
 			NoFailback: itemMap["nofailback"].(float64) == 1,
 			Restricted: itemMap["restricted"].(float64) == 1,
@@ -39,7 +39,7 @@ func (c *Client) GetHAGroupList() (haGroups []HAGroup, err error) {
 	return haGroups, nil
 }
 
-func (c *Client) GetHAGroupByName(GroupName string) (*HAGroup, error) {
+func (c *Client) GetHAGroupByName(GroupName HaGroupName) (*HAGroup, error) {
 	groups, err := c.GetHAGroupList()
 
 	if err != nil {
@@ -52,5 +52,5 @@ func (c *Client) GetHAGroupByName(GroupName string) (*HAGroup, error) {
 		}
 	}
 
-	return nil, errors.New("cannot find HaGroup by name " + GroupName)
+	return nil, errors.New("cannot find HaGroup by name " + string(GroupName))
 }
