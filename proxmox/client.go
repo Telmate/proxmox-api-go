@@ -1584,6 +1584,7 @@ func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, 
 	return
 }
 
+// deprecated use NewGuestHAFromApi() instead
 func (c *Client) ReadVMHA(vmr *VmRef) (err error) {
 	var list map[string]interface{}
 	url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
@@ -1602,6 +1603,7 @@ func (c *Client) ReadVMHA(vmr *VmRef) (err error) {
 	return
 }
 
+// deprecated use GuestHA.Set() instead
 func (c *Client) UpdateVMHA(vmr *VmRef, haState HaState, haGroup HaGroupName) (exitStatus interface{}, err error) {
 	// Same hastate & hagroup
 	if vmr.haState == haState && vmr.haGroup == haGroup {
