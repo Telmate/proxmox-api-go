@@ -3,6 +3,7 @@ package storagesubtests
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
@@ -16,18 +17,18 @@ var CephfsFull = proxmox.ConfigStorage{
 		FSname:   "test-fs-name",
 	},
 	Content: &proxmox.ConfigStorageContent{
-		Backup:   proxmox.PointerBool(true),
-		Iso:      proxmox.PointerBool(true),
-		Snippets: proxmox.PointerBool(true),
-		Template: proxmox.PointerBool(true),
+		Backup:   util.Pointer(true),
+		Iso:      util.Pointer(true),
+		Snippets: util.Pointer(true),
+		Template: util.Pointer(true),
 	},
 	BackupRetention: &proxmox.ConfigStorageBackupRetention{
-		Last:    proxmox.PointerInt(6),
-		Hourly:  proxmox.PointerInt(5),
-		Daily:   proxmox.PointerInt(4),
-		Monthly: proxmox.PointerInt(3),
-		Weekly:  proxmox.PointerInt(2),
-		Yearly:  proxmox.PointerInt(1),
+		Last:    util.Pointer(6),
+		Hourly:  util.Pointer(5),
+		Daily:   util.Pointer(4),
+		Monthly: util.Pointer(3),
+		Weekly:  util.Pointer(2),
+		Yearly:  util.Pointer(1),
 	},
 }
 
@@ -39,7 +40,7 @@ var CephfsEmpty = proxmox.ConfigStorage{
 		FSname:   "test-fs-name",
 	},
 	Content: &proxmox.ConfigStorageContent{
-		Iso: proxmox.PointerBool(true),
+		Iso: util.Pointer(true),
 	},
 }
 
@@ -52,8 +53,8 @@ func CephfsGetFull(name string, t *testing.T) {
 func CephfsGetEmpty(name string, t *testing.T) {
 	s := CloneJson(CephfsEmpty)
 	s.ID = name
-	s.Content.Backup = proxmox.PointerBool(false)
-	s.Content.Snippets = proxmox.PointerBool(false)
-	s.Content.Template = proxmox.PointerBool(false)
+	s.Content.Backup = util.Pointer(false)
+	s.Content.Snippets = util.Pointer(false)
+	s.Content.Template = util.Pointer(false)
 	Get(s, name, t)
 }

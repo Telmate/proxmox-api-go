@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
 )
 
@@ -28,14 +29,14 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 	config := pxapi.ConfigQemu{
 		Name:         "test-qemu01",
 		Bios:         "seabios",
-		Tablet:       pxapi.PointerBool(true),
+		Tablet:       util.Pointer(true),
 		Memory:       2048,
 		QemuOs:       "l26",
 		QemuCores:    1,
 		QemuSockets:  1,
 		QemuCpu:      "kvm64",
-		QemuNuma:     pxapi.PointerBool(false),
-		QemuKVM:      pxapi.PointerBool(true),
+		QemuNuma:     util.Pointer(false),
+		QemuKVM:      util.Pointer(true),
 		Hotplug:      "network,disk,usb",
 		QemuNetworks: networks,
 		QemuIso:      "none",

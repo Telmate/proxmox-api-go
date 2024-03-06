@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	storagesubtests "github.com/Telmate/proxmox-api-go/test/cli/Storage/storage-sub-tests"
 )
@@ -33,14 +34,14 @@ func Test_Storage_ZFSoverISCSI_Comstar_0_Update_Empty(t *testing.T) {
 func Test_Storage_ZFSoverISCSI_Comstar_0_Get_Empty(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.ZFSoverISCSI_ComstarEmpty)
 	s.ID = "zfs-over-iscsi_comstar-test-0"
-	s.ZFSoverISCSI.Blocksize = proxmox.PointerString("8k")
+	s.ZFSoverISCSI.Blocksize = util.Pointer("8k")
 	s.ZFSoverISCSI.Comstar = &proxmox.ConfigStorageZFSoverISCSI_Comstar{
 		TargetGroup: "t-group",
 		HostGroup:   "h-group",
 		Writecache:  false,
 	}
 	s.Content = &proxmox.ConfigStorageContent{
-		DiskImage: proxmox.PointerBool(true),
+		DiskImage: util.Pointer(true),
 	}
 	storagesubtests.Get(s, s.ID, t)
 }

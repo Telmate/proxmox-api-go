@@ -3,6 +3,7 @@ package storagesubtests
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
@@ -15,7 +16,7 @@ var IscsiFull = proxmox.ConfigStorage{
 		Target: "target-volume",
 	},
 	Content: &proxmox.ConfigStorageContent{
-		DiskImage: proxmox.PointerBool(true),
+		DiskImage: util.Pointer(true),
 	},
 }
 
@@ -37,6 +38,6 @@ func IscsiGetFull(name string, t *testing.T) {
 func IscsiGetEmpty(name string, t *testing.T) {
 	s := CloneJson(IscsiEmpty)
 	s.ID = name
-	s.Content.DiskImage = proxmox.PointerBool(false)
+	s.Content.DiskImage = util.Pointer(false)
 	Get(s, name, t)
 }

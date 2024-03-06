@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	storagesubtests "github.com/Telmate/proxmox-api-go/test/cli/Storage/storage-sub-tests"
 )
@@ -24,7 +25,7 @@ func Test_Storage_SMB_1_Get_Empty(t *testing.T) {
 
 func Test_Storage_SMB_1_Update_Full(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.SMBFull)
-	s.SMB.Password = proxmox.PointerString("Enter123!")
+	s.SMB.Password = util.Pointer("Enter123!")
 	storagesubtests.Update(s, "smb-test-1", t)
 }
 

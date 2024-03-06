@@ -3,6 +3,7 @@ package storagesubtests
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
@@ -18,8 +19,8 @@ var RBDFull = proxmox.ConfigStorage{
 		KRBD:      true,
 	},
 	Content: &proxmox.ConfigStorageContent{
-		Container: proxmox.PointerBool(true),
-		DiskImage: proxmox.PointerBool(true),
+		Container: util.Pointer(true),
+		DiskImage: util.Pointer(true),
 	},
 }
 
@@ -32,7 +33,7 @@ var RBDEmpty = proxmox.ConfigStorage{
 		Namespace: "ceph-namespace",
 	},
 	Content: &proxmox.ConfigStorageContent{
-		Container: proxmox.PointerBool(true),
+		Container: util.Pointer(true),
 	},
 }
 
@@ -46,6 +47,6 @@ func RBDGetEmpty(name string, t *testing.T) {
 	s := CloneJson(RBDEmpty)
 	s.ID = name
 	s.RBD.KRBD = false
-	s.Content.DiskImage = proxmox.PointerBool(false)
+	s.Content.DiskImage = util.Pointer(false)
 	Get(s, name, t)
 }
