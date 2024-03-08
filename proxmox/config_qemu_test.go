@@ -5812,7 +5812,10 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 	}
 }
 func Test_ConfigQemu_Validate(t *testing.T) {
-	PointerHaState := func(i HaState) *HaState { return &i } // TODO remove when we have a generic pointer function
+	PointerHaState := func(i HaState) *HaState { return &i }             // TODO remove when we have a generic pointer function
+	PointerHaGroupName := func(i HaGroupName) *HaGroupName { return &i } // TODO remove when we have a generic pointer function
+	PointerHaRelocate := func(i HaRelocate) *HaRelocate { return &i }    // TODO remove when we have a generic pointer function
+	PointerHaRestart := func(i HaRestart) *HaRestart { return &i }       // TODO remove when we have a generic pointer function
 	BandwidthValid0 := QemuDiskBandwidth{
 		MBps: QemuDiskBandwidthMBps{
 			ReadLimit: QemuDiskBandwidthMBpsLimit{
@@ -6019,9 +6022,9 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		// Valid HA
 		{name: "Valid HA",
 			input: ConfigQemu{HA: &GuestHA{
-				Group:       "test",
-				Reallocates: 10,
-				Restarts:    0,
+				Group:       PointerHaGroupName("test"),
+				Reallocates: PointerHaRelocate(10),
+				Restarts:    PointerHaRestart(0),
 				State:       PointerHaState("started"),
 			}},
 		},
@@ -7109,15 +7112,15 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		},
 		// Invalid HA
 		{name: "Invalid HA Group",
-			input: ConfigQemu{HA: &GuestHA{Group: "^$#&@bdsh"}},
+			input: ConfigQemu{HA: &GuestHA{Group: PointerHaGroupName("^$#&@bdsh")}},
 			err:   errors.New(HaGroupName_Error_Illegal_Start),
 		},
 		{name: "Invalid HA Reallocates",
-			input: ConfigQemu{HA: &GuestHA{Reallocates: 11}},
+			input: ConfigQemu{HA: &GuestHA{Reallocates: PointerHaRelocate(11)}},
 			err:   errors.New(HaRelocate_Error_UpperBound),
 		},
 		{name: "Invalid HA Restart",
-			input: ConfigQemu{HA: &GuestHA{Restarts: 11}},
+			input: ConfigQemu{HA: &GuestHA{Restarts: PointerHaRestart(11)}},
 			err:   errors.New(HaRestart_Error_UpperBound),
 		},
 		{name: "Invalid HA State",

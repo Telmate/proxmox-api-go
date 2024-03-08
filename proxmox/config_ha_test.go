@@ -8,7 +8,11 @@ import (
 )
 
 func Test_GuestHA_mapToApi(t *testing.T) {
-	PointerHaState := func(i HaState) *HaState { return &i } // TODO remove when we have a generic pointer function
+	PointerHaState := func(i HaState) *HaState { return &i }             // TODO remove when we have a generic pointer function
+	PointerHaGroupName := func(i HaGroupName) *HaGroupName { return &i } // TODO remove when we have a generic pointer function
+	PointerHaRelocate := func(i HaRelocate) *HaRelocate { return &i }    // TODO remove when we have a generic pointer function
+	PointerHaRestart := func(i HaRestart) *HaRestart { return &i }       // TODO remove when we have a generic pointer function
+	PointerString := func(i string) *string { return &i }                // TODO remove when we have a generic pointer function
 	type testInput struct {
 		vmID   int
 		config GuestHA
@@ -18,118 +22,97 @@ func Test_GuestHA_mapToApi(t *testing.T) {
 		input  testInput
 		output map[string]interface{}
 	}{
-		{name: "Test Comment Create",
-			input: testInput{config: GuestHA{Comment: "abc"}},
+		{name: `Test Comment Create`,
+			input:  testInput{config: GuestHA{Comment: PointerString("abc")}},
+			output: map[string]interface{}{"comment": string("abc")}},
+		{name: `Test Comment Update`,
+			input: testInput{vmID: 100, config: GuestHA{Comment: PointerString("abc")}},
 			output: map[string]interface{}{
-				"comment":      "abc",
-				"max_relocate": 0,
-				"max_restart":  0}},
-		{name: "Test Comment Update",
-			input: testInput{vmID: 100, config: GuestHA{Comment: "abc"}},
-			output: map[string]interface{}{
-				"comment":      "abc",
-				"delete":       "group",
-				"max_relocate": 0,
-				"max_restart":  0,
-				"sid":          100}},
-		{name: "Test Full Create",
+				"comment": string("abc"),
+				"sid":     int(100)}},
+		{name: `Test Full Create`,
 			input: testInput{
 				config: GuestHA{
-					Comment:     "test",
+					Comment:     PointerString("test"),
 					Delete:      true,
-					Group:       "test-group",
-					Reallocates: 1,
-					Restarts:    10,
+					Group:       PointerHaGroupName("test-group"),
+					Reallocates: PointerHaRelocate(1),
+					Restarts:    PointerHaRestart(10),
 					State:       PointerHaState(HaState_Started)}},
 			output: map[string]interface{}{
-				"comment":      "test",
-				"group":        "test-group",
-				"max_relocate": 1,
-				"max_restart":  10,
-				"state":        "started"}},
-		{name: "Test Full Update",
+				"comment":      string("test"),
+				"group":        string("test-group"),
+				"max_relocate": int(1),
+				"max_restart":  int(10),
+				"state":        string("started")}},
+		{name: `Test Full Create nil`,
+			input:  testInput{config: GuestHA{}},
+			output: map[string]interface{}{}},
+		{name: `Test Full Update`,
 			input: testInput{vmID: 100, config: GuestHA{
-				Comment:     "test",
+				Comment:     PointerString("test"),
 				Delete:      true,
-				Group:       "test-group",
-				Reallocates: 10,
-				Restarts:    1,
+				Group:       PointerHaGroupName("test-group"),
+				Reallocates: PointerHaRelocate(10),
+				Restarts:    PointerHaRestart(1),
 				State:       PointerHaState(HaState_Stopped)}},
 			output: map[string]interface{}{
-				"comment":      "test",
-				"group":        "test-group",
-				"max_relocate": 10,
-				"max_restart":  1,
-				"sid":          100,
-				"state":        "stopped"}},
-		{name: "Test Group Create",
-			input: testInput{config: GuestHA{Group: "test-group"}},
+				"comment":      string("test"),
+				"group":        string("test-group"),
+				"max_relocate": int(10),
+				"max_restart":  int(1),
+				"sid":          int(100),
+				"state":        string("stopped")}},
+		{name: `Test Full Update nil`,
+			input:  testInput{vmID: 100, config: GuestHA{}},
+			output: map[string]interface{}{"sid": int(100)}},
+		{name: `Test Group Create`,
+			input:  testInput{config: GuestHA{Group: PointerHaGroupName("test-group")}},
+			output: map[string]interface{}{"group": string("test-group")}},
+		{name: `Test Group Create nil`,
+			input:  testInput{config: GuestHA{Group: nil}},
+			output: map[string]interface{}{}},
+		{name: `Test Group Create ""`,
+			input:  testInput{config: GuestHA{Group: PointerHaGroupName("")}},
+			output: map[string]interface{}{}},
+		{name: `Test Group Update`,
+			input: testInput{vmID: 100, config: GuestHA{Group: PointerHaGroupName("test-group")}},
 			output: map[string]interface{}{
-				"group":        "test-group",
-				"max_relocate": 0,
-				"max_restart":  0}},
-		{name: "Test Group Update",
-			input: testInput{vmID: 100, config: GuestHA{Group: "test-group"}},
+				"group": string("test-group"),
+				"sid":   int(100)}},
+		{name: `Test Group Update nil`,
+			input: testInput{vmID: 100, config: GuestHA{Group: nil}},
 			output: map[string]interface{}{
-				"comment":      "",
-				"group":        "test-group",
-				"max_relocate": 0,
-				"max_restart":  0,
-				"sid":          100}},
-		{name: "Test Reallocates Create",
-			input: testInput{config: GuestHA{Reallocates: 10}},
+				"sid": int(100)}},
+		{name: `Test Group Update ""`,
+			input: testInput{vmID: 100, config: GuestHA{Group: PointerHaGroupName("")}},
 			output: map[string]interface{}{
-				"max_relocate": 10,
-				"max_restart":  0}},
-		{name: "Test Reallocates Update",
-			input: testInput{vmID: 100, config: GuestHA{Reallocates: 10}},
+				"delete": string("group"),
+				"sid":    int(100)}},
+		{name: `Test Reallocates Create`,
+			input:  testInput{config: GuestHA{Reallocates: PointerHaRelocate(10)}},
+			output: map[string]interface{}{"max_relocate": int(10)}},
+		{name: `Test Reallocates Update`,
+			input: testInput{vmID: 100, config: GuestHA{Reallocates: PointerHaRelocate(10)}},
 			output: map[string]interface{}{
-				"comment":      "",
-				"delete":       "group",
-				"max_relocate": 10,
-				"max_restart":  0,
-				"sid":          100}},
-		{name: "Test Restarts Create",
-			input: testInput{config: GuestHA{Restarts: 10}},
+				"max_relocate": int(10),
+				"sid":          int(100)}},
+		{name: `Test Restarts Create`,
+			input:  testInput{config: GuestHA{Restarts: PointerHaRestart(10)}},
+			output: map[string]interface{}{"max_restart": int(10)}},
+		{name: `Test Restarts Update`,
+			input: testInput{vmID: 100, config: GuestHA{Restarts: PointerHaRestart(10)}},
 			output: map[string]interface{}{
-				"max_relocate": 0,
-				"max_restart":  10}},
-		{name: "Test Restarts Update",
-			input: testInput{vmID: 100, config: GuestHA{Restarts: 10}},
-			output: map[string]interface{}{
-				"comment":      "",
-				"delete":       "group",
-				"max_relocate": 0,
-				"max_restart":  10,
-				"sid":          100}},
-		{name: "Test State Create",
-			input: testInput{config: GuestHA{State: PointerHaState(HaState_Started)}},
-			output: map[string]interface{}{
-				"max_relocate": 0,
-				"max_restart":  0,
-				"state":        "started"}},
-		{name: "Test State Create nil",
-			input: testInput{config: GuestHA{State: nil}},
-			output: map[string]interface{}{
-				"max_relocate": 0,
-				"max_restart":  0}},
-		{name: "Test State Update",
+				"max_restart": int(10),
+				"sid":         int(100)}},
+		{name: `Test State Create`,
+			input:  testInput{config: GuestHA{State: PointerHaState(HaState_Started)}},
+			output: map[string]interface{}{"state": string("started")}},
+		{name: `Test State Update`,
 			input: testInput{vmID: 100, config: GuestHA{State: PointerHaState(HaState_Started)}},
 			output: map[string]interface{}{
-				"comment":      "",
-				"delete":       "group",
-				"max_relocate": 0,
-				"max_restart":  0,
-				"sid":          100,
-				"state":        "started"}},
-		{name: "Test State Update nil",
-			input: testInput{vmID: 100, config: GuestHA{State: nil}},
-			output: map[string]interface{}{
-				"comment":      "",
-				"delete":       "group",
-				"max_relocate": 0,
-				"max_restart":  0,
-				"sid":          100}},
+				"sid":   int(100),
+				"state": string("started")}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -139,7 +122,11 @@ func Test_GuestHA_mapToApi(t *testing.T) {
 }
 
 func Test_GuestHA_mapToSDK(t *testing.T) {
-	PointerHaState := func(i HaState) *HaState { return &i } // TODO remove when we have a generic pointer function
+	PointerHaState := func(i HaState) *HaState { return &i }             // TODO remove when we have a generic pointer function
+	PointerHaGroupName := func(i HaGroupName) *HaGroupName { return &i } // TODO remove when we have a generic pointer function
+	PointerHaRelocate := func(i HaRelocate) *HaRelocate { return &i }    // TODO remove when we have a generic pointer function
+	PointerHaRestart := func(i HaRestart) *HaRestart { return &i }       // TODO remove when we have a generic pointer function
+	PointerString := func(i string) *string { return &i }                // TODO remove when we have a generic pointer function
 	tests := []struct {
 		name   string
 		input  map[string]interface{}
@@ -147,7 +134,7 @@ func Test_GuestHA_mapToSDK(t *testing.T) {
 	}{
 		{name: "Test Comment",
 			input:  map[string]interface{}{"comment": "abc"},
-			output: GuestHA{Comment: "abc"}},
+			output: GuestHA{Comment: PointerString("abc")}},
 		{name: "Test Full",
 			input: map[string]interface{}{
 				"comment":      "test",
@@ -156,20 +143,20 @@ func Test_GuestHA_mapToSDK(t *testing.T) {
 				"max_restart":  float64(1),
 				"state":        "stopped"},
 			output: GuestHA{
-				Comment:     "test",
-				Group:       HaGroupName("test-group"),
-				Reallocates: 10,
-				Restarts:    1,
+				Comment:     PointerString("test"),
+				Group:       PointerHaGroupName("test-group"),
+				Reallocates: PointerHaRelocate(10),
+				Restarts:    PointerHaRestart(1),
 				State:       PointerHaState(HaState_Stopped)}},
 		{name: "Test Group",
 			input:  map[string]interface{}{"group": "test-group"},
-			output: GuestHA{Group: "test-group"}},
+			output: GuestHA{Group: PointerHaGroupName("test-group")}},
 		{name: "Test Reallocates",
 			input:  map[string]interface{}{"max_relocate": float64(10)},
-			output: GuestHA{Reallocates: 10}},
+			output: GuestHA{Reallocates: PointerHaRelocate(10)}},
 		{name: "Test Restarts",
 			input:  map[string]interface{}{"max_restart": float64(10)},
-			output: GuestHA{Restarts: 10}},
+			output: GuestHA{Restarts: PointerHaRestart(10)}},
 		{name: "Test State",
 			input:  map[string]interface{}{"state": "started"},
 			output: GuestHA{State: PointerHaState(HaState_Started)}},
@@ -202,15 +189,18 @@ func Test_GuestHA_Set(t *testing.T) {
 }
 
 func Test_GuestHA_Validate(t *testing.T) {
-	PointerHaState := func(i HaState) *HaState { return &i } // TODO remove when we have a generic pointer function
+	PointerHaState := func(i HaState) *HaState { return &i }             // TODO remove when we have a generic pointer function
+	PointerHaGroupName := func(i HaGroupName) *HaGroupName { return &i } // TODO remove when we have a generic pointer function
+	PointerHaRelocate := func(i HaRelocate) *HaRelocate { return &i }    // TODO remove when we have a generic pointer function
+	PointerHaRestart := func(i HaRestart) *HaRestart { return &i }       // TODO remove when we have a generic pointer function
 	tests := []struct {
 		name   string
 		input  GuestHA
 		output error
 	}{
-		{name: "Invalid Group", input: GuestHA{Group: "inv&lid"}, output: errors.New(HaGroupName_Error_Illegal)},
-		{name: "Invalid Reallocates", input: GuestHA{Reallocates: 11}, output: errors.New(HaRelocate_Error_UpperBound)},
-		{name: "Invalid Restarts", input: GuestHA{Restarts: 11}, output: errors.New(HaRestart_Error_UpperBound)},
+		{name: "Invalid Group", input: GuestHA{Group: PointerHaGroupName("inv&lid")}, output: errors.New(HaGroupName_Error_Illegal)},
+		{name: "Invalid Reallocates", input: GuestHA{Reallocates: PointerHaRelocate(11)}, output: errors.New(HaRelocate_Error_UpperBound)},
+		{name: "Invalid Restarts", input: GuestHA{Restarts: PointerHaRestart(11)}, output: errors.New(HaRestart_Error_UpperBound)},
 		{name: "Invalid State", input: GuestHA{State: PointerHaState("invalid")}, output: errors.New(HaState_Error_Invalid)},
 		{name: "Valid", input: GuestHA{}},
 	}

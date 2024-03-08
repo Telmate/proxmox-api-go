@@ -7,37 +7,44 @@ import (
 )
 
 type GuestHA struct {
-	Comment     string      `json:"comment"`          // Description.
-	Delete      bool        `json:"remove,omitempty"` // When true, remove HA settings for the Guest.
-	Group       HaGroupName `json:"group"`            // May be empty, in which case the guest is not part of a group.
-	Reallocates HaRelocate  `json:"reallocates"`
-	Restarts    HaRestart   `json:"restarts"`
-	State       *HaState    `json:"state"`
+	Comment     *string      `json:"comment"`          // Description.
+	Delete      bool         `json:"remove,omitempty"` // When true, remove HA settings for the Guest.
+	Group       *HaGroupName `json:"group"`            // May be empty, in which case the guest is not part of a group.
+	Reallocates *HaRelocate  `json:"reallocates"`
+	Restarts    *HaRestart   `json:"restarts"`
+	State       *HaState     `json:"state"`
 }
 
 // TODO change type when we have a custom type for guestID
 func (g GuestHA) mapToApi(guestID int) map[string]interface{} {
-	params := map[string]interface{}{
-		"max_restart":  int(g.Restarts),
-		"max_relocate": int(g.Reallocates),
-	}
+	params := map[string]interface{}{}
 	if g.State != nil {
 		params["state"] = string(*g.State)
 	}
+	if g.Restarts != nil {
+		params["max_restart"] = int(*g.Restarts)
+	}
+	if g.Reallocates != nil {
+		params["max_relocate"] = int(*g.Reallocates)
+	}
 	if guestID > 0 { // Update
-		params["comment"] = g.Comment
+		if g.Comment != nil {
+			params["comment"] = *g.Comment
+		}
 		params["sid"] = guestID
-		if g.Group != "" {
-			params["group"] = string(g.Group)
-		} else {
-			params["delete"] = "group"
+		if g.Group != nil {
+			if *g.Group != "" {
+				params["group"] = string(*g.Group)
+			} else {
+				params["delete"] = "group"
+			}
 		}
 	} else { // Create
-		if g.Comment != "" {
-			params["comment"] = g.Comment
+		if g.Comment != nil && *g.Comment != "" {
+			params["comment"] = *g.Comment
 		}
-		if g.Group != "" {
-			params["group"] = string(g.Group)
+		if g.Group != nil && *g.Group != "" {
+			params["group"] = string(*g.Group)
 		}
 	}
 	return params
@@ -45,16 +52,20 @@ func (g GuestHA) mapToApi(guestID int) map[string]interface{} {
 
 func (GuestHA) mapToSDK(params map[string]interface{}) (config GuestHA) {
 	if itemValue, isSet := params["comment"]; isSet {
-		config.Comment = itemValue.(string)
+		comment := itemValue.(string)
+		config.Comment = &comment
 	}
 	if itemValue, isSet := params["group"]; isSet {
-		config.Group = HaGroupName(itemValue.(string))
+		group := HaGroupName(itemValue.(string))
+		config.Group = &group
 	}
 	if itemValue, isSet := params["max_relocate"]; isSet {
-		config.Reallocates = HaRelocate(itemValue.(float64))
+		relocate := HaRelocate(itemValue.(float64))
+		config.Reallocates = &relocate
 	}
 	if itemValue, isSet := params["max_restart"]; isSet {
-		config.Restarts = HaRestart(itemValue.(float64))
+		restarts := HaRestart(itemValue.(float64))
+		config.Restarts = &restarts
 	}
 	if itemValue, isSet := params["state"]; isSet {
 		state := HaState(itemValue.(string))
@@ -82,7 +93,7 @@ func (g GuestHA) Set_Unsafe(current *GuestHA, vmr *VmRef, client *Client) (err e
 		if g.State != nil {
 			vmr.haState = *g.State
 		}
-		vmr.haGroup = g.Group
+		vmr.haGroup = *g.Group
 		return
 	}
 	if g.Delete { // delete
@@ -100,23 +111,32 @@ func (g GuestHA) Set_Unsafe(current *GuestHA, vmr *VmRef, client *Client) (err e
 	if g.State != nil {
 		vmr.haState = *g.State
 	}
-	vmr.haGroup = g.Group
+	vmr.haGroup = *g.Group
 	return
 }
 
 func (g GuestHA) Validate() (err error) {
-	if g.Group != "" {
+	if g.Group != nil && *g.Group != "" {
 		if err = g.Group.Validate(); err != nil {
 			return
 		}
 	}
 	if g.State != nil {
-		return g.State.Validate()
+		if err = g.State.Validate(); err != nil {
+			return
+		}
 	}
-	if err = g.Reallocates.Validate(); err != nil {
-		return
+	if g.Reallocates != nil {
+		if err = g.Reallocates.Validate(); err != nil {
+			return
+		}
 	}
-	return g.Restarts.Validate()
+	if g.Restarts != nil {
+		if err = g.Restarts.Validate(); err != nil {
+			return
+		}
+	}
+	return
 }
 
 type HaGroupName string
@@ -206,6 +226,6 @@ func NewGuestHAFromApi(vmr *VmRef, client *Client) (*GuestHA, error) {
 	}
 	ha := GuestHA{}.mapToSDK(params)
 	vmr.haState = *ha.State
-	vmr.haGroup = ha.Group
+	vmr.haGroup = *ha.Group
 	return &ha, nil
 }
