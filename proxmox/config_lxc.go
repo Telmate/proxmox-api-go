@@ -24,8 +24,7 @@ type ConfigLxc struct {
 	Features           QemuDevice  `json:"features,omitempty"`
 	Force              bool        `json:"force,omitempty"`
 	Full               bool        `json:"full,omitempty"`
-	HaState            string      `json:"hastate,omitempty"`
-	HaGroup            string      `json:"hagroup,omitempty"`
+	HA                 *GuestHA    `json:"ha,omitempty"`
 	Hookscript         string      `json:"hookscript,omitempty"`
 	Hostname           string      `json:"hostname,omitempty"`
 	IgnoreUnpackErrors bool        `json:"ignore-unpack-errors,omitempty"`
@@ -318,15 +317,10 @@ func NewConfigLxcFromApi(vmr *VmRef, client *Client) (config *ConfigLxc, err err
 	config.Unused = unused
 	config.Tags = tags
 
-	err = client.ReadVMHA(vmr)
-	if err == nil {
-		config.HaState = vmr.HaState()
-		config.HaGroup = vmr.HaGroup()
-	} else {
-		//log.Printf("[DEBUG] Container %d(%s) has no HA config", vmr.vmId, lxcConfig["hostname"])
-		return config, nil
+	config.HA, err = NewGuestHAFromApi(vmr, client)
+	if err != nil {
+		return nil, err
 	}
-
 	return
 }
 
@@ -344,11 +338,12 @@ func (config ConfigLxc) CreateLxc(vmr *VmRef, client *Client) (err error) {
 		return fmt.Errorf("error creating LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
 	}
 
-	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
-	if err != nil {
-		return fmt.Errorf("[ERROR] %q", err)
+	if config.HA != nil {
+		err = config.HA.Set(vmr, client)
+		if err != nil {
+			return
+		}
 	}
-
 	return
 }
 
@@ -390,11 +385,12 @@ func (config ConfigLxc) CloneLxc(vmr *VmRef, client *Client) (err error) {
 		return fmt.Errorf("error cloning LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))
 	}
 
-	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
-	if err != nil {
-		return fmt.Errorf("[ERROR] %q", err)
+	if config.HA != nil {
+		err = config.HA.Set(vmr, client)
+		if err != nil {
+			return
+		}
 	}
-
 	return
 }
 
@@ -415,9 +411,11 @@ func (config ConfigLxc) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 	// also, error "500 unable to modify read-only option: 'unprivileged'"
 	delete(paramMap, "unprivileged")
 
-	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
-	if err != nil {
-		return err
+	if config.HA != nil {
+		err = config.HA.Set(vmr, client)
+		if err != nil {
+			return
+		}
 	}
 
 	_, err = client.SetLxcConfig(vmr, paramMap)

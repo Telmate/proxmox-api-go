@@ -49,8 +49,7 @@ type ConfigQemu struct {
 	Disks           *QemuStorages `json:"disks,omitempty"`
 	EFIDisk         QemuDevice    `json:"efidisk,omitempty"`   // TODO should be a struct
 	FullClone       *int          `json:"fullclone,omitempty"` // TODO should probably be a bool
-	HaGroup         string        `json:"hagroup,omitempty"`
-	HaState         string        `json:"hastate,omitempty"` // TODO should be custom type with enum
+	HA              *GuestHA      `json:"ha,omitempty"`
 	Hookscript      string        `json:"hookscript,omitempty"`
 	Hotplug         string        `json:"hotplug,omitempty"`    // TODO should be a struct
 	Ipconfig        IpconfigMap   `json:"ipconfig,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
@@ -212,9 +211,11 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		return fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 	}
 
-	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
-	if err != nil {
-		return fmt.Errorf("[ERROR] %q", err)
+	if config.HA != nil {
+		err = config.HA.Set(vmr, client)
+		if err != nil {
+			return fmt.Errorf("error setting HA: %v", err)
+		}
 	}
 
 	return
@@ -952,6 +953,11 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 				return rebootRequired, nil
 			}
 		}
+		if newConfig.HA != nil { // Set HA
+			if err = newConfig.HA.Set_Unsafe(currentConfig.HA, vmr, client); err != nil {
+				return
+			}
+		}
 	} else { // Create
 		_, params, err = newConfig.mapToApiValues(ConfigQemu{})
 		if err != nil {
@@ -964,11 +970,12 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		if err = resizeNewDisks(vmr, client, newConfig.Disks, nil); err != nil {
 			return
 		}
-	}
 
-	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)
-	if err != nil {
-		return
+		if newConfig.HA != nil { // Create HA
+			if err = newConfig.HA.Set_Unsafe(nil, vmr, client); err != nil {
+				return
+			}
+		}
 	}
 
 	_, err = client.UpdateVMPool(vmr, newConfig.Pool)
@@ -979,8 +986,12 @@ func (config ConfigQemu) Validate() (err error) {
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
 	if config.Disks != nil {
-		err = config.Disks.Validate()
-		if err != nil {
+		if err = config.Disks.Validate(); err != nil {
+			return
+		}
+	}
+	if config.HA != nil {
+		if err = config.HA.Validate(); err != nil {
 			return
 		}
 	}
@@ -1221,9 +1232,11 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 		return err
 	}
 
-	_, err = client.UpdateVMHA(vmr, config.HaState, config.HaGroup)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
+	if config.HA != nil {
+		err = config.HA.Set(vmr, client)
+		if err != nil {
+			log.Printf("[ERROR] %q", err)
+		}
 	}
 
 	_, err = client.UpdateVMPool(vmr, config.Pool)
@@ -1279,14 +1292,9 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 
 	config.defaults()
 
-	// HAstate is return by the api for a vm resource type but not the HAgroup
-	err = client.ReadVMHA(vmr)
-	if err == nil {
-		config.HaState = vmr.HaState()
-		config.HaGroup = vmr.HaGroup()
-	} else {
-		//log.Printf("[DEBUG] VM %d(%s) has no HA config", vmr.vmId, vmConfig["hostname"])
-		return config, nil
+	config.HA, err = NewGuestHAFromApi(vmr, client)
+	if err != nil {
+		return
 	}
 	return
 }
