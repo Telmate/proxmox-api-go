@@ -23,22 +23,31 @@ func (config ConfigSnapshot) mapToApiValues() map[string]interface{} {
 	}
 }
 
-func (config ConfigSnapshot) CreateSnapshot(c *Client, vmr *VmRef) (err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
+// Creates a snapshot and validates the input
+func (config ConfigSnapshot) Create(c *Client, vmr *VmRef) (err error) {
+	if err = c.CheckVmRef(vmr); err != nil {
 		return
 	}
-	err = config.Validate()
-	if err != nil {
+	if err = config.Validate(); err != nil {
 		return
 	}
+	return config.Create_Unsafe(c, vmr)
+}
+
+// Create a snapshot without validating the input, use ConfigSnapshot.Create() to validate the input.
+func (config ConfigSnapshot) Create_Unsafe(c *Client, vmr *VmRef) error {
 	params := config.mapToApiValues()
-	_, err = c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
+	_, err := c.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Snapshot: %v, (params: %v)", err, string(params))
 	}
-	return
+	return nil
+}
+
+// deprecated use ConfigSnapshot.Create() instead
+func (config ConfigSnapshot) CreateSnapshot(c *Client, vmr *VmRef) error {
+	return config.Create(c, vmr)
 }
 
 func (config ConfigSnapshot) Validate() error {
@@ -48,44 +57,25 @@ func (config ConfigSnapshot) Validate() error {
 type rawSnapshots []interface{}
 
 func ListSnapshots(c *Client, vmr *VmRef) (rawSnapshots, error) {
-	err := c.CheckVmRef(vmr)
-	if err != nil {
+	if err := c.CheckVmRef(vmr); err != nil {
 		return nil, err
 	}
 	return c.GetItemConfigInterfaceArray("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/", "Guest", "SNAPSHOTS")
 }
 
-// Can only be used to update the description of an already existing snapshot
+// Updates the description of the specified snapshot, same as SnapshotName.UpdateDescription()
 func UpdateSnapshotDescription(c *Client, vmr *VmRef, snapshot SnapshotName, description string) (err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	err = snapshot.Validate()
-	if err != nil {
-		return
-	}
-	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snapshot)+"/config")
+	return snapshot.UpdateDescription(c, vmr, description)
 }
 
+// Deletes a snapshot, same as SnapshotName.Delete()
 func DeleteSnapshot(c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	err = snapshot.Validate()
-	if err != nil {
-		return
-	}
-	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + string(snapshot))
+	return snapshot.Delete(c, vmr)
 }
 
-func RollbackSnapshot(c *Client, vmr *VmRef, snapshot string) (exitStatus string, err error) {
-	err = c.CheckVmRef(vmr)
-	if err != nil {
-		return
-	}
-	return c.PostWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+snapshot+"/rollback")
+// Rollback to a snapshot, same as SnapshotName.Rollback()
+func RollbackSnapshot(c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
+	return snapshot.Rollback(c, vmr)
 }
 
 // Used for formatting the output when retrieving snapshots
@@ -154,6 +144,57 @@ const (
 	SnapshotName_Error_MinLength         string = "SnapshotName must be at least 3 characters long"
 	SnapshotName_Error_StartNoLetter     string = "SnapshotName must start with a letter"
 )
+
+// Deletes the specified snapshot, validates the input
+func (snap SnapshotName) Delete(c *Client, vmr *VmRef) (exitStatus string, err error) {
+	if err = c.CheckVmRef(vmr); err != nil {
+		return
+	}
+	if err = snap.Validate(); err != nil {
+		return
+	}
+	// TODO check if snapshot exists
+	return snap.Delete_Unsafe(c, vmr)
+}
+
+// Deletes the specified snapshot without validating the input, use SnapshotName.Delete() to validate the input.
+func (snap SnapshotName) Delete_Unsafe(c *Client, vmr *VmRef) (exitStatus string, err error) {
+	return c.DeleteWithTask("/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/snapshot/" + string(snap))
+}
+
+// Rollback to the specified snapshot, validates the input
+func (snap SnapshotName) Rollback(c *Client, vmr *VmRef) (exitStatus string, err error) {
+	if err = c.CheckVmRef(vmr); err != nil {
+		return
+	}
+	if err = snap.Validate(); err != nil {
+		return
+	}
+	// TODO check if snapshot exists
+	return snap.Rollback_Unsafe(c, vmr)
+}
+
+// Rollback to the specified snapshot without validating the input, use SnapshotName.Rollback() to validate the input.
+func (snap SnapshotName) Rollback_Unsafe(c *Client, vmr *VmRef) (exitStatus string, err error) {
+	return c.PostWithTask(nil, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback")
+}
+
+// Updates the description of the specified snapshot, validates the input
+func (snap SnapshotName) UpdateDescription(c *Client, vmr *VmRef, description string) (err error) {
+	if err = c.CheckVmRef(vmr); err != nil {
+		return
+	}
+	if err = snap.Validate(); err != nil {
+		return
+	}
+	// TODO check if snapshot exists
+	return snap.UpdateDescription_Unsafe(c, vmr, description)
+}
+
+// Updates the description of the specified snapshot without validating the input, use SnapshotName.UpdateDescription() to validate the input.
+func (snap SnapshotName) UpdateDescription_Unsafe(c *Client, vmr *VmRef, description string) error {
+	return c.Put(map[string]interface{}{"description": description}, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snap)+"/config")
+}
 
 func (name SnapshotName) Validate() error {
 	regex, _ := regexp.Compile(`^([a-zA-Z])([a-z]|[A-Z]|[0-9]|_|-){2,39}$`)

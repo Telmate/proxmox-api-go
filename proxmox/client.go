@@ -760,7 +760,7 @@ func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface
 
 // DEPRECATED superseded by RollbackSnapshot()
 func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string, err error) {
-	return RollbackSnapshot(c, vmr, snapshot)
+	return RollbackSnapshot(c, vmr, SnapshotName(snapshot))
 }
 
 // DEPRECATED SetVmConfig - send config options
