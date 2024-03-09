@@ -3,6 +3,7 @@ package storagesubtests
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
@@ -13,23 +14,23 @@ var GlusterfsFull = proxmox.ConfigStorage{
 	GlusterFS: &proxmox.ConfigStorageGlusterFS{
 		Server1:       "10.20.1.1",
 		Server2:       "10.20.1.2",
-		Preallocation: proxmox.PointerString("full"),
+		Preallocation: util.Pointer("full"),
 		Volume:        "test",
 	},
 	Content: &proxmox.ConfigStorageContent{
-		Backup:    proxmox.PointerBool(true),
-		DiskImage: proxmox.PointerBool(true),
-		Iso:       proxmox.PointerBool(true),
-		Snippets:  proxmox.PointerBool(true),
-		Template:  proxmox.PointerBool(true),
+		Backup:    util.Pointer(true),
+		DiskImage: util.Pointer(true),
+		Iso:       util.Pointer(true),
+		Snippets:  util.Pointer(true),
+		Template:  util.Pointer(true),
 	},
 	BackupRetention: &proxmox.ConfigStorageBackupRetention{
-		Last:    proxmox.PointerInt(6),
-		Hourly:  proxmox.PointerInt(5),
-		Daily:   proxmox.PointerInt(4),
-		Monthly: proxmox.PointerInt(3),
-		Weekly:  proxmox.PointerInt(2),
-		Yearly:  proxmox.PointerInt(1),
+		Last:    util.Pointer(6),
+		Hourly:  util.Pointer(5),
+		Daily:   util.Pointer(4),
+		Monthly: util.Pointer(3),
+		Weekly:  util.Pointer(2),
+		Yearly:  util.Pointer(1),
 	},
 }
 
@@ -40,7 +41,7 @@ var GlusterfsEmpty = proxmox.ConfigStorage{
 		Volume:  "test",
 	},
 	Content: &proxmox.ConfigStorageContent{
-		Iso: proxmox.PointerBool(true),
+		Iso: util.Pointer(true),
 	},
 }
 
@@ -53,10 +54,10 @@ func GlusterfsGetFull(name string, t *testing.T) {
 func GlusterfsGetEmpty(name string, t *testing.T) {
 	s := CloneJson(GlusterfsEmpty)
 	s.ID = name
-	s.GlusterFS.Preallocation = proxmox.PointerString("metadata")
-	s.Content.Backup = proxmox.PointerBool(false)
-	s.Content.DiskImage = proxmox.PointerBool(false)
-	s.Content.Snippets = proxmox.PointerBool(false)
-	s.Content.Template = proxmox.PointerBool(false)
+	s.GlusterFS.Preallocation = util.Pointer("metadata")
+	s.Content.Backup = util.Pointer(false)
+	s.Content.DiskImage = util.Pointer(false)
+	s.Content.Snippets = util.Pointer(false)
+	s.Content.Template = util.Pointer(false)
 	Get(s, name, t)
 }

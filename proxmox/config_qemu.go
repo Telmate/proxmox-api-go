@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 // Currently ZFS local, LVM, Ceph RBD, CephFS, Directory and virtio-scsi-pci are considered.
@@ -237,7 +239,7 @@ func (config *ConfigQemu) defaults() {
 		config.EFIDisk = QemuDevice{}
 	}
 	if config.Onboot == nil {
-		config.Onboot = PointerBool(true)
+		config.Onboot = util.Pointer(true)
 	}
 	if config.Hotplug == "" {
 		config.Hotplug = "network,disk,usb"
@@ -255,7 +257,7 @@ func (config *ConfigQemu) defaults() {
 		config.QemuDisks = QemuDevices{}
 	}
 	if config.QemuKVM == nil {
-		config.QemuKVM = PointerBool(true)
+		config.QemuKVM = util.Pointer(true)
 	}
 	if config.QemuNetworks == nil {
 		config.QemuNetworks = QemuDevices{}
@@ -285,7 +287,7 @@ func (config *ConfigQemu) defaults() {
 		config.Scsihw = "lsi"
 	}
 	if config.Tablet == nil {
-		config.Tablet = PointerBool(true)
+		config.Tablet = util.Pointer(true)
 	}
 
 }
@@ -541,7 +543,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Nameserver = params["nameserver"].(string)
 	}
 	if _, isSet := params["onboot"]; isSet {
-		config.Onboot = PointerBool(Itob(int(params["onboot"].(float64))))
+		config.Onboot = util.Pointer(Itob(int(params["onboot"].(float64))))
 	}
 	if _, isSet := params["cores"]; isSet {
 		config.QemuCores = int(params["cores"].(float64))
@@ -550,10 +552,10 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.QemuCpu = params["cpu"].(string)
 	}
 	if _, isSet := params["kvm"]; isSet {
-		config.QemuKVM = PointerBool(Itob(int(params["kvm"].(float64))))
+		config.QemuKVM = util.Pointer(Itob(int(params["kvm"].(float64))))
 	}
 	if _, isSet := params["numa"]; isSet {
-		config.QemuNuma = PointerBool(Itob(int(params["numa"].(float64))))
+		config.QemuNuma = util.Pointer(Itob(int(params["numa"].(float64))))
 	}
 	if _, isSet := params["ostype"]; isSet {
 		config.QemuOs = params["ostype"].(string)
@@ -580,7 +582,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Startup = params["startup"].(string)
 	}
 	if _, isSet := params["tablet"]; isSet {
-		config.Tablet = PointerBool(Itob(int(params["tablet"].(float64))))
+		config.Tablet = util.Pointer(Itob(int(params["tablet"].(float64))))
 	}
 	if _, isSet := params["tags"]; isSet {
 		config.Tags = strings.TrimSpace(params["tags"].(string))

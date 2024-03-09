@@ -3,6 +3,7 @@ package storagesubtests
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
@@ -12,12 +13,12 @@ var ZFSFull = proxmox.ConfigStorage{
 	Type:   "zfs",
 	ZFS: &proxmox.ConfigStorageZFS{
 		Pool:          "test-pool",
-		Blocksize:     proxmox.PointerString("4k"),
+		Blocksize:     util.Pointer("4k"),
 		Thinprovision: true,
 	},
 	Content: &proxmox.ConfigStorageContent{
-		Container: proxmox.PointerBool(true),
-		DiskImage: proxmox.PointerBool(true),
+		Container: util.Pointer(true),
+		DiskImage: util.Pointer(true),
 	},
 }
 
@@ -27,7 +28,7 @@ var ZFSEmpty = proxmox.ConfigStorage{
 		Pool: "test-pool",
 	},
 	Content: &proxmox.ConfigStorageContent{
-		DiskImage: proxmox.PointerBool(true),
+		DiskImage: util.Pointer(true),
 	},
 }
 
@@ -40,7 +41,7 @@ func ZFSGetFull(name string, t *testing.T) {
 func ZFSGetEmpty(name string, t *testing.T) {
 	s := CloneJson(ZFSEmpty)
 	s.ID = name
-	s.ZFS.Blocksize = proxmox.PointerString("8k")
-	s.Content.Container = proxmox.PointerBool(false)
+	s.ZFS.Blocksize = util.Pointer("8k")
+	s.Content.Container = util.Pointer(false)
 	Get(s, name, t)
 }

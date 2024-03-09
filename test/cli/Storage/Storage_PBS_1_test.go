@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	storagesubtests "github.com/Telmate/proxmox-api-go/test/cli/Storage/storage-sub-tests"
 )
@@ -14,7 +15,7 @@ func Test_Storage_PBS_1_Cleanup(t *testing.T) {
 
 func Test_Storage_PBS_1_Create_Empty(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.PBSEmpty)
-	s.PBS.Password = proxmox.PointerString("Enter123!")
+	s.PBS.Password = util.Pointer("Enter123!")
 	s.BackupRetention = &proxmox.ConfigStorageBackupRetention{}
 	storagesubtests.Create(s, "pbs-test-1", t)
 }
@@ -22,9 +23,9 @@ func Test_Storage_PBS_1_Create_Empty(t *testing.T) {
 func Test_Storage_PBS_1_Get_Empty(t *testing.T) {
 	s := storagesubtests.CloneJson(storagesubtests.PBSEmpty)
 	s.ID = "pbs-test-1"
-	s.PBS.Port = proxmox.PointerInt(8007)
+	s.PBS.Port = util.Pointer(8007)
 	s.Content = &proxmox.ConfigStorageContent{
-		Backup: proxmox.PointerBool(true),
+		Backup: util.Pointer(true),
 	}
 	storagesubtests.Get(s, s.ID, t)
 }

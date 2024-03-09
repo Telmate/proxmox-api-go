@@ -1,6 +1,7 @@
 package storagesubtests
 
 import (
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
@@ -11,7 +12,7 @@ var ZFSoverISCSI_IstgtFull = proxmox.ConfigStorage{
 	ZFSoverISCSI: &proxmox.ConfigStorageZFSoverISCSI{
 		Portal:        "test-portal",
 		Pool:          "test-pool",
-		Blocksize:     proxmox.PointerString("8k"),
+		Blocksize:     util.Pointer("8k"),
 		Target:        "test-target",
 		Thinprovision: true,
 		ISCSIprovider: "istgt",
@@ -20,7 +21,7 @@ var ZFSoverISCSI_IstgtFull = proxmox.ConfigStorage{
 		},
 	},
 	Content: &proxmox.ConfigStorageContent{
-		DiskImage: proxmox.PointerBool(true),
+		DiskImage: util.Pointer(true),
 	},
 }
 

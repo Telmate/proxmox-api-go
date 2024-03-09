@@ -3,6 +3,7 @@ package storagesubtests
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
@@ -15,8 +16,8 @@ var LVMFull = proxmox.ConfigStorage{
 		Shared: true,
 	},
 	Content: &proxmox.ConfigStorageContent{
-		Container: proxmox.PointerBool(true),
-		DiskImage: proxmox.PointerBool(true),
+		Container: util.Pointer(true),
+		DiskImage: util.Pointer(true),
 	},
 }
 
@@ -26,7 +27,7 @@ var LVMEmpty = proxmox.ConfigStorage{
 		VGname: "TestVolumeGroup",
 	},
 	Content: &proxmox.ConfigStorageContent{
-		DiskImage: proxmox.PointerBool(true),
+		DiskImage: util.Pointer(true),
 	},
 }
 
@@ -39,6 +40,6 @@ func LVMGetFull(name string, t *testing.T) {
 func LVMGetEmpty(name string, t *testing.T) {
 	s := CloneJson(LVMEmpty)
 	s.ID = name
-	s.Content.Container = proxmox.PointerBool(false)
+	s.Content.Container = util.Pointer(false)
 	Get(s, name, t)
 }

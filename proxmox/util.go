@@ -178,21 +178,6 @@ func ArrayToStringType(inputarray []interface{}) (array []string) {
 	return
 }
 
-// Creates a pointer to a string
-func PointerString(text string) *string {
-	return &text
-}
-
-// Creates a pointer to an int
-func PointerInt(number int) *int {
-	return &number
-}
-
-// Creates a pointer to a bool
-func PointerBool(boolean bool) *bool {
-	return &boolean
-}
-
 func failError(err error) {
 	if err != nil {
 		log.Fatal(err)
