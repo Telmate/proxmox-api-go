@@ -964,6 +964,9 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		if err = resizeNewDisks(vmr, client, newConfig.Disks, nil); err != nil {
 			return
 		}
+		if err = client.insertCachedPermission(permissionPath(permissionCategory_GuestPath) + "/" + permissionPath(strconv.Itoa(vmr.vmId))); err != nil {
+			return
+		}
 	}
 
 	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)

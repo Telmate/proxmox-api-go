@@ -27,14 +27,16 @@ const exitStatusSuccess = "OK"
 
 // Client - URL, user and password to specific Proxmox node
 type Client struct {
-	session      *Session
-	ApiUrl       string
-	Username     string
-	Password     string
-	Otp          string
-	TaskTimeout  int
-	version      *Version
-	versionMutex *sync.Mutex
+	session         *Session
+	ApiUrl          string
+	Username        string
+	Password        string
+	Otp             string
+	TaskTimeout     int
+	permissionMutex *sync.Mutex
+	permissions     map[permissionPath]privileges
+	version         *Version
+	versionMutex    *sync.Mutex
 }
 
 const (
@@ -112,7 +114,7 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 		return nil, err
 	}
 	if err_s == nil {
-		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout, versionMutex: &sync.Mutex{}}
+		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout, versionMutex: &sync.Mutex{}, permissionMutex: &sync.Mutex{}, permissions: make(map[permissionPath]privileges)}
 	}
 
 	return client, err_s
@@ -2225,6 +2227,102 @@ func (c *Client) CheckTask(resp *http.Response) (exitStatus string, err error) {
 		return "", err
 	}
 	return c.WaitForCompletion(taskResponse)
+}
+
+// return a list of requested permissions from the cache for further processing
+func (c *Client) cachedPermissions(paths []permissionPath) (map[permissionPath]privileges, error) {
+	c.permissionMutex.Lock()
+	defer c.permissionMutex.Unlock()
+	if c.permissions == nil {
+		permissionMap, err := c.getPermissions()
+		if err != nil {
+			return nil, err
+		}
+		c.permissions = permissionMap
+	}
+	extractedPermissions := make(map[permissionPath]privileges)
+	for _, path := range paths {
+		if permission, ok := c.permissions[path]; ok {
+			extractedPermissions[path] = permission
+		}
+	}
+	return extractedPermissions, nil
+}
+
+// Returns an error if the user does not have the required permissions on the given category and itme.
+func (c *Client) CheckPermissions(perms []Permission) error {
+	for _, perm := range perms {
+		if err := perm.Validate(); err != nil {
+			return err
+		}
+	}
+	return c.checkPermissions(perms)
+}
+
+// internal function to check permissions, does not validate input.
+func (c *Client) checkPermissions(perms []Permission) error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if c.Username == "root@pam" { // no permissions check for root
+		return nil
+	}
+	permissions, err := c.cachedPermissions(Permission{}.buildPathList(perms))
+	if err != nil {
+		return err
+	}
+	for _, perm := range perms {
+		err = perm.check(permissions)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// inserts a permission into the cache, this is useful for when we create an item, as refreshing the whole cache is quite expensive.
+func (c *Client) insertCachedPermission(path permissionPath) error {
+	rawPermissions, err := c.getPermissionsRaw()
+	if err != nil {
+		return err
+	}
+	if rawPrivileges, ok := rawPermissions[string(path)]; ok {
+		privileges := privileges{}.mapToSDK(rawPrivileges.(map[string]interface{}))
+		c.permissionMutex.Lock()
+		c.permissions[path] = privileges
+		c.permissionMutex.Unlock()
+		return nil
+	}
+	return nil
+}
+
+// get the users permissions from the cache and decodes them for the SDK
+func (c *Client) getPermissions() (map[permissionPath]privileges, error) {
+	permissions, err := c.getPermissionsRaw()
+	if err != nil {
+		return nil, err
+	}
+	return permissionPath("").mapToSDK(permissions), nil
+}
+
+// returns the raw permissions from the API
+func (c *Client) getPermissionsRaw() (map[string]interface{}, error) {
+	return c.GetItemConfigMapStringInterface("/access/permissions", "", "permissions")
+}
+
+// RefreshPermissions fetches the permissions from the API and updates the cache.
+func (c *Client) RefreshPermissions() error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	tmpPermsissions, err := c.getPermissions()
+	if err != nil {
+		return err
+	}
+	c.permissionMutex.Lock()
+	c.permissions = tmpPermsissions
+	c.permissionMutex.Unlock()
+	return nil
 }
 
 // Returns the Client's cached version if it exists, otherwise fetches the version from the API.

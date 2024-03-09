@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -196,6 +197,14 @@ func failError(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func arrayToStringArray[T fmt.Stringer](arr []T) []string {
+	strArr := make([]string, len(arr))
+	for i, v := range arr {
+		strArr[i] = v.String()
+	}
+	return strArr
 }
 
 // Create list of http.Header out of string, separator is ","
