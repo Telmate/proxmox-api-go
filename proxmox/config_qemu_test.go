@@ -6022,10 +6022,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		// Valid HA
 		{name: "Valid HA",
 			input: ConfigQemu{HA: &GuestHA{
-				Group:       PointerHaGroupName("test"),
-				Reallocates: PointerHaRelocate(10),
-				Restarts:    PointerHaRestart(0),
-				State:       PointerHaState("started"),
+				Group:     PointerHaGroupName("test"),
+				Relocates: PointerHaRelocate(10),
+				Restarts:  PointerHaRestart(0),
+				State:     PointerHaState("started"),
 			}},
 		},
 		{name: "Valid HA Minimum",
@@ -7116,7 +7116,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			err:   errors.New(HaGroupName_Error_Illegal_Start),
 		},
 		{name: "Invalid HA Reallocates",
-			input: ConfigQemu{HA: &GuestHA{Reallocates: PointerHaRelocate(11)}},
+			input: ConfigQemu{HA: &GuestHA{Relocates: PointerHaRelocate(11)}},
 			err:   errors.New(HaRelocate_Error_UpperBound),
 		},
 		{name: "Invalid HA Restart",

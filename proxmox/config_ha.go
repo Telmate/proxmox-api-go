@@ -7,12 +7,12 @@ import (
 )
 
 type GuestHA struct {
-	Comment     *string      `json:"comment"`          // Description.
-	Delete      bool         `json:"remove,omitempty"` // When true, remove HA settings for the Guest.
-	Group       *HaGroupName `json:"group"`            // May be empty, in which case the guest is not part of a group.
-	Reallocates *HaRelocate  `json:"reallocates"`
-	Restarts    *HaRestart   `json:"restarts"`
-	State       *HaState     `json:"state"`
+	Comment   *string      `json:"comment"`          // Description.
+	Delete    bool         `json:"remove,omitempty"` // When true, remove HA settings for the Guest.
+	Group     *HaGroupName `json:"group"`            // May be empty, in which case the guest is not part of a group.
+	Relocates *HaRelocate  `json:"relocates"`
+	Restarts  *HaRestart   `json:"restarts"`
+	State     *HaState     `json:"state"`
 }
 
 // TODO change type when we have a custom type for guestID
@@ -24,27 +24,27 @@ func (g GuestHA) mapToApi(guestID int) map[string]interface{} {
 	if g.Restarts != nil {
 		params["max_restart"] = int(*g.Restarts)
 	}
-	if g.Reallocates != nil {
-		params["max_relocate"] = int(*g.Reallocates)
+	if g.Relocates != nil {
+		params["max_relocate"] = int(*g.Relocates)
 	}
-	if guestID > 0 { // Update
-		if g.Comment != nil {
+	if guestID > 0 { // Create
+		if g.Comment != nil && *g.Comment != "" {
 			params["comment"] = *g.Comment
 		}
 		params["sid"] = guestID
+		if g.Group != nil && *g.Group != "" {
+			params["group"] = string(*g.Group)
+		}
+	} else { // Update
+		if g.Comment != nil {
+			params["comment"] = *g.Comment
+		}
 		if g.Group != nil {
 			if *g.Group != "" {
 				params["group"] = string(*g.Group)
 			} else {
 				params["delete"] = "group"
 			}
-		}
-	} else { // Create
-		if g.Comment != nil && *g.Comment != "" {
-			params["comment"] = *g.Comment
-		}
-		if g.Group != nil && *g.Group != "" {
-			params["group"] = string(*g.Group)
 		}
 	}
 	return params
@@ -61,7 +61,7 @@ func (GuestHA) mapToSDK(params map[string]interface{}) (config GuestHA) {
 	}
 	if itemValue, isSet := params["max_relocate"]; isSet {
 		relocate := HaRelocate(itemValue.(float64))
-		config.Reallocates = &relocate
+		config.Relocates = &relocate
 	}
 	if itemValue, isSet := params["max_restart"]; isSet {
 		restarts := HaRestart(itemValue.(float64))
@@ -129,8 +129,8 @@ func (g GuestHA) Validate() (err error) {
 			return
 		}
 	}
-	if g.Reallocates != nil {
-		if err = g.Reallocates.Validate(); err != nil {
+	if g.Relocates != nil {
+		if err = g.Relocates.Validate(); err != nil {
 			return
 		}
 	}
