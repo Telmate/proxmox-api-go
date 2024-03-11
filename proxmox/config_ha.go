@@ -93,8 +93,9 @@ func (g GuestHA) Set_Unsafe(current *GuestHA, vmr *VmRef, client *Client) (err e
 		if g.State != nil {
 			vmr.haState = *g.State
 		}
-		vmr.haGroup = *g.Group
-		return
+		if g.Group != nil {
+			vmr.haGroup = *g.Group
+		}
 	}
 	if g.Delete { // delete
 		if err = client.Delete("/cluster/ha/resources/" + strconv.FormatInt(int64(vmr.vmId), 10)); err != nil {
@@ -111,7 +112,9 @@ func (g GuestHA) Set_Unsafe(current *GuestHA, vmr *VmRef, client *Client) (err e
 	if g.State != nil {
 		vmr.haState = *g.State
 	}
-	vmr.haGroup = *g.Group
+	if g.Group != nil {
+		vmr.haGroup = *g.Group
+	}
 	return
 }
 
@@ -226,6 +229,10 @@ func NewGuestHAFromApi(vmr *VmRef, client *Client) (*GuestHA, error) {
 	}
 	ha := GuestHA{}.mapToSDK(params)
 	vmr.haState = *ha.State
-	vmr.haGroup = *ha.Group
+	if ha.Group != nil {
+		vmr.haGroup = *ha.Group
+	} else {
+		vmr.haGroup = ""
+	}
 	return &ha, nil
 }
