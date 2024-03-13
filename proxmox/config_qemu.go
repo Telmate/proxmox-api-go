@@ -88,8 +88,9 @@ type ConfigQemu struct {
 	Sshkeys         string        `json:"sshkeys,omitempty"`      // TODO should be an array of strings
 	Startup         string        `json:"startup,omitempty"`      // TODO should be a struct?
 	Tablet          *bool         `json:"tablet,omitempty"`
-	Tags            string        `json:"tags,omitempty"` // TODO should be an array of a custom type as there are character and length limitations
-	VmID            int           `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
+	Tags            string        `json:"tags,omitempty"`     // TODO should be an array of a custom type as there are character and length limitations
+	TPMState        QemuDevice    `json:"tpmstate,omitempty"` // TODO should be a struct
+	VmID            int           `json:"vmid,omitempty"`     // TODO should be a custom type as there are limitations
 }
 
 const (
@@ -219,6 +220,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		return fmt.Errorf("[ERROR] %q", err)
 	}
 
+	// Create TPM State disk
+	config.CreateQemuTpmParams(params)
+
 	return
 }
 
@@ -288,6 +292,9 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.Tablet == nil {
 		config.Tablet = util.Pointer(true)
+	}
+	if config.TPMState == nil {
+		config.TPMState = QemuDevice{}
 	}
 
 }
@@ -444,6 +451,9 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	config.CreateQemuUsbsParams(params)
 
 	config.CreateQemuPCIsParams(params)
+
+	// Create TPM state disk
+	config.CreateQemuTpmParams(params)
 
 	err = config.CreateIpconfigParams(params)
 	if err != nil {
@@ -814,6 +824,15 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		efiDiskConfMap["storage"] = storageName
 		efiDiskConfMap["file"] = fileName
 		config.EFIDisk = efiDiskConfMap
+	}
+
+	// tpmstate
+	if tpmstate, isSet := params["tpmstate0"].(string); isSet {
+		tpmStateConfMap := ParsePMConf(tpmstate, "volume")
+		storageName, fileName := ParseSubConf(tpmStateConfMap["volume"].(string), ":")
+		tpmStateConfMap["storage"] = storageName
+		tpmStateConfMap["file"] = fileName
+		config.TPMState = tpmStateConfMap
 	}
 
 	return &config, nil
@@ -1731,6 +1750,30 @@ func (p QemuDeviceParam) createDeviceParam(
 	}
 
 	return p
+}
+
+// Create tpm parameter.
+func (c ConfigQemu) CreateQemuTpmParams(params map[string]interface{}) {
+	tpmParam := QemuDeviceParam{}
+	tpmParam = tpmParam.createDeviceParam(c.TPMState, nil)
+
+	if len(tpmParam) > 0 {
+		storage_info := []string{}
+		storage := ""
+		for _, param := range tpmParam {
+			key := strings.Split(param, "=")
+			if key[0] == "storage" {
+				// Proxmox format for disk creation
+				storage = fmt.Sprintf("%s:1", key[1])
+			} else {
+				storage_info = append(storage_info, param)
+			}
+		}
+		if len(storage_info) > 0 {
+			storage = fmt.Sprintf("%s,%s", storage, strings.Join(storage_info, ","))
+		}
+		params["tpmstate0"] = storage
+	}
 }
 
 // readDeviceConfig - get standard sub-conf strings where `key=value` and update conf map.

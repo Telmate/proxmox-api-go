@@ -5763,6 +5763,17 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				"volume":  "local-lvm:vm-1000-disk-0",
 			}},
 		},
+		// TPM
+		{name: "TPM State",
+			input: map[string]interface{}{"tpmstate0": "local-lvm:vm-1000-disk-0.raw,size=4M,version=v2.0"},
+			output: &ConfigQemu{TPMState: map[string]interface{}{
+				"file":    "vm-1000-disk-0.raw",
+				"size":    "4M",
+				"storage": "local-lvm",
+				"version": "v2.0",
+				"volume":  "local-lvm:vm-1000-disk-0.raw",
+			}},
+		},
 		// Node
 		{name: "Node vmr nil",
 			output: &ConfigQemu{},
