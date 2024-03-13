@@ -183,6 +183,9 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	// Create EFI disk
 	config.CreateQemuEfiParams(params)
 
+	// Create TPM State
+	config.CreateQemuTpmParams(params)
+
 	// Create VirtIO RNG
 	config.CreateQemuRngParams(params)
 
@@ -219,9 +222,6 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 	if err != nil {
 		return fmt.Errorf("[ERROR] %q", err)
 	}
-
-	// Create TPM State disk
-	config.CreateQemuTpmParams(params)
 
 	return
 }
@@ -432,6 +432,9 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	// Create EFI disk
 	config.CreateQemuEfiParams(params)
 
+	// Create TPM state
+	config.CreateQemuTpmParams(params)
+
 	// Create VirtIO RNG
 	config.CreateQemuRngParams(params)
 
@@ -451,9 +454,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	config.CreateQemuUsbsParams(params)
 
 	config.CreateQemuPCIsParams(params)
-
-	// Create TPM state disk
-	config.CreateQemuTpmParams(params)
 
 	err = config.CreateIpconfigParams(params)
 	if err != nil {
@@ -1758,21 +1758,21 @@ func (c ConfigQemu) CreateQemuTpmParams(params map[string]interface{}) {
 	tpmParam = tpmParam.createDeviceParam(c.TPMState, nil)
 
 	if len(tpmParam) > 0 {
-		storage_info := []string{}
-		storage := ""
+		tpm_info := []string{}
+		tpm := ""
 		for _, param := range tpmParam {
 			key := strings.Split(param, "=")
 			if key[0] == "storage" {
 				// Proxmox format for disk creation
-				storage = fmt.Sprintf("%s:1", key[1])
+				tpm = fmt.Sprintf("%s:1", key[1])
 			} else {
-				storage_info = append(storage_info, param)
+				tpm_info = append(tpm_info, param)
 			}
 		}
-		if len(storage_info) > 0 {
-			storage = fmt.Sprintf("%s,%s", storage, strings.Join(storage_info, ","))
+		if len(tpm_info) > 0 {
+			tpm = fmt.Sprintf("%s,%s", tpm, strings.Join(tpm_info, ","))
 		}
-		params["tpmstate0"] = storage
+		params["tpmstate0"] = tpm
 	}
 }
 
