@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
 	"github.com/stretchr/testify/require"
 )
@@ -1274,6 +1275,20 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			config: &ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 			output: map[string]interface{}{"ide2": "test:iso/file.iso,media=cdrom"},
 		},
+		// Create TPM
+		{name: "Create TPM",
+			config: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion_2_0)}},
+			output: map[string]interface{}{"tpmstate0": "test:1,version=v2.0"},
+		},
+		// Delete
+
+		// Delete TPM
+		{name: "Delete TPM",
+			config: &ConfigQemu{TPM: &TpmState{Delete: true}},
+			output: map[string]interface{}{"delete": "tpmstate0"}},
+		{name: "Delete TPM Full",
+			config: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion_2_0), Delete: true}},
+			output: map[string]interface{}{"delete": "tpmstate0"}},
 		// Update
 
 		// Update Disk.Ide
@@ -3253,6 +3268,11 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			config:        &ConfigQemu{Iso: &IsoFile{Storage: "NewStorage", File: "file.iso"}},
 			output:        map[string]interface{}{"ide2": "NewStorage:iso/file.iso,media=cdrom"},
 		},
+		// Update TPM
+		{name: "Update TPM",
+			config:        &ConfigQemu{TPM: &TpmState{Storage: "aaaa", Version: util.Pointer(TpmVersion_1_2)}},
+			currentConfig: ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion_2_0)}},
+			output:        map[string]interface{}{}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
@@ -5799,6 +5819,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			vmr:    &VmRef{vmId: 100},
 			output: &ConfigQemu{VmID: 100},
 		},
+		// TPM
+		{name: "TPM",
+			input:  map[string]interface{}{"tpmstate0": string("local-lvm:vm-101-disk-0,size=4M,version=v2.0")},
+			output: &ConfigQemu{TPM: &TpmState{Storage: "local-lvm", Version: util.Pointer(TpmVersion("v2.0"))}},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
@@ -5811,6 +5836,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		})
 	}
 }
+
 func Test_ConfigQemu_Validate(t *testing.T) {
 	BandwidthValid0 := QemuDiskBandwidth{
 		MBps: QemuDiskBandwidthMBps{
@@ -5902,9 +5928,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 	}
 	validCloudInit := QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}
 	testData := []struct {
-		name  string
-		input ConfigQemu
-		err   error
+		name    string
+		input   ConfigQemu
+		current *ConfigQemu
+		err     error
 	}{
 		// Valid
 		// Valid Disks
@@ -6015,6 +6042,15 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				}}},
 			}},
 		},
+		// Valid Tpm
+		{name: "Valid TPM Create",
+			input: ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v2.0"))}}},
+		{name: "Valid TPM Update",
+			input:   ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v2.0"))}},
+			current: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v1.2"))}}},
+		{name: "Valid TPM Update Version=nil",
+			input:   ConfigQemu{TPM: &TpmState{Storage: "test"}},
+			current: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v1.2"))}}},
 		// Invalid
 		// Invalid Disks Mutually exclusive Ide
 		{name: "Invalid Disks MutuallyExclusive Ide 0",
@@ -7094,15 +7130,31 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}},
 			err:   errors.New(Error_QemuWorldWideName_Invalid),
 		},
+		// invalid TMP
+		{name: "Invalid TPM errors.New(storage is required) Create",
+			input: ConfigQemu{TPM: &TpmState{Storage: ""}},
+			err:   errors.New("storage is required")},
+		{name: "Invalid TPM errors.New(storage is required) Update",
+			input:   ConfigQemu{TPM: &TpmState{Storage: ""}},
+			current: &ConfigQemu{TPM: &TpmState{}},
+			err:     errors.New("storage is required")},
+		{name: "Invalid TPM errors.New(TmpState_Error_VersionRequired) Create",
+			input: ConfigQemu{TPM: &TpmState{Storage: "test", Version: nil}},
+			err:   errors.New(TmpState_Error_VersionRequired)},
+		{name: "Invalid TPM errors.New(TmpVersion_Error_Invalid) Create",
+			input: ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion(""))}},
+			err:   errors.New(TpmVersion_Error_Invalid)},
+		{name: "Invalid TPM errors.New(TmpVersion_Error_Invalid) Update",
+			input:   ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion(""))}},
+			current: &ConfigQemu{TPM: &TpmState{}},
+			err:     errors.New(TpmVersion_Error_Invalid)},
 	}
 	for _, test := range testData {
-		t.Run(test.name, func(*testing.T) {
-			if test.err != nil {
-				require.Equal(t, test.input.Validate(), test.err, test.name)
-			} else {
-				require.NoError(t, test.input.Validate(), test.name)
-			}
-		})
+		if test.current == nil {
+			t.Run(test.name, func(*testing.T) {
+				require.Equal(t, test.input.Validate(test.current), test.err, test.name)
+			})
+		}
 	}
 }
 
