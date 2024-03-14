@@ -87,6 +87,7 @@ type ConfigQemu struct {
 	Smbios1         string        `json:"smbios1,omitempty"`      // TODO should be custom type with enum?
 	Sshkeys         string        `json:"sshkeys,omitempty"`      // TODO should be an array of strings
 	Startup         string        `json:"startup,omitempty"`      // TODO should be a struct?
+	TPM             *TpmState     `json:"tpm,omitempty"`
 	Tablet          *bool         `json:"tablet,omitempty"`
 	Tags            string        `json:"tags,omitempty"` // TODO should be an array of a custom type as there are character and length limitations
 	VmID            int           `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
@@ -391,6 +392,11 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.Smbios1 != "" {
 		params["smbios1"] = config.Smbios1
 	}
+	if config.TPM != nil {
+		if delete := config.TPM.mapToApi(params, currentConfig.TPM); delete != "" {
+			itemsToDelete = AddToList(itemsToDelete, delete)
+		}
+	}
 
 	if config.Iso != nil {
 		if config.Disks == nil {
@@ -544,6 +550,9 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["onboot"]; isSet {
 		config.Onboot = util.Pointer(Itob(int(params["onboot"].(float64))))
+	}
+	if itemValue, isSet := params["tpmstate0"]; isSet {
+		config.TPM = TpmState{}.mapToSDK(itemValue.(string))
 	}
 	if _, isSet := params["cores"]; isSet {
 		config.QemuCores = int(params["cores"].(float64))
@@ -840,13 +849,13 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 	return
 }
 
+// currentConfig will be mutated
 func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
 	err = newConfig.setVmr(vmr)
 	if err != nil {
 		return
 	}
-	err = newConfig.Validate()
-	if err != nil {
+	if err = newConfig.Validate(currentConfig); err != nil {
 		return
 	}
 
@@ -854,6 +863,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 	var exitStatus string
 
 	if currentConfig != nil { // Update
+		// TODO implement tmp move and version change
 		url := "/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/config"
 		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 		stopped := false
@@ -871,6 +881,18 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 				return false, err
 			}
 			itemsToDeleteBeforeUpdate = newConfig.Disks.cloudInitRemove(*currentConfig.Disks)
+		}
+
+		if newConfig.TPM != nil && currentConfig.TPM != nil { // delete or move TPM
+			delete, disk := newConfig.TPM.markChanges(*currentConfig.TPM)
+			if delete != "" { // delete
+				itemsToDeleteBeforeUpdate = AddToList(itemsToDeleteBeforeUpdate, delete)
+				currentConfig.TPM = nil
+			} else if disk != nil { // move
+				if _, err := disk.move(true, vmr, client); err != nil {
+					return false, err
+				}
+			}
 		}
 
 		if itemsToDeleteBeforeUpdate != "" {
@@ -980,13 +1002,24 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 	return
 }
 
-func (config ConfigQemu) Validate() (err error) {
+func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
 	if config.Disks != nil {
 		err = config.Disks.Validate()
 		if err != nil {
 			return
+		}
+	}
+	if config.TPM != nil {
+		if current == nil {
+			if err = config.TPM.Validate(nil); err != nil {
+				return
+			}
+		} else {
+			if err = config.TPM.Validate(current.TPM); err != nil {
+				return
+			}
 		}
 	}
 
