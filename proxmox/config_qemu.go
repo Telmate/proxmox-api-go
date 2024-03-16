@@ -368,6 +368,9 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.Onboot != nil {
 		params["onboot"] = *config.Onboot
 	}
+	if config.Protection != nil {
+		params["protection"] = *config.Protection
+	}
 	if config.QemuOs != "" {
 		params["ostype"] = config.QemuOs
 	}
