@@ -20,7 +20,7 @@ func Test_Clone_Qemu_VM(t *testing.T) {
 	_ = Test.CreateTest()
 	config := _create_vm_spec(false)
 
-	config.CreateVm(_create_vmref(), Test.GetClient())
+	config.Create(_create_vmref(), Test.GetClient())
 
 	cloneConfig := _create_vm_spec(false)
 

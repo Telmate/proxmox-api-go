@@ -12,7 +12,7 @@ func Test_Start_Stop_Qemu_VM_Setup(t *testing.T) {
 	_ = Test.CreateTest()
 
 	config := _create_vm_spec(false)
-	config.CreateVm(_create_vmref(), Test.GetClient())
+	config.Create(_create_vmref(), Test.GetClient())
 }
 
 func Test_Start_Qemu_VM(t *testing.T) {
