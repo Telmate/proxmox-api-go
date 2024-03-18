@@ -153,7 +153,10 @@ createQemu JSON Sample:
   "os": "l26",
   "cores": 2,
   "sockets": 1,
-  "iso": "local:iso/ubuntu-14.04.5-server-amd64.iso",
+  "iso": {
+    "storage": "local",
+    "file": "ubuntu-14.04.5-server-amd64.iso"
+  },
   "disk": {
     "0": {
       "type": "virtio",

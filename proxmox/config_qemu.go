@@ -64,7 +64,8 @@ type ConfigQemu struct {
 	Nameserver      string        `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	Node            string        `json:"node,omitempty"`       // Only returned setting it has no effect, set node in the VmRef instead
 	Onboot          *bool         `json:"onboot,omitempty"`
-	Pool            string        `json:"pool,omitempty"`    // TODO should be custom type as there are character and length limitations
+	Pool            string        `json:"pool,omitempty"` // TODO should be custom type as there are character and length limitations
+	Protection      *bool         `json:"protection,omitempty"`
 	QemuCores       int           `json:"cores,omitempty"`   // TODO should be uint
 	QemuCpu         string        `json:"cpu,omitempty"`     // TODO should be custom type with enum
 	QemuDisks       QemuDevices   `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
@@ -171,6 +172,10 @@ func (config ConfigQemu) CreateVm(vmr *VmRef, client *Client) (err error) {
 		params["scsihw"] = config.Scsihw
 	}
 
+	if config.Protection != nil {
+		params["protection"] = *config.Protection
+	}
+
 	err = config.CreateQemuMachineParam(params)
 	if err != nil {
 		log.Printf("[ERROR] %q", err)
@@ -247,6 +252,9 @@ func (config *ConfigQemu) defaults() {
 	if config.Ipconfig == nil {
 		config.Ipconfig = IpconfigMap{}
 	}
+	if config.Protection == nil {
+		config.Protection = util.Pointer(false)
+	}
 	if config.QemuCores == 0 {
 		config.QemuCores = 1
 	}
@@ -289,7 +297,6 @@ func (config *ConfigQemu) defaults() {
 	if config.Tablet == nil {
 		config.Tablet = util.Pointer(true)
 	}
-
 }
 
 func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequired bool, params map[string]interface{}, err error) {
@@ -360,6 +367,9 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	}
 	if config.Onboot != nil {
 		params["onboot"] = *config.Onboot
+	}
+	if config.Protection != nil {
+		params["protection"] = *config.Protection
 	}
 	if config.QemuOs != "" {
 		params["ostype"] = config.QemuOs
@@ -568,6 +578,9 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		if vCpu > 0 {
 			config.QemuVcpus = vCpu
 		}
+	}
+	if _, isSet := params["protection"]; isSet {
+		config.Protection = util.Pointer(Itob(int(params["protection"].(float64))))
 	}
 	if _, isSet := params["scsihw"]; isSet {
 		config.Scsihw = params["scsihw"].(string)
@@ -1082,6 +1095,10 @@ func (config ConfigQemu) UpdateConfig(vmr *VmRef, client *Client) (err error) {
 
 	if config.Onboot != nil {
 		configParams["onboot"] = *config.Onboot
+	}
+
+	if config.Protection != nil {
+		configParams["protection"] = *config.Protection
 	}
 
 	if config.Tablet != nil {
