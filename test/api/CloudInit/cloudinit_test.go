@@ -30,7 +30,7 @@ func Test_Cloud_Init_VM(t *testing.T) {
 	config.QemuDisks[0] = disk
 	config.Name = "Base-Image"
 
-	err = config.CreateVm(vmref, Test.GetClient())
+	err = config.Create(vmref, Test.GetClient())
 	require.NoError(t, err)
 
 	config.Ipconfig = pxapi.IpconfigMap{}
@@ -38,7 +38,7 @@ func Test_Cloud_Init_VM(t *testing.T) {
 
 	config.Ipconfig[0] = "gw=10.0.0.1,ip=10.0.0.2/24"
 
-	err = config.UpdateConfig(vmref, Test.GetClient())
+	_, err = config.Update(true, vmref, Test.GetClient())
 	require.NoError(t, err)
 
 	testConfig, _ := pxapi.NewConfigQemuFromApi(vmref, Test.GetClient())
