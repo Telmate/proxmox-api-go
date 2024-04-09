@@ -38,7 +38,7 @@ func createGuest(args []string, IDtype string) (err error) {
 		if err != nil {
 			return
 		}
-		err = config.CreateVm(vmr, c)
+		err = config.Create(vmr, c)
 	}
 	if err != nil {
 		return

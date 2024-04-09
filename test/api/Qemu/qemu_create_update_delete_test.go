@@ -13,7 +13,7 @@ func Test_Create_Qemu_VM(t *testing.T) {
 	_ = Test.CreateTest()
 	config := _create_vm_spec(true)
 
-	err := config.CreateVm(_create_vmref(), Test.GetClient())
+	err := config.Create(_create_vmref(), Test.GetClient())
 	require.NoError(t, err)
 }
 
@@ -34,7 +34,7 @@ func Test_Update_Qemu_VM(t *testing.T) {
 
 	config.Boot = "order=net0;ide2"
 
-	err := config.UpdateConfig(_create_vmref(), Test.GetClient())
+	_, err := config.Update(true, _create_vmref(), Test.GetClient())
 
 	require.NoError(t, err)
 }

@@ -194,7 +194,7 @@ func main() {
 		failError(err)
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
-		failError(config.CreateVm(vmr, c))
+		failError(config.Create(vmr, c))
 		log.Println("Complete")
 
 	case "createLxc":
@@ -224,7 +224,7 @@ func main() {
 		vmr.SetNode(flag.Args()[1])
 		log.Printf("Creating node %s: \n", mode)
 		log.Println(vmr)
-		failError(config.CreateVm(vmr, c))
+		failError(config.Create(vmr, c))
 		_, err = c.StartVm(vmr)
 		failError(err)
 
@@ -283,7 +283,8 @@ func main() {
 		}
 
 		failError(config.CloneVm(sourceVmr, vmr, c))
-		failError(config.UpdateConfig(vmr, c))
+		_, err = config.Update(true, vmr, c)
+		failError(err)
 		log.Println("Complete")
 
 	case "createQemuSnapshot":
