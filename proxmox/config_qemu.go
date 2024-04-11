@@ -182,14 +182,13 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 
 	params = map[string]interface{}{}
 
+	params["agent"] = config.Agent
+
 	if config.VmID != 0 {
 		params["vmid"] = config.VmID
 	}
 	if config.Args != "" {
 		params["args"] = config.Args
-	}
-	if config.Agent != 0 {
-		params["agent"] = config.Agent
 	}
 	if config.Balloon >= 1 {
 		params["balloon"] = config.Balloon
