@@ -34,6 +34,30 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		vmr           *VmRef
 		output        map[string]interface{}
 	}{
+		// TODO add option for create and update, as the crate and update are the same for many settings like 'Agent'
+		// Create Agent
+		{name: `Create Agent=nil`,
+			config: &ConfigQemu{},
+			output: map[string]interface{}{}},
+		{name: `Create Agent Full`,
+			config: &ConfigQemu{Agent: &QemuGuestAgent{
+				Enable: util.Pointer(true),
+				Type:   util.Pointer(QemuGuestAgentType_VirtIO),
+				Freeze: util.Pointer(true),
+				FsTrim: util.Pointer(true)}},
+			output: map[string]interface{}{"agent": "1,freeze-fs-on-backup=1,fstrim_cloned_disks=1,type=virtio"}},
+		{name: `Create Agent.Enable`,
+			config: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}},
+			output: map[string]interface{}{"agent": "1"}},
+		{name: `Create Agent.Type`,
+			config: &ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
+			output: map[string]interface{}{"agent": "0,type=virtio"}},
+		{name: `Create Agent.Freeze`,
+			config: &ConfigQemu{Agent: &QemuGuestAgent{Freeze: util.Pointer(true)}},
+			output: map[string]interface{}{"agent": "0,freeze-fs-on-backup=1"}},
+		{name: `Create Agent.FsTrim`,
+			config: &ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(true)}},
+			output: map[string]interface{}{"agent": "0,fstrim_cloned_disks=1"}},
 		// Create Disks
 
 		// Create Disks.Ide
@@ -1291,6 +1315,70 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			output: map[string]interface{}{"delete": "tpmstate0"}},
 		// Update
 
+		// Update agent
+		{name: `Update Agent !nil nil`,
+			config: &ConfigQemu{Agent: &QemuGuestAgent{}},
+			output: map[string]interface{}{"agent": "0"}},
+		{name: `Update Agent nil !nil`,
+			config: &ConfigQemu{},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{
+				Enable: util.Pointer(true),
+				Type:   util.Pointer(QemuGuestAgentType_VirtIO),
+				Freeze: util.Pointer(true),
+				FsTrim: util.Pointer(true)}},
+			output: map[string]interface{}{}},
+		{name: `Update Agent nil nil `,
+			config: &ConfigQemu{},
+			output: map[string]interface{}{}},
+		{name: `Update Agent.Enable !nil nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+			output:        map[string]interface{}{"agent": "1"}},
+		{name: `Update Agent.Enable nil !nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}},
+			output:        map[string]interface{}{"agent": "1"}},
+		{name: `Update Agent.Enable nil nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+			output:        map[string]interface{}{"agent": "0"}},
+		{name: `Update Agent.Type !nil nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+			output:        map[string]interface{}{"agent": "0,type=virtio"}},
+		{name: `Update Agent.Type nil !nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
+			output:        map[string]interface{}{"agent": "0,type=virtio"}},
+		{name: `Update Agent.Type nil nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+			output:        map[string]interface{}{"agent": "0"}},
+		{name: `Update Agent.Freeze !nil nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{Freeze: util.Pointer(false)}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+			output:        map[string]interface{}{"agent": "0,freeze-fs-on-backup=0"}},
+		{name: `Update Agent.Freeze nil !nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{Freeze: util.Pointer(true)}},
+			output:        map[string]interface{}{"agent": "0,freeze-fs-on-backup=1"}},
+		{name: `Update Agent.Freeze nil nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+			output:        map[string]interface{}{"agent": "0"}},
+		{name: `Update Agent.FsTrim !nil nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(false)}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+			output:        map[string]interface{}{"agent": "0,fstrim_cloned_disks=0"}},
+		{name: `Update Agent.FsTrim nil !nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(true)}},
+			output:        map[string]interface{}{"agent": "0,fstrim_cloned_disks=1"}},
+		{name: `Update Agent.FsTrim nil nil`,
+			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
+			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+			output:        map[string]interface{}{"agent": "0"}},
+		// Update Disk
 		// Update Disk.Ide
 		{name: "Update Disk.Ide.Disk_X DELETE",
 			currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{}}}},
@@ -3297,6 +3385,26 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		err    error
 	}{
 		// TODO add test cases for all other items of ConfigQemu{}
+		{name: `Agent ALL`,
+			input: map[string]interface{}{"agent": string("1,freeze-fs-on-backup=1,fstrim_cloned_disks=1,type=virtio")},
+			output: &ConfigQemu{Agent: &QemuGuestAgent{
+				Enable: util.Pointer(true),
+				Freeze: util.Pointer(true),
+				FsTrim: util.Pointer(true),
+				Type:   util.Pointer(QemuGuestAgentType_VirtIO),
+			}}},
+		{name: `Agent Enabled`,
+			input:  map[string]interface{}{"agent": string("1")},
+			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}}},
+		{name: `Agent Freeze`,
+			input:  map[string]interface{}{"agent": string("0,freeze-fs-on-backup=1")},
+			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(false), Freeze: util.Pointer(true)}}},
+		{name: `Agent FsTrim`,
+			input:  map[string]interface{}{"agent": string("0,fstrim_cloned_disks=1")},
+			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(false), FsTrim: util.Pointer(true)}}},
+		{name: `Agent Type`,
+			input:  map[string]interface{}{"agent": string("1,type=virtio")},
+			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}}},
 		// Disks Ide CdRom
 		{name: "Disks Ide CdRom none",
 			input:  map[string]interface{}{"ide1": "none,media=cdrom"},
@@ -5934,6 +6042,9 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		err     error
 	}{
 		// Valid
+		// Valid Agent
+		{name: "Valid Agent",
+			input: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("isa"))}}},
 		// Valid Disks
 		{name: "Valid Disks Empty 0",
 			input: ConfigQemu{Disks: &QemuStorages{}},
@@ -6052,6 +6163,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			input:   ConfigQemu{TPM: &TpmState{Storage: "test"}},
 			current: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v1.2"))}}},
 		// Invalid
+		// Invalid Agent
+		{name: "Invalid Agent",
+			input: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("test"))}},
+			err:   errors.New(QemuGuestAgentType_Error_Invalid)},
 		// Invalid Disks Mutually exclusive Ide
 		{name: "Invalid Disks MutuallyExclusive Ide 0",
 			input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
