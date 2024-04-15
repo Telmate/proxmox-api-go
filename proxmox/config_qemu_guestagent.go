@@ -38,7 +38,9 @@ func (newSetting QemuGuestAgent) mapToAPI(currentSettings *QemuGuestAgent) strin
 		params += ",fstrim_cloned_disks=" + boolToIntString(*currentSettings.FsTrim)
 	}
 	if newSetting.Type != nil {
-		params += ",type=" + strings.ToLower(string(*newSetting.Type))
+		if *newSetting.Type != QemuGuestAgentType_None {
+			params += ",type=" + strings.ToLower(string(*newSetting.Type))
+		}
 	} else if currentSettings != nil && currentSettings.Type != nil {
 		params += ",type=" + strings.ToLower(string(*currentSettings.Type))
 	}
