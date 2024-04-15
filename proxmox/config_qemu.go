@@ -38,60 +38,60 @@ type AgentNetworkInterface struct {
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
-	Agent           int           `json:"agent,omitempty"` // TODO should probably be a bool
-	Args            string        `json:"args,omitempty"`
-	Balloon         int           `json:"balloon,omitempty"` // TODO should probably be a bool
-	Bios            string        `json:"bios,omitempty"`
-	Boot            string        `json:"boot,omitempty"`       // TODO should be an array of custom enums
-	BootDisk        string        `json:"bootdisk,omitempty"`   // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
-	CIcustom        string        `json:"cicustom,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
-	CIpassword      string        `json:"cipassword,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
-	CIuser          string        `json:"ciuser,omitempty"`     // TODO should be part of a cloud-init struct (cloud-init option)
-	Description     string        `json:"description,omitempty"`
-	Disks           *QemuStorages `json:"disks,omitempty"`
-	EFIDisk         QemuDevice    `json:"efidisk,omitempty"`   // TODO should be a struct
-	FullClone       *int          `json:"fullclone,omitempty"` // TODO should probably be a bool
-	HaGroup         string        `json:"hagroup,omitempty"`
-	HaState         string        `json:"hastate,omitempty"` // TODO should be custom type with enum
-	Hookscript      string        `json:"hookscript,omitempty"`
-	Hotplug         string        `json:"hotplug,omitempty"`    // TODO should be a struct
-	Ipconfig        IpconfigMap   `json:"ipconfig,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
-	Iso             *IsoFile      `json:"iso,omitempty"`        // Same as Disks.Ide.Disk_2.CdRom.Iso
-	LinkedVmId      uint          `json:"linked_id,omitempty"`  // Only returned setting it has no effect
-	Machine         string        `json:"machine,omitempty"`    // TODO should be custom type with enum
-	Memory          int           `json:"memory,omitempty"`     // TODO should be uint
-	Name            string        `json:"name,omitempty"`       // TODO should be custom type as there are character and length limitations
-	Nameserver      string        `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
-	Node            string        `json:"node,omitempty"`       // Only returned setting it has no effect, set node in the VmRef instead
-	Onboot          *bool         `json:"onboot,omitempty"`
-	Pool            string        `json:"pool,omitempty"` // TODO should be custom type as there are character and length limitations
-	Protection      *bool         `json:"protection,omitempty"`
-	QemuCores       int           `json:"cores,omitempty"`   // TODO should be uint
-	QemuCpu         string        `json:"cpu,omitempty"`     // TODO should be custom type with enum
-	QemuDisks       QemuDevices   `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
-	QemuIso         string        `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
-	QemuKVM         *bool         `json:"kvm,omitempty"`
-	QemuNetworks    QemuDevices   `json:"network,omitempty"` // TODO should be a struct
-	QemuNuma        *bool         `json:"numa,omitempty"`
-	QemuOs          string        `json:"ostype,omitempty"`
-	QemuPCIDevices  QemuDevices   `json:"hostpci,omitempty"` // TODO should be a struct
-	QemuPxe         bool          `json:"pxe,omitempty"`
-	QemuSerials     QemuDevices   `json:"serial,omitempty"`       // TODO should be a struct
-	QemuSockets     int           `json:"sockets,omitempty"`      // TODO should be uint
-	QemuUnusedDisks QemuDevices   `json:"unused,omitempty"`       // TODO should be a struct
-	QemuUsbs        QemuDevices   `json:"usb,omitempty"`          // TODO should be a struct
-	QemuVcpus       int           `json:"vcpus,omitempty"`        // TODO should be uint
-	QemuVga         QemuDevice    `json:"vga,omitempty"`          // TODO should be a struct
-	RNGDrive        QemuDevice    `json:"rng0,omitempty"`         // TODO should be a struct
-	Scsihw          string        `json:"scsihw,omitempty"`       // TODO should be custom type with enum
-	Searchdomain    string        `json:"searchdomain,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
-	Smbios1         string        `json:"smbios1,omitempty"`      // TODO should be custom type with enum?
-	Sshkeys         string        `json:"sshkeys,omitempty"`      // TODO should be an array of strings
-	Startup         string        `json:"startup,omitempty"`      // TODO should be a struct?
-	TPM             *TpmState     `json:"tpm,omitempty"`
-	Tablet          *bool         `json:"tablet,omitempty"`
-	Tags            string        `json:"tags,omitempty"` // TODO should be an array of a custom type as there are character and length limitations
-	VmID            int           `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
+	Agent           *QemuGuestAgent `json:"agent,omitempty"`
+	Args            string          `json:"args,omitempty"`
+	Balloon         int             `json:"balloon,omitempty"` // TODO should probably be a bool
+	Bios            string          `json:"bios,omitempty"`
+	Boot            string          `json:"boot,omitempty"`       // TODO should be an array of custom enums
+	BootDisk        string          `json:"bootdisk,omitempty"`   // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
+	CIcustom        string          `json:"cicustom,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
+	CIpassword      string          `json:"cipassword,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
+	CIuser          string          `json:"ciuser,omitempty"`     // TODO should be part of a cloud-init struct (cloud-init option)
+	Description     string          `json:"description,omitempty"`
+	Disks           *QemuStorages   `json:"disks,omitempty"`
+	EFIDisk         QemuDevice      `json:"efidisk,omitempty"`   // TODO should be a struct
+	FullClone       *int            `json:"fullclone,omitempty"` // TODO should probably be a bool
+	HaGroup         string          `json:"hagroup,omitempty"`
+	HaState         string          `json:"hastate,omitempty"` // TODO should be custom type with enum
+	Hookscript      string          `json:"hookscript,omitempty"`
+	Hotplug         string          `json:"hotplug,omitempty"`    // TODO should be a struct
+	Ipconfig        IpconfigMap     `json:"ipconfig,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
+	Iso             *IsoFile        `json:"iso,omitempty"`        // Same as Disks.Ide.Disk_2.CdRom.Iso
+	LinkedVmId      uint            `json:"linked_id,omitempty"`  // Only returned setting it has no effect
+	Machine         string          `json:"machine,omitempty"`    // TODO should be custom type with enum
+	Memory          int             `json:"memory,omitempty"`     // TODO should be uint
+	Name            string          `json:"name,omitempty"`       // TODO should be custom type as there are character and length limitations
+	Nameserver      string          `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
+	Node            string          `json:"node,omitempty"`       // Only returned setting it has no effect, set node in the VmRef instead
+	Onboot          *bool           `json:"onboot,omitempty"`
+	Pool            string          `json:"pool,omitempty"` // TODO should be custom type as there are character and length limitations
+	Protection      *bool           `json:"protection,omitempty"`
+	QemuCores       int             `json:"cores,omitempty"`   // TODO should be uint
+	QemuCpu         string          `json:"cpu,omitempty"`     // TODO should be custom type with enum
+	QemuDisks       QemuDevices     `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
+	QemuIso         string          `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
+	QemuKVM         *bool           `json:"kvm,omitempty"`
+	QemuNetworks    QemuDevices     `json:"network,omitempty"` // TODO should be a struct
+	QemuNuma        *bool           `json:"numa,omitempty"`
+	QemuOs          string          `json:"ostype,omitempty"`
+	QemuPCIDevices  QemuDevices     `json:"hostpci,omitempty"` // TODO should be a struct
+	QemuPxe         bool            `json:"pxe,omitempty"`
+	QemuSerials     QemuDevices     `json:"serial,omitempty"`       // TODO should be a struct
+	QemuSockets     int             `json:"sockets,omitempty"`      // TODO should be uint
+	QemuUnusedDisks QemuDevices     `json:"unused,omitempty"`       // TODO should be a struct
+	QemuUsbs        QemuDevices     `json:"usb,omitempty"`          // TODO should be a struct
+	QemuVcpus       int             `json:"vcpus,omitempty"`        // TODO should be uint
+	QemuVga         QemuDevice      `json:"vga,omitempty"`          // TODO should be a struct
+	RNGDrive        QemuDevice      `json:"rng0,omitempty"`         // TODO should be a struct
+	Scsihw          string          `json:"scsihw,omitempty"`       // TODO should be custom type with enum
+	Searchdomain    string          `json:"searchdomain,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
+	Smbios1         string          `json:"smbios1,omitempty"`      // TODO should be custom type with enum?
+	Sshkeys         string          `json:"sshkeys,omitempty"`      // TODO should be an array of strings
+	Startup         string          `json:"startup,omitempty"`      // TODO should be a struct?
+	TPM             *TpmState       `json:"tpm,omitempty"`
+	Tablet          *bool           `json:"tablet,omitempty"`
+	Tags            string          `json:"tags,omitempty"` // TODO should be an array of a custom type as there are character and length limitations
+	VmID            int             `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
 }
 
 const (
@@ -188,8 +188,8 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.Args != "" {
 		params["args"] = config.Args
 	}
-	if config.Agent != 0 {
-		params["agent"] = config.Agent
+	if config.Agent != nil {
+		params["agent"] = config.Agent.mapToAPI(currentConfig.Agent)
 	}
 	if config.Balloon >= 1 {
 		params["balloon"] = config.Balloon
@@ -366,14 +366,8 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.VmID = vmr.vmId
 	}
 
-	if _, isSet := params["agent"]; isSet {
-		switch params["agent"].(type) {
-		case float64:
-			config.Agent = int(params["agent"].(float64))
-		case string:
-			AgentConfList := strings.Split(params["agent"].(string), ",")
-			config.Agent, _ = strconv.Atoi(AgentConfList[0])
-		}
+	if v, isSet := params["agent"]; isSet {
+		config.Agent = QemuGuestAgent{}.mapToSDK(v.(string))
 	}
 	if _, isSet := params["args"]; isSet {
 		config.Args = strings.TrimSpace(params["args"].(string))
@@ -894,6 +888,11 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
+	if config.Agent != nil {
+		if err = config.Agent.Validate(); err != nil {
+			return
+		}
+	}
 	if config.Disks != nil {
 		err = config.Disks.Validate()
 		if err != nil {
