@@ -184,6 +184,14 @@ func failError(err error) {
 	}
 }
 
+// Convert a bool to a string "1" or "0"
+func boolToIntString(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
+}
+
 func arrayToStringArray[T fmt.Stringer](arr []T) []string {
 	strArr := make([]string, len(arr))
 	for i, v := range arr {
