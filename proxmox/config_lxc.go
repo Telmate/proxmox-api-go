@@ -37,7 +37,7 @@ type ConfigLxc struct {
 	OnBoot             bool        `json:"onboot"`
 	OsType             string      `json:"ostype,omitempty"`
 	Password           string      `json:"password,omitempty"`
-	Pool               string      `json:"pool,omitempty"`
+	Pool               *PoolName   `json:"pool,omitempty"`
 	Protection         bool        `json:"protection"`
 	Restore            bool        `json:"restore,omitempty"`
 	RootFs             QemuDevice  `json:"rootfs,omitempty"`

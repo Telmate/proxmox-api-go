@@ -64,7 +64,7 @@ type ConfigQemu struct {
 	Nameserver      string          `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	Node            string          `json:"node,omitempty"`       // Only returned setting it has no effect, set node in the VmRef instead
 	Onboot          *bool           `json:"onboot,omitempty"`
-	Pool            string          `json:"pool,omitempty"` // TODO should be custom type as there are character and length limitations
+	Pool            *PoolName       `json:"pool,omitempty"`
 	Protection      *bool           `json:"protection,omitempty"`
 	QemuCores       int             `json:"cores,omitempty"`   // TODO should be uint
 	QemuCpu         string          `json:"cpu,omitempty"`     // TODO should be custom type with enum
@@ -362,7 +362,8 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 
 	if vmr != nil {
 		config.Node = vmr.node
-		config.Pool = vmr.pool
+		poolCopy := PoolName(vmr.pool)
+		config.Pool = &poolCopy
 		config.VmID = vmr.vmId
 	}
 
@@ -881,7 +882,9 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		return
 	}
 
-	_, err = client.UpdateVMPool(vmr, newConfig.Pool)
+	if newConfig.Pool != nil {
+		_, err = client.UpdateVMPool(vmr, string(*newConfig.Pool))
+	}
 	return
 }
 

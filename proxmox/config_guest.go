@@ -22,8 +22,8 @@ type GuestResource struct {
 	Name               string    `json:"name"` // TODO custom type
 	NetworkIn          uint      `json:"network_in"`
 	NetworkOut         uint      `json:"network_out"`
-	Node               string    `json:"node"`   // TODO custom type
-	Pool               string    `json:"pool"`   // TODO custom type
+	Node               string    `json:"node"` // TODO custom type
+	Pool               PoolName  `json:"pool"`
 	Status             string    `json:"status"` // TODO custom type?
 	Tags               []string  `json:"tags"`   // TODO custom type
 	Template           bool      `json:"template"`
