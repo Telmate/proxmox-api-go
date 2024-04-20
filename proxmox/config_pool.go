@@ -27,6 +27,11 @@ type ConfigPool struct {
 	Guests  *[]uint  `json:"guests"` // TODO: Change type once we have a type for guestID
 }
 
+// Same as PoolName.Delete()
+func (config ConfigPool) Delete(c *Client) error {
+	return config.Name.Delete(c)
+}
+
 // Same as PoolName.Exists()
 func (config ConfigPool) Exists(c *Client) (bool, error) {
 	return config.Name.Exists(c)
@@ -40,12 +45,35 @@ func (config ConfigPool) Validate() error {
 type PoolName string
 
 const (
+	PoolName_Error_Characters string = "PoolName may only contain the following characters: a-z, A-Z, 0-9, hyphen (-), and underscore (_)"
 	PoolName_Error_Empty      string = "PoolName cannot be empty"
 	PoolName_Error_Length     string = "PoolName may not be longer than 1024 characters" // proxmox does not seem to have a max length, so we artificially cap it at 1024
-	PoolName_Error_Characters string = "PoolName may only contain the following characters: a-z, A-Z, 0-9, hyphen (-), and underscore (_)"
+	PoolName_Error_NotExists  string = "Pool doesn't exist"
 )
 
 var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
+
+func (config PoolName) Delete(c *Client) error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	// TODO: permission check
+	exists, err := config.Exists_Unsafe(c)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New(PoolName_Error_NotExists)
+	}
+	return config.Delete_Unsafe(c)
+}
+
+func (config PoolName) Delete_Unsafe(c *Client) error {
+	return c.Delete("/pools/" + string(config))
+}
 
 func (config PoolName) Exists(c *Client) (bool, error) {
 	if c == nil {
