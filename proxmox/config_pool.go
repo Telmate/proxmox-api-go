@@ -27,6 +27,11 @@ type ConfigPool struct {
 	Guests  *[]uint  `json:"guests"` // TODO: Change type once we have a type for guestID
 }
 
+// Same as PoolName.Exists()
+func (config ConfigPool) Exists(c *Client) (bool, error) {
+	return config.Name.Exists(c)
+}
+
 func (config ConfigPool) Validate() error {
 	// TODO: Add validation for Guests and Comment
 	return config.Name.Validate()
@@ -41,6 +46,25 @@ const (
 )
 
 var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
+
+func (config PoolName) Exists(c *Client) (bool, error) {
+	if c == nil {
+		return false, errors.New(Client_Error_Nil)
+	}
+	if err := config.Validate(); err != nil {
+		return false, err
+	}
+	// TODO: permission check
+	return config.Exists_Unsafe(c)
+}
+
+func (config PoolName) Exists_Unsafe(c *Client) (bool, error) {
+	raw, err := listPools(c)
+	if err != nil {
+		return false, err
+	}
+	return ItemInKeyOfArray(raw, "poolid", string(config)), nil
+}
 
 func (config PoolName) Validate() error {
 	if config == "" {
