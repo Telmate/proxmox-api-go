@@ -5,6 +5,22 @@ import (
 	"regexp"
 )
 
+func ListPools(c *Client) ([]PoolName, error) {
+	raw, err := listPools(c)
+	if err != nil {
+		return nil, err
+	}
+	pools := make([]PoolName, len(raw))
+	for i, e := range raw {
+		pools[i] = PoolName(e.(map[string]interface{})["poolid"].(string))
+	}
+	return pools, nil
+}
+
+func listPools(c *Client) ([]interface{}, error) {
+	return c.GetItemListInterfaceArray("/pools")
+}
+
 type ConfigPool struct {
 	Name    PoolName `json:"name"`
 	Comment *string  `json:"comment"`
