@@ -902,6 +902,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 			return
 		}
 	}
+	if config.Pool != nil && *config.Pool != "" {
+		if err = config.Pool.Validate(); err != nil {
+			return
+		}
+	}
 	if config.TPM != nil {
 		if current == nil {
 			if err = config.TPM.Validate(nil); err != nil {

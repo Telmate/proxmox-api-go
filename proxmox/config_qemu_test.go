@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_pool"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
 	"github.com/stretchr/testify/require"
 )
@@ -6164,6 +6165,11 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				}}},
 			}},
 		},
+		// Valid Pool
+		{name: "Valid PoolName",
+			input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Legal()))}},
+		{name: "Valid PoolName Empty",
+			input: ConfigQemu{Pool: util.Pointer(PoolName(""))}},
 		// Valid Tpm
 		{name: "Valid TPM Create",
 			input: ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v2.0"))}}},
@@ -7256,6 +7262,13 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}},
 			err:   errors.New(Error_QemuWorldWideName_Invalid),
 		},
+		// Invalid Pool
+		{name: "Invalid Pool Length",
+			input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Max_Illegal()))},
+			err:   errors.New(PoolName_Error_Length)},
+		{name: "Invalid Pool Characters",
+			input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Error_Characters()[0]))},
+			err:   errors.New(PoolName_Error_Characters)},
 		// invalid TMP
 		{name: "Invalid TPM errors.New(storage is required) Create",
 			input: ConfigQemu{TPM: &TpmState{Storage: ""}},
