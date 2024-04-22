@@ -154,15 +154,21 @@ func (c *Client) GetVersion() (version Version, err error) {
 	return
 }
 
-func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int) error {
+func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int, errorString ...string) error {
 	var statErr error
 	for ii := 0; ii < tries; ii++ {
 		_, statErr = c.session.GetJSON(url, nil, nil, data)
 		if statErr == nil {
 			return nil
 		}
+		// TODO can probable check for `500` status code instead of providing a list of error strings to check for
 		if strings.Contains(statErr.Error(), "500 no such resource") {
 			return statErr
+		}
+		for _, e := range errorString {
+			if strings.Contains(statErr.Error(), e) {
+				return statErr
+			}
 		}
 		// fmt.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
 		time.Sleep(time.Duration(ii+1) * time.Second)
@@ -2075,8 +2081,8 @@ func (c *Client) UpdateSDNZone(id string, params map[string]interface{}) error {
 }
 
 // Shared
-func (c *Client) GetItemConfigMapStringInterface(url, text, message string) (map[string]interface{}, error) {
-	data, err := c.GetItemConfig(url, text, message)
+func (c *Client) GetItemConfigMapStringInterface(url, text, message string, errorString ...string) (map[string]interface{}, error) {
+	data, err := c.GetItemConfig(url, text, message, errorString...)
 	if err != nil {
 		return nil, err
 	}
@@ -2099,8 +2105,8 @@ func (c *Client) GetItemConfigInterfaceArray(url, text, message string) ([]inter
 	return data["data"].([]interface{}), err
 }
 
-func (c *Client) GetItemConfig(url, text, message string) (config map[string]interface{}, err error) {
-	err = c.GetJsonRetryable(url, &config, 3)
+func (c *Client) GetItemConfig(url, text, message string, errorString ...string) (config map[string]interface{}, err error) {
+	err = c.GetJsonRetryable(url, &config, 3, errorString...)
 	if err != nil {
 		return nil, err
 	}
