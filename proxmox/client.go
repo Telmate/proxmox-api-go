@@ -368,6 +368,7 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 	return
 }
 
+// deprecated use *VmRef.GetAgentInformation() instead
 func (c *Client) GetVmAgentNetworkInterfaces(vmr *VmRef) ([]AgentNetworkInterface, error) {
 	return vmr.GetAgentInformation(c, true)
 }
