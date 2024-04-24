@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -369,39 +368,8 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 	return
 }
 
-func (a *AgentNetworkInterface) UnmarshalJSON(b []byte) error {
-	var intermediate struct {
-		HardwareAddress string `json:"hardware-address"`
-		IPAddresses     []struct {
-			IPAddress     string `json:"ip-address"`
-			IPAddressType string `json:"ip-address-type"`
-			Prefix        int    `json:"prefix"`
-		} `json:"ip-addresses"`
-		Name       string           `json:"name"`
-		Statistics map[string]int64 `json:"statistics"`
-	}
-	err := json.Unmarshal(b, &intermediate)
-	if err != nil {
-		return err
-	}
-
-	a.IPAddresses = make([]net.IP, len(intermediate.IPAddresses))
-	for idx, ip := range intermediate.IPAddresses {
-		a.IPAddresses[idx] = net.ParseIP((strings.Split(ip.IPAddress, "%"))[0])
-		if a.IPAddresses[idx] == nil {
-			return fmt.Errorf("could not parse %s as IP", ip.IPAddress)
-		}
-	}
-	a.MACAddress = intermediate.HardwareAddress
-	a.Name = intermediate.Name
-	a.Statistics = intermediate.Statistics
-	return nil
-}
-
 func (c *Client) GetVmAgentNetworkInterfaces(vmr *VmRef) ([]AgentNetworkInterface, error) {
-	var ifs []AgentNetworkInterface
-	err := c.doAgentGet(vmr, "network-get-interfaces", &ifs)
-	return ifs, err
+	return vmr.GetAgentInformation(c, true)
 }
 
 func (c *Client) doAgentGet(vmr *VmRef, command string, output interface{}) error {
