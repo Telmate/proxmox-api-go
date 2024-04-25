@@ -373,21 +373,6 @@ func (c *Client) GetVmAgentNetworkInterfaces(vmr *VmRef) ([]AgentNetworkInterfac
 	return vmr.GetAgentInformation(c, true)
 }
 
-func (c *Client) doAgentGet(vmr *VmRef, command string, output interface{}) error {
-	err := c.CheckVmRef(vmr)
-	if err != nil {
-		return err
-	}
-
-	url := fmt.Sprintf("/nodes/%s/%s/%d/agent/%s", vmr.node, vmr.vmType, vmr.vmId, command)
-	resp, err := c.session.Get(url, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return TypedResponse(resp, output)
-}
-
 func (c *Client) CreateTemplate(vmr *VmRef) error {
 	err := c.CheckVmRef(vmr)
 	if err != nil {
