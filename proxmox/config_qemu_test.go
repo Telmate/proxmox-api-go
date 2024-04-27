@@ -7,6 +7,7 @@ import (
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_tag"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1301,6 +1302,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: "Create Iso",
 			config: &ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 			output: map[string]interface{}{"ide2": "test:iso/file.iso,media=cdrom"},
+		},
+		// Create Tags
+		{name: `Create Tags Empty`,
+			config: &ConfigQemu{Tags: util.Pointer([]Tag{})},
+			output: map[string]interface{}{"tags": string("")},
+		},
+		{name: `Create Tags Full`,
+			config: &ConfigQemu{Tags: util.Pointer([]Tag{"tag1", "tag2"})},
+			output: map[string]interface{}{"tags": string("tag1;tag2")},
 		},
 		// Create TPM
 		{name: "Create TPM",
@@ -3366,6 +3376,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			currentConfig: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 			config:        &ConfigQemu{Iso: &IsoFile{Storage: "NewStorage", File: "file.iso"}},
 			output:        map[string]interface{}{"ide2": "NewStorage:iso/file.iso,media=cdrom"},
+		},
+		// Update Tags
+		{name: `Update Tags Empty`,
+			config: &ConfigQemu{Tags: util.Pointer([]Tag{})},
+			output: map[string]interface{}{"tags": string("")},
+		},
+		{name: `Update Tags Full`,
+			config: &ConfigQemu{Tags: util.Pointer([]Tag{"tag1", "tag2"})},
+			output: map[string]interface{}{"tags": string("tag1;tag2")},
 		},
 		// Update TPM
 		{name: "Update TPM",
@@ -6046,6 +6065,14 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		},
 	}
 	validCloudInit := QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}
+	validTags := func() []Tag {
+		array := test_data_tag.Tag_Legal()
+		tags := make([]Tag, len(array))
+		for i, e := range array {
+			tags[i] = Tag(e)
+		}
+		return tags
+	}
 	testData := []struct {
 		name    string
 		input   ConfigQemu
@@ -6163,6 +6190,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					WorldWideName: "0x5004A3B2C1D0E0F1",
 				}}},
 			}},
+		},
+		// Valid Tags
+		{name: "Valid Tags",
+			input: ConfigQemu{Tags: util.Pointer(validTags())},
 		},
 		// Valid Tpm
 		{name: "Valid TPM Create",
@@ -7256,6 +7287,19 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}},
 			err:   errors.New(Error_QemuWorldWideName_Invalid),
 		},
+		// Invalid Tags
+		{name: `Invalid Tags errors.New(Tag_Error_Invalid)`,
+			input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Illegal())})},
+			err:   errors.New(Tag_Error_Invalid)},
+		{name: `Invalid Tags errors.New(Tag_Error_Duplicate)`,
+			input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Max_Legal()), Tag(test_data_tag.Tag_Max_Legal())})},
+			err:   errors.New(Tag_Error_Duplicate)},
+		{name: `Invalid Tags errors.New(Tag_Error_Empty)`,
+			input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Empty())})},
+			err:   errors.New(Tag_Error_Empty)},
+		{name: `Invalid Tags errors.New(Tag_Error_MaxLength)`,
+			input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Max_Illegal())})},
+			err:   errors.New(Tag_Error_MaxLength)},
 		// invalid TMP
 		{name: "Invalid TPM errors.New(storage is required) Create",
 			input: ConfigQemu{TPM: &TpmState{Storage: ""}},
