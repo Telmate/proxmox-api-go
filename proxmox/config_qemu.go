@@ -29,13 +29,6 @@ type (
 	IpconfigMap     map[int]interface{}
 )
 
-type AgentNetworkInterface struct {
-	MACAddress  string
-	IPAddresses []net.IP
-	Name        string
-	Statistics  map[string]int64
-}
-
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
 	Agent           *QemuGuestAgent `json:"agent,omitempty"`

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -154,15 +153,21 @@ func (c *Client) GetVersion() (version Version, err error) {
 	return
 }
 
-func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int) error {
+func (c *Client) GetJsonRetryable(url string, data *map[string]interface{}, tries int, errorString ...string) error {
 	var statErr error
 	for ii := 0; ii < tries; ii++ {
 		_, statErr = c.session.GetJSON(url, nil, nil, data)
 		if statErr == nil {
 			return nil
 		}
+		// TODO can probable check for `500` status code instead of providing a list of error strings to check for
 		if strings.Contains(statErr.Error(), "500 no such resource") {
 			return statErr
+		}
+		for _, e := range errorString {
+			if strings.Contains(statErr.Error(), e) {
+				return statErr
+			}
 		}
 		// fmt.Printf("[DEBUG][GetJsonRetryable] Sleeping for %d seconds before asking url %s", ii+1, url)
 		time.Sleep(time.Duration(ii+1) * time.Second)
@@ -363,54 +368,9 @@ func (c *Client) GetVmSpiceProxy(vmr *VmRef) (vmSpiceProxy map[string]interface{
 	return
 }
 
-func (a *AgentNetworkInterface) UnmarshalJSON(b []byte) error {
-	var intermediate struct {
-		HardwareAddress string `json:"hardware-address"`
-		IPAddresses     []struct {
-			IPAddress     string `json:"ip-address"`
-			IPAddressType string `json:"ip-address-type"`
-			Prefix        int    `json:"prefix"`
-		} `json:"ip-addresses"`
-		Name       string           `json:"name"`
-		Statistics map[string]int64 `json:"statistics"`
-	}
-	err := json.Unmarshal(b, &intermediate)
-	if err != nil {
-		return err
-	}
-
-	a.IPAddresses = make([]net.IP, len(intermediate.IPAddresses))
-	for idx, ip := range intermediate.IPAddresses {
-		a.IPAddresses[idx] = net.ParseIP((strings.Split(ip.IPAddress, "%"))[0])
-		if a.IPAddresses[idx] == nil {
-			return fmt.Errorf("could not parse %s as IP", ip.IPAddress)
-		}
-	}
-	a.MACAddress = intermediate.HardwareAddress
-	a.Name = intermediate.Name
-	a.Statistics = intermediate.Statistics
-	return nil
-}
-
+// deprecated use *VmRef.GetAgentInformation() instead
 func (c *Client) GetVmAgentNetworkInterfaces(vmr *VmRef) ([]AgentNetworkInterface, error) {
-	var ifs []AgentNetworkInterface
-	err := c.doAgentGet(vmr, "network-get-interfaces", &ifs)
-	return ifs, err
-}
-
-func (c *Client) doAgentGet(vmr *VmRef, command string, output interface{}) error {
-	err := c.CheckVmRef(vmr)
-	if err != nil {
-		return err
-	}
-
-	url := fmt.Sprintf("/nodes/%s/%s/%d/agent/%s", vmr.node, vmr.vmType, vmr.vmId, command)
-	resp, err := c.session.Get(url, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return TypedResponse(resp, output)
+	return vmr.GetAgentInformation(c, true)
 }
 
 func (c *Client) CreateTemplate(vmr *VmRef) error {
@@ -2075,8 +2035,8 @@ func (c *Client) UpdateSDNZone(id string, params map[string]interface{}) error {
 }
 
 // Shared
-func (c *Client) GetItemConfigMapStringInterface(url, text, message string) (map[string]interface{}, error) {
-	data, err := c.GetItemConfig(url, text, message)
+func (c *Client) GetItemConfigMapStringInterface(url, text, message string, errorString ...string) (map[string]interface{}, error) {
+	data, err := c.GetItemConfig(url, text, message, errorString...)
 	if err != nil {
 		return nil, err
 	}
@@ -2099,8 +2059,8 @@ func (c *Client) GetItemConfigInterfaceArray(url, text, message string) ([]inter
 	return data["data"].([]interface{}), err
 }
 
-func (c *Client) GetItemConfig(url, text, message string) (config map[string]interface{}, err error) {
-	err = c.GetJsonRetryable(url, &config, 3)
+func (c *Client) GetItemConfig(url, text, message string, errorString ...string) (config map[string]interface{}, err error) {
+	err = c.GetJsonRetryable(url, &config, 3, errorString...)
 	if err != nil {
 		return nil, err
 	}
