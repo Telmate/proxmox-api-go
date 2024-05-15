@@ -83,7 +83,7 @@ type ConfigQemu struct {
 	Startup         string          `json:"startup,omitempty"`      // TODO should be a struct?
 	TPM             *TpmState       `json:"tpm,omitempty"`
 	Tablet          *bool           `json:"tablet,omitempty"`
-	Tags            string          `json:"tags,omitempty"` // TODO should be an array of a custom type as there are character and length limitations
+	Tags            *[]Tag          `json:"tags,omitempty"`
 	VmID            int             `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
 }
 
@@ -262,8 +262,8 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.Tablet != nil {
 		params["tablet"] = *config.Tablet
 	}
-	if config.Tags != "" {
-		params["tags"] = config.Tags
+	if config.Tags != nil {
+		params["tags"] = Tag("").mapToApi(*config.Tags)
 	}
 	if config.QemuVcpus >= 1 {
 		params["vcpus"] = config.QemuVcpus
@@ -470,7 +470,8 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Tablet = util.Pointer(Itob(int(params["tablet"].(float64))))
 	}
 	if _, isSet := params["tags"]; isSet {
-		config.Tags = strings.TrimSpace(params["tags"].(string))
+		tmpTags := Tag("").mapToSDK(params["tags"].(string))
+		config.Tags = &tmpTags
 	}
 	if _, isSet := params["smbios1"]; isSet {
 		config.Smbios1 = params["smbios1"].(string)
@@ -901,6 +902,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 			if err = config.TPM.Validate(current.TPM); err != nil {
 				return
 			}
+		}
+	}
+	if config.Tags != nil {
+		if err := Tag("").validate(*config.Tags); err != nil {
+			return err
 		}
 	}
 
