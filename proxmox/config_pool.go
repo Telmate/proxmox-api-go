@@ -27,6 +27,29 @@ type ConfigPool struct {
 	Guests  *[]uint  `json:"guests"` // TODO: Change type once we have a type for guestID
 }
 
+func (ConfigPool) mapToSDK(params map[string]interface{}) (config ConfigPool) {
+	if v, isSet := params["poolid"]; isSet {
+		config.Name = PoolName(v.(string))
+	}
+	if v, isSet := params["comment"]; isSet {
+		tmp := v.(string)
+		config.Comment = &tmp
+	}
+	if v, isSet := params["members"]; isSet {
+		guests := make([]uint, 0)
+		for _, e := range v.([]interface{}) {
+			param := e.(map[string]interface{})
+			if v, isSet := param["vmid"]; isSet {
+				guests = append(guests, uint(v.(float64)))
+			}
+		}
+		if len(guests) > 0 {
+			config.Guests = &guests
+		}
+	}
+	return
+}
+
 // Same as PoolName.Delete()
 func (config ConfigPool) Delete(c *Client) error {
 	return config.Name.Delete(c)
@@ -92,6 +115,26 @@ func (config PoolName) Exists_Unsafe(c *Client) (bool, error) {
 		return false, err
 	}
 	return ItemInKeyOfArray(raw, "poolid", string(config)), nil
+}
+
+func (pool PoolName) Get(c *Client) (*ConfigPool, error) {
+	if c == nil {
+		return nil, errors.New(Client_Error_Nil)
+	}
+	if err := pool.Validate(); err != nil {
+		return nil, err
+	}
+	// TODO: permission check
+	return pool.Get_Unsafe(c)
+}
+
+func (pool PoolName) Get_Unsafe(c *Client) (*ConfigPool, error) {
+	params, err := c.GetItemConfigMapStringInterface("/pools/"+string(pool), "pool", "CONFIG")
+	if err != nil {
+		return nil, err
+	}
+	config := ConfigPool{}.mapToSDK(params)
+	return &config, nil
 }
 
 func (config PoolName) Validate() error {
