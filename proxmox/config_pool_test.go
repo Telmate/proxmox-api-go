@@ -73,6 +73,55 @@ func Test_ConfigPool_Validate(t *testing.T) {
 	}
 }
 
+func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
+	type testInput struct {
+		guests      []GuestResource
+		guestsToAdd []uint
+	}
+	tests := []struct {
+		name   string
+		input  testInput
+		output map[PoolName][]uint
+	}{
+		{name: `'guestsToAdd' Not in 'guests'`,
+			input: testInput{
+				guests: []GuestResource{
+					{Id: 100, Pool: "test"},
+					{Id: 200, Pool: "poolA"},
+					{Id: 300, Pool: "test"}},
+				guestsToAdd: []uint{700, 800, 900}},
+			output: map[PoolName][]uint{}},
+		{name: `Empty`,
+			output: map[PoolName][]uint{}},
+		{name: `Empty 'guests'`,
+			input: testInput{
+				guestsToAdd: []uint{100, 300, 200}},
+			output: map[PoolName][]uint{}},
+		{name: `Empty 'guestsToAdd'`,
+			input: testInput{
+				guests: []GuestResource{
+					{Id: 100, Pool: "test"},
+					{Id: 200, Pool: "poolA"},
+					{Id: 300, Pool: "test"}}},
+			output: map[PoolName][]uint{}},
+		{name: `Full`,
+			input: testInput{
+				guests: []GuestResource{
+					{Id: 100, Pool: "test"},
+					{Id: 200, Pool: "poolA"},
+					{Id: 300, Pool: "test"}},
+				guestsToAdd: []uint{100, 300, 200}},
+			output: map[PoolName][]uint{
+				"test":  {100, 300},
+				"poolA": {200}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, PoolName("").guestsToRemoveFromPools(test.input.guests, test.input.guestsToAdd))
+		})
+	}
+}
+
 func Test_PoolName_mapToApi(t *testing.T) {
 	type testInput struct {
 		pool   PoolName

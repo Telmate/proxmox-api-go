@@ -78,6 +78,68 @@ const (
 
 var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
 
+func (config PoolName) addGuests_Unsafe(c *Client, guestIDs []uint, currentGuests *[]uint) error {
+	var guestsToAdd []uint
+	if currentGuests != nil && len(*currentGuests) > 0 {
+		guestsToAdd = subtractArray(guestIDs, *currentGuests)
+	} else {
+		guestsToAdd = guestIDs
+	}
+	if len(guestsToAdd) == 0 {
+		return nil
+	}
+	if c.version.Smaller(Version{8, 0, 0}) {
+		guests, err := ListGuests(c)
+		if err != nil {
+			return err
+		}
+		for i, e := range PoolName("").guestsToRemoveFromPools(guests, guestsToAdd) {
+			if err = i.RemoveGuests_Unsafe(c, e); err != nil {
+				return err
+			}
+		}
+		return config.addGuests_UnsafeV7(c, guestsToAdd)
+	}
+	return config.addGuests_UnsafeV8(c, guestsToAdd)
+}
+
+func (config PoolName) addGuests_UnsafeV7(c *Client, guestIDs []uint) error {
+	params := config.mapToApi(guestIDs)
+	return c.Put(params, "/pools")
+}
+
+func (config PoolName) addGuests_UnsafeV8(c *Client, guestIDs []uint) error {
+	params := config.mapToApi(guestIDs)
+	params["allow-move"] = "1"
+	return c.Put(params, "/pools")
+}
+
+func (config PoolName) AddGuests(c *Client, guestIDs []uint) error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	// TODO: permission check
+	exists, err := config.Exists_Unsafe(c)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New(PoolName_Error_NotExists)
+	}
+	return config.AddGuests_Unsafe(c, guestIDs)
+}
+
+func (pool PoolName) AddGuests_Unsafe(c *Client, guestIDs []uint) error {
+	config, err := pool.Get_Unsafe(c)
+	if err != nil {
+		return err
+	}
+	return pool.addGuests_Unsafe(c, guestIDs, config.Guests)
+}
+
 func (config PoolName) Delete(c *Client) error {
 	if c == nil {
 		return errors.New(Client_Error_Nil)
@@ -137,6 +199,28 @@ func (pool PoolName) Get_Unsafe(c *Client) (*ConfigPool, error) {
 	}
 	config := ConfigPool{}.mapToSDK(params)
 	return &config, nil
+}
+
+func (PoolName) guestsToRemoveFromPools(guests []GuestResource, guestsToAdd []uint) map[PoolName][]uint {
+	// map[guestID]PoolName
+	guestsMap := make(map[uint]PoolName)
+	for _, e := range guests {
+		if e.Pool != "" {
+			guestsMap[e.Id] = e.Pool
+			continue
+		}
+	}
+	poolMap := make(map[PoolName][]uint)
+	for _, e := range guestsToAdd {
+		if pool, isSet := guestsMap[e]; isSet {
+			if _, isSet := poolMap[pool]; !isSet {
+				poolMap[pool] = []uint{e}
+			} else {
+				poolMap[pool] = append(poolMap[pool], e)
+			}
+		}
+	}
+	return poolMap
 }
 
 func (config PoolName) mapToApi(guestID []uint) map[string]interface{} {
