@@ -3,6 +3,7 @@ package proxmox
 import (
 	"errors"
 	"regexp"
+	"strconv"
 )
 
 func ListPools(c *Client) ([]PoolName, error) {
@@ -68,10 +69,11 @@ func (config ConfigPool) Validate() error {
 type PoolName string
 
 const (
-	PoolName_Error_Characters string = "PoolName may only contain the following characters: a-z, A-Z, 0-9, hyphen (-), and underscore (_)"
-	PoolName_Error_Empty      string = "PoolName cannot be empty"
-	PoolName_Error_Length     string = "PoolName may not be longer than 1024 characters" // proxmox does not seem to have a max length, so we artificially cap it at 1024
-	PoolName_Error_NotExists  string = "Pool doesn't exist"
+	PoolName_Error_Characters        string = "PoolName may only contain the following characters: a-z, A-Z, 0-9, hyphen (-), and underscore (_)"
+	PoolName_Error_Empty             string = "PoolName cannot be empty"
+	PoolName_Error_Length            string = "PoolName may not be longer than 1024 characters" // proxmox does not seem to have a max length, so we artificially cap it at 1024
+	PoolName_Error_NotExists         string = "Pool doesn't exist"
+	PoolName_Error_NoGuestsSpecified string = "no guests specified"
 )
 
 var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
@@ -135,6 +137,45 @@ func (pool PoolName) Get_Unsafe(c *Client) (*ConfigPool, error) {
 	}
 	config := ConfigPool{}.mapToSDK(params)
 	return &config, nil
+}
+
+func (config PoolName) mapToApi(guestID []uint) map[string]interface{} {
+	var vms string
+	for _, e := range guestID {
+		vms += "," + strconv.FormatInt(int64(e), 10)
+	}
+	if len(vms) > 0 {
+		vms = vms[1:]
+	}
+	return map[string]interface{}{
+		"poolid": string(config),
+		"vms":    vms,
+	}
+}
+
+func (config PoolName) RemoveGuests(c *Client, guestID []uint) error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	if len(guestID) == 0 {
+		return errors.New(PoolName_Error_NoGuestsSpecified)
+	}
+	// TODO: permission check
+	if exists, err := config.Exists_Unsafe(c); err != nil {
+		return err
+	} else if !exists {
+		return errors.New(PoolName_Error_NotExists)
+	}
+	return config.RemoveGuests_Unsafe(c, guestID)
+}
+
+func (config PoolName) RemoveGuests_Unsafe(c *Client, guestID []uint) error {
+	params := config.mapToApi(guestID)
+	params["delete"] = "1"
+	return c.Put(params, "/pools")
 }
 
 func (config PoolName) Validate() error {

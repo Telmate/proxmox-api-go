@@ -73,6 +73,40 @@ func Test_ConfigPool_Validate(t *testing.T) {
 	}
 }
 
+func Test_PoolName_mapToApi(t *testing.T) {
+	type testInput struct {
+		pool   PoolName
+		guests []uint
+	}
+	tests := []struct {
+		name   string
+		input  testInput
+		output map[string]interface{}
+	}{
+		{name: `All`,
+			input: testInput{
+				pool:   "test",
+				guests: []uint{100, 300, 200}},
+			output: map[string]interface{}{
+				"poolid": "test",
+				"vms":    "100,300,200"}},
+		{name: `Empty`,
+			input:  testInput{},
+			output: map[string]interface{}{"poolid": "", "vms": ""}},
+		{name: `pool`,
+			input:  testInput{pool: "test"},
+			output: map[string]interface{}{"poolid": "test", "vms": ""}},
+		{name: `guests`,
+			input:  testInput{guests: []uint{100, 300, 200}},
+			output: map[string]interface{}{"poolid": "", "vms": "100,300,200"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.pool.mapToApi(test.input.guests))
+		})
+	}
+}
+
 func Test_PoolName_Validate(t *testing.T) {
 	tests := []struct {
 		name   string
