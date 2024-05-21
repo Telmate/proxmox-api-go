@@ -9,6 +9,75 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_ConfigPool_mapToApi(t *testing.T) {
+	type testInput struct {
+		new     ConfigPool
+		current *ConfigPool
+	}
+	tests := []struct {
+		name   string
+		input  testInput
+		output map[string]interface{}
+	}{
+		{name: `Create Full`,
+			input: testInput{
+				new: ConfigPool{
+					Name:    "test",
+					Comment: util.Pointer("test-comment"),
+					Guests:  &[]uint{100, 300, 200}}},
+			output: map[string]interface{}{
+				"poolid":  "test",
+				"comment": "test-comment"}},
+		{name: `Create poolid`,
+			input: testInput{
+				new: ConfigPool{Name: "test"}},
+			output: map[string]interface{}{"poolid": "test"}},
+		{name: `Create comment`,
+			input: testInput{
+				new: ConfigPool{Comment: util.Pointer("test-comment")}},
+			output: map[string]interface{}{
+				"poolid":  "",
+				"comment": "test-comment"}},
+		{name: `Create members`,
+			input: testInput{
+				new: ConfigPool{Guests: &[]uint{100, 300, 200}}},
+			output: map[string]interface{}{"poolid": ""}},
+		{name: `Update Full`,
+			input: testInput{
+				new: ConfigPool{
+					Name:    "test",
+					Comment: util.Pointer("test-comment"),
+					Guests:  &[]uint{100, 300, 200}},
+				current: &ConfigPool{
+					Name:    "test",
+					Comment: util.Pointer("old-comment"),
+					Guests:  &[]uint{100, 300}}},
+			output: map[string]interface{}{
+				"comment": "test-comment"}},
+		{name: `Update poolid`,
+			input: testInput{
+				new:     ConfigPool{Name: "test"},
+				current: &ConfigPool{Name: "old"}},
+			output: map[string]interface{}{}},
+		{name: `Update comment`,
+			input: testInput{
+				new:     ConfigPool{Comment: util.Pointer("test-comment")},
+				current: &ConfigPool{Comment: util.Pointer("old-comment")}},
+			output: map[string]interface{}{
+				"comment": "test-comment"}},
+		{name: `Update members`,
+			input: testInput{
+				new:     ConfigPool{Guests: &[]uint{100, 300, 200}},
+				current: &ConfigPool{Guests: &[]uint{100, 300}}},
+			output: map[string]interface{}{}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.new.mapToApi(test.input.current))
+		})
+	}
+}
+
 func Test_ConfigPool_mapToSDK(t *testing.T) {
 	tests := []struct {
 		name   string

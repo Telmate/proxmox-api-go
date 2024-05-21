@@ -28,6 +28,22 @@ type ConfigPool struct {
 	Guests  *[]uint  `json:"guests"` // TODO: Change type once we have a type for guestID
 }
 
+func (config ConfigPool) mapToApi(currentConfig *ConfigPool) map[string]interface{} {
+	params := map[string]interface{}{}
+	if currentConfig == nil { //create
+		params["poolid"] = string(config.Name)
+		if config.Comment != nil && *config.Comment != "" {
+			params["comment"] = string(*config.Comment)
+		}
+		return params
+	}
+	// update
+	if config.Comment != nil {
+		params["comment"] = string(*config.Comment)
+	}
+	return params
+}
+
 func (ConfigPool) mapToSDK(params map[string]interface{}) (config ConfigPool) {
 	if v, isSet := params["poolid"]; isSet {
 		config.Name = PoolName(v.(string))
@@ -51,6 +67,34 @@ func (ConfigPool) mapToSDK(params map[string]interface{}) (config ConfigPool) {
 	return
 }
 
+func (config ConfigPool) Create(c *Client) error {
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	// TODO check permissions
+	if exists, err := config.Name.Exists_Unsafe(c); err != nil {
+		return err
+	} else if exists {
+		return errors.New(PoolName_Error_Exists)
+	}
+	return config.Create_Unsafe(c)
+}
+
+// Create_Unsafe creates a new pool without validating the input
+func (config ConfigPool) Create_Unsafe(c *Client) error {
+	version, err := c.GetVersion()
+	if err != nil {
+		return err
+	}
+	if err := c.Post(config.mapToApi(nil), "/pools"); err != nil {
+		return err
+	}
+	if config.Guests != nil {
+		return config.Name.addGuests_Unsafe(c, *config.Guests, nil, version)
+	}
+	return nil
+}
+
 // Same as PoolName.Delete()
 func (config ConfigPool) Delete(c *Client) error {
 	return config.Name.Delete(c)
@@ -59,6 +103,39 @@ func (config ConfigPool) Delete(c *Client) error {
 // Same as PoolName.Exists()
 func (config ConfigPool) Exists(c *Client) (bool, error) {
 	return config.Name.Exists(c)
+}
+
+func (config ConfigPool) Update(c *Client) error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	if exists, err := config.Name.Exists(c); err != nil {
+		return err
+	} else if !exists {
+		return errors.New(PoolName_Error_NotExists)
+	}
+	// TODO check permissions
+	current, err := config.Name.Get_Unsafe(c)
+	if err != nil {
+		return err
+	}
+	return config.Update_Unsafe(c, current)
+}
+
+// Update_Unsafe updates a pool without validating the input
+func (config ConfigPool) Update_Unsafe(c *Client, current *ConfigPool) error {
+	if params := config.mapToApi(current); len(params) > 0 {
+		if err := config.Name.put(c, params); err != nil {
+			return err
+		}
+	}
+	if config.Guests != nil {
+		return config.Name.SetGuests_Unsafe(c, *config.Guests)
+	}
+	return nil
 }
 
 func (config ConfigPool) Validate() error {
