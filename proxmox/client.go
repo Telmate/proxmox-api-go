@@ -1357,7 +1357,7 @@ func (c *Client) DeleteQemuFirewallRules(vmr *VmRef, pos int) (err error) {
 		return err
 	}
 
-	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%s", vmr.node, vmr.vmId, pos)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", vmr.node, vmr.vmId, pos)
 	return c.Delete(url)
 }
 
