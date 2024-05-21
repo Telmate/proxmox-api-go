@@ -105,6 +105,32 @@ func (config ConfigPool) Exists(c *Client) (bool, error) {
 	return config.Name.Exists(c)
 }
 
+func (config ConfigPool) Set(c *Client) error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	// TODO check permissions
+	return config.Set_Unsafe(c)
+}
+
+func (config ConfigPool) Set_Unsafe(c *Client) error {
+	exists, err := config.Name.Exists_Unsafe(c)
+	if err != nil {
+		return err
+	}
+	if exists {
+		current, err := config.Name.Get_Unsafe(c)
+		if err != nil {
+			return err
+		}
+		return config.Update_Unsafe(c, current)
+	}
+	return config.Create_Unsafe(c)
+}
+
 func (config ConfigPool) Update(c *Client) error {
 	if c == nil {
 		return errors.New(Client_Error_Nil)
