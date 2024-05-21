@@ -73,12 +73,13 @@ const (
 	PoolName_Error_Empty             string = "PoolName cannot be empty"
 	PoolName_Error_Length            string = "PoolName may not be longer than 1024 characters" // proxmox does not seem to have a max length, so we artificially cap it at 1024
 	PoolName_Error_NotExists         string = "Pool doesn't exist"
+	PoolName_Error_Exists            string = "Pool already exists"
 	PoolName_Error_NoGuestsSpecified string = "no guests specified"
 )
 
 var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
 
-func (config PoolName) addGuests_Unsafe(c *Client, guestIDs []uint, currentGuests *[]uint) error {
+func (config PoolName) addGuests_Unsafe(c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
 	var guestsToAdd []uint
 	if currentGuests != nil && len(*currentGuests) > 0 {
 		guestsToAdd = subtractArray(guestIDs, *currentGuests)
@@ -88,30 +89,29 @@ func (config PoolName) addGuests_Unsafe(c *Client, guestIDs []uint, currentGuest
 	if len(guestsToAdd) == 0 {
 		return nil
 	}
-	if c.version.Smaller(Version{8, 0, 0}) {
-		guests, err := ListGuests(c)
-		if err != nil {
+	if !version.Smaller(Version{8, 0, 0}) {
+		return config.addGuests_UnsafeV8(c, guestsToAdd)
+	}
+	guests, err := ListGuests(c)
+	if err != nil {
+		return err
+	}
+	for i, e := range PoolName("").guestsToRemoveFromPools(guests, guestsToAdd) {
+		if err = i.RemoveGuests_Unsafe(c, e); err != nil {
 			return err
 		}
-		for i, e := range PoolName("").guestsToRemoveFromPools(guests, guestsToAdd) {
-			if err = i.RemoveGuests_Unsafe(c, e); err != nil {
-				return err
-			}
-		}
-		return config.addGuests_UnsafeV7(c, guestsToAdd)
 	}
-	return config.addGuests_UnsafeV8(c, guestsToAdd)
+	return config.addGuests_UnsafeV7(c, guestsToAdd)
 }
 
-func (config PoolName) addGuests_UnsafeV7(c *Client, guestIDs []uint) error {
-	params := config.mapToApi(guestIDs)
-	return c.Put(params, "/pools")
+func (pool PoolName) addGuests_UnsafeV7(c *Client, guestIDs []uint) error {
+	return pool.put(c, map[string]interface{}{"vms": PoolName("").mapToString(guestIDs)})
 }
 
-func (config PoolName) addGuests_UnsafeV8(c *Client, guestIDs []uint) error {
-	params := config.mapToApi(guestIDs)
-	params["allow-move"] = "1"
-	return c.Put(params, "/pools")
+func (pool PoolName) addGuests_UnsafeV8(c *Client, guestIDs []uint) error {
+	return pool.put(c, map[string]interface{}{
+		"vms":        PoolName("").mapToString(guestIDs),
+		"allow-move": "1"})
 }
 
 func (config PoolName) AddGuests(c *Client, guestIDs []uint) error {
@@ -133,11 +133,15 @@ func (config PoolName) AddGuests(c *Client, guestIDs []uint) error {
 }
 
 func (pool PoolName) AddGuests_Unsafe(c *Client, guestIDs []uint) error {
+	version, err := c.GetVersion()
+	if err != nil {
+		return err
+	}
 	config, err := pool.Get_Unsafe(c)
 	if err != nil {
 		return err
 	}
-	return pool.addGuests_Unsafe(c, guestIDs, config.Guests)
+	return pool.addGuests_Unsafe(c, guestIDs, config.Guests, version)
 }
 
 func (config PoolName) Delete(c *Client) error {
@@ -223,18 +227,19 @@ func (PoolName) guestsToRemoveFromPools(guests []GuestResource, guestsToAdd []ui
 	return poolMap
 }
 
-func (config PoolName) mapToApi(guestID []uint) map[string]interface{} {
-	var vms string
+// TODO replace once we have a type for guestID
+func (PoolName) mapToString(guestID []uint) (vms string) {
 	for _, e := range guestID {
 		vms += "," + strconv.FormatInt(int64(e), 10)
 	}
 	if len(vms) > 0 {
 		vms = vms[1:]
 	}
-	return map[string]interface{}{
-		"poolid": string(config),
-		"vms":    vms,
-	}
+	return
+}
+
+func (pool PoolName) put(c *Client, params map[string]interface{}) error {
+	return c.Put(params, "/pools?poolid="+string(pool))
 }
 
 func (config PoolName) RemoveGuests(c *Client, guestID []uint) error {
@@ -256,10 +261,58 @@ func (config PoolName) RemoveGuests(c *Client, guestID []uint) error {
 	return config.RemoveGuests_Unsafe(c, guestID)
 }
 
-func (config PoolName) RemoveGuests_Unsafe(c *Client, guestID []uint) error {
-	params := config.mapToApi(guestID)
-	params["delete"] = "1"
-	return c.Put(params, "/pools")
+func (pool PoolName) RemoveGuests_Unsafe(c *Client, guestID []uint) error {
+	return pool.put(c, map[string]interface{}{
+		"vms":    PoolName("").mapToString(guestID),
+		"delete": "1"})
+}
+
+func (pool PoolName) SetGuests(c *Client, guestID []uint) error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if err := pool.Validate(); err != nil {
+		return err
+	}
+	if exists, err := pool.Exists(c); err != nil {
+		return err
+	} else if !exists {
+		return errors.New(PoolName_Error_NotExists)
+	}
+	// TODO: permission check
+	return pool.SetGuests_Unsafe(c, guestID)
+}
+
+func (pool PoolName) SetGuests_Unsafe(c *Client, guestID []uint) error {
+	version, err := c.GetVersion()
+	if err != nil {
+		return err
+	}
+	config, err := pool.Get(c)
+	if err != nil {
+		return err
+	}
+	return pool.setGuests_Unsafe(c, guestID, config.Guests, version)
+}
+
+func (pool PoolName) setGuests_Unsafe(c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
+	var guestsToRemove []uint
+	for _, e := range *currentGuests {
+		removeGuest := true
+		for _, ee := range guestIDs {
+			if e == ee {
+				removeGuest = false
+				break
+			}
+		}
+		if removeGuest {
+			guestsToRemove = append(guestsToRemove, e)
+		}
+	}
+	if err := pool.RemoveGuests_Unsafe(c, guestsToRemove); err != nil {
+		return err
+	}
+	return pool.addGuests_Unsafe(c, guestIDs, currentGuests, version)
 }
 
 func (config PoolName) Validate() error {
