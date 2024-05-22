@@ -400,21 +400,10 @@ func (pool PoolName) SetGuests_Unsafe(c *Client, guestID []uint) error {
 }
 
 func (pool PoolName) setGuests_Unsafe(c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
-	var guestsToRemove []uint
-	for _, e := range *currentGuests {
-		removeGuest := true
-		for _, ee := range guestIDs {
-			if e == ee {
-				removeGuest = false
-				break
-			}
+	if currentGuests != nil && len(*currentGuests) > 0 {
+		if err := pool.RemoveGuests_Unsafe(c, subtractArray(*currentGuests, guestIDs)); err != nil {
+			return err
 		}
-		if removeGuest {
-			guestsToRemove = append(guestsToRemove, e)
-		}
-	}
-	if err := pool.RemoveGuests_Unsafe(c, guestsToRemove); err != nil {
-		return err
 	}
 	return pool.addGuests_Unsafe(c, guestIDs, currentGuests, version)
 }
