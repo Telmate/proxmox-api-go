@@ -486,8 +486,10 @@ func main() {
 			comment = flag.Args()[2]
 		}
 
-		err := c.CreatePool(poolid, comment)
-		failError(err)
+		failError(proxmox.ConfigPool{
+			Name:    proxmox.PoolName(poolid),
+			Comment: &comment,
+		}.Create(c))
 		fmt.Printf("Pool %s created\n", poolid)
 
 	case "deletePool":
@@ -497,8 +499,7 @@ func main() {
 		}
 		poolid := flag.Args()[1]
 
-		err := c.DeletePool(poolid)
-		failError(err)
+		failError(proxmox.PoolName(poolid).Delete(c))
 		fmt.Printf("Pool %s removed\n", poolid)
 
 	case "updatePoolComment":
@@ -510,8 +511,10 @@ func main() {
 		poolid := flag.Args()[1]
 		comment := flag.Args()[2]
 
-		err := c.UpdatePoolComment(poolid, comment)
-		failError(err)
+		failError(proxmox.ConfigPool{
+			Name:    proxmox.PoolName(poolid),
+			Comment: &comment,
+		}.Update(c))
 		fmt.Printf("Pool %s updated\n", poolid)
 
 	//Users

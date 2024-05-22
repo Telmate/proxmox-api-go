@@ -2,6 +2,7 @@ package update
 
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
+	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
@@ -10,13 +11,16 @@ var update_poolCmd = &cobra.Command{
 	Short: "Updates the comment on the specified pool",
 	Args:  cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		var comment string
 		id := cli.RequiredIDset(args, 0, "PoolID")
+		var comment *string
 		if len(args) > 1 {
-			comment = args[1]
+			comment = &args[1]
 		}
 		c := cli.NewClient()
-		err = c.UpdatePoolComment(id, comment)
+		err = proxmox.ConfigPool{
+			Name:    proxmox.PoolName(id),
+			Comment: comment,
+		}.Update(c)
 		if err != nil {
 			return
 		}
