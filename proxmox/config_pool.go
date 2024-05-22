@@ -211,6 +211,7 @@ func (pool PoolName) addGuests_UnsafeV7(c *Client, guestIDs []uint) error {
 	return pool.put(c, map[string]interface{}{"vms": PoolName("").mapToString(guestIDs)})
 }
 
+// from 8.0.0 on proxmox can move the guests to the pool while they are still in another pool
 func (pool PoolName) addGuests_UnsafeV8(c *Client, guestIDs []uint) error {
 	return pool.put(c, map[string]interface{}{
 		"vms":        PoolName("").mapToString(guestIDs),
