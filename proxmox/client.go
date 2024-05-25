@@ -1669,7 +1669,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 	return
 }
 
-// TODO: implement replacement
+// Deprecated: use ListPoolsWithComments() instead
 func (c *Client) GetPoolList() (pools map[string]interface{}, err error) {
 	return c.GetItemList("/pools")
 }

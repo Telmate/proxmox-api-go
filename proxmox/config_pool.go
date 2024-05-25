@@ -18,6 +18,23 @@ func ListPools(c *Client) ([]PoolName, error) {
 	return pools, nil
 }
 
+func ListPoolsWithComments(c *Client) (map[PoolName]string, error) {
+	raw, err := listPools(c)
+	if err != nil {
+		return nil, err
+	}
+	pools := make(map[PoolName]string, len(raw))
+	for _, e := range raw {
+		pool := e.(map[string]interface{})
+		var comment string
+		if v, isSet := pool["comment"]; isSet {
+			comment = v.(string)
+		}
+		pools[PoolName(pool["poolid"].(string))] = comment
+	}
+	return pools, nil
+}
+
 func listPools(c *Client) ([]interface{}, error) {
 	return c.GetItemListInterfaceArray("/pools")
 }
