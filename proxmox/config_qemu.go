@@ -1006,25 +1006,33 @@ var (
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
 	var vmConfig map[string]interface{}
+	var vmInfo map[string]interface{}
 	for ii := 0; ii < 3; ii++ {
 		vmConfig, err = client.GetVmConfig(vmr)
 		if err != nil {
 			log.Fatal(err)
 			return nil, err
 		}
+		// TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
+		vmInfo, err = client.GetVmInfo(vmr)
+		if err != nil {
+			return nil, err
+		}
 		// this can happen:
 		// {"data":{"lock":"clone","digest":"eb54fb9d9f120ba0c3bdf694f73b10002c375c38","description":" qmclone temporary file\n"}})
-		if vmConfig["lock"] == nil {
+		if vmInfo["lock"] == nil {
 			break
 		} else {
 			time.Sleep(8 * time.Second)
 		}
 	}
 
-	if vmConfig["lock"] != nil {
+	if vmInfo["lock"] != nil {
 		return nil, fmt.Errorf("vm locked, could not obtain config")
 	}
-
+	if v, isSet := vmInfo["pool"]; isSet { // TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
+		vmr.pool = v.(string)
+	}
 	config, err = ConfigQemu{}.mapToStruct(vmr, vmConfig)
 	if err != nil {
 		return
@@ -1033,7 +1041,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	config.defaults()
 
 	// HAstate is return by the api for a vm resource type but not the HAgroup
-	err = client.ReadVMHA(vmr)
+	err = client.ReadVMHA(vmr) // TODO: can be optimized, uses same API call as GetVmConfig and GetVmInfo
 	if err == nil {
 		config.HaState = vmr.HaState()
 		config.HaGroup = vmr.HaGroup()
