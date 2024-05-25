@@ -9,6 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_ListPools(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { _, err = ListPools(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_ListPoolsWithComments(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { _, err = ListPoolsWithComments(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
 func Test_ConfigPool_mapToApi(t *testing.T) {
 	type testInput struct {
 		new     ConfigPool
@@ -117,6 +129,54 @@ func Test_ConfigPool_mapToSDK(t *testing.T) {
 	}
 }
 
+func Test_ConfigPool_Create(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Create(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_ConfigPool_Create_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Create_Unsafe(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_ConfigPool_Delete(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Delete(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_ConfigPool_Exists(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { _, err = ConfigPool{Name: "test"}.Exists(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_ConfigPool_Set(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Set(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_ConfigPool_Set_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Set_Unsafe(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_ConfigPool_Update(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Update(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_ConfigPool_Update_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Update_Unsafe(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
 func Test_ConfigPool_Validate(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -140,6 +200,54 @@ func Test_ConfigPool_Validate(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
 		})
 	}
+}
+
+func Test_PoolName_AddGuests(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = PoolName("test").AddGuests(nil, nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_AddGuests_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = PoolName("test").AddGuests_Unsafe(nil, nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_Delete(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = PoolName("test").Delete(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_Delete_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = PoolName("test").Delete_Unsafe(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_Exists(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { _, err = PoolName("test").Exists(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_Exists_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { _, err = PoolName("test").Exists_Unsafe(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_Get(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { _, err = PoolName("test").Get(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_Get_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { _, err = PoolName("test").Get_Unsafe(nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
 func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
@@ -189,6 +297,30 @@ func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 			require.Equal(t, test.output, PoolName("").guestsToRemoveFromPools(test.input.guests, test.input.guestsToAdd))
 		})
 	}
+}
+
+func Test_PoolName_RemoveGuests(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = PoolName("test").RemoveGuests(nil, nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_RemoveGuests_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = PoolName("test").RemoveGuests_Unsafe(nil, nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_SetGuests(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = PoolName("test").SetGuests(nil, nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
+}
+
+func Test_PoolName_SetGuests_Unsafe(t *testing.T) {
+	var err error
+	require.NotPanics(t, func() { err = PoolName("test").SetGuests_Unsafe(nil, nil) })
+	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
 func Test_PoolName_mapToString(t *testing.T) {
