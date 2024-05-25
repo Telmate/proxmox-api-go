@@ -450,7 +450,7 @@ func main() {
 
 	//Pool
 	case "getPoolList":
-		pools, err := c.GetPoolList()
+		pools, err := proxmox.ListPoolsWithComments(c)
 		if err != nil {
 			log.Printf("Error listing pools %+v\n", err)
 			os.Exit(1)
