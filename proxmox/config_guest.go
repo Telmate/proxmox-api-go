@@ -3,7 +3,6 @@ package proxmox
 import (
 	"errors"
 	"strconv"
-	"strings"
 )
 
 // All code LXC and Qemu have in common should be placed here.
@@ -25,7 +24,7 @@ type GuestResource struct {
 	Node               string    `json:"node"` // TODO custom type
 	Pool               PoolName  `json:"pool"`
 	Status             string    `json:"status"` // TODO custom type?
-	Tags               []string  `json:"tags"`   // TODO custom type
+	Tags               []Tag     `json:"tags"`
 	Template           bool      `json:"template"`
 	Type               GuestType `json:"type"`
 	UptimeInSeconds    uint      `json:"uptime"`
@@ -85,7 +84,7 @@ func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
 			resources[i].Status = tmpParams["status"].(string)
 		}
 		if _, isSet := tmpParams["tags"]; isSet {
-			resources[i].Tags = strings.Split(tmpParams["tags"].(string), ";")
+			resources[i].Tags = Tag("").mapToSDK(tmpParams["tags"].(string))
 		}
 		if _, isSet := tmpParams["template"]; isSet {
 			resources[i].Template = Itob(int(tmpParams["template"].(float64)))

@@ -145,6 +145,7 @@ func ResponseJSON(resp *http.Response) (jbody map[string]interface{}, err error)
 	return jbody, err
 }
 
+// Is this needed?
 func TypedResponse(resp *http.Response, v interface{}) error {
 	var intermediate struct {
 		Data struct {
