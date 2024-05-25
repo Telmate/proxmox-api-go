@@ -743,15 +743,15 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		return
 	}
 
+	var version Version
+	if version, err = client.Version(); err != nil {
+		return
+	}
+
 	var params map[string]interface{}
 	var exitStatus string
 
 	if currentConfig != nil { // Update
-		var version Version
-		if version, err = client.Version(); err != nil {
-			return
-		}
-
 		// TODO implement tmp move and version change
 		url := "/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/config"
 		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
@@ -882,8 +882,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			return
 		}
 		if newConfig.Pool != nil && *newConfig.Pool != "" { // add guest to pool
-			// we can use the v7 implementation here because we know the guest isn't in a pool yet
-			if err = newConfig.Pool.addGuests_UnsafeV7(client, []uint{uint(vmr.vmId)}); err != nil {
+			if err = newConfig.Pool.addGuests_Unsafe(client, []uint{uint(vmr.vmId)}, nil, version); err != nil {
 				return
 			}
 		}

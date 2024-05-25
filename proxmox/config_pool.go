@@ -153,8 +153,12 @@ func (config ConfigPool) Update(c *Client) error {
 
 // Update_Unsafe updates a pool without validating the input
 func (config ConfigPool) Update_Unsafe(c *Client, current *ConfigPool) error {
+	version, err := c.GetVersion()
+	if err != nil {
+		return err
+	}
 	if params := config.mapToApi(current); len(params) > 0 {
-		if err := config.Name.put(c, params); err != nil {
+		if err = config.Name.put(c, params, version); err != nil {
 			return err
 		}
 	}
@@ -200,7 +204,7 @@ func (config PoolName) addGuests_Unsafe(c *Client, guestIDs []uint, currentGuest
 		return err
 	}
 	for i, e := range PoolName("").guestsToRemoveFromPools(guests, guestsToAdd) {
-		if err = i.RemoveGuests_Unsafe(c, e); err != nil {
+		if err = i.RemoveGuests_Unsafe(c, e, version); err != nil {
 			return err
 		}
 	}
@@ -208,12 +212,12 @@ func (config PoolName) addGuests_Unsafe(c *Client, guestIDs []uint, currentGuest
 }
 
 func (pool PoolName) addGuests_UnsafeV7(c *Client, guestIDs []uint) error {
-	return pool.put(c, map[string]interface{}{"vms": PoolName("").mapToString(guestIDs)})
+	return pool.putV7(c, map[string]interface{}{"vms": PoolName("").mapToString(guestIDs)})
 }
 
 // from 8.0.0 on proxmox can move the guests to the pool while they are still in another pool
 func (pool PoolName) addGuests_UnsafeV8(c *Client, guestIDs []uint) error {
-	return pool.put(c, map[string]interface{}{
+	return pool.putV8(c, map[string]interface{}{
 		"vms":        PoolName("").mapToString(guestIDs),
 		"allow-move": "1"})
 }
@@ -342,13 +346,25 @@ func (PoolName) mapToString(guestID []uint) (vms string) {
 	return
 }
 
-func (pool PoolName) put(c *Client, params map[string]interface{}) error {
+func (pool PoolName) put(c *Client, params map[string]interface{}, version Version) error {
+	if version.Smaller(Version{8, 0, 0}) {
+		return pool.putV7(c, params)
+	}
+	return pool.putV8(c, params)
+}
+
+func (pool PoolName) putV7(c *Client, params map[string]interface{}) error {
+	return c.Put(params, "/pools/"+string(pool))
+}
+
+func (pool PoolName) putV8(c *Client, params map[string]interface{}) error {
 	return c.Put(params, "/pools?poolid="+string(pool))
 }
 
 func (config PoolName) RemoveGuests(c *Client, guestID []uint) error {
-	if c == nil {
-		return errors.New(Client_Error_Nil)
+	version, err := c.GetVersion()
+	if err != nil {
+		return err
 	}
 	if err := config.Validate(); err != nil {
 		return err
@@ -362,13 +378,14 @@ func (config PoolName) RemoveGuests(c *Client, guestID []uint) error {
 	} else if !exists {
 		return errors.New(PoolName_Error_NotExists)
 	}
-	return config.RemoveGuests_Unsafe(c, guestID)
+	return config.RemoveGuests_Unsafe(c, guestID, version)
 }
 
-func (pool PoolName) RemoveGuests_Unsafe(c *Client, guestID []uint) error {
+func (pool PoolName) RemoveGuests_Unsafe(c *Client, guestID []uint, version Version) error {
 	return pool.put(c, map[string]interface{}{
 		"vms":    PoolName("").mapToString(guestID),
-		"delete": "1"})
+		"delete": "1"},
+		version)
 }
 
 func (pool PoolName) SetGuests(c *Client, guestID []uint) error {
@@ -401,7 +418,7 @@ func (pool PoolName) SetGuests_Unsafe(c *Client, guestID []uint) error {
 
 func (pool PoolName) setGuests_Unsafe(c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
 	if currentGuests != nil && len(*currentGuests) > 0 {
-		if err := pool.RemoveGuests_Unsafe(c, subtractArray(*currentGuests, guestIDs)); err != nil {
+		if err := pool.RemoveGuests_Unsafe(c, subtractArray(*currentGuests, guestIDs), version); err != nil {
 			return err
 		}
 	}
