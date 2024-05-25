@@ -181,7 +181,7 @@ func GuestReboot(vmr *VmRef, client *Client) (err error) {
 func guestSetPool_Unsafe(c *Client, guestID uint, newPool PoolName, currentPool *PoolName, version Version) (err error) {
 	if newPool == "" {
 		if *currentPool != "" { // leave pool
-			if err = (*currentPool).RemoveGuests_Unsafe(c, []uint{guestID}, version); err != nil {
+			if err = (*currentPool).removeGuests_Unsafe(c, []uint{guestID}, version); err != nil {
 				return
 			}
 		}
@@ -196,7 +196,7 @@ func guestSetPool_Unsafe(c *Client, guestID uint, newPool PoolName, currentPool 
 			}
 		} else if newPool != *currentPool { // change pool
 			if version.Smaller(Version{8, 0, 0}) {
-				if err = (*currentPool).RemoveGuests_Unsafe(c, []uint{guestID}, version); err != nil {
+				if err = (*currentPool).removeGuests_Unsafe(c, []uint{guestID}, version); err != nil {
 					return
 				}
 				if err = newPool.addGuests_UnsafeV7(c, []uint{guestID}); err != nil {

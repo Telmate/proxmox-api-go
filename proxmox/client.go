@@ -141,6 +141,9 @@ func (c *Client) Login(username string, password string, otp string) (err error)
 
 // Updates the client's cached version information and returns it.
 func (c *Client) GetVersion() (version Version, err error) {
+	if c == nil {
+		return Version{}, errors.New(Client_Error_Nil)
+	}
 	params, err := c.GetItemConfigMapStringInterface("/version", "version", "data")
 	version = version.mapToSDK(params)
 	cachedVersion := Version{ // clones the struct
