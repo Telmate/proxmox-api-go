@@ -57,7 +57,7 @@ type ConfigQemu struct {
 	Nameserver      string          `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	Node            string          `json:"node,omitempty"`       // Only returned setting it has no effect, set node in the VmRef instead
 	Onboot          *bool           `json:"onboot,omitempty"`
-	Pool            string          `json:"pool,omitempty"` // TODO should be custom type as there are character and length limitations
+	Pool            *PoolName       `json:"pool,omitempty"`
 	Protection      *bool           `json:"protection,omitempty"`
 	QemuCores       int             `json:"cores,omitempty"`   // TODO should be uint
 	QemuCpu         string          `json:"cpu,omitempty"`     // TODO should be custom type with enum
@@ -355,7 +355,8 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 
 	if vmr != nil {
 		config.Node = vmr.node
-		config.Pool = vmr.pool
+		poolCopy := PoolName(vmr.pool)
+		config.Pool = &poolCopy
 		config.VmID = vmr.vmId
 	}
 
@@ -736,6 +737,11 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		return
 	}
 
+	var version Version
+	if version, err = client.Version(); err != nil {
+		return
+	}
+
 	var params map[string]interface{}
 	var exitStatus string
 
@@ -833,6 +839,10 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			return
 		}
 
+		if newConfig.Pool != nil { // update pool membership
+			guestSetPool_Unsafe(client, uint(vmr.vmId), *newConfig.Pool, currentConfig.Pool, version)
+		}
+
 		if stopped { // start vm if it was stopped
 			if rebootIfNeeded {
 				if err = GuestStart(vmr, client); err != nil {
@@ -865,17 +875,17 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		if err = resizeNewDisks(vmr, client, newConfig.Disks, nil); err != nil {
 			return
 		}
+		if newConfig.Pool != nil && *newConfig.Pool != "" { // add guest to pool
+			if err = newConfig.Pool.addGuests_Unsafe(client, []uint{uint(vmr.vmId)}, nil, version); err != nil {
+				return
+			}
+		}
 		if err = client.insertCachedPermission(permissionPath(permissionCategory_GuestPath) + "/" + permissionPath(strconv.Itoa(vmr.vmId))); err != nil {
 			return
 		}
 	}
 
 	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)
-	if err != nil {
-		return
-	}
-
-	_, err = client.UpdateVMPool(vmr, newConfig.Pool)
 	return
 }
 
@@ -890,6 +900,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 	if config.Disks != nil {
 		err = config.Disks.Validate()
 		if err != nil {
+			return
+		}
+	}
+	if config.Pool != nil && *config.Pool != "" {
+		if err = config.Pool.Validate(); err != nil {
 			return
 		}
 	}
@@ -990,25 +1005,33 @@ var (
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
 	var vmConfig map[string]interface{}
+	var vmInfo map[string]interface{}
 	for ii := 0; ii < 3; ii++ {
 		vmConfig, err = client.GetVmConfig(vmr)
 		if err != nil {
 			log.Fatal(err)
 			return nil, err
 		}
+		// TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
+		vmInfo, err = client.GetVmInfo(vmr)
+		if err != nil {
+			return nil, err
+		}
 		// this can happen:
 		// {"data":{"lock":"clone","digest":"eb54fb9d9f120ba0c3bdf694f73b10002c375c38","description":" qmclone temporary file\n"}})
-		if vmConfig["lock"] == nil {
+		if vmInfo["lock"] == nil {
 			break
 		} else {
 			time.Sleep(8 * time.Second)
 		}
 	}
 
-	if vmConfig["lock"] != nil {
+	if vmInfo["lock"] != nil {
 		return nil, fmt.Errorf("vm locked, could not obtain config")
 	}
-
+	if v, isSet := vmInfo["pool"]; isSet { // TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
+		vmr.pool = v.(string)
+	}
 	config, err = ConfigQemu{}.mapToStruct(vmr, vmConfig)
 	if err != nil {
 		return
@@ -1017,7 +1040,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	config.defaults()
 
 	// HAstate is return by the api for a vm resource type but not the HAgroup
-	err = client.ReadVMHA(vmr)
+	err = client.ReadVMHA(vmr) // TODO: can be optimized, uses same API call as GetVmConfig and GetVmInfo
 	if err == nil {
 		config.HaState = vmr.HaState()
 		config.HaGroup = vmr.HaGroup()

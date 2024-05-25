@@ -21,8 +21,8 @@ type GuestResource struct {
 	Name               string    `json:"name"` // TODO custom type
 	NetworkIn          uint      `json:"network_in"`
 	NetworkOut         uint      `json:"network_out"`
-	Node               string    `json:"node"`   // TODO custom type
-	Pool               string    `json:"pool"`   // TODO custom type
+	Node               string    `json:"node"` // TODO custom type
+	Pool               PoolName  `json:"pool"`
 	Status             string    `json:"status"` // TODO custom type?
 	Tags               []Tag     `json:"tags"`
 	Template           bool      `json:"template"`
@@ -174,6 +174,40 @@ func GuestHasPendingChanges(vmr *VmRef, client *Client) (bool, error) {
 // Reboot the specified guest
 func GuestReboot(vmr *VmRef, client *Client) (err error) {
 	_, err = client.RebootVm(vmr)
+	return
+}
+
+func guestSetPool_Unsafe(c *Client, guestID uint, newPool PoolName, currentPool *PoolName, version Version) (err error) {
+	if newPool == "" {
+		if *currentPool != "" { // leave pool
+			if err = (*currentPool).removeGuests_Unsafe(c, []uint{guestID}, version); err != nil {
+				return
+			}
+		}
+	} else {
+		if *currentPool == "" { // join pool
+			if version.Smaller(Version{8, 0, 0}) {
+				if err = newPool.addGuests_UnsafeV7(c, []uint{guestID}); err != nil {
+					return
+				}
+			} else {
+				newPool.addGuests_UnsafeV8(c, []uint{guestID})
+			}
+		} else if newPool != *currentPool { // change pool
+			if version.Smaller(Version{8, 0, 0}) {
+				if err = (*currentPool).removeGuests_Unsafe(c, []uint{guestID}, version); err != nil {
+					return
+				}
+				if err = newPool.addGuests_UnsafeV7(c, []uint{guestID}); err != nil {
+					return
+				}
+			} else {
+				if err = newPool.addGuests_UnsafeV8(c, []uint{guestID}); err != nil {
+					return
+				}
+			}
+		}
+	}
 	return
 }
 

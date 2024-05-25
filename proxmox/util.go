@@ -249,3 +249,17 @@ func splitStringOfSettings(settings string) map[string]interface{} {
 	}
 	return settingMap
 }
+
+// subtracts array B from array A
+func subtractArray[T comparable](A, B []T) (result []T) {
+	elements := make(map[T]bool)
+	for _, item := range B {
+		elements[item] = true
+	}
+	for _, item := range A {
+		if !elements[item] {
+			result = append(result, item)
+		}
+	}
+	return
+}

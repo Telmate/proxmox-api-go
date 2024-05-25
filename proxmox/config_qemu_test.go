@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_pool"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_tag"
 	"github.com/stretchr/testify/require"
@@ -5927,11 +5928,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		},
 		{name: "Node vmr empty",
 			vmr:    &VmRef{node: ""},
-			output: &ConfigQemu{},
+			output: &ConfigQemu{Pool: util.Pointer(PoolName(""))},
 		},
 		{name: "Node vmr populated",
 			vmr:    &VmRef{node: "test"},
-			output: &ConfigQemu{Node: "test"},
+			output: &ConfigQemu{Node: "test", Pool: util.Pointer(PoolName(""))},
 		},
 		// Pool
 		{name: "Pool vmr nil",
@@ -5939,11 +5940,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		},
 		{name: "Pool vmr empty",
 			vmr:    &VmRef{pool: ""},
-			output: &ConfigQemu{},
+			output: &ConfigQemu{Pool: util.Pointer(PoolName(""))},
 		},
 		{name: "Pool vmr populated",
 			vmr:    &VmRef{pool: "test"},
-			output: &ConfigQemu{Pool: "test"},
+			output: &ConfigQemu{Pool: util.Pointer(PoolName("test"))},
 		},
 		// VmID
 		{name: "VmID vmr nil",
@@ -5951,11 +5952,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		},
 		{name: "VmID vmr empty",
 			vmr:    &VmRef{vmId: 0},
-			output: &ConfigQemu{},
+			output: &ConfigQemu{Pool: util.Pointer(PoolName(""))},
 		},
 		{name: "VmID vmr populated",
 			vmr:    &VmRef{vmId: 100},
-			output: &ConfigQemu{VmID: 100},
+			output: &ConfigQemu{VmID: 100, Pool: util.Pointer(PoolName(""))},
 		},
 		// TPM
 		{name: "TPM",
@@ -6191,6 +6192,11 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				}}},
 			}},
 		},
+		// Valid Pool
+		{name: "Valid PoolName",
+			input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Legal()))}},
+		{name: "Valid PoolName Empty",
+			input: ConfigQemu{Pool: util.Pointer(PoolName(""))}},
 		// Valid Tags
 		{name: "Valid Tags",
 			input: ConfigQemu{Tags: util.Pointer(validTags())},
@@ -7287,6 +7293,13 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}},
 			err:   errors.New(Error_QemuWorldWideName_Invalid),
 		},
+		// Invalid Pool
+		{name: "Invalid Pool Length",
+			input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Max_Illegal()))},
+			err:   errors.New(PoolName_Error_Length)},
+		{name: "Invalid Pool Characters",
+			input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Error_Characters()[0]))},
+			err:   errors.New(PoolName_Error_Characters)},
 		// Invalid Tags
 		{name: `Invalid Tags errors.New(Tag_Error_Invalid)`,
 			input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Illegal())})},

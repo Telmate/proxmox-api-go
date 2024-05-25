@@ -27,8 +27,6 @@ func listRaw(IDtype string) {
 		list, err = c.GetMetricsServerList()
 	case "Nodes":
 		list, err = c.GetNodeList()
-	case "Pools":
-		list, err = c.GetPoolList()
 	case "Storages":
 		list, err = c.GetStorageList()
 	}

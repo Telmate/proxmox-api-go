@@ -29,7 +29,7 @@ func deleteID(args []string, IDtype string) (err error) {
 	case "MetricServer":
 		err = c.DeleteMetricServer(id)
 	case "Pool":
-		err = c.DeletePool(id)
+		err = proxmox.PoolName(id).Delete(c)
 	case "Storage":
 		err = c.DeleteStorage(id)
 	case "User":

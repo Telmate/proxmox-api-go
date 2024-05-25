@@ -140,6 +140,9 @@ func (c *Client) Login(username string, password string, otp string) (err error)
 
 // Updates the client's cached version information and returns it.
 func (c *Client) GetVersion() (version Version, err error) {
+	if c == nil {
+		return Version{}, errors.New(Client_Error_Nil)
+	}
 	params, err := c.GetItemConfigMapStringInterface("/version", "version", "data")
 	version = version.mapToSDK(params)
 	cachedVersion := Version{ // clones the struct
@@ -1491,6 +1494,7 @@ func getStorageAndVolumeName(
 	return storageName, volumeName
 }
 
+// Deprecated: use ConfigQemu.Update() instead
 func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, err error) {
 	// Same pool
 	if vmr.pool == pool {
@@ -1628,14 +1632,17 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 	return
 }
 
+// Deprecated: use ListPoolsWithComments() instead
 func (c *Client) GetPoolList() (pools map[string]interface{}, err error) {
 	return c.GetItemList("/pools")
 }
 
+// TODO: implement replacement
 func (c *Client) GetPoolInfo(poolid string) (poolInfo map[string]interface{}, err error) {
 	return c.GetItemConfigMapStringInterface("/pools/"+poolid, "pool", "CONFIG")
 }
 
+// Deprecated: use ConfigPool.Create() instead
 func (c *Client) CreatePool(poolid string, comment string) error {
 	return c.Post(map[string]interface{}{
 		"poolid":  poolid,
@@ -1643,6 +1650,7 @@ func (c *Client) CreatePool(poolid string, comment string) error {
 	}, "/pools")
 }
 
+// Deprecated: use ConfigPool.Update() instead
 func (c *Client) UpdatePoolComment(poolid string, comment string) error {
 	return c.Put(map[string]interface{}{
 		"poolid":  poolid,
@@ -1650,6 +1658,7 @@ func (c *Client) UpdatePoolComment(poolid string, comment string) error {
 	}, "/pools/"+poolid)
 }
 
+// Deprecated: use PoolName.Delete() instead
 func (c *Client) DeletePool(poolid string) error {
 	return c.Delete("/pools/" + poolid)
 }
