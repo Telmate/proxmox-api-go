@@ -1494,7 +1494,7 @@ func getStorageAndVolumeName(
 	return storageName, volumeName
 }
 
-// Deprecated: use ConfigQemu.Update() instead
+// Still used by Terraform. Deprecated: use ConfigQemu.Update() instead
 func (c *Client) UpdateVMPool(vmr *VmRef, pool string) (exitStatus interface{}, err error) {
 	// Same pool
 	if vmr.pool == pool {
@@ -1632,7 +1632,7 @@ func (c *Client) UpdateVMHA(vmr *VmRef, haState string, haGroup string) (exitSta
 	return
 }
 
-// Deprecated: use ListPoolsWithComments() instead
+// Still used by Terraform. Deprecated: use ListPoolsWithComments() instead
 func (c *Client) GetPoolList() (pools map[string]interface{}, err error) {
 	return c.GetItemList("/pools")
 }
