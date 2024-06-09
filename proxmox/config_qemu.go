@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,6 +39,7 @@ type ConfigQemu struct {
 	CIcustom        string          `json:"cicustom,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
 	CIpassword      string          `json:"cipassword,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	CIuser          string          `json:"ciuser,omitempty"`     // TODO should be part of a cloud-init struct (cloud-init option)
+	CloudInit       *CloudInit      `json:"cloudinit,omitempty"`
 	Description     string          `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
 	EFIDisk         QemuDevice      `json:"efidisk,omitempty"`   // TODO should be a struct
@@ -79,7 +79,6 @@ type ConfigQemu struct {
 	Scsihw          string          `json:"scsihw,omitempty"`       // TODO should be custom type with enum
 	Searchdomain    string          `json:"searchdomain,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	Smbios1         string          `json:"smbios1,omitempty"`      // TODO should be custom type with enum?
-	Sshkeys         string          `json:"sshkeys,omitempty"`      // TODO should be an array of strings
 	Startup         string          `json:"startup,omitempty"`      // TODO should be a struct?
 	TPM             *TpmState       `json:"tpm,omitempty"`
 	Tablet          *bool           `json:"tablet,omitempty"`
@@ -253,9 +252,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.QemuSockets != 0 {
 		params["sockets"] = config.QemuSockets
 	}
-	if config.Sshkeys != "" {
-		params["sshkeys"] = sshKeyUrlEncode(config.Sshkeys)
-	}
 	if config.Startup != "" {
 		params["startup"] = config.Startup
 	}
@@ -307,6 +303,10 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 		}
 	}
 
+	if config.CloudInit != nil {
+		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params)
+	}
+
 	// Create EFI disk
 	config.CreateQemuEfiParams(params)
 
@@ -336,7 +336,7 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	}
 
 	if itemsToDelete != "" {
-		params["delete"] = itemsToDelete
+		params["delete"] = strings.TrimPrefix(itemsToDelete, ",")
 	}
 	return
 }
@@ -351,7 +351,9 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	// description:Base image
 	// cores:2 ostype:l26
 
-	config := ConfigQemu{}
+	config := ConfigQemu{
+		CloudInit: CloudInit{}.mapToSDK(params),
+	}
 
 	if vmr != nil {
 		config.Node = vmr.node
@@ -460,9 +462,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["searchdomain"]; isSet {
 		config.Searchdomain = params["searchdomain"].(string)
-	}
-	if _, isSet := params["sshkeys"]; isSet {
-		config.Sshkeys, _ = url.PathUnescape(params["sshkeys"].(string))
 	}
 	if _, isSet := params["startup"]; isSet {
 		config.Startup = params["startup"].(string)
@@ -939,7 +938,6 @@ func (config ConfigQemu) HasCloudInit() bool {
 		config.CIpassword != "" ||
 		config.Searchdomain != "" ||
 		config.Nameserver != "" ||
-		config.Sshkeys != "" ||
 		config.CIcustom != ""
 }
 

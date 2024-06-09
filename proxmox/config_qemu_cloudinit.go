@@ -40,3 +40,38 @@ func sshKeyUrlEncode(keys []crypto.PublicKey) (encodedKeys string) {
 	}
 	return
 }
+
+type CloudInit struct {
+	PublicSSHkeys *[]crypto.PublicKey `json:"sshkeys"`
+}
+
+func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface{}) (delete string) {
+	if current != nil { // Update
+		if config.PublicSSHkeys != nil {
+			if len(*config.PublicSSHkeys) > 0 {
+				params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
+			} else {
+				delete += ",sshkeys"
+			}
+		}
+	} else { // Create
+		if config.PublicSSHkeys != nil && len(*config.PublicSSHkeys) > 0 {
+			params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
+		}
+	}
+	return
+}
+
+func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
+	ci := CloudInit{}
+	var set bool
+	if v, isSet := params["sshkeys"]; isSet {
+		tmp := sshKeyUrlDecode(v.(string))
+		ci.PublicSSHkeys = &tmp
+		set = true
+	}
+	if set {
+		return &ci
+	}
+	return nil
+}

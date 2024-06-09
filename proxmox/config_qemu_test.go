@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"crypto"
 	"errors"
 	"testing"
 
@@ -62,6 +63,16 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Create Agent.FsTrim`,
 			config: &ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(true)}},
 			output: map[string]interface{}{"agent": "0,fstrim_cloned_disks=1"}},
+		// Create CloudInit no need for update as update and create behave the same. will be changed in the future
+		{name: `Create CloudInit=nil`,
+			config: &ConfigQemu{},
+			output: map[string]interface{}{}},
+		{name: `Create CloudInit PublicSSHkeys`,
+			config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Input())}},
+			output: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Output()}},
+		{name: `Create CloudInit PublicSSHkeys empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{})}},
+			output: map[string]interface{}{}},
 		// Create Disks
 
 		// Create Disks.Ide
@@ -1399,6 +1410,18 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
 			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
 			output:        map[string]interface{}{"agent": "0"}},
+		// Update CloudInit
+		{name: `Update CloudInit=nil`,
+			config: &ConfigQemu{},
+			output: map[string]interface{}{}},
+		{name: `Update CloudInit PublicSSHkeys`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Input())}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key"})}},
+			output:        map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Output()}},
+		{name: `Update CloudInit PublicSSHkeys empty`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{})}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key"})}},
+			output:        map[string]interface{}{"delete": "sshkeys"}},
 		// Update Disk
 		// Update Disk.Ide
 		{name: "Update Disk.Ide.Disk_X DELETE",
@@ -3435,6 +3458,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		{name: `Agent Type`,
 			input:  map[string]interface{}{"agent": string("1,type=virtio")},
 			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}}},
+		// CloudInit
+		{name: `CloudInit PublicSSHkeys`,
+			input: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Input()},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Output())}}},
 		// Disks Ide CdRom
 		{name: "Disks Ide CdRom none",
 			input:  map[string]interface{}{"ide1": "none,media=cdrom"},
