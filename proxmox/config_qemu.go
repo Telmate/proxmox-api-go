@@ -927,7 +927,6 @@ var (
 	rxSerialName     = regexp.MustCompile(`serial\d+`)
 	rxUsbName        = regexp.MustCompile(`usb\d+`)
 	rxPCIName        = regexp.MustCompile(`hostpci\d+`)
-	rxIpconfigName   = regexp.MustCompile(`ipconfig\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
