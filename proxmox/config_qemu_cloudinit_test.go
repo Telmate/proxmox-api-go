@@ -72,6 +72,9 @@ func Test_CloudInit_Validate(t *testing.T) {
 			input: CloudInit{Custom: &CloudInitCustom{Network: &CloudInitSnippet{
 				FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Relative())}}},
 			output: errors.New(CloudInitSnippetPath_Error_Relative)},
+		{name: `Invalid errors.New(QemuNetworkInterfaceID_Error_Invalid)`,
+			input:  CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{32: ""}},
+			output: errors.New(QemuNetworkInterfaceID_Error_Invalid)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

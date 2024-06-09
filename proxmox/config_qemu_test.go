@@ -125,6 +125,15 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Create CloudInit DNS SearchDomain empty`,
 			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
 			output: map[string]interface{}{}},
+		{name: `Create CloudInit NetworkInterfaces`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID1:  "ip=dhcp,ip6=dhcp",
+				QemuNetworkInterfaceID20: "",
+				QemuNetworkInterfaceID30: "ip=10.20.4.7/22"}}},
+			output: map[string]interface{}{
+				"ipconfig1":  "ip=dhcp,ip6=dhcp",
+				"ipconfig20": "",
+				"ipconfig30": "ip=10.20.4.7/22"}},
 		{name: `Create CloudInit PublicSSHkeys`,
 			config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Input())}},
 			output: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Output()}},
@@ -1537,6 +1546,19 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
 			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
 			output:        map[string]interface{}{"delete": "searchdomain"}},
+		{name: `Update CloudInit NetworkInterfaces`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID1:  "ip=dhcp,ip6=dhcp",
+				QemuNetworkInterfaceID20: "",
+				QemuNetworkInterfaceID30: "ip=10.20.4.7/22"}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID15: "ip=dhcp,ip6=dhcp",
+				QemuNetworkInterfaceID25: "ip=dhcp,ip6=dhcp",
+			}}},
+			output: map[string]interface{}{
+				"ipconfig1":  "ip=dhcp,ip6=dhcp",
+				"ipconfig20": "",
+				"ipconfig30": "ip=10.20.4.7/22"}},
 		{name: `Update CloudInit PublicSSHkeys`,
 			config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Input())}},
 			currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key"})}},
@@ -3601,26 +3623,31 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		{name: `CloudInit Custom Meta`,
 			input: map[string]interface{}{"cicustom": string("meta=local-zfs:ci-meta.yml")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
-				Custom: &CloudInitCustom{Meta: &CloudInitSnippet{FilePath: "ci-meta.yml", Storage: "local-zfs"}}}}},
+				Custom:            &CloudInitCustom{Meta: &CloudInitSnippet{FilePath: "ci-meta.yml", Storage: "local-zfs"}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
 		{name: `CloudInit Custom Network`,
 			input: map[string]interface{}{"cicustom": string("network=local-lvm:ci-network.yml")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
-				Custom: &CloudInitCustom{Network: &CloudInitSnippet{FilePath: "ci-network.yml", Storage: "local-lvm"}}}}},
+				Custom:            &CloudInitCustom{Network: &CloudInitSnippet{FilePath: "ci-network.yml", Storage: "local-lvm"}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
 		{name: `CloudInit Custom User`,
 			input: map[string]interface{}{
 				"cicustom": string("user=folder:ci-user.yml")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
-				Custom: &CloudInitCustom{User: &CloudInitSnippet{FilePath: "ci-user.yml", Storage: "folder"}}}}},
+				Custom:            &CloudInitCustom{User: &CloudInitSnippet{FilePath: "ci-user.yml", Storage: "folder"}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
 		{name: `CloudInit Custom Vendor`,
 			input: map[string]interface{}{"cicustom": string("vendor=local:snippets/ci-custom.yml")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
-				Custom: &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: "snippets/ci-custom.yml", Storage: "local"}}}}},
+				Custom:            &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: "snippets/ci-custom.yml", Storage: "local"}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
 		{name: `CloudInit DNS SearchDomain`,
 			input: map[string]interface{}{"searchdomain": string("example.com")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
 				DNS: &GuestDNS{
 					SearchDomain: util.Pointer("example.com"),
-					NameServers:  util.Pointer(uninitializedArray[netip.Addr]())}}}},
+					NameServers:  util.Pointer(uninitializedArray[netip.Addr]())},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
 		{name: `CloudInit DNS SearchDomain empty`,
 			input:  map[string]interface{}{"searchdomain": string(" ")},
 			output: &ConfigQemu{}},
@@ -3629,19 +3656,33 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			output: &ConfigQemu{CloudInit: &CloudInit{
 				DNS: &GuestDNS{
 					SearchDomain: util.Pointer(""),
-					NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}}}}},
+					NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+		{name: `CloudInit NetworkInterfaces`,
+			input: map[string]interface{}{
+				"ipconfig0":  string("ip=dhcp,ip6=dhcp"),
+				"ipconfig19": string(""),
+				"ipconfig20": string(" "), // this single space is on porpuse to test if it is ignored
+				"ipconfig31": string("ip=10.20.4.7/22")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				NetworkInterfaces: CloudInitNetworkInterfaces{
+					QemuNetworkInterfaceID0:  "ip=dhcp,ip6=dhcp",
+					QemuNetworkInterfaceID31: "ip=10.20.4.7/22"}}}},
 		{name: `CloudInit PublicSSHkeys`,
 			input: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Input()},
 			output: &ConfigQemu{CloudInit: &CloudInit{
-				PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Output())}}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{},
+				PublicSSHkeys:     util.Pointer(test_data_qemu.PublicKey_Decoded_Output())}}},
 		{name: `CloudInit UserPassword`,
 			input: map[string]interface{}{"cipassword": string("Enter123!")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
-				UserPassword: util.Pointer("Enter123!")}}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{},
+				UserPassword:      util.Pointer("Enter123!")}}},
 		{name: `CloudInit Username`,
 			input: map[string]interface{}{"ciuser": string("root")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
-				Username: util.Pointer("root")}}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{},
+				Username:          util.Pointer("root")}}},
 		{name: `CloudInit Username empty`,
 			input:  map[string]interface{}{"ciuser": string(" ")},
 			output: &ConfigQemu{}},
@@ -6299,7 +6340,9 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				Meta:    &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Legal())},
 				Network: &CloudInitSnippet{FilePath: ""},
 				User:    &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Legal())},
-				Vendor:  &CloudInitSnippet{FilePath: ""}}}}},
+				Vendor:  &CloudInitSnippet{FilePath: ""}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{
+					QemuNetworkInterfaceID0: ""}}}},
 		// Valid Disks
 		{name: "Valid Disks Empty 0",
 			input: ConfigQemu{Disks: &QemuStorages{}},
@@ -6447,6 +6490,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_Relative)`,
 			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Relative())}}}},
 			err:   errors.New(CloudInitSnippetPath_Error_Relative)},
+		{name: `Invalid CloudInit errors.New(QemuNetworkInterfaceID_Error_Invalid)`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				32: ""}}},
+			err: errors.New(QemuNetworkInterfaceID_Error_Invalid)},
 		// Invalid Disks Mutually exclusive Ide
 		{name: "Invalid Disks MutuallyExclusive Ide 0",
 			input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
@@ -7570,5 +7617,24 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				require.Equal(t, test.input.Validate(test.current), test.err, test.name)
 			})
 		}
+	}
+}
+
+func Test_QemuNetworkInterfaceID_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  QemuNetworkInterfaceID
+		output error
+	}{
+		{name: "Valid",
+			input: QemuNetworkInterfaceID0},
+		{name: "Invalid",
+			input:  32,
+			output: errors.New(QemuNetworkInterfaceID_Error_Invalid)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.Validate())
+		})
 	}
 }

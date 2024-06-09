@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -44,11 +45,12 @@ func sshKeyUrlEncode(keys []crypto.PublicKey) (encodedKeys string) {
 }
 
 type CloudInit struct {
-	Custom        *CloudInitCustom    `json:"cicustom"`
-	DNS           *GuestDNS           `json:"dns"`
-	PublicSSHkeys *[]crypto.PublicKey `json:"sshkeys"`
-	UserPassword  *string             `json:"userpassword"` // TODO custom type
-	Username      *string             `json:"username"`     // TODO custom type
+	Custom            *CloudInitCustom           `json:"cicustom"`
+	DNS               *GuestDNS                  `json:"dns"`
+	NetworkInterfaces CloudInitNetworkInterfaces `json:"ipconfig"`
+	PublicSSHkeys     *[]crypto.PublicKey        `json:"sshkeys"`
+	UserPassword      *string                    `json:"userpassword"` // TODO custom type
+	Username          *string                    `json:"username"`     // TODO custom type
 }
 
 func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface{}) (delete string) {
@@ -115,6 +117,7 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 		}
 	}
 	// Shared
+	config.NetworkInterfaces.mapToAPI(params)
 	if config.UserPassword != nil {
 		params["cipassword"] = *config.UserPassword
 	}
@@ -169,7 +172,8 @@ func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 		}
 		set = true
 	}
-	if set {
+	ci.NetworkInterfaces = CloudInitNetworkInterfaces{}.mapToSDK(params)
+	if set || len(ci.NetworkInterfaces) > 0 {
 		return &ci
 	}
 	return nil
@@ -181,7 +185,7 @@ func (ci CloudInit) Validate() error {
 			return err
 		}
 	}
-	return nil
+	return ci.NetworkInterfaces.Validate()
 }
 
 type CloudInitCustom struct {
@@ -284,6 +288,36 @@ func (ci CloudInitCustom) Validate() (err error) {
 
 func (ci CloudInitCustom) String() string {
 	return ci.mapToAPI(nil)
+}
+
+type CloudInitNetworkInterfaces map[QemuNetworkInterfaceID]string // TODO string should be a custom type
+
+func (interfaces CloudInitNetworkInterfaces) mapToAPI(params map[string]interface{}) {
+	for i, e := range interfaces {
+		params["ipconfig"+strconv.FormatInt(int64(i), 10)] = e
+	}
+}
+
+func (CloudInitNetworkInterfaces) mapToSDK(params map[string]interface{}) CloudInitNetworkInterfaces {
+	ci := make(CloudInitNetworkInterfaces)
+	for i := QemuNetworkInterfaceID(0); i < 32; i++ {
+		if v, isSet := params["ipconfig"+strconv.FormatInt(int64(i), 10)]; isSet {
+			tmp := v.(string)
+			if len(tmp) > 1 { // can be "" or " "
+				ci[i] = v.(string)
+			}
+		}
+	}
+	return ci
+}
+
+func (interfaces CloudInitNetworkInterfaces) Validate() (err error) {
+	for i := range interfaces {
+		if err = i.Validate(); err != nil {
+			return
+		}
+	}
+	return
 }
 
 // If either Storage or FilePath is empty, the snippet will be removed

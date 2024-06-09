@@ -33,17 +33,18 @@ func Test_Cloud_Init_VM(t *testing.T) {
 	err = config.Create(vmref, Test.GetClient())
 	require.NoError(t, err)
 
-	config.Ipconfig = pxapi.IpconfigMap{}
 	config.Boot = "order=virtio0;ide2;net0"
 
-	config.Ipconfig[0] = "gw=10.0.0.1,ip=10.0.0.2/24"
+	config.CloudInit = &pxapi.CloudInit{
+		NetworkInterfaces: pxapi.CloudInitNetworkInterfaces{
+			pxapi.QemuNetworkInterfaceID0: "gw=10.0.0.1,ip=10.0.0.2/24"}}
 
 	_, err = config.Update(true, vmref, Test.GetClient())
 	require.NoError(t, err)
 
 	testConfig, _ := pxapi.NewConfigQemuFromApi(vmref, Test.GetClient())
 
-	require.Equal(t, testConfig.Ipconfig[0], "gw=10.0.0.1,ip=10.0.0.2/24")
+	require.Equal(t, testConfig.CloudInit.NetworkInterfaces[pxapi.QemuNetworkInterfaceID0], "gw=10.0.0.1,ip=10.0.0.2/24")
 
 	_, err = Test.GetClient().DeleteVm(vmref)
 	require.NoError(t, err)
