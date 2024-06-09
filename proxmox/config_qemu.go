@@ -34,10 +34,9 @@ type ConfigQemu struct {
 	Args            string          `json:"args,omitempty"`
 	Balloon         int             `json:"balloon,omitempty"` // TODO should probably be a bool
 	Bios            string          `json:"bios,omitempty"`
-	Boot            string          `json:"boot,omitempty"`       // TODO should be an array of custom enums
-	BootDisk        string          `json:"bootdisk,omitempty"`   // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
-	CIcustom        string          `json:"cicustom,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
-	CIpassword      string          `json:"cipassword,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
+	Boot            string          `json:"boot,omitempty"`     // TODO should be an array of custom enums
+	BootDisk        string          `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
+	CIcustom        string          `json:"cicustom,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	CloudInit       *CloudInit      `json:"cloudinit,omitempty"`
 	Description     string          `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
@@ -193,9 +192,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	}
 	if config.CIcustom != "" {
 		params["cicustom"] = config.CIcustom
-	}
-	if config.CIpassword != "" {
-		params["cipassword"] = config.CIpassword
 	}
 	if config.QemuCores != 0 {
 		params["cores"] = config.QemuCores
@@ -382,9 +378,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["cicustom"]; isSet {
 		config.CIcustom = params["cicustom"].(string)
-	}
-	if _, isSet := params["cipassword"]; isSet {
-		config.CIpassword = params["cipassword"].(string)
 	}
 	if _, isSet := params["description"]; isSet {
 		config.Description = strings.TrimSpace(params["description"].(string))
@@ -927,8 +920,7 @@ func (config ConfigQemu) HasCloudInit() bool {
 			return true
 		}
 	}
-	return config.CIpassword != "" ||
-		config.Searchdomain != "" ||
+	return config.Searchdomain != "" ||
 		config.Nameserver != "" ||
 		config.CIcustom != ""
 }

@@ -43,7 +43,8 @@ func sshKeyUrlEncode(keys []crypto.PublicKey) (encodedKeys string) {
 
 type CloudInit struct {
 	PublicSSHkeys *[]crypto.PublicKey `json:"sshkeys"`
-	Username      *string             `json:"username"` // TODO custom type
+	UserPassword  *string             `json:"userpassword"` // TODO custom type
+	Username      *string             `json:"username"`     // TODO custom type
 }
 
 func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface{}) (delete string) {
@@ -71,12 +72,21 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 			params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
 		}
 	}
+	// Shared
+	if config.UserPassword != nil {
+		params["cipassword"] = *config.UserPassword
+	}
 	return
 }
 
 func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 	ci := CloudInit{}
 	var set bool
+	if v, isSet := params["cipassword"]; isSet {
+		tmp := v.(string)
+		ci.UserPassword = &tmp
+		set = true
+	}
 	if v, isSet := params["ciuser"]; isSet {
 		tmp := v.(string)
 		if tmp != "" && tmp != " " {
