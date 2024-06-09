@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"crypto"
+	"net/netip"
 	"net/url"
 	"regexp"
 	"strings"
@@ -42,6 +43,7 @@ func sshKeyUrlEncode(keys []crypto.PublicKey) (encodedKeys string) {
 }
 
 type CloudInit struct {
+	DNS           *GuestDNS           `json:"dns"`
 	PublicSSHkeys *[]crypto.PublicKey `json:"sshkeys"`
 	UserPassword  *string             `json:"userpassword"` // TODO custom type
 	Username      *string             `json:"username"`     // TODO custom type
@@ -57,6 +59,26 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 				delete += ",ciuser"
 			}
 		}
+		if config.DNS != nil {
+			if config.DNS.SearchDomain != nil {
+				if *config.DNS.SearchDomain != "" {
+					params["searchdomain"] = *config.DNS.SearchDomain
+				} else {
+					delete += ",searchdomain"
+				}
+			}
+			if config.DNS.NameServers != nil {
+				if len(*config.DNS.NameServers) > 0 {
+					var nameservers string
+					for _, ns := range *config.DNS.NameServers {
+						nameservers += " " + ns.String()
+					}
+					params["nameserver"] = nameservers[1:]
+				} else {
+					delete += ",nameserver"
+				}
+			}
+		}
 		if config.PublicSSHkeys != nil {
 			if len(*config.PublicSSHkeys) > 0 {
 				params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
@@ -67,6 +89,18 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 	} else { // Create
 		if config.Username != nil && *config.Username != "" {
 			params["ciuser"] = *config.Username
+		}
+		if config.DNS != nil {
+			if config.DNS.SearchDomain != nil && *config.DNS.SearchDomain != "" {
+				params["searchdomain"] = *config.DNS.SearchDomain
+			}
+			if config.DNS.NameServers != nil && len(*config.DNS.NameServers) > 0 {
+				var nameservers string
+				for _, ns := range *config.DNS.NameServers {
+					nameservers += " " + ns.String()
+				}
+				params["nameserver"] = nameservers[1:]
+			}
 		}
 		if config.PublicSSHkeys != nil && len(*config.PublicSSHkeys) > 0 {
 			params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
@@ -97,6 +131,30 @@ func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 	if v, isSet := params["sshkeys"]; isSet {
 		tmp := sshKeyUrlDecode(v.(string))
 		ci.PublicSSHkeys = &tmp
+		set = true
+	}
+	var dnsSet bool
+	var nameservers []netip.Addr
+	if v, isSet := params["nameserver"]; isSet {
+		tmp := strings.Split(v.(string), " ")
+		nameservers = make([]netip.Addr, len(tmp))
+		for i, e := range tmp {
+			nameservers[i], _ = netip.ParseAddr(e)
+		}
+		dnsSet = true
+	}
+	var domain string
+	if v, isSet := params["searchdomain"]; isSet {
+		if len(v.(string)) > 1 {
+			domain = v.(string)
+			dnsSet = true
+		}
+	}
+	if dnsSet {
+		ci.DNS = &GuestDNS{
+			SearchDomain: &domain,
+			NameServers:  &nameservers,
+		}
 		set = true
 	}
 	if set {

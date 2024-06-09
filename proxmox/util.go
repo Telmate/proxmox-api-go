@@ -263,3 +263,9 @@ func subtractArray[T comparable](A, B []T) (result []T) {
 	}
 	return
 }
+
+// To be used during testing
+func uninitializedArray[T any]() []T {
+	var x []T
+	return x
+}

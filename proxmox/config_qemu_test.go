@@ -3,6 +3,7 @@ package proxmox
 import (
 	"crypto"
 	"errors"
+	"net/netip"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
@@ -13,6 +14,10 @@ import (
 )
 
 func Test_ConfigQemu_mapToApiValues(t *testing.T) {
+	parseIP := func(rawIP string) (ip netip.Addr) {
+		ip, _ = netip.ParseAddr(rawIP)
+		return
+	}
 	format_Raw := QemuDiskFormat_Raw
 	float10 := QemuDiskBandwidthMBpsLimitConcurrent(10.3)
 	float45 := QemuDiskBandwidthMBpsLimitConcurrent(45.23)
@@ -66,6 +71,20 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		// Create CloudInit no need for update as update and create behave the same. will be changed in the future
 		{name: `Create CloudInit=nil`,
 			config: &ConfigQemu{},
+			output: map[string]interface{}{}},
+		{name: `Create CloudInit DNS NameServers`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{parseIP("9.9.9.9")}}}},
+			output: map[string]interface{}{"nameserver": "9.9.9.9"}},
+		{name: `Create CloudInit DNS NameServers empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{}}}},
+			output: map[string]interface{}{}},
+		{name: `Create CloudInit DNS SearchDomain`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}}},
+			output: map[string]interface{}{"searchdomain": "example.com"}},
+		{name: `Create CloudInit DNS SearchDomain empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
 			output: map[string]interface{}{}},
 		{name: `Create CloudInit PublicSSHkeys`,
 			config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Input())}},
@@ -1423,6 +1442,26 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Update CloudInit=nil`,
 			config: &ConfigQemu{},
 			output: map[string]interface{}{}},
+		{name: `Update CloudInit DNS NameServers`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{parseIP("9.9.9.9")}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
+			output: map[string]interface{}{"nameserver": "9.9.9.9"}},
+		{name: `Update CloudInit DNS NameServers empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
+			output: map[string]interface{}{"delete": "nameserver"}},
+		{name: `Update CloudInit DNS SearchDomain`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
+			output:        map[string]interface{}{"searchdomain": "example.com"}},
+		{name: `Update CloudInit DNS SearchDomain empty`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
+			output:        map[string]interface{}{"delete": "searchdomain"}},
 		{name: `Update CloudInit PublicSSHkeys`,
 			config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Input())}},
 			currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key"})}},
@@ -3446,6 +3485,10 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 }
 
 func Test_ConfigQemu_mapToStruct(t *testing.T) {
+	parseIP := func(rawIP string) (ip netip.Addr) {
+		ip, _ = netip.ParseAddr(rawIP)
+		return
+	}
 	uint1 := uint(1)
 	uint2 := uint(2)
 	uint31 := uint(31)
@@ -3480,6 +3523,21 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			input:  map[string]interface{}{"agent": string("1,type=virtio")},
 			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}}},
 		// CloudInit
+		{name: `CloudInit DNS SearchDomain`,
+			input: map[string]interface{}{"searchdomain": string("example.com")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				DNS: &GuestDNS{
+					SearchDomain: util.Pointer("example.com"),
+					NameServers:  util.Pointer(uninitializedArray[netip.Addr]())}}}},
+		{name: `CloudInit DNS SearchDomain empty`,
+			input:  map[string]interface{}{"searchdomain": string(" ")},
+			output: &ConfigQemu{}},
+		{name: `CloudInit DNS NameServers`,
+			input: map[string]interface{}{"nameserver": string("1.1.1.1 8.8.8.8 9.9.9.9")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				DNS: &GuestDNS{
+					SearchDomain: util.Pointer(""),
+					NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}}}}},
 		{name: `CloudInit PublicSSHkeys`,
 			input: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Input()},
 			output: &ConfigQemu{CloudInit: &CloudInit{
