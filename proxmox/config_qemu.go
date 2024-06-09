@@ -1087,16 +1087,6 @@ func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
 	return
 }
 
-// URL encodes the ssh keys
-func sshKeyUrlEncode(keys string) (encodedKeys string) {
-	encodedKeys = url.PathEscape(keys + "\n")
-	encodedKeys = strings.Replace(encodedKeys, "+", "%2B", -1)
-	encodedKeys = strings.Replace(encodedKeys, "@", "%40", -1)
-	encodedKeys = strings.Replace(encodedKeys, "=", "%3D", -1)
-	encodedKeys = strings.Replace(encodedKeys, ":", "%3A", -1)
-	return
-}
-
 // device_del net1
 // netdev_del net1
 func RemoveSshForwardUsernet(vmr *VmRef, client *Client) (err error) {
