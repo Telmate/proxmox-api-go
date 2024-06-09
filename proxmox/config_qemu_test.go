@@ -140,6 +140,9 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Create CloudInit PublicSSHkeys empty`,
 			config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{})}},
 			output: map[string]interface{}{}},
+		{name: `Create CloudInit UpgradePackages`,
+			config: &ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(false)}},
+			output: map[string]interface{}{"ciupgrade": 0}},
 		{name: `Create CloudInit UserPassword`,
 			config: &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Enter123!")}},
 			output: map[string]interface{}{"cipassword": "Enter123!"}},
@@ -1567,6 +1570,10 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{})}},
 			currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key"})}},
 			output:        map[string]interface{}{"delete": "sshkeys"}},
+		{name: `Update CloudInit UpgradePackages`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(false)}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}},
+			output:        map[string]interface{}{"ciupgrade": 0}},
 		{name: `Update CloudInit UserPassword`,
 			config:        &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Enter123!")}},
 			currentConfig: ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Abc123!")}},
@@ -3673,6 +3680,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			output: &ConfigQemu{CloudInit: &CloudInit{
 				NetworkInterfaces: CloudInitNetworkInterfaces{},
 				PublicSSHkeys:     util.Pointer(test_data_qemu.PublicKey_Decoded_Output())}}},
+		{name: `CloudInit UpgradePackages`,
+			input: map[string]interface{}{"ciupgrade": float64(0)},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				NetworkInterfaces: CloudInitNetworkInterfaces{},
+				UpgradePackages:   util.Pointer(false)}}},
 		{name: `CloudInit UserPassword`,
 			input: map[string]interface{}{"cipassword": string("Enter123!")},
 			output: &ConfigQemu{CloudInit: &CloudInit{

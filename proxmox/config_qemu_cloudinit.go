@@ -49,6 +49,7 @@ type CloudInit struct {
 	DNS               *GuestDNS                  `json:"dns"`
 	NetworkInterfaces CloudInitNetworkInterfaces `json:"ipconfig"`
 	PublicSSHkeys     *[]crypto.PublicKey        `json:"sshkeys"`
+	UpgradePackages   *bool                      `json:"ciupgrade"`
 	UserPassword      *string                    `json:"userpassword"` // TODO custom type
 	Username          *string                    `json:"username"`     // TODO custom type
 }
@@ -118,6 +119,9 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 	}
 	// Shared
 	config.NetworkInterfaces.mapToAPI(params)
+	if config.UpgradePackages != nil {
+		params["ciupgrade"] = Btoi(*config.UpgradePackages)
+	}
 	if config.UserPassword != nil {
 		params["cipassword"] = *config.UserPassword
 	}
@@ -134,6 +138,11 @@ func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 	if v, isSet := params["cipassword"]; isSet {
 		tmp := v.(string)
 		ci.UserPassword = &tmp
+		set = true
+	}
+	if v, isSet := params["ciupgrade"]; isSet {
+		tmp := Itob(int(v.(float64)))
+		ci.UpgradePackages = &tmp
 		set = true
 	}
 	if v, isSet := params["ciuser"]; isSet {
