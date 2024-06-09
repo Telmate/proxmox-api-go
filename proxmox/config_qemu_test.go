@@ -73,6 +73,12 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Create CloudInit PublicSSHkeys empty`,
 			config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{})}},
 			output: map[string]interface{}{}},
+		{name: `Create CloudInit Username`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("root")}},
+			output: map[string]interface{}{"ciuser": "root"}},
+		{name: `Create CloudInit Username empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
+			output: map[string]interface{}{}},
 		// Create Disks
 
 		// Create Disks.Ide
@@ -1422,6 +1428,14 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{})}},
 			currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key"})}},
 			output:        map[string]interface{}{"delete": "sshkeys"}},
+		{name: `Update CloudInit Username`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("root")}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
+			output:        map[string]interface{}{"ciuser": "root"}},
+		{name: `Update CloudInit Username empty`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
+			output:        map[string]interface{}{"delete": "ciuser"}},
 		// Update Disk
 		// Update Disk.Ide
 		{name: "Update Disk.Ide.Disk_X DELETE",
@@ -3463,6 +3477,13 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			input: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Input()},
 			output: &ConfigQemu{CloudInit: &CloudInit{
 				PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Output())}}},
+		{name: `CloudInit Username`,
+			input: map[string]interface{}{"ciuser": string("root")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Username: util.Pointer("root")}}},
+		{name: `CloudInit Username empty`,
+			input:  map[string]interface{}{"ciuser": string(" ")},
+			output: &ConfigQemu{}},
 		// Disks Ide CdRom
 		{name: "Disks Ide CdRom none",
 			input:  map[string]interface{}{"ide1": "none,media=cdrom"},

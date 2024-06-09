@@ -43,10 +43,19 @@ func sshKeyUrlEncode(keys []crypto.PublicKey) (encodedKeys string) {
 
 type CloudInit struct {
 	PublicSSHkeys *[]crypto.PublicKey `json:"sshkeys"`
+	Username      *string             `json:"username"` // TODO custom type
 }
 
 func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface{}) (delete string) {
 	if current != nil { // Update
+		if config.Username != nil {
+			tmp := *config.Username
+			if tmp != "" {
+				params["ciuser"] = *config.Username
+			} else {
+				delete += ",ciuser"
+			}
+		}
 		if config.PublicSSHkeys != nil {
 			if len(*config.PublicSSHkeys) > 0 {
 				params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
@@ -55,6 +64,9 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 			}
 		}
 	} else { // Create
+		if config.Username != nil && *config.Username != "" {
+			params["ciuser"] = *config.Username
+		}
 		if config.PublicSSHkeys != nil && len(*config.PublicSSHkeys) > 0 {
 			params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
 		}
@@ -65,6 +77,13 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 	ci := CloudInit{}
 	var set bool
+	if v, isSet := params["ciuser"]; isSet {
+		tmp := v.(string)
+		if tmp != "" && tmp != " " {
+			ci.Username = &tmp
+			set = true
+		}
+	}
 	if v, isSet := params["sshkeys"]; isSet {
 		tmp := sshKeyUrlDecode(v.(string))
 		ci.PublicSSHkeys = &tmp

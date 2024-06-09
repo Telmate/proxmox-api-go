@@ -38,7 +38,6 @@ type ConfigQemu struct {
 	BootDisk        string          `json:"bootdisk,omitempty"`   // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
 	CIcustom        string          `json:"cicustom,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
 	CIpassword      string          `json:"cipassword,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
-	CIuser          string          `json:"ciuser,omitempty"`     // TODO should be part of a cloud-init struct (cloud-init option)
 	CloudInit       *CloudInit      `json:"cloudinit,omitempty"`
 	Description     string          `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
@@ -197,9 +196,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	}
 	if config.CIpassword != "" {
 		params["cipassword"] = config.CIpassword
-	}
-	if config.CIuser != "" {
-		params["ciuser"] = config.CIuser
 	}
 	if config.QemuCores != 0 {
 		params["cores"] = config.QemuCores
@@ -389,9 +385,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["cipassword"]; isSet {
 		config.CIpassword = params["cipassword"].(string)
-	}
-	if _, isSet := params["ciuser"]; isSet {
-		config.CIuser = params["ciuser"].(string)
 	}
 	if _, isSet := params["description"]; isSet {
 		config.Description = strings.TrimSpace(params["description"].(string))
@@ -934,8 +927,7 @@ func (config ConfigQemu) HasCloudInit() bool {
 			return true
 		}
 	}
-	return config.CIuser != "" ||
-		config.CIpassword != "" ||
+	return config.CIpassword != "" ||
 		config.Searchdomain != "" ||
 		config.Nameserver != "" ||
 		config.CIcustom != ""
