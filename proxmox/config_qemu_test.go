@@ -14,6 +14,21 @@ import (
 )
 
 func Test_ConfigQemu_mapToApiValues(t *testing.T) {
+	cloudInitCustom := func() *CloudInitCustom {
+		return &CloudInitCustom{
+			Meta: &CloudInitSnippet{
+				Storage:  "local-zfs",
+				FilePath: "ci-meta.yml"},
+			Network: &CloudInitSnippet{
+				Storage:  "local-lvm",
+				FilePath: "ci-network.yml"},
+			User: &CloudInitSnippet{
+				Storage:  "folder",
+				FilePath: "ci-user.yml"},
+			Vendor: &CloudInitSnippet{
+				Storage:  "local",
+				FilePath: "snippets/ci-custom.yml"}}
+	}
 	parseIP := func(rawIP string) (ip netip.Addr) {
 		ip, _ = netip.ParseAddr(rawIP)
 		return
@@ -72,6 +87,30 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Create CloudInit=nil`,
 			config: &ConfigQemu{},
 			output: map[string]interface{}{}},
+		{name: `Create CloudInit Custom Network`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Network: &CloudInitSnippet{
+					Storage:  "local",
+					FilePath: "ci-network.yml"}}}},
+			output: map[string]interface{}{"cicustom": "network=local:ci-network.yml"}},
+		{name: `Create CloudInit Custom User`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				User: &CloudInitSnippet{
+					Storage:  "file",
+					FilePath: "abcd.yml"}}}},
+			output: map[string]interface{}{"cicustom": "user=file:abcd.yml"}},
+		{name: `Create CloudInit Custom Vendor`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Vendor: &CloudInitSnippet{
+					Storage:  "local",
+					FilePath: "vendor-ci"}}}},
+			output: map[string]interface{}{"cicustom": "vendor=local:vendor-ci"}},
+		{name: `Create CloudInit Custom Meta`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Meta: &CloudInitSnippet{
+					Storage:  "local-zfs",
+					FilePath: "ci-meta.yml"}}}},
+			output: map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml"}},
 		{name: `Create CloudInit DNS NameServers`,
 			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 				NameServers: &[]netip.Addr{parseIP("9.9.9.9")}}}},
@@ -1442,6 +1481,42 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Update CloudInit=nil`,
 			config: &ConfigQemu{},
 			output: map[string]interface{}{}},
+		{name: `Update CloudInit Custom clear`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Meta:    &CloudInitSnippet{},
+				Network: &CloudInitSnippet{},
+				User:    &CloudInitSnippet{},
+				Vendor:  &CloudInitSnippet{}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": ""}},
+		{name: `Update CloudInit Custom Network`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Network: &CloudInitSnippet{
+					Storage:  "newStorage",
+					FilePath: "new.yml"}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=newStorage:new.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"}},
+		{name: `Update CloudInit Custom User`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				User: &CloudInitSnippet{
+					Storage:  "newStorage",
+					FilePath: "new.yml"}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=newStorage:new.yml,vendor=local:snippets/ci-custom.yml"}},
+		{name: `Update CloudInit Custom Vendor`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Vendor: &CloudInitSnippet{
+					Storage:  "newStorage",
+					FilePath: "new.yml"}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=newStorage:new.yml"}},
+		{name: `Update CloudInit Custom Meta`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Meta: &CloudInitSnippet{
+					Storage:  "newStorage",
+					FilePath: "new.yml"}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": "meta=newStorage:new.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"}},
 		{name: `Update CloudInit DNS NameServers`,
 			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 				NameServers: &[]netip.Addr{parseIP("9.9.9.9")}}}},
@@ -3523,6 +3598,23 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			input:  map[string]interface{}{"agent": string("1,type=virtio")},
 			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}}},
 		// CloudInit
+		{name: `CloudInit Custom Meta`,
+			input: map[string]interface{}{"cicustom": string("meta=local-zfs:ci-meta.yml")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom: &CloudInitCustom{Meta: &CloudInitSnippet{FilePath: "ci-meta.yml", Storage: "local-zfs"}}}}},
+		{name: `CloudInit Custom Network`,
+			input: map[string]interface{}{"cicustom": string("network=local-lvm:ci-network.yml")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom: &CloudInitCustom{Network: &CloudInitSnippet{FilePath: "ci-network.yml", Storage: "local-lvm"}}}}},
+		{name: `CloudInit Custom User`,
+			input: map[string]interface{}{
+				"cicustom": string("user=folder:ci-user.yml")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom: &CloudInitCustom{User: &CloudInitSnippet{FilePath: "ci-user.yml", Storage: "folder"}}}}},
+		{name: `CloudInit Custom Vendor`,
+			input: map[string]interface{}{"cicustom": string("vendor=local:snippets/ci-custom.yml")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom: &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: "snippets/ci-custom.yml", Storage: "local"}}}}},
 		{name: `CloudInit DNS SearchDomain`,
 			input: map[string]interface{}{"searchdomain": string("example.com")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
@@ -6201,6 +6293,13 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		// Valid Agent
 		{name: "Valid Agent",
 			input: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("isa"))}}},
+		// Valid CloudInit
+		{name: `Valid CloudInit`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Meta:    &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Legal())},
+				Network: &CloudInitSnippet{FilePath: ""},
+				User:    &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Legal())},
+				Vendor:  &CloudInitSnippet{FilePath: ""}}}}},
 		// Valid Disks
 		{name: "Valid Disks Empty 0",
 			input: ConfigQemu{Disks: &QemuStorages{}},
@@ -6332,6 +6431,22 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		{name: "Invalid Agent",
 			input: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("test"))}},
 			err:   errors.New(QemuGuestAgentType_Error_Invalid)},
+		// Invalid CloudInit
+		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_InvalidCharacters)`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Meta: &CloudInitSnippet{
+				FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Character_Illegal()[0])}}}},
+			err: errors.New(CloudInitSnippetPath_Error_InvalidCharacters)},
+		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_InvalidPath)`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Network: &CloudInitSnippet{
+				FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_InvalidPath())}}}},
+			err: errors.New(CloudInitSnippetPath_Error_InvalidPath)},
+		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_MaxLength)`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{User: &CloudInitSnippet{
+				FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Illegal())}}}},
+			err: errors.New(CloudInitSnippetPath_Error_MaxLength)},
+		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_Relative)`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Relative())}}}},
+			err:   errors.New(CloudInitSnippetPath_Error_Relative)},
 		// Invalid Disks Mutually exclusive Ide
 		{name: "Invalid Disks MutuallyExclusive Ide 0",
 			input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{

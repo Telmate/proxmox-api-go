@@ -36,7 +36,6 @@ type ConfigQemu struct {
 	Bios            string          `json:"bios,omitempty"`
 	Boot            string          `json:"boot,omitempty"`     // TODO should be an array of custom enums
 	BootDisk        string          `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
-	CIcustom        string          `json:"cicustom,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
 	CloudInit       *CloudInit      `json:"cloudinit,omitempty"`
 	Description     string          `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
@@ -187,9 +186,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	}
 	if config.Boot != "" {
 		params["boot"] = config.Boot
-	}
-	if config.CIcustom != "" {
-		params["cicustom"] = config.CIcustom
 	}
 	if config.QemuCores != 0 {
 		params["cores"] = config.QemuCores
@@ -367,9 +363,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["bios"]; isSet {
 		config.Bios = params["bios"].(string)
-	}
-	if _, isSet := params["cicustom"]; isSet {
-		config.CIcustom = params["cicustom"].(string)
 	}
 	if _, isSet := params["description"]; isSet {
 		config.Description = strings.TrimSpace(params["description"].(string))
@@ -868,6 +861,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 			return
 		}
 	}
+	if config.CloudInit != nil {
+		if err = config.CloudInit.Validate(); err != nil {
+			return
+		}
+	}
 	if config.Disks != nil {
 		err = config.Disks.Validate()
 		if err != nil {
@@ -906,7 +904,7 @@ func (config ConfigQemu) HasCloudInit() bool {
 			return true
 		}
 	}
-	return config.CIcustom != ""
+	return false
 }
 
 /*
