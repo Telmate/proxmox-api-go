@@ -87,6 +87,43 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Create CloudInit=nil`,
 			config: &ConfigQemu{},
 			output: map[string]interface{}{}},
+		{name: `Create CloudInit Full`,
+			config: &ConfigQemu{CloudInit: &CloudInit{
+				Custom: &CloudInitCustom{
+					Meta: &CloudInitSnippet{
+						Storage:  "local-zfs",
+						FilePath: "ci-meta.yml"},
+					Network: &CloudInitSnippet{
+						Storage:  "local-lvm",
+						FilePath: "ci-network.yml"},
+					User: &CloudInitSnippet{
+						Storage:  "folder",
+						FilePath: "ci-user.yml"},
+					Vendor: &CloudInitSnippet{
+						Storage:  "local",
+						FilePath: "snippets/ci-custom.yml"}},
+				DNS: &GuestDNS{
+					SearchDomain: util.Pointer("example.com"),
+					NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{
+					QemuNetworkInterfaceID0:  "ip=dhcp,ip6=dhcp",
+					QemuNetworkInterfaceID19: "",
+					QemuNetworkInterfaceID31: "ip=10.20.4.7/22"},
+				PublicSSHkeys:   util.Pointer(test_data_qemu.PublicKey_Decoded_Input()),
+				UpgradePackages: util.Pointer(true),
+				UserPassword:    util.Pointer("Enter123!"),
+				Username:        util.Pointer("root")}},
+			output: map[string]interface{}{
+				"cicustom":     "meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml",
+				"searchdomain": "example.com",
+				"nameserver":   "1.1.1.1 8.8.8.8 9.9.9.9",
+				"ipconfig0":    "ip=dhcp,ip6=dhcp",
+				"ipconfig19":   "",
+				"ipconfig31":   "ip=10.20.4.7/22",
+				"sshkeys":      test_data_qemu.PublicKey_Encoded_Output(),
+				"ciupgrade":    1,
+				"cipassword":   "Enter123!",
+				"ciuser":       "root"}},
 		{name: `Create CloudInit Custom Network`,
 			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
 				Network: &CloudInitSnippet{
@@ -3627,6 +3664,42 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			input:  map[string]interface{}{"agent": string("1,type=virtio")},
 			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}}},
 		// CloudInit
+		{name: `CloudInit ALL`,
+			input: map[string]interface{}{
+				"cicustom":     string("meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"),
+				"searchdomain": string("example.com"),
+				"nameserver":   string("1.1.1.1 8.8.8.8 9.9.9.9"),
+				"ipconfig0":    string("ip=dhcp,ip6=dhcp"),
+				"ipconfig19":   string(""),
+				"ipconfig31":   string("ip=10.20.4.7/22"),
+				"sshkeys":      test_data_qemu.PublicKey_Encoded_Input(),
+				"ciupgrade":    float64(1),
+				"cipassword":   string("Enter123!"),
+				"ciuser":       string("root")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom: &CloudInitCustom{
+					Meta: &CloudInitSnippet{
+						FilePath: "ci-meta.yml",
+						Storage:  "local-zfs"},
+					Network: &CloudInitSnippet{
+						FilePath: "ci-network.yml",
+						Storage:  "local-lvm"},
+					User: &CloudInitSnippet{
+						FilePath: "ci-user.yml",
+						Storage:  "folder"},
+					Vendor: &CloudInitSnippet{
+						FilePath: "snippets/ci-custom.yml",
+						Storage:  "local"}},
+				DNS: &GuestDNS{
+					SearchDomain: util.Pointer("example.com"),
+					NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{
+					QemuNetworkInterfaceID0:  "ip=dhcp,ip6=dhcp",
+					QemuNetworkInterfaceID31: "ip=10.20.4.7/22"},
+				PublicSSHkeys:   util.Pointer(test_data_qemu.PublicKey_Decoded_Output()),
+				UpgradePackages: util.Pointer(true),
+				UserPassword:    util.Pointer("Enter123!"),
+				Username:        util.Pointer("root")}}},
 		{name: `CloudInit Custom Meta`,
 			input: map[string]interface{}{"cicustom": string("meta=local-zfs:ci-meta.yml")},
 			output: &ConfigQemu{CloudInit: &CloudInit{
