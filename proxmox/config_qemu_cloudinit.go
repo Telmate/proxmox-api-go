@@ -45,15 +45,14 @@ func sshKeyUrlEncode(keys []crypto.PublicKey) (encodedKeys string) {
 	return
 }
 
-// TODO add omitempty everywhere
 type CloudInit struct {
-	Custom            *CloudInitCustom           `json:"cicustom"`
-	DNS               *GuestDNS                  `json:"dns"`
-	NetworkInterfaces CloudInitNetworkInterfaces `json:"ipconfig"`
-	PublicSSHkeys     *[]crypto.PublicKey        `json:"sshkeys"`
-	UpgradePackages   *bool                      `json:"ciupgrade"`
-	UserPassword      *string                    `json:"userpassword"` // TODO custom type
-	Username          *string                    `json:"username"`     // TODO custom type
+	Custom            *CloudInitCustom           `json:"cicustom,omitempty"`
+	DNS               *GuestDNS                  `json:"dns,omitempty"`
+	NetworkInterfaces CloudInitNetworkInterfaces `json:"ipconfig,omitempty"`
+	PublicSSHkeys     *[]crypto.PublicKey        `json:"sshkeys,omitempty"`
+	UpgradePackages   *bool                      `json:"ciupgrade,omitempty"`
+	UserPassword      *string                    `json:"userpassword,omitempty"` // TODO custom type
+	Username          *string                    `json:"username,omitempty"`     // TODO custom type
 }
 
 func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface{}) (delete string) {
@@ -201,10 +200,10 @@ func (ci CloudInit) Validate() error {
 }
 
 type CloudInitCustom struct {
-	Meta    *CloudInitSnippet `json:"meta"`
-	Network *CloudInitSnippet `json:"network"`
-	User    *CloudInitSnippet `json:"user"`
-	Vendor  *CloudInitSnippet `json:"vendor"`
+	Meta    *CloudInitSnippet `json:"meta,omitempty"`
+	Network *CloudInitSnippet `json:"network,omitempty"`
+	User    *CloudInitSnippet `json:"user,omitempty"`
+	Vendor  *CloudInitSnippet `json:"vendor,omitempty"`
 }
 
 func (config CloudInitCustom) mapToAPI(current *CloudInitCustom) string {
@@ -303,9 +302,9 @@ func (ci CloudInitCustom) String() string {
 }
 
 type CloudInitIPv4Config struct {
-	Address *IPv4CIDR    `json:"address"`
-	Gateway *IPv4Address `json:"gateway"`
-	DHCP    bool         `json:"dhcp"`
+	Address *IPv4CIDR    `json:"address,omitempty"`
+	Gateway *IPv4Address `json:"gateway,omitempty"`
+	DHCP    bool         `json:"dhcp,omitempty"`
 }
 
 const CloudInitIPv4Config_Error_DhcpAddressMutuallyExclusive string = "ipv4 dhcp is mutually exclusive with address"
@@ -374,10 +373,10 @@ func (config CloudInitIPv4Config) Validate() error {
 }
 
 type CloudInitIPv6Config struct {
-	Address *IPv6CIDR    `json:"address"`
-	Gateway *IPv6Address `json:"gateway"`
-	DHCP    bool         `json:"dhcp"`
-	SLAAC   bool         `json:"slaac"`
+	Address *IPv6CIDR    `json:"address,omitempty"`
+	Gateway *IPv6Address `json:"gateway,omitempty"`
+	DHCP    bool         `json:"dhcp,omitempty"`
+	SLAAC   bool         `json:"slaac,omitempty"`
 }
 
 func (config CloudInitIPv6Config) mapToAPI(current *CloudInitIPv6Config) string {
@@ -460,8 +459,8 @@ func (config CloudInitIPv6Config) Validate() error {
 }
 
 type CloudInitNetworkConfig struct {
-	IPv4 *CloudInitIPv4Config `json:"ip4"`
-	IPv6 *CloudInitIPv6Config `json:"ip6"`
+	IPv4 *CloudInitIPv4Config `json:"ip4,omitempty"`
+	IPv6 *CloudInitIPv6Config `json:"ip6,omitempty"`
 }
 
 func (config CloudInitNetworkConfig) mapToAPI(current *CloudInitNetworkConfig) (param string) {
@@ -596,8 +595,8 @@ func (interfaces CloudInitNetworkInterfaces) Validate() (err error) {
 
 // If either Storage or FilePath is empty, the snippet will be removed
 type CloudInitSnippet struct {
-	Storage  string               `json:"storage"` // TODO custom type (storage)
-	FilePath CloudInitSnippetPath `json:"path"`
+	Storage  string               `json:"storage,omitempty"` // TODO custom type (storage)
+	FilePath CloudInitSnippetPath `json:"path,omitempty"`
 }
 
 func (ci CloudInitSnippet) mapToAPI(kind string) string {

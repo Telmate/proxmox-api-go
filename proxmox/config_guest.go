@@ -9,8 +9,8 @@ import (
 // All code LXC and Qemu have in common should be placed here.
 
 type GuestDNS struct {
-	NameServers  *[]netip.Addr `json:"nameservers"`
-	SearchDomain *string       `json:"searchdomain"` // we are not validating this field, as validating domain names is a complex topic.
+	NameServers  *[]netip.Addr `json:"nameservers,omitempty"`
+	SearchDomain *string       `json:"searchdomain,omitempty"` // we are not validating this field, as validating domain names is a complex topic.
 }
 
 type GuestResource struct {
