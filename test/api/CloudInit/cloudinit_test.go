@@ -3,6 +3,7 @@ package api_test
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
 	api_test "github.com/Telmate/proxmox-api-go/test/api"
 	"github.com/stretchr/testify/require"
@@ -37,14 +38,20 @@ func Test_Cloud_Init_VM(t *testing.T) {
 
 	config.CloudInit = &pxapi.CloudInit{
 		NetworkInterfaces: pxapi.CloudInitNetworkInterfaces{
-			pxapi.QemuNetworkInterfaceID0: "gw=10.0.0.1,ip=10.0.0.2/24"}}
-
+			pxapi.QemuNetworkInterfaceID0: pxapi.CloudInitNetworkConfig{
+				IPv4: &pxapi.CloudInitIPv4Config{
+					Address: util.Pointer(pxapi.IPv4CIDR("10.0.0.2/24")),
+					Gateway: util.Pointer(pxapi.IPv4Address("10.0.0.1"))}}}}
 	_, err = config.Update(true, vmref, Test.GetClient())
 	require.NoError(t, err)
 
 	testConfig, _ := pxapi.NewConfigQemuFromApi(vmref, Test.GetClient())
 
-	require.Equal(t, testConfig.CloudInit.NetworkInterfaces[pxapi.QemuNetworkInterfaceID0], "gw=10.0.0.1,ip=10.0.0.2/24")
+	require.Equal(t, testConfig.CloudInit.NetworkInterfaces[pxapi.QemuNetworkInterfaceID0],
+		pxapi.CloudInitNetworkConfig{
+			IPv4: &pxapi.CloudInitIPv4Config{
+				Address: util.Pointer(pxapi.IPv4CIDR("10.0.0.2/24")),
+				Gateway: util.Pointer(pxapi.IPv4Address("10.0.0.1"))}})
 
 	_, err = Test.GetClient().DeleteVm(vmref)
 	require.NoError(t, err)

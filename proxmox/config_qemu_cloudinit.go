@@ -3,6 +3,7 @@ package proxmox
 import (
 	"crypto"
 	"errors"
+	"net"
 	"net/netip"
 	"net/url"
 	"regexp"
@@ -44,6 +45,7 @@ func sshKeyUrlEncode(keys []crypto.PublicKey) (encodedKeys string) {
 	return
 }
 
+// TODO add omitempty everywhere
 type CloudInit struct {
 	Custom            *CloudInitCustom           `json:"cicustom"`
 	DNS               *GuestDNS                  `json:"dns"`
@@ -87,6 +89,7 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 				}
 			}
 		}
+		delete += config.NetworkInterfaces.mapToAPI(current.NetworkInterfaces, params)
 		if config.PublicSSHkeys != nil {
 			if len(*config.PublicSSHkeys) > 0 {
 				params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
@@ -113,12 +116,12 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 				params["nameserver"] = nameservers[1:]
 			}
 		}
+		config.NetworkInterfaces.mapToAPI(nil, params)
 		if config.PublicSSHkeys != nil && len(*config.PublicSSHkeys) > 0 {
 			params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
 		}
 	}
 	// Shared
-	config.NetworkInterfaces.mapToAPI(params)
 	if config.UpgradePackages != nil {
 		params["ciupgrade"] = Btoi(*config.UpgradePackages)
 	}
@@ -299,12 +302,271 @@ func (ci CloudInitCustom) String() string {
 	return ci.mapToAPI(nil)
 }
 
-type CloudInitNetworkInterfaces map[QemuNetworkInterfaceID]string // TODO string should be a custom type
+type CloudInitIPv4Config struct {
+	Address *IPv4CIDR    `json:"address"`
+	Gateway *IPv4Address `json:"gateway"`
+	DHCP    bool         `json:"dhcp"`
+}
 
-func (interfaces CloudInitNetworkInterfaces) mapToAPI(params map[string]interface{}) {
-	for i, e := range interfaces {
-		params["ipconfig"+strconv.FormatInt(int64(i), 10)] = e
+const CloudInitIPv4Config_Error_DhcpAddressMutuallyExclusive string = "ipv4 dhcp is mutually exclusive with address"
+const CloudInitIPv4Config_Error_DhcpGatewayMutuallyExclusive string = "ipv4 dhcp is mutually exclusive with gateway"
+
+func (config CloudInitIPv4Config) mapToAPI(current *CloudInitIPv4Config) string {
+	// config can only be nil during update
+	if config.DHCP {
+		return ",ip=dhcp"
 	}
+	if current != nil { // Update phase, Update value
+		var param string
+		if config.Address != nil {
+			if *config.Address != "" {
+				param = ",ip=" + string(*config.Address)
+			}
+		} else if current.Address != nil {
+			param = ",ip=" + string(*current.Address)
+		}
+		if config.Gateway != nil {
+			if *config.Gateway != "" {
+				param += ",gw=" + string(*config.Gateway)
+			}
+		} else if current.Gateway != nil {
+			param += ",gw=" + string(*current.Gateway)
+		}
+		return param
+	}
+	// Create phase
+	var param string
+	if config.Address != nil && *config.Address != "" {
+		param = ",ip=" + string(*config.Address)
+	}
+	if config.Gateway != nil && *config.Gateway != "" {
+		param += ",gw=" + string(*config.Gateway)
+	}
+	return param
+}
+
+func (config CloudInitIPv4Config) String() string {
+	param := config.mapToAPI(nil)
+	if param != "" {
+		return param[1:]
+	}
+	return ""
+}
+
+func (config CloudInitIPv4Config) Validate() error {
+	if config.Address != nil && *config.Address != "" {
+		if config.DHCP {
+			return errors.New(CloudInitIPv4Config_Error_DhcpAddressMutuallyExclusive)
+		}
+		if err := config.Address.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.Gateway != nil && *config.Gateway != "" {
+		if config.DHCP {
+			return errors.New(CloudInitIPv4Config_Error_DhcpGatewayMutuallyExclusive)
+		}
+		if err := config.Gateway.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type CloudInitIPv6Config struct {
+	Address *IPv6CIDR    `json:"address"`
+	Gateway *IPv6Address `json:"gateway"`
+	DHCP    bool         `json:"dhcp"`
+	SLAAC   bool         `json:"slaac"`
+}
+
+func (config CloudInitIPv6Config) mapToAPI(current *CloudInitIPv6Config) string {
+	if config.DHCP {
+		return ",ip6=dhcp"
+	}
+	if config.SLAAC {
+		return ",ip6=auto"
+	}
+	if current != nil { // Update
+		var param string
+		if config.Address != nil {
+			if *config.Address != "" {
+				param = ",ip6=" + string(*config.Address)
+			}
+		} else if current.Address != nil {
+			param = ",ip6=" + string(*current.Address)
+		}
+		if config.Gateway != nil {
+			if *config.Gateway != "" {
+				param += ",gw6=" + string(*config.Gateway)
+			}
+		} else if current.Gateway != nil {
+			param += ",gw6=" + string(*current.Gateway)
+		}
+		return param
+	}
+	// create
+	var param string
+	if config.Address != nil && *config.Address != "" {
+		param = ",ip6=" + string(*config.Address)
+	}
+	if config.Gateway != nil && *config.Gateway != "" {
+		param += ",gw6=" + string(*config.Gateway)
+	}
+	return param
+}
+
+func (config CloudInitIPv6Config) String() string {
+	param := config.mapToAPI(nil)
+	if param != "" {
+		return param[1:]
+	}
+	return ""
+}
+
+const CloudInitIPv6Config_Error_DhcpAddressMutuallyExclusive string = "ipv6 dhcp is mutually exclusive with address"
+const CloudInitIPv6Config_Error_DhcpGatewayMutuallyExclusive string = "ipv6 dhcp is mutually exclusive with gateway"
+const CloudInitIPv6Config_Error_DhcpSlaacMutuallyExclusive string = "ipv6 dhcp is mutually exclusive with slaac"
+const CloudInitIPv6Config_Error_SlaacAddressMutuallyExclusive string = "ipv6 slaac is mutually exclusive with address"
+const CloudInitIPv6Config_Error_SlaacGatewayMutuallyExclusive string = "ipv6 slaac is mutually exclusive with gateway"
+
+func (config CloudInitIPv6Config) Validate() error {
+	if config.DHCP && config.SLAAC {
+		return errors.New(CloudInitIPv6Config_Error_DhcpSlaacMutuallyExclusive)
+	}
+	if config.Address != nil && *config.Address != "" {
+		if config.DHCP {
+			return errors.New(CloudInitIPv6Config_Error_DhcpAddressMutuallyExclusive)
+		}
+		if config.SLAAC {
+			return errors.New(CloudInitIPv6Config_Error_SlaacAddressMutuallyExclusive)
+		}
+		if err := config.Address.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.Gateway != nil && *config.Gateway != "" {
+		if config.DHCP {
+			return errors.New(CloudInitIPv6Config_Error_DhcpGatewayMutuallyExclusive)
+		}
+		if config.SLAAC {
+			return errors.New(CloudInitIPv6Config_Error_SlaacGatewayMutuallyExclusive)
+		}
+		if err := config.Gateway.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type CloudInitNetworkConfig struct {
+	IPv4 *CloudInitIPv4Config `json:"ip4"`
+	IPv6 *CloudInitIPv6Config `json:"ip6"`
+}
+
+func (config CloudInitNetworkConfig) mapToAPI(current *CloudInitNetworkConfig) (param string) {
+	if current != nil { // Update
+		if config.IPv4 != nil {
+			param += config.IPv4.mapToAPI(current.IPv4)
+		} else {
+			if current.IPv4 != nil {
+				param += current.IPv4.mapToAPI(nil)
+			}
+		}
+		if config.IPv6 != nil {
+			param += config.IPv6.mapToAPI(current.IPv6)
+		} else {
+			if current.IPv6 != nil {
+				param += current.IPv6.mapToAPI(nil)
+			}
+		}
+	} else { // Create
+		if config.IPv4 != nil {
+			param += config.IPv4.mapToAPI(nil)
+		}
+		if config.IPv6 != nil {
+			param += config.IPv6.mapToAPI(nil)
+		}
+	}
+	return
+}
+
+func (CloudInitNetworkConfig) mapToSDK(param string) (config CloudInitNetworkConfig) {
+	params := splitStringOfSettings(param)
+	var ipv4Set bool
+	var ipv6Set bool
+	var ipv4 CloudInitIPv4Config
+	var ipv6 CloudInitIPv6Config
+	if v, isSet := params["ip"]; isSet {
+		ipv4Set = true
+		if v.(string) == "dhcp" {
+			ipv4.DHCP = true
+		} else {
+			tmp := IPv4CIDR(v.(string))
+			ipv4.Address = &tmp
+		}
+	}
+	if v, isSet := params["gw"]; isSet {
+		ipv4Set = true
+		tmp := IPv4Address(v.(string))
+		ipv4.Gateway = &tmp
+	}
+	if v, isSet := params["ip6"]; isSet {
+		ipv6Set = true
+		if v.(string) == "dhcp" {
+			ipv6.DHCP = true
+		} else if v.(string) == "auto" {
+			ipv6.SLAAC = true
+		} else {
+			tmp := IPv6CIDR(v.(string))
+			ipv6.Address = &tmp
+		}
+	}
+	if v, isSet := params["gw6"]; isSet {
+		ipv6Set = true
+		tmp := IPv6Address(v.(string))
+		ipv6.Gateway = &tmp
+	}
+	if ipv4Set {
+		config.IPv4 = &ipv4
+	}
+	if ipv6Set {
+		config.IPv6 = &ipv6
+	}
+	return
+}
+
+func (config CloudInitNetworkConfig) Validate() (err error) {
+	if config.IPv4 != nil {
+		if err = config.IPv4.Validate(); err != nil {
+			return
+		}
+	}
+	if config.IPv6 != nil {
+		err = config.IPv6.Validate()
+	}
+	return
+}
+
+type CloudInitNetworkInterfaces map[QemuNetworkInterfaceID]CloudInitNetworkConfig
+
+func (interfaces CloudInitNetworkInterfaces) mapToAPI(current CloudInitNetworkInterfaces, params map[string]interface{}) (delete string) {
+	for i, e := range interfaces {
+		var tmpCurrent *CloudInitNetworkConfig
+		if current != nil {
+			if _, isSet := current[i]; isSet {
+				tmp := current[i]
+				tmpCurrent = &tmp
+			}
+		}
+		param := e.mapToAPI(tmpCurrent)
+		if param != "" {
+			params["ipconfig"+strconv.FormatInt(int64(i), 10)] = param[1:]
+		} else if tmpCurrent != nil {
+			delete += ",ipconfig" + strconv.FormatInt(int64(i), 10)
+		}
+	}
+	return
 }
 
 func (CloudInitNetworkInterfaces) mapToSDK(params map[string]interface{}) CloudInitNetworkInterfaces {
@@ -313,7 +575,7 @@ func (CloudInitNetworkInterfaces) mapToSDK(params map[string]interface{}) CloudI
 		if v, isSet := params["ipconfig"+strconv.FormatInt(int64(i), 10)]; isSet {
 			tmp := v.(string)
 			if len(tmp) > 1 { // can be "" or " "
-				ci[i] = v.(string)
+				ci[i] = CloudInitNetworkConfig{}.mapToSDK(tmp)
 			}
 		}
 	}
@@ -323,6 +585,9 @@ func (CloudInitNetworkInterfaces) mapToSDK(params map[string]interface{}) CloudI
 func (interfaces CloudInitNetworkInterfaces) Validate() (err error) {
 	for i := range interfaces {
 		if err = i.Validate(); err != nil {
+			return
+		}
+		if err = interfaces[i].Validate(); err != nil {
 			return
 		}
 	}
@@ -394,6 +659,76 @@ func (path CloudInitSnippetPath) Validate() error {
 	}
 	if !regexCloudInitSnippetPath_Path.MatchString(string(path)) {
 		return errors.New(CloudInitSnippetPath_Error_InvalidPath)
+	}
+	return nil
+}
+
+type IPv4Address string
+
+const IPv4Address_Error_Invalid = "ipv4Address is not a valid ipv6 address"
+
+func (ip IPv4Address) Validate() error {
+	if ip == "" {
+		return nil
+	}
+	if net.ParseIP(string(ip)) == nil {
+		return errors.New(IPv4Address_Error_Invalid)
+	}
+	if !isIPv4(string(ip)) {
+		return errors.New(IPv4Address_Error_Invalid)
+	}
+	return nil
+}
+
+type IPv4CIDR string
+
+const IPv4CIDR_Error_Invalid = "ipv4CIDR is not a valid ipv4 address"
+
+func (cidr IPv4CIDR) Validate() error {
+	if cidr == "" {
+		return nil
+	}
+	ip, _, err := net.ParseCIDR(string(cidr))
+	if err != nil {
+		return errors.New(IPv4CIDR_Error_Invalid)
+	}
+	if !isIPv4(ip.String()) {
+		return errors.New(IPv4CIDR_Error_Invalid)
+	}
+	return err
+}
+
+type IPv6Address string
+
+const IPv6Address_Error_Invalid = "ipv6Address is not a valid ipv6 address"
+
+func (ip IPv6Address) Validate() error {
+	if ip == "" {
+		return nil
+	}
+	if net.ParseIP(string(ip)) == nil {
+		return errors.New(IPv6Address_Error_Invalid)
+	}
+	if !isIPv6(string(ip)) {
+		return errors.New(IPv6Address_Error_Invalid)
+	}
+	return nil
+}
+
+type IPv6CIDR string
+
+const IPv6CIDR_Error_Invalid = "ipv6CIDR is not a valid ipv6 address"
+
+func (cidr IPv6CIDR) Validate() error {
+	if cidr == "" {
+		return nil
+	}
+	ip, _, err := net.ParseCIDR(string(cidr))
+	if err != nil {
+		return errors.New(IPv6CIDR_Error_Invalid)
+	}
+	if !isIPv6(ip.String()) {
+		return errors.New(IPv6CIDR_Error_Invalid)
 	}
 	return nil
 }
