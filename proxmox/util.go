@@ -236,6 +236,14 @@ func floatToTrimmedString(f float64, maxDecimals uint8) (s string) {
 	return
 }
 
+func isIPv4(address string) bool {
+	return strings.Count(address, ":") == 0
+}
+
+func isIPv6(address string) bool {
+	return strings.Count(address, ":") > 2
+}
+
 func splitStringOfSettings(settings string) map[string]interface{} {
 	settingValuePairs := strings.Split(settings, ",")
 	settingMap := map[string]interface{}{}
@@ -262,4 +270,10 @@ func subtractArray[T comparable](A, B []T) (result []T) {
 		}
 	}
 	return
+}
+
+// To be used during testing
+func uninitializedArray[T any]() []T {
+	var x []T
+	return x
 }

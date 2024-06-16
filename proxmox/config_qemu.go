@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -35,11 +34,9 @@ type ConfigQemu struct {
 	Args            string          `json:"args,omitempty"`
 	Balloon         int             `json:"balloon,omitempty"` // TODO should probably be a bool
 	Bios            string          `json:"bios,omitempty"`
-	Boot            string          `json:"boot,omitempty"`       // TODO should be an array of custom enums
-	BootDisk        string          `json:"bootdisk,omitempty"`   // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
-	CIcustom        string          `json:"cicustom,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
-	CIpassword      string          `json:"cipassword,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
-	CIuser          string          `json:"ciuser,omitempty"`     // TODO should be part of a cloud-init struct (cloud-init option)
+	Boot            string          `json:"boot,omitempty"`     // TODO should be an array of custom enums
+	BootDisk        string          `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
+	CloudInit       *CloudInit      `json:"cloudinit,omitempty"`
 	Description     string          `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
 	EFIDisk         QemuDevice      `json:"efidisk,omitempty"`   // TODO should be a struct
@@ -47,15 +44,13 @@ type ConfigQemu struct {
 	HaGroup         string          `json:"hagroup,omitempty"`
 	HaState         string          `json:"hastate,omitempty"` // TODO should be custom type with enum
 	Hookscript      string          `json:"hookscript,omitempty"`
-	Hotplug         string          `json:"hotplug,omitempty"`    // TODO should be a struct
-	Ipconfig        IpconfigMap     `json:"ipconfig,omitempty"`   // TODO should be part of a cloud-init struct (cloud-init option)
-	Iso             *IsoFile        `json:"iso,omitempty"`        // Same as Disks.Ide.Disk_2.CdRom.Iso
-	LinkedVmId      uint            `json:"linked_id,omitempty"`  // Only returned setting it has no effect
-	Machine         string          `json:"machine,omitempty"`    // TODO should be custom type with enum
-	Memory          int             `json:"memory,omitempty"`     // TODO should be uint
-	Name            string          `json:"name,omitempty"`       // TODO should be custom type as there are character and length limitations
-	Nameserver      string          `json:"nameserver,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
-	Node            string          `json:"node,omitempty"`       // Only returned setting it has no effect, set node in the VmRef instead
+	Hotplug         string          `json:"hotplug,omitempty"`   // TODO should be a struct
+	Iso             *IsoFile        `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
+	LinkedVmId      uint            `json:"linked_id,omitempty"` // Only returned setting it has no effect
+	Machine         string          `json:"machine,omitempty"`   // TODO should be custom type with enum
+	Memory          int             `json:"memory,omitempty"`    // TODO should be uint
+	Name            string          `json:"name,omitempty"`      // TODO should be custom type as there are character and length limitations
+	Node            string          `json:"node,omitempty"`      // Only returned setting it has no effect, set node in the VmRef instead
 	Onboot          *bool           `json:"onboot,omitempty"`
 	Pool            *PoolName       `json:"pool,omitempty"`
 	Protection      *bool           `json:"protection,omitempty"`
@@ -69,18 +64,16 @@ type ConfigQemu struct {
 	QemuOs          string          `json:"ostype,omitempty"`
 	QemuPCIDevices  QemuDevices     `json:"hostpci,omitempty"` // TODO should be a struct
 	QemuPxe         bool            `json:"pxe,omitempty"`
-	QemuSerials     QemuDevices     `json:"serial,omitempty"`       // TODO should be a struct
-	QemuSockets     int             `json:"sockets,omitempty"`      // TODO should be uint
-	QemuUnusedDisks QemuDevices     `json:"unused,omitempty"`       // TODO should be a struct
-	QemuUsbs        QemuDevices     `json:"usb,omitempty"`          // TODO should be a struct
-	QemuVcpus       int             `json:"vcpus,omitempty"`        // TODO should be uint
-	QemuVga         QemuDevice      `json:"vga,omitempty"`          // TODO should be a struct
-	RNGDrive        QemuDevice      `json:"rng0,omitempty"`         // TODO should be a struct
-	Scsihw          string          `json:"scsihw,omitempty"`       // TODO should be custom type with enum
-	Searchdomain    string          `json:"searchdomain,omitempty"` // TODO should be part of a cloud-init struct (cloud-init option)
-	Smbios1         string          `json:"smbios1,omitempty"`      // TODO should be custom type with enum?
-	Sshkeys         string          `json:"sshkeys,omitempty"`      // TODO should be an array of strings
-	Startup         string          `json:"startup,omitempty"`      // TODO should be a struct?
+	QemuSerials     QemuDevices     `json:"serial,omitempty"`  // TODO should be a struct
+	QemuSockets     int             `json:"sockets,omitempty"` // TODO should be uint
+	QemuUnusedDisks QemuDevices     `json:"unused,omitempty"`  // TODO should be a struct
+	QemuUsbs        QemuDevices     `json:"usb,omitempty"`     // TODO should be a struct
+	QemuVcpus       int             `json:"vcpus,omitempty"`   // TODO should be uint
+	QemuVga         QemuDevice      `json:"vga,omitempty"`     // TODO should be a struct
+	RNGDrive        QemuDevice      `json:"rng0,omitempty"`    // TODO should be a struct
+	Scsihw          string          `json:"scsihw,omitempty"`  // TODO should be custom type with enum
+	Smbios1         string          `json:"smbios1,omitempty"` // TODO should be custom type with enum?
+	Startup         string          `json:"startup,omitempty"` // TODO should be a struct?
 	TPM             *TpmState       `json:"tpm,omitempty"`
 	Tablet          *bool           `json:"tablet,omitempty"`
 	Tags            *[]Tag          `json:"tags,omitempty"`
@@ -118,9 +111,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.Hotplug == "" {
 		config.Hotplug = "network,disk,usb"
-	}
-	if config.Ipconfig == nil {
-		config.Ipconfig = IpconfigMap{}
 	}
 	if config.Protection == nil {
 		config.Protection = util.Pointer(false)
@@ -193,15 +183,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.Boot != "" {
 		params["boot"] = config.Boot
 	}
-	if config.CIcustom != "" {
-		params["cicustom"] = config.CIcustom
-	}
-	if config.CIpassword != "" {
-		params["cipassword"] = config.CIpassword
-	}
-	if config.CIuser != "" {
-		params["ciuser"] = config.CIuser
-	}
 	if config.QemuCores != 0 {
 		params["cores"] = config.QemuCores
 	}
@@ -229,9 +210,6 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.Name != "" {
 		params["name"] = config.Name
 	}
-	if config.Nameserver != "" {
-		params["nameserver"] = config.Nameserver
-	}
 	if config.QemuNuma != nil {
 		params["numa"] = *config.QemuNuma
 	}
@@ -247,14 +225,8 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	if config.Scsihw != "" {
 		params["scsihw"] = config.Scsihw
 	}
-	if config.Searchdomain != "" {
-		params["searchdomain"] = config.Searchdomain
-	}
 	if config.QemuSockets != 0 {
 		params["sockets"] = config.QemuSockets
-	}
-	if config.Sshkeys != "" {
-		params["sshkeys"] = sshKeyUrlEncode(config.Sshkeys)
 	}
 	if config.Startup != "" {
 		params["startup"] = config.Startup
@@ -307,6 +279,10 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 		}
 	}
 
+	if config.CloudInit != nil {
+		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params)
+	}
+
 	// Create EFI disk
 	config.CreateQemuEfiParams(params)
 
@@ -330,13 +306,8 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 
 	config.CreateQemuPCIsParams(params)
 
-	err = config.CreateIpconfigParams(params)
-	if err != nil {
-		log.Printf("[ERROR] %q", err)
-	}
-
 	if itemsToDelete != "" {
-		params["delete"] = itemsToDelete
+		params["delete"] = strings.TrimPrefix(itemsToDelete, ",")
 	}
 	return
 }
@@ -351,7 +322,9 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	// description:Base image
 	// cores:2 ostype:l26
 
-	config := ConfigQemu{}
+	config := ConfigQemu{
+		CloudInit: CloudInit{}.mapToSDK(params),
+	}
 
 	if vmr != nil {
 		config.Node = vmr.node
@@ -382,15 +355,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	if _, isSet := params["bios"]; isSet {
 		config.Bios = params["bios"].(string)
 	}
-	if _, isSet := params["cicustom"]; isSet {
-		config.CIcustom = params["cicustom"].(string)
-	}
-	if _, isSet := params["cipassword"]; isSet {
-		config.CIpassword = params["cipassword"].(string)
-	}
-	if _, isSet := params["ciuser"]; isSet {
-		config.CIuser = params["ciuser"].(string)
-	}
 	if _, isSet := params["description"]; isSet {
 		config.Description = strings.TrimSpace(params["description"].(string))
 	}
@@ -418,9 +382,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["name"]; isSet {
 		config.Name = params["name"].(string)
-	}
-	if _, isSet := params["nameserver"]; isSet {
-		config.Nameserver = params["nameserver"].(string)
 	}
 	if _, isSet := params["onboot"]; isSet {
 		config.Onboot = util.Pointer(Itob(int(params["onboot"].(float64))))
@@ -458,12 +419,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	if _, isSet := params["scsihw"]; isSet {
 		config.Scsihw = params["scsihw"].(string)
 	}
-	if _, isSet := params["searchdomain"]; isSet {
-		config.Searchdomain = params["searchdomain"].(string)
-	}
-	if _, isSet := params["sshkeys"]; isSet {
-		config.Sshkeys, _ = url.PathUnescape(params["sshkeys"].(string))
-	}
 	if _, isSet := params["startup"]; isSet {
 		config.Startup = params["startup"].(string)
 	}
@@ -476,24 +431,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["smbios1"]; isSet {
 		config.Smbios1 = params["smbios1"].(string)
-	}
-
-	ipconfigNames := []string{}
-
-	for k := range params {
-		if ipconfigName := rxIpconfigName.FindStringSubmatch(k); len(ipconfigName) > 0 {
-			ipconfigNames = append(ipconfigNames, ipconfigName[0])
-		}
-	}
-
-	if len(ipconfigNames) > 0 {
-		config.Ipconfig = IpconfigMap{}
-		for _, ipconfigName := range ipconfigNames {
-			ipConfStr := params[ipconfigName]
-			id := rxDeviceID.FindStringSubmatch(ipconfigName)
-			ipconfigID, _ := strconv.Atoi(id[0])
-			config.Ipconfig[ipconfigID] = ipConfStr
-		}
 	}
 
 	linkedVmId := uint(0)
@@ -897,6 +834,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 			return
 		}
 	}
+	if config.CloudInit != nil {
+		if err = config.CloudInit.Validate(); err != nil {
+			return
+		}
+	}
 	if config.Disks != nil {
 		err = config.Disks.Validate()
 		if err != nil {
@@ -926,21 +868,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 	}
 
 	return
-}
-
-// HasCloudInit - are there cloud-init options?
-func (config ConfigQemu) HasCloudInit() bool {
-	for _, config := range config.Ipconfig {
-		if config != nil && config != "" {
-			return true
-		}
-	}
-	return config.CIuser != "" ||
-		config.CIpassword != "" ||
-		config.Searchdomain != "" ||
-		config.Nameserver != "" ||
-		config.Sshkeys != "" ||
-		config.CIcustom != ""
 }
 
 /*
@@ -1000,7 +927,6 @@ var (
 	rxSerialName     = regexp.MustCompile(`serial\d+`)
 	rxUsbName        = regexp.MustCompile(`usb\d+`)
 	rxPCIName        = regexp.MustCompile(`hostpci\d+`)
-	rxIpconfigName   = regexp.MustCompile(`ipconfig\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
@@ -1084,16 +1010,6 @@ func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
 	if err != nil {
 		return "", err
 	}
-	return
-}
-
-// URL encodes the ssh keys
-func sshKeyUrlEncode(keys string) (encodedKeys string) {
-	encodedKeys = url.PathEscape(keys + "\n")
-	encodedKeys = strings.Replace(encodedKeys, "+", "%2B", -1)
-	encodedKeys = strings.Replace(encodedKeys, "@", "%40", -1)
-	encodedKeys = strings.Replace(encodedKeys, "=", "%3D", -1)
-	encodedKeys = strings.Replace(encodedKeys, ":", "%3A", -1)
 	return
 }
 
@@ -1328,23 +1244,6 @@ func (c ConfigQemu) CreateQemuNetworksParams(params map[string]interface{}) {
 	}
 }
 
-// Create parameters for each Cloud-Init ipconfig entry.
-func (c ConfigQemu) CreateIpconfigParams(params map[string]interface{}) error {
-
-	for ID, config := range c.Ipconfig {
-		if ID > 15 {
-			return fmt.Errorf("only up to 16 Cloud-Init network configurations supported (ipconfig[0-15]), skipping ipconfig%d", ID)
-		}
-
-		if config != "" {
-			ipconfigName := "ipconfig" + strconv.Itoa(ID)
-			params[ipconfigName] = config
-		}
-	}
-
-	return nil
-}
-
 // Create RNG parameter.
 func (c ConfigQemu) CreateQemuRngParams(params map[string]interface{}) {
 	rngParam := QemuDeviceParam{}
@@ -1500,4 +1399,50 @@ func (confMap QemuDevice) readDeviceConfig(confList []string) {
 func (c ConfigQemu) String() string {
 	jsConf, _ := json.Marshal(c)
 	return string(jsConf)
+}
+
+type QemuNetworkInterfaceID uint8
+
+const (
+	QemuNetworkInterfaceID_Error_Invalid string = "network interface ID must be in the range 0-31"
+
+	QemuNetworkInterfaceID0  QemuNetworkInterfaceID = 0
+	QemuNetworkInterfaceID1  QemuNetworkInterfaceID = 1
+	QemuNetworkInterfaceID2  QemuNetworkInterfaceID = 2
+	QemuNetworkInterfaceID3  QemuNetworkInterfaceID = 3
+	QemuNetworkInterfaceID4  QemuNetworkInterfaceID = 4
+	QemuNetworkInterfaceID5  QemuNetworkInterfaceID = 5
+	QemuNetworkInterfaceID6  QemuNetworkInterfaceID = 6
+	QemuNetworkInterfaceID7  QemuNetworkInterfaceID = 7
+	QemuNetworkInterfaceID8  QemuNetworkInterfaceID = 8
+	QemuNetworkInterfaceID9  QemuNetworkInterfaceID = 9
+	QemuNetworkInterfaceID10 QemuNetworkInterfaceID = 10
+	QemuNetworkInterfaceID11 QemuNetworkInterfaceID = 11
+	QemuNetworkInterfaceID12 QemuNetworkInterfaceID = 12
+	QemuNetworkInterfaceID13 QemuNetworkInterfaceID = 13
+	QemuNetworkInterfaceID14 QemuNetworkInterfaceID = 14
+	QemuNetworkInterfaceID15 QemuNetworkInterfaceID = 15
+	QemuNetworkInterfaceID16 QemuNetworkInterfaceID = 16
+	QemuNetworkInterfaceID17 QemuNetworkInterfaceID = 17
+	QemuNetworkInterfaceID18 QemuNetworkInterfaceID = 18
+	QemuNetworkInterfaceID19 QemuNetworkInterfaceID = 19
+	QemuNetworkInterfaceID20 QemuNetworkInterfaceID = 20
+	QemuNetworkInterfaceID21 QemuNetworkInterfaceID = 21
+	QemuNetworkInterfaceID22 QemuNetworkInterfaceID = 22
+	QemuNetworkInterfaceID23 QemuNetworkInterfaceID = 23
+	QemuNetworkInterfaceID24 QemuNetworkInterfaceID = 24
+	QemuNetworkInterfaceID25 QemuNetworkInterfaceID = 25
+	QemuNetworkInterfaceID26 QemuNetworkInterfaceID = 26
+	QemuNetworkInterfaceID27 QemuNetworkInterfaceID = 27
+	QemuNetworkInterfaceID28 QemuNetworkInterfaceID = 28
+	QemuNetworkInterfaceID29 QemuNetworkInterfaceID = 29
+	QemuNetworkInterfaceID30 QemuNetworkInterfaceID = 30
+	QemuNetworkInterfaceID31 QemuNetworkInterfaceID = 31
+)
+
+func (id QemuNetworkInterfaceID) Validate() error {
+	if id > 31 {
+		return fmt.Errorf(QemuNetworkInterfaceID_Error_Invalid)
+	}
+	return nil
 }

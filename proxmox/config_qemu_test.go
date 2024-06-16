@@ -1,8 +1,9 @@
 package proxmox
 
 import (
+	"crypto"
 	"errors"
-	"strings"
+	"net/netip"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
@@ -13,6 +14,34 @@ import (
 )
 
 func Test_ConfigQemu_mapToApiValues(t *testing.T) {
+	cloudInitCustom := func() *CloudInitCustom {
+		return &CloudInitCustom{
+			Meta: &CloudInitSnippet{
+				Storage:  "local-zfs",
+				FilePath: "ci-meta.yml"},
+			Network: &CloudInitSnippet{
+				Storage:  "local-lvm",
+				FilePath: "ci-network.yml"},
+			User: &CloudInitSnippet{
+				Storage:  "folder",
+				FilePath: "ci-user.yml"},
+			Vendor: &CloudInitSnippet{
+				Storage:  "local",
+				FilePath: "snippets/ci-custom.yml"}}
+	}
+	cloudInitNetworkConfig := func() CloudInitNetworkConfig {
+		return CloudInitNetworkConfig{
+			IPv4: &CloudInitIPv4Config{
+				Address: util.Pointer(IPv4CIDR("192.168.56.30/24")),
+				Gateway: util.Pointer(IPv4Address("192.168.56.1"))},
+			IPv6: &CloudInitIPv6Config{
+				Address: util.Pointer(IPv6CIDR("2001:0db8:abcd::/48")),
+				Gateway: util.Pointer(IPv6Address("2001:0db8:abcd::1"))}}
+	}
+	parseIP := func(rawIP string) (ip netip.Addr) {
+		ip, _ = netip.ParseAddr(rawIP)
+		return
+	}
 	format_Raw := QemuDiskFormat_Raw
 	float10 := QemuDiskBandwidthMBpsLimitConcurrent(10.3)
 	float45 := QemuDiskBandwidthMBpsLimitConcurrent(45.23)
@@ -63,6 +92,116 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		{name: `Create Agent.FsTrim`,
 			config: &ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(true)}},
 			output: map[string]interface{}{"agent": "0,fstrim_cloned_disks=1"}},
+		// Create CloudInit no need for update as update and create behave the same. will be changed in the future
+		{name: `Create CloudInit=nil`,
+			config: &ConfigQemu{},
+			output: map[string]interface{}{}},
+		{name: `Create CloudInit Full`,
+			config: &ConfigQemu{CloudInit: &CloudInit{
+				Custom: &CloudInitCustom{
+					Meta: &CloudInitSnippet{
+						Storage:  "local-zfs",
+						FilePath: "ci-meta.yml"},
+					Network: &CloudInitSnippet{
+						Storage:  "local-lvm",
+						FilePath: "ci-network.yml"},
+					User: &CloudInitSnippet{
+						Storage:  "folder",
+						FilePath: "ci-user.yml"},
+					Vendor: &CloudInitSnippet{
+						Storage:  "local",
+						FilePath: "snippets/ci-custom.yml"}},
+				DNS: &GuestDNS{
+					SearchDomain: util.Pointer("example.com"),
+					NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{
+					QemuNetworkInterfaceID0: CloudInitNetworkConfig{
+						IPv4: &CloudInitIPv4Config{DHCP: true},
+						IPv6: &CloudInitIPv6Config{DHCP: true}},
+					QemuNetworkInterfaceID19: CloudInitNetworkConfig{},
+					QemuNetworkInterfaceID31: CloudInitNetworkConfig{
+						IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("10.20.4.7/22"))}}},
+				PublicSSHkeys:   util.Pointer(test_data_qemu.PublicKey_Decoded_Input()),
+				UpgradePackages: util.Pointer(true),
+				UserPassword:    util.Pointer("Enter123!"),
+				Username:        util.Pointer("root")}},
+			output: map[string]interface{}{
+				"cicustom":     "meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml",
+				"searchdomain": "example.com",
+				"nameserver":   "1.1.1.1 8.8.8.8 9.9.9.9",
+				"ipconfig0":    "ip=dhcp,ip6=dhcp",
+				"ipconfig31":   "ip=10.20.4.7/22",
+				"sshkeys":      test_data_qemu.PublicKey_Encoded_Output(),
+				"ciupgrade":    1,
+				"cipassword":   "Enter123!",
+				"ciuser":       "root"}},
+		{name: `Create CloudInit Custom Network`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Network: &CloudInitSnippet{
+					Storage:  "local",
+					FilePath: "ci-network.yml"}}}},
+			output: map[string]interface{}{"cicustom": "network=local:ci-network.yml"}},
+		{name: `Create CloudInit Custom User`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				User: &CloudInitSnippet{
+					Storage:  "file",
+					FilePath: "abcd.yml"}}}},
+			output: map[string]interface{}{"cicustom": "user=file:abcd.yml"}},
+		{name: `Create CloudInit Custom Vendor`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Vendor: &CloudInitSnippet{
+					Storage:  "local",
+					FilePath: "vendor-ci"}}}},
+			output: map[string]interface{}{"cicustom": "vendor=local:vendor-ci"}},
+		{name: `Create CloudInit Custom Meta`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Meta: &CloudInitSnippet{
+					Storage:  "local-zfs",
+					FilePath: "ci-meta.yml"}}}},
+			output: map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml"}},
+		{name: `Create CloudInit DNS NameServers`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{parseIP("9.9.9.9")}}}},
+			output: map[string]interface{}{"nameserver": "9.9.9.9"}},
+		{name: `Create CloudInit DNS NameServers empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{}}}},
+			output: map[string]interface{}{}},
+		{name: `Create CloudInit DNS SearchDomain`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}}},
+			output: map[string]interface{}{"searchdomain": "example.com"}},
+		{name: `Create CloudInit DNS SearchDomain empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
+			output: map[string]interface{}{}},
+		{name: `Create CloudInit NetworkInterfaces`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID1: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{DHCP: true},
+					IPv6: &CloudInitIPv6Config{DHCP: true}},
+				QemuNetworkInterfaceID20: CloudInitNetworkConfig{},
+				QemuNetworkInterfaceID30: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("10.20.4.7/22"))}}}}},
+			output: map[string]interface{}{
+				"ipconfig1":  "ip=dhcp,ip6=dhcp",
+				"ipconfig30": "ip=10.20.4.7/22"}},
+		{name: `Create CloudInit PublicSSHkeys`,
+			config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Input())}},
+			output: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Output()}},
+		{name: `Create CloudInit PublicSSHkeys empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{})}},
+			output: map[string]interface{}{}},
+		{name: `Create CloudInit UpgradePackages`,
+			config: &ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(false)}},
+			output: map[string]interface{}{"ciupgrade": 0}},
+		{name: `Create CloudInit UserPassword`,
+			config: &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Enter123!")}},
+			output: map[string]interface{}{"cipassword": "Enter123!"}},
+		{name: `Create CloudInit Username`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("root")}},
+			output: map[string]interface{}{"ciuser": "root"}},
+		{name: `Create CloudInit Username empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
+			output: map[string]interface{}{}},
 		// Create Disks
 
 		// Create Disks.Ide
@@ -1400,6 +1539,305 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 			config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
 			currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
 			output:        map[string]interface{}{"agent": "0"}},
+		// Update CloudInit
+		{name: `Update CloudInit=nil`,
+			config: &ConfigQemu{},
+			output: map[string]interface{}{}},
+		{name: `Update CloudInit Custom clear`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Meta:    &CloudInitSnippet{},
+				Network: &CloudInitSnippet{},
+				User:    &CloudInitSnippet{},
+				Vendor:  &CloudInitSnippet{}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": ""}},
+		{name: `Update CloudInit Custom Network`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Network: &CloudInitSnippet{
+					Storage:  "newStorage",
+					FilePath: "new.yml"}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=newStorage:new.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"}},
+		{name: `Update CloudInit Custom User`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				User: &CloudInitSnippet{
+					Storage:  "newStorage",
+					FilePath: "new.yml"}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=newStorage:new.yml,vendor=local:snippets/ci-custom.yml"}},
+		{name: `Update CloudInit Custom Vendor`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Vendor: &CloudInitSnippet{
+					Storage:  "newStorage",
+					FilePath: "new.yml"}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=newStorage:new.yml"}},
+		{name: `Update CloudInit Custom Meta`,
+			config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Meta: &CloudInitSnippet{
+					Storage:  "newStorage",
+					FilePath: "new.yml"}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+			output:        map[string]interface{}{"cicustom": "meta=newStorage:new.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"}},
+		{name: `Update CloudInit DNS NameServers`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{parseIP("9.9.9.9")}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
+			output: map[string]interface{}{"nameserver": "9.9.9.9"}},
+		{name: `Update CloudInit DNS NameServers empty`,
+			config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+				NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
+			output: map[string]interface{}{"delete": "nameserver"}},
+		{name: `Update CloudInit DNS SearchDomain`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
+			output:        map[string]interface{}{"searchdomain": "example.com"}},
+		{name: `Update CloudInit DNS SearchDomain empty`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
+			output:        map[string]interface{}{"delete": "searchdomain"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv4.Address update`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID0: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("192.168.1.10/24"))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID0: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig0": "ip=192.168.1.10/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv4.Address remove`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID1: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR(""))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID1: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig1": "gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv4.DHCP set`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID2: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{DHCP: true}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID2: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig2": "ip=dhcp,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv4.Gateway update`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID3: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.1.1"))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID3: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig3": "ip=192.168.56.30/24,gw=192.168.1.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv4.Gateway overwrite Ipv4.DHCP`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID4: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.1.1"))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID4: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{DHCP: true}}}}},
+			output: map[string]interface{}{"ipconfig4": "gw=192.168.1.1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv4.Gateway remove`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID5: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address(""))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID5: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig5": "ip=192.168.56.30/24,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv6.Address update`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID6: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR("2001:0db8:85a3::/48"))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID6: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig6": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:85a3::/48,gw6=2001:0db8:abcd::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv6.Address remove`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID7: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR(""))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID7: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig7": "ip=192.168.56.30/24,gw=192.168.56.1,gw6=2001:0db8:abcd::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv6.DHCP set`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID8: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{DHCP: true}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID8: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig8": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=dhcp"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv6.Gateway update`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID9: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID9: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig9": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:85a3::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv6.Gateway overwrite Ipv6.DHCP`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID10: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID10: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{DHCP: true}}}}},
+			output: map[string]interface{}{"ipconfig10": "gw6=2001:0db8:85a3::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv6.Gateway overwrite Ipv6.SLAAC`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID11: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID11: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{SLAAC: true}}}}},
+			output: map[string]interface{}{"ipconfig11": "gw6=2001:0db8:85a3::1"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv6.Gateway remove`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID12: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address(""))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID12: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig12": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48"}},
+		{name: `Update CloudInit NetworkInterfaces Ipv6.SLAAC set`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID13: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{SLAAC: true}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID13: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"ipconfig13": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=auto"}},
+		{name: `Update CloudInit NetworkInterfaces delete existing interface`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID14: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{
+						Address: util.Pointer(IPv4CIDR("")),
+						Gateway: util.Pointer(IPv4Address(""))},
+					IPv6: &CloudInitIPv6Config{
+						Address: util.Pointer(IPv6CIDR("")),
+						Gateway: util.Pointer(IPv6Address(""))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID14: cloudInitNetworkConfig()}}},
+			output: map[string]interface{}{"delete": "ipconfig14"}},
+		{name: `Update CloudInit NetworkInterfaces delete non-existing interface`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID20: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{
+						Address: util.Pointer(IPv4CIDR("")),
+						Gateway: util.Pointer(IPv4Address(""))},
+					IPv6: &CloudInitIPv6Config{
+						Address: util.Pointer(IPv6CIDR("")),
+						Gateway: util.Pointer(IPv6Address(""))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{}}},
+			output:        map[string]interface{}{}},
+		{name: `Update CloudInit NetworkInterfaces no updates`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID29: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID30: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{DHCP: true},
+					IPv6: &CloudInitIPv6Config{DHCP: true}}}}},
+			output: map[string]interface{}{}},
+		{name: `Update CloudInit NetworkInterfaces full`,
+			config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID0: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("192.168.1.10/24"))}},
+				QemuNetworkInterfaceID1: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR(""))}},
+				QemuNetworkInterfaceID2: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{DHCP: true}},
+				QemuNetworkInterfaceID3: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.1.1"))}},
+				QemuNetworkInterfaceID4: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.1.1"))}},
+				QemuNetworkInterfaceID5: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address(""))}},
+				QemuNetworkInterfaceID6: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR("2001:0db8:85a3::/48"))}},
+				QemuNetworkInterfaceID7: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR(""))}},
+				QemuNetworkInterfaceID8: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{DHCP: true}},
+				QemuNetworkInterfaceID9: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}},
+				QemuNetworkInterfaceID10: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}},
+				QemuNetworkInterfaceID11: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}},
+				QemuNetworkInterfaceID12: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address(""))}},
+				QemuNetworkInterfaceID13: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{SLAAC: true}},
+				QemuNetworkInterfaceID14: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{
+						Address: util.Pointer(IPv4CIDR("")),
+						Gateway: util.Pointer(IPv4Address(""))},
+					IPv6: &CloudInitIPv6Config{
+						Address: util.Pointer(IPv6CIDR("")),
+						Gateway: util.Pointer(IPv6Address(""))}},
+				QemuNetworkInterfaceID20: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{
+						Address: util.Pointer(IPv4CIDR("")),
+						Gateway: util.Pointer(IPv4Address(""))},
+					IPv6: &CloudInitIPv6Config{
+						Address: util.Pointer(IPv6CIDR("")),
+						Gateway: util.Pointer(IPv6Address(""))}}}}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				QemuNetworkInterfaceID0: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID1: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID2: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID3: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID4: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{DHCP: true}},
+				QemuNetworkInterfaceID5: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID6: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID7: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID8: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID9: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID10: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{DHCP: true}},
+				QemuNetworkInterfaceID11: CloudInitNetworkConfig{
+					IPv6: &CloudInitIPv6Config{SLAAC: true}},
+				QemuNetworkInterfaceID12: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID13: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID14: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID29: cloudInitNetworkConfig(),
+				QemuNetworkInterfaceID30: CloudInitNetworkConfig{
+					IPv4: &CloudInitIPv4Config{DHCP: true},
+					IPv6: &CloudInitIPv6Config{DHCP: true}}}}},
+			output: map[string]interface{}{
+				"ipconfig0":  "ip=192.168.1.10/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1",
+				"ipconfig1":  "gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1",
+				"ipconfig2":  "ip=dhcp,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1",
+				"ipconfig3":  "ip=192.168.56.30/24,gw=192.168.1.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1",
+				"ipconfig4":  "gw=192.168.1.1",
+				"ipconfig5":  "ip=192.168.56.30/24,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1",
+				"ipconfig6":  "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:85a3::/48,gw6=2001:0db8:abcd::1",
+				"ipconfig7":  "ip=192.168.56.30/24,gw=192.168.56.1,gw6=2001:0db8:abcd::1",
+				"ipconfig8":  "ip=192.168.56.30/24,gw=192.168.56.1,ip6=dhcp",
+				"ipconfig9":  "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:85a3::1",
+				"ipconfig10": "gw6=2001:0db8:85a3::1",
+				"ipconfig11": "gw6=2001:0db8:85a3::1",
+				"ipconfig12": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48",
+				"ipconfig13": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=auto",
+				"delete":     "ipconfig14"}},
+		{name: `Update CloudInit PublicSSHkeys`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer(test_data_qemu.PublicKey_Decoded_Input())}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key"})}},
+			output:        map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Output()}},
+		{name: `Update CloudInit PublicSSHkeys empty`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{})}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]crypto.PublicKey{"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key"})}},
+			output:        map[string]interface{}{"delete": "sshkeys"}},
+		{name: `Update CloudInit UpgradePackages`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(false)}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}},
+			output:        map[string]interface{}{"ciupgrade": 0}},
+		{name: `Update CloudInit UserPassword`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Enter123!")}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Abc123!")}},
+			output:        map[string]interface{}{"cipassword": "Enter123!"}},
+		{name: `Update CloudInit Username`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("root")}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
+			output:        map[string]interface{}{"ciuser": "root"}},
+		{name: `Update CloudInit Username empty`,
+			config:        &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
+			currentConfig: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
+			output:        map[string]interface{}{"delete": "ciuser"}},
 		// Update Disk
 		// Update Disk.Ide
 		{name: "Update Disk.Ide.Disk_X DELETE",
@@ -3403,6 +3841,10 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 }
 
 func Test_ConfigQemu_mapToStruct(t *testing.T) {
+	parseIP := func(rawIP string) (ip netip.Addr) {
+		ip, _ = netip.ParseAddr(rawIP)
+		return
+	}
 	uint1 := uint(1)
 	uint2 := uint(2)
 	uint31 := uint(31)
@@ -3436,6 +3878,132 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		{name: `Agent Type`,
 			input:  map[string]interface{}{"agent": string("1,type=virtio")},
 			output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}}},
+		// CloudInit
+		{name: `CloudInit ALL`,
+			input: map[string]interface{}{
+				"cicustom":     string("meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"),
+				"searchdomain": string("example.com"),
+				"nameserver":   string("1.1.1.1 8.8.8.8 9.9.9.9"),
+				"ipconfig0":    string("ip=dhcp,ip6=dhcp"),
+				"ipconfig19":   string(""),
+				"ipconfig31":   string("ip=10.20.4.7/22"),
+				"sshkeys":      test_data_qemu.PublicKey_Encoded_Input(),
+				"ciupgrade":    float64(1),
+				"cipassword":   string("Enter123!"),
+				"ciuser":       string("root")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom: &CloudInitCustom{
+					Meta: &CloudInitSnippet{
+						FilePath: "ci-meta.yml",
+						Storage:  "local-zfs"},
+					Network: &CloudInitSnippet{
+						FilePath: "ci-network.yml",
+						Storage:  "local-lvm"},
+					User: &CloudInitSnippet{
+						FilePath: "ci-user.yml",
+						Storage:  "folder"},
+					Vendor: &CloudInitSnippet{
+						FilePath: "snippets/ci-custom.yml",
+						Storage:  "local"}},
+				DNS: &GuestDNS{
+					SearchDomain: util.Pointer("example.com"),
+					NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{
+					QemuNetworkInterfaceID0: CloudInitNetworkConfig{
+						IPv4: &CloudInitIPv4Config{DHCP: true},
+						IPv6: &CloudInitIPv6Config{DHCP: true}},
+					QemuNetworkInterfaceID31: CloudInitNetworkConfig{
+						IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("10.20.4.7/22"))}}},
+				PublicSSHkeys:   util.Pointer(test_data_qemu.PublicKey_Decoded_Output()),
+				UpgradePackages: util.Pointer(true),
+				UserPassword:    util.Pointer("Enter123!"),
+				Username:        util.Pointer("root")}}},
+		{name: `CloudInit Custom Meta`,
+			input: map[string]interface{}{"cicustom": string("meta=local-zfs:ci-meta.yml")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom:            &CloudInitCustom{Meta: &CloudInitSnippet{FilePath: "ci-meta.yml", Storage: "local-zfs"}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+		{name: `CloudInit Custom Network`,
+			input: map[string]interface{}{"cicustom": string("network=local-lvm:ci-network.yml")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom:            &CloudInitCustom{Network: &CloudInitSnippet{FilePath: "ci-network.yml", Storage: "local-lvm"}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+		{name: `CloudInit Custom User`,
+			input: map[string]interface{}{
+				"cicustom": string("user=folder:ci-user.yml")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom:            &CloudInitCustom{User: &CloudInitSnippet{FilePath: "ci-user.yml", Storage: "folder"}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+		{name: `CloudInit Custom Vendor`,
+			input: map[string]interface{}{"cicustom": string("vendor=local:snippets/ci-custom.yml")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				Custom:            &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: "snippets/ci-custom.yml", Storage: "local"}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+		{name: `CloudInit DNS SearchDomain`,
+			input: map[string]interface{}{"searchdomain": string("example.com")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				DNS: &GuestDNS{
+					SearchDomain: util.Pointer("example.com"),
+					NameServers:  util.Pointer(uninitializedArray[netip.Addr]())},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+		{name: `CloudInit DNS SearchDomain empty`,
+			input:  map[string]interface{}{"searchdomain": string(" ")},
+			output: &ConfigQemu{}},
+		{name: `CloudInit DNS NameServers`,
+			input: map[string]interface{}{"nameserver": string("1.1.1.1 8.8.8.8 9.9.9.9")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				DNS: &GuestDNS{
+					SearchDomain: util.Pointer(""),
+					NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+		{name: `CloudInit NetworkInterfaces`,
+			input: map[string]interface{}{
+
+				"ipconfig0":  string("ip=dhcp,ip6=dhcp"),
+				"ipconfig1":  string("ip6=auto"),
+				"ipconfig2":  string("ip=192.168.1.10/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"),
+				"ipconfig19": string(""),
+				"ipconfig20": string(" "), // this single space is on porpuse to test if it is ignored
+				"ipconfig31": string("ip=10.20.4.7/22")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				NetworkInterfaces: CloudInitNetworkInterfaces{
+					QemuNetworkInterfaceID0: CloudInitNetworkConfig{
+						IPv4: &CloudInitIPv4Config{DHCP: true},
+						IPv6: &CloudInitIPv6Config{DHCP: true}},
+					QemuNetworkInterfaceID1: CloudInitNetworkConfig{
+						IPv6: &CloudInitIPv6Config{SLAAC: true}},
+					QemuNetworkInterfaceID2: CloudInitNetworkConfig{
+						IPv4: &CloudInitIPv4Config{
+							Address: util.Pointer(IPv4CIDR("192.168.1.10/24")),
+							Gateway: util.Pointer(IPv4Address("192.168.56.1"))},
+						IPv6: &CloudInitIPv6Config{
+							Address: util.Pointer(IPv6CIDR("2001:0db8:abcd::/48")),
+							Gateway: util.Pointer(IPv6Address("2001:0db8:abcd::1"))}},
+					QemuNetworkInterfaceID31: CloudInitNetworkConfig{
+						IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("10.20.4.7/22"))}}}}}},
+		{name: `CloudInit PublicSSHkeys`,
+			input: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Input()},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				NetworkInterfaces: CloudInitNetworkInterfaces{},
+				PublicSSHkeys:     util.Pointer(test_data_qemu.PublicKey_Decoded_Output())}}},
+		{name: `CloudInit UpgradePackages`,
+			input: map[string]interface{}{"ciupgrade": float64(0)},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				NetworkInterfaces: CloudInitNetworkInterfaces{},
+				UpgradePackages:   util.Pointer(false)}}},
+		{name: `CloudInit UserPassword`,
+			input: map[string]interface{}{"cipassword": string("Enter123!")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				NetworkInterfaces: CloudInitNetworkInterfaces{},
+				UserPassword:      util.Pointer("Enter123!")}}},
+		{name: `CloudInit Username`,
+			input: map[string]interface{}{"ciuser": string("root")},
+			output: &ConfigQemu{CloudInit: &CloudInit{
+				NetworkInterfaces: CloudInitNetworkInterfaces{},
+				Username:          util.Pointer("root")}}},
+		{name: `CloudInit Username empty`,
+			input:  map[string]interface{}{"ciuser": string(" ")},
+			output: &ConfigQemu{}},
 		// Disks Ide CdRom
 		{name: "Disks Ide CdRom none",
 			input:  map[string]interface{}{"ide1": "none,media=cdrom"},
@@ -6084,6 +6652,54 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		// Valid Agent
 		{name: "Valid Agent",
 			input: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("isa"))}}},
+		// Valid CloudInit
+		{name: `Valid CloudInit`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
+				Meta:    &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Legal())},
+				Network: &CloudInitSnippet{FilePath: ""},
+				User:    &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Legal())},
+				Vendor:  &CloudInitSnippet{FilePath: ""}},
+				NetworkInterfaces: CloudInitNetworkInterfaces{
+					QemuNetworkInterfaceID0: CloudInitNetworkConfig{
+						IPv4: util.Pointer(CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("192.168.45.1/24"))})},
+					QemuNetworkInterfaceID1: CloudInitNetworkConfig{
+						IPv4: util.Pointer(CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR(""))})},
+					QemuNetworkInterfaceID2: CloudInitNetworkConfig{
+						IPv4: util.Pointer(CloudInitIPv4Config{
+							Address: util.Pointer(IPv4CIDR("")),
+							DHCP:    true})},
+					QemuNetworkInterfaceID3: CloudInitNetworkConfig{
+						IPv4: util.Pointer(CloudInitIPv4Config{
+							Gateway: util.Pointer(IPv4Address("")),
+							DHCP:    true})},
+					QemuNetworkInterfaceID4: CloudInitNetworkConfig{
+						IPv4: util.Pointer(CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.45.1"))})},
+					QemuNetworkInterfaceID5: CloudInitNetworkConfig{
+						IPv4: util.Pointer(CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address(""))})},
+					QemuNetworkInterfaceID9: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR("2001:0db8:85a3::/64"))})},
+					QemuNetworkInterfaceID10: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR(""))})},
+					QemuNetworkInterfaceID11: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{
+							Address: util.Pointer(IPv6CIDR("")),
+							DHCP:    true})},
+					QemuNetworkInterfaceID12: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{
+							Gateway: util.Pointer(IPv6Address("")),
+							DHCP:    true})},
+					QemuNetworkInterfaceID13: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("3f6d:5b2a:1e4d:7c91:abcd:1234:5678:9abc"))})},
+					QemuNetworkInterfaceID14: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address(""))})},
+					QemuNetworkInterfaceID15: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{
+							Address: util.Pointer(IPv6CIDR("")),
+							SLAAC:   true})},
+					QemuNetworkInterfaceID16: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{
+							Gateway: util.Pointer(IPv6Address("")),
+							SLAAC:   true})}}}}},
 		// Valid Disks
 		{name: "Valid Disks Empty 0",
 			input: ConfigQemu{Disks: &QemuStorages{}},
@@ -6215,6 +6831,84 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		{name: "Invalid Agent",
 			input: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("test"))}},
 			err:   errors.New(QemuGuestAgentType_Error_Invalid)},
+		// Invalid CloudInit
+		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_InvalidCharacters)`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Meta: &CloudInitSnippet{
+				FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Character_Illegal()[0])}}}},
+			err: errors.New(CloudInitSnippetPath_Error_InvalidCharacters)},
+		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_InvalidPath)`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Network: &CloudInitSnippet{
+				FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_InvalidPath())}}}},
+			err: errors.New(CloudInitSnippetPath_Error_InvalidPath)},
+		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_MaxLength)`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{User: &CloudInitSnippet{
+				FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Illegal())}}}},
+			err: errors.New(CloudInitSnippetPath_Error_MaxLength)},
+		{name: `Invalid CloudInit errors.New(CloudInitSnippetPath_Error_Relative)`,
+			input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Relative())}}}},
+			err:   errors.New(CloudInitSnippetPath_Error_Relative)},
+		{name: `Invalid CloudInit errors.New(QemuNetworkInterfaceID_Error_Invalid)`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+				32: CloudInitNetworkConfig{}}}},
+			err: errors.New(QemuNetworkInterfaceID_Error_Invalid)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv4 Address Mutually exclusive with DHCP`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID5: CloudInitNetworkConfig{
+				IPv4: util.Pointer(CloudInitIPv4Config{
+					Address: util.Pointer(IPv4CIDR("192.168.45.1/24")),
+					DHCP:    true})}}}},
+			err: errors.New(CloudInitIPv4Config_Error_DhcpAddressMutuallyExclusive)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv4 Gateway Mutually exclusive with DHCP`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID6: CloudInitNetworkConfig{
+				IPv4: util.Pointer(CloudInitIPv4Config{
+					Gateway: util.Pointer(IPv4Address("192.168.45.1")),
+					DHCP:    true})}}}},
+			err: errors.New(CloudInitIPv4Config_Error_DhcpGatewayMutuallyExclusive)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv4 Address errors.New(IPv4CIDR_Error_Invalid)`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID7: CloudInitNetworkConfig{
+				IPv4: util.Pointer(CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("192.168.45.1"))})}}}},
+			err: errors.New(IPv4CIDR_Error_Invalid)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv4 Gateway errors.New(IPv4Address_Error_Invalid)`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID8: CloudInitNetworkConfig{
+				IPv4: util.Pointer(CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.45.1/24"))})}}}},
+			err: errors.New(IPv4Address_Error_Invalid)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv6 Address Mutually exclusive with DHCP`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID17: CloudInitNetworkConfig{
+				IPv6: util.Pointer(CloudInitIPv6Config{
+					Address: util.Pointer(IPv6CIDR("2001:0db8:85a3::/64")),
+					DHCP:    true})}}}},
+			err: errors.New(CloudInitIPv6Config_Error_DhcpAddressMutuallyExclusive)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv6 Address Mutually exclusive with SLAAC`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID18: CloudInitNetworkConfig{
+				IPv6: util.Pointer(CloudInitIPv6Config{
+					Address: util.Pointer(IPv6CIDR("2001:0db8:85a3::/64")),
+					SLAAC:   true})}}}},
+			err: errors.New(CloudInitIPv6Config_Error_SlaacAddressMutuallyExclusive)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv6 DHCP Mutually exclusive with SLAAC`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID19: CloudInitNetworkConfig{
+				IPv6: util.Pointer(CloudInitIPv6Config{
+					DHCP:  true,
+					SLAAC: true})}}}},
+			err: errors.New(CloudInitIPv6Config_Error_DhcpSlaacMutuallyExclusive)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv6 Gateway Mutually exclusive with DHCP`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID20: CloudInitNetworkConfig{
+				IPv6: util.Pointer(CloudInitIPv6Config{
+					Gateway: util.Pointer(IPv6Address("3f6d:5b2a:1e4d:7c91:abcd:1234:5678:9abc")),
+					DHCP:    true})}}}},
+			err: errors.New(CloudInitIPv6Config_Error_DhcpGatewayMutuallyExclusive)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv6 Gateway Mutually exclusive with SLAAC`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID21: CloudInitNetworkConfig{
+				IPv6: util.Pointer(CloudInitIPv6Config{
+					Gateway: util.Pointer(IPv6Address("3f6d:5b2a:1e4d:7c91:abcd:1234:5678:9abc")),
+					SLAAC:   true})}}}},
+			err: errors.New(CloudInitIPv6Config_Error_SlaacGatewayMutuallyExclusive)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv6 Address errors.New(IPv6CIDR_Error_Invalid)`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID22: CloudInitNetworkConfig{
+				IPv6: util.Pointer(CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR("3f6d:5b2a:1e4d:7c91:abcd:1234:5678:9abc"))})}}}},
+			err: errors.New(IPv6CIDR_Error_Invalid)},
+		{name: `Invalid CloudInit CloudInitNetworkInterfaces IPv6 Gateway errors.New(IPv6Address_Error_Invalid)`,
+			input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID23: CloudInitNetworkConfig{
+				IPv6: util.Pointer(CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::/64"))})}}}},
+			err: errors.New(IPv6Address_Error_Invalid)},
 		// Invalid Disks Mutually exclusive Ide
 		{name: "Invalid Disks MutuallyExclusive Ide 0",
 			input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
@@ -7341,28 +8035,21 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 	}
 }
 
-// Test the encoding logic to encode the ssh keys
-func Test_sshKeyUrlEncode(t *testing.T) {
-	input := test_sshKeyUrlEncode_Input()
-	output := test_sshKeyUrlEncode_Output()
-	test := sshKeyUrlEncode(input)
-	require.Equal(t, output, test)
-}
-
-func test_sshKeyUrlEncode_Input() string {
-	keys := []string{
-		"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDT7lsC9gTAjL0FUPlHqnz71TzqDMdsdHhWu54M7NN4E9KNzKwzUy1h6ZuOMm+d0nWX+yuT2Mfzi8NaKe5ATg0bwmrzZ1ikS/tGs7v/TyMSBOlmrS5v0g8rn40bphCqnNeNcfP9JR2zyq4UccpdIYA62t6Ky9d/WBbsAQRESwZVhpU9JGhwnVHFcNN5svlDwz9wzW1a2J2/E76+vym+3Rt4W9s3MqQZdbHozo4N43puXq7PH1tTr/RT84uaMF4XLx1CUm+bMZLgtac8sHl1DJz4gC3MLasD6UXZzRz99K+QAHD6YsXHDwdWu6QAkqzS0DNDbm0E618wn4GEZAJJhehh test@VScode",
-		"ssh-dss AAAAB3NzaC1kc3MAAACBAN6VwM2CMPrpz0CT8z4UP5we4Jt1MSDHumArdzTaxaqtAcV6Z+a4ZO/0geqEDZJSideX7Iq8zYrzdXGXfR+8N5GHoz49mVFit101cKAvcwZhzVeXQ1Cc8Zyjk53qmjWiNonfsjxP9VorNjjb/zGnA3ZnazflfyzqwEr8fV7JtUwjAAAAFQDlk3FT+QmsKiiBjBuekwyFeVzwiwAAAIBeAlzP9hsVeEbPjEjkxi9/hVgNQE8xtuUMZUCq7NOu5RlGzPHStzh8ByMh0Jsly0GbVHUfM84ikSpU/L5O3j75vq+cng77mezAGWfHfBpAL+whKfXvYHy0mqb0M1krzbdRbQkt9TV4gNw+Nac17jmfnRBebYYoJltehCognAU+xAAAAIEAmI1SEcjqSTHRnHeypg08ppcpRUGx0Mkcb/Moos2SVfSfWBXrNR7p6eRzVPN0gCXSLsiaE0DaRvM+GPRJeffCh4+Ahx84Gptf0m+EXH47sPfsumk8XxItDZa4zYYJ2gAISBdLD06iMtmJWAzD59FXDaHedxom9/Hb7oQXHEUzQQY= test@VScode",
-		"ecdsa-sha2-nistp521 AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBAF9dgZNa82njYtBR2zhCQs1yHL/GqA+AAmz97bjj2t2EQwMepx3TT8RubZscqwt6yedPREJU/8x0XtoEWkQzjBkGgCc2ip8xGyy6j3Th9YtYj9gW1g7Rwmqwnz0ZOd/l12tC3q7ujS7hlInkhxbOyhqNXZ+obseOaS0g5Toqpgr+mV1Rg== test@VScode",
-		"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY5T2JQgiL5Z5Yuy4yXuUYglVJlpsokHFXR1hvnCVYW cardno:18 228 342"}
-	return strings.Join(keys, "\n")
-}
-
-func test_sshKeyUrlEncode_Output() string {
-	encodedKeys := []string{
-		"ssh-rsa%20AAAAB3NzaC1yc2EAAAADAQABAAABAQDT7lsC9gTAjL0FUPlHqnz71TzqDMdsdHhWu54M7NN4E9KNzKwzUy1h6ZuOMm%2Bd0nWX%2ByuT2Mfzi8NaKe5ATg0bwmrzZ1ikS%2FtGs7v%2FTyMSBOlmrS5v0g8rn40bphCqnNeNcfP9JR2zyq4UccpdIYA62t6Ky9d%2FWBbsAQRESwZVhpU9JGhwnVHFcNN5svlDwz9wzW1a2J2%2FE76%2Bvym%2B3Rt4W9s3MqQZdbHozo4N43puXq7PH1tTr%2FRT84uaMF4XLx1CUm%2BbMZLgtac8sHl1DJz4gC3MLasD6UXZzRz99K%2BQAHD6YsXHDwdWu6QAkqzS0DNDbm0E618wn4GEZAJJhehh%20test%40VScode",
-		"ssh-dss%20AAAAB3NzaC1kc3MAAACBAN6VwM2CMPrpz0CT8z4UP5we4Jt1MSDHumArdzTaxaqtAcV6Z%2Ba4ZO%2F0geqEDZJSideX7Iq8zYrzdXGXfR%2B8N5GHoz49mVFit101cKAvcwZhzVeXQ1Cc8Zyjk53qmjWiNonfsjxP9VorNjjb%2FzGnA3ZnazflfyzqwEr8fV7JtUwjAAAAFQDlk3FT%2BQmsKiiBjBuekwyFeVzwiwAAAIBeAlzP9hsVeEbPjEjkxi9%2FhVgNQE8xtuUMZUCq7NOu5RlGzPHStzh8ByMh0Jsly0GbVHUfM84ikSpU%2FL5O3j75vq%2Bcng77mezAGWfHfBpAL%2BwhKfXvYHy0mqb0M1krzbdRbQkt9TV4gNw%2BNac17jmfnRBebYYoJltehCognAU%2BxAAAAIEAmI1SEcjqSTHRnHeypg08ppcpRUGx0Mkcb%2FMoos2SVfSfWBXrNR7p6eRzVPN0gCXSLsiaE0DaRvM%2BGPRJeffCh4%2BAhx84Gptf0m%2BEXH47sPfsumk8XxItDZa4zYYJ2gAISBdLD06iMtmJWAzD59FXDaHedxom9%2FHb7oQXHEUzQQY%3D%20test%40VScode",
-		"ecdsa-sha2-nistp521%20AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACFBAF9dgZNa82njYtBR2zhCQs1yHL%2FGqA%2BAAmz97bjj2t2EQwMepx3TT8RubZscqwt6yedPREJU%2F8x0XtoEWkQzjBkGgCc2ip8xGyy6j3Th9YtYj9gW1g7Rwmqwnz0ZOd%2Fl12tC3q7ujS7hlInkhxbOyhqNXZ%2BobseOaS0g5Toqpgr%2BmV1Rg%3D%3D%20test%40VScode",
-		"ssh-ed25519%20AAAAC3NzaC1lZDI1NTE5AAAAIEY5T2JQgiL5Z5Yuy4yXuUYglVJlpsokHFXR1hvnCVYW%20cardno%3A18%20228%20342"}
-	return strings.Join(encodedKeys, "%0A") + "%0A"
+func Test_QemuNetworkInterfaceID_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  QemuNetworkInterfaceID
+		output error
+	}{
+		{name: "Valid",
+			input: QemuNetworkInterfaceID0},
+		{name: "Invalid",
+			input:  32,
+			output: errors.New(QemuNetworkInterfaceID_Error_Invalid)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
 }
