@@ -11,9 +11,9 @@ import (
 	"strings"
 )
 
+var regexMultipleNewlineEncoded = regexp.MustCompile(`(%0A)+`)
 var regexMultipleSpaces = regexp.MustCompile(`\s+`)
 var regexMultipleSpacesEncoded = regexp.MustCompile(`(%20)+`)
-var regexMultipleNewlineEncoded = regexp.MustCompile(`(%0A)+`)
 
 // URL encodes the ssh keys
 func sshKeyUrlDecode(encodedKeys string) (keys []crypto.PublicKey) {
@@ -303,8 +303,8 @@ func (ci CloudInitCustom) String() string {
 
 type CloudInitIPv4Config struct {
 	Address *IPv4CIDR    `json:"address,omitempty"`
-	Gateway *IPv4Address `json:"gateway,omitempty"`
 	DHCP    bool         `json:"dhcp,omitempty"`
+	Gateway *IPv4Address `json:"gateway,omitempty"`
 }
 
 const CloudInitIPv4Config_Error_DhcpAddressMutuallyExclusive string = "ipv4 dhcp is mutually exclusive with address"
@@ -374,8 +374,8 @@ func (config CloudInitIPv4Config) Validate() error {
 
 type CloudInitIPv6Config struct {
 	Address *IPv6CIDR    `json:"address,omitempty"`
-	Gateway *IPv6Address `json:"gateway,omitempty"`
 	DHCP    bool         `json:"dhcp,omitempty"`
+	Gateway *IPv6Address `json:"gateway,omitempty"`
 	SLAAC   bool         `json:"slaac,omitempty"`
 }
 
@@ -595,8 +595,8 @@ func (interfaces CloudInitNetworkInterfaces) Validate() (err error) {
 
 // If either Storage or FilePath is empty, the snippet will be removed
 type CloudInitSnippet struct {
-	Storage  string               `json:"storage,omitempty"` // TODO custom type (storage)
 	FilePath CloudInitSnippetPath `json:"path,omitempty"`
+	Storage  string               `json:"storage,omitempty"` // TODO custom type (storage)
 }
 
 func (ci CloudInitSnippet) mapToAPI(kind string) string {
