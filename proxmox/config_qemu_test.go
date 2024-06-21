@@ -72,7 +72,6 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		config        *ConfigQemu
 		currentConfig ConfigQemu
 		reboot        bool
-		vmr           *VmRef
 		output        map[string]interface{}
 	}
 	tests := []struct {
