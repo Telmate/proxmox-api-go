@@ -75,22 +75,6 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		vmr           *VmRef
 		output        map[string]interface{}
 	}
-	create := func(t *testing.T, category string, test test) {
-		name := category + "/Create/" + test.name
-		t.Run(name, func(*testing.T) {
-			reboot, tmpParams, _ := test.config.mapToApiValues(ConfigQemu{})
-			require.Equal(t, test.output, tmpParams, name)
-			require.Equal(t, false, reboot, name)
-		})
-	}
-	update := func(t *testing.T, category string, test test) {
-		name := category + "/Update/" + test.name
-		t.Run(name, func(*testing.T) {
-			reboot, tmpParams, _ := test.config.mapToApiValues(test.currentConfig)
-			require.Equal(t, test.output, tmpParams, name)
-			require.Equal(t, test.reboot, reboot, name)
-		})
-	}
 	tests := []struct {
 		category     string
 		create       []test
@@ -3195,15 +3179,21 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 					output: map[string]interface{}{"delete": "tpmstate0"}}}},
 	}
 	for _, test := range tests {
-		for _, subTest := range test.create {
-			create(t, test.category, subTest)
+		for _, subTest := range append(test.create, test.createUpdate...) {
+			name := test.category + "/Create/" + subTest.name
+			t.Run(name, func(*testing.T) {
+				reboot, tmpParams, _ := subTest.config.mapToApiValues(ConfigQemu{})
+				require.Equal(t, subTest.output, tmpParams, name)
+				require.Equal(t, false, reboot, name)
+			})
 		}
-		for _, subTest := range test.createUpdate {
-			create(t, test.category, subTest)
-			update(t, test.category, subTest)
-		}
-		for _, subTest := range test.update {
-			update(t, test.category, subTest)
+		for _, subTest := range append(test.update, test.createUpdate...) {
+			name := test.category + "/Update/" + subTest.name
+			t.Run(name, func(*testing.T) {
+				reboot, tmpParams, _ := subTest.config.mapToApiValues(subTest.currentConfig)
+				require.Equal(t, subTest.output, tmpParams, name)
+				require.Equal(t, subTest.reboot, reboot, name)
+			})
 		}
 	}
 }
