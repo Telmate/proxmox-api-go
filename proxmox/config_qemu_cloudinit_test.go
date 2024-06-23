@@ -47,9 +47,10 @@ func Test_sshKeyUrlEncode(t *testing.T) {
 
 func Test_CloudInit_Validate(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  CloudInit
-		output error
+		name    string
+		input   CloudInit
+		version Version
+		output  error
 	}{
 		{name: `Valid CloudInit CloudInitCustom FilePath`,
 			input: CloudInit{Custom: &CloudInitCustom{
@@ -111,6 +112,16 @@ func Test_CloudInit_Validate(t *testing.T) {
 				IPv6: util.Pointer(CloudInitIPv6Config{
 					Gateway: util.Pointer(IPv6Address("")),
 					SLAAC:   true})}}}},
+		{name: `Valid CloudInit UpgradePackages v7`,
+			version: Version{Major: 7, Minor: 255, Patch: 255},
+			input:   CloudInit{UpgradePackages: util.Pointer(false)}},
+		{name: `Valid CloudInit UpgradePackages v8`,
+			version: Version{Major: 8},
+			input:   CloudInit{UpgradePackages: util.Pointer(true)}},
+		{name: `Invalid errors.New(CloudInit_Error_UpgradePackagesPre8)`,
+			version: Version{Major: 7, Minor: 255, Patch: 255},
+			input:   CloudInit{UpgradePackages: util.Pointer(true)},
+			output:  errors.New(CloudInit_Error_UpgradePackagesPre8)},
 		{name: `Invalid errors.New(CloudInitSnippetPath_Error_InvalidCharacters)`,
 			input: CloudInit{Custom: &CloudInitCustom{User: &CloudInitSnippet{
 				FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Character_Illegal()[0])}}},
@@ -191,7 +202,7 @@ func Test_CloudInit_Validate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, test.input.Validate())
+			require.Equal(t, test.output, test.input.Validate(test.version))
 		})
 	}
 }

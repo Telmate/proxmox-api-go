@@ -159,7 +159,7 @@ func (config *ConfigQemu) defaults() {
 	}
 }
 
-func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequired bool, params map[string]interface{}, err error) {
+func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (rebootRequired bool, params map[string]interface{}, err error) {
 	// TODO check if cloudInit settings changed, they require a reboot to take effect.
 	var itemsToDelete string
 
@@ -280,7 +280,7 @@ func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequire
 	}
 
 	if config.CloudInit != nil {
-		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params)
+		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params, version)
 	}
 
 	// Create EFI disk
@@ -666,16 +666,14 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 
 // currentConfig will be mutated
 func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
-	err = newConfig.setVmr(vmr)
-	if err != nil {
+	if err = newConfig.setVmr(vmr); err != nil {
 		return
 	}
-	if err = newConfig.Validate(currentConfig); err != nil {
-		return
-	}
-
 	var version Version
 	if version, err = client.Version(); err != nil {
+		return
+	}
+	if err = newConfig.Validate(currentConfig, version); err != nil {
 		return
 	}
 
@@ -756,7 +754,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			vmr.SetNode(newConfig.Node)
 		}
 
-		rebootRequired, params, err = newConfig.mapToApiValues(*currentConfig)
+		rebootRequired, params, err = newConfig.mapToAPI(*currentConfig, version)
 		if err != nil {
 			return
 		}
@@ -801,7 +799,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			}
 		}
 	} else { // Create
-		_, params, err = newConfig.mapToApiValues(ConfigQemu{})
+		_, params, err = newConfig.mapToAPI(ConfigQemu{}, version)
 		if err != nil {
 			return
 		}
@@ -826,7 +824,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 	return
 }
 
-func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
+func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err error) {
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
 	if config.Agent != nil {
@@ -835,7 +833,7 @@ func (config ConfigQemu) Validate(current *ConfigQemu) (err error) {
 		}
 	}
 	if config.CloudInit != nil {
-		if err = config.CloudInit.Validate(); err != nil {
+		if err = config.CloudInit.Validate(version); err != nil {
 			return
 		}
 	}
