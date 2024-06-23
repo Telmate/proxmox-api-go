@@ -159,7 +159,7 @@ func (config *ConfigQemu) defaults() {
 	}
 }
 
-func (config ConfigQemu) mapToApiValues(currentConfig ConfigQemu) (rebootRequired bool, params map[string]interface{}, err error) {
+func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu) (rebootRequired bool, params map[string]interface{}, err error) {
 	// TODO check if cloudInit settings changed, they require a reboot to take effect.
 	var itemsToDelete string
 
@@ -756,7 +756,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			vmr.SetNode(newConfig.Node)
 		}
 
-		rebootRequired, params, err = newConfig.mapToApiValues(*currentConfig)
+		rebootRequired, params, err = newConfig.mapToAPI(*currentConfig)
 		if err != nil {
 			return
 		}
@@ -801,7 +801,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			}
 		}
 	} else { // Create
-		_, params, err = newConfig.mapToApiValues(ConfigQemu{})
+		_, params, err = newConfig.mapToAPI(ConfigQemu{})
 		if err != nil {
 			return
 		}

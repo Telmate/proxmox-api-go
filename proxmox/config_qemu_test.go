@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ConfigQemu_mapToApiValues(t *testing.T) {
+func Test_ConfigQemu_mapToAPI(t *testing.T) {
 	cloudInitCustom := func() *CloudInitCustom {
 		return &CloudInitCustom{
 			Meta: &CloudInitSnippet{
@@ -3156,7 +3156,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		for _, subTest := range append(test.create, test.createUpdate...) {
 			name := test.category + "/Create/" + subTest.name
 			t.Run(name, func(*testing.T) {
-				reboot, tmpParams, _ := subTest.config.mapToApiValues(ConfigQemu{})
+				reboot, tmpParams, _ := subTest.config.mapToAPI(ConfigQemu{})
 				require.Equal(t, subTest.output, tmpParams, name)
 				require.Equal(t, false, reboot, name)
 			})
@@ -3164,7 +3164,7 @@ func Test_ConfigQemu_mapToApiValues(t *testing.T) {
 		for _, subTest := range append(test.update, test.createUpdate...) {
 			name := test.category + "/Update/" + subTest.name
 			t.Run(name, func(*testing.T) {
-				reboot, tmpParams, _ := subTest.config.mapToApiValues(subTest.currentConfig)
+				reboot, tmpParams, _ := subTest.config.mapToAPI(subTest.currentConfig)
 				require.Equal(t, subTest.output, tmpParams, name)
 				require.Equal(t, subTest.reboot, reboot, name)
 			})
