@@ -55,7 +55,9 @@ type CloudInit struct {
 	Username          *string                    `json:"username,omitempty"`     // TODO custom type
 }
 
-func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface{}) (delete string) {
+const CloudInit_Error_UpgradePackagesPre8 = "upgradePackages is only available in version 8 and above"
+
+func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface{}, version Version) (delete string) {
 	if current != nil { // Update
 		if config.Custom != nil {
 			params["cicustom"] = config.Custom.mapToAPI(current.Custom)
@@ -121,7 +123,7 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 		}
 	}
 	// Shared
-	if config.UpgradePackages != nil {
+	if config.UpgradePackages != nil && !version.Smaller(Version{Major: 8}) {
 		params["ciupgrade"] = Btoi(*config.UpgradePackages)
 	}
 	if config.UserPassword != nil {
@@ -190,11 +192,14 @@ func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 	return nil
 }
 
-func (ci CloudInit) Validate() error {
+func (ci CloudInit) Validate(version Version) error {
 	if ci.Custom != nil {
 		if err := ci.Custom.Validate(); err != nil {
 			return err
 		}
+	}
+	if ci.UpgradePackages != nil && *ci.UpgradePackages && version.Smaller(Version{Major: 8}) {
+		return errors.New(CloudInit_Error_UpgradePackagesPre8)
 	}
 	return ci.NetworkInterfaces.Validate()
 }
