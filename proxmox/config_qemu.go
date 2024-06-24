@@ -37,7 +37,7 @@ type ConfigQemu struct {
 	Boot            string          `json:"boot,omitempty"`     // TODO should be an array of custom enums
 	BootDisk        string          `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
 	CloudInit       *CloudInit      `json:"cloudinit,omitempty"`
-	Description     string          `json:"description,omitempty"`
+	Description     *string         `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
 	EFIDisk         QemuDevice      `json:"efidisk,omitempty"`   // TODO should be a struct
 	FullClone       *int            `json:"fullclone,omitempty"` // TODO should probably be a bool
@@ -189,8 +189,12 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.QemuCpu != "" {
 		params["cpu"] = config.QemuCpu
 	}
-	if config.Description != "" {
-		params["description"] = config.Description
+	if config.Description != nil {
+		if *config.Description != "" {
+			params["description"] = *config.Description
+		} else if currentConfig.Description != nil {
+			itemsToDelete += ",description"
+		}
 	}
 	if config.Hookscript != "" {
 		params["hookscript"] = config.Hookscript
@@ -356,7 +360,8 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Bios = params["bios"].(string)
 	}
 	if _, isSet := params["description"]; isSet {
-		config.Description = strings.TrimSpace(params["description"].(string))
+		tmp := params["description"].(string)
+		config.Description = &tmp
 	}
 	//Can be network,disk,cpu,memory,usb
 	if _, isSet := params["hotplug"]; isSet {

@@ -616,6 +616,21 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
 					currentConfig: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
 					output:        map[string]interface{}{"delete": "ciuser"}}}},
+		{category: `Description`,
+			create: []test{
+				{name: `Description empty`,
+					config: &ConfigQemu{Description: util.Pointer("")},
+					output: map[string]interface{}{}}},
+			createUpdate: []test{
+				{name: `Description set`,
+					config:        &ConfigQemu{Description: util.Pointer("test description")},
+					currentConfig: ConfigQemu{Description: util.Pointer("old description")},
+					output:        map[string]interface{}{"description": "test description"}}},
+			update: []test{
+				{name: `Description empty`,
+					config:        &ConfigQemu{Description: util.Pointer("")},
+					currentConfig: ConfigQemu{Description: util.Pointer("old description")},
+					output:        map[string]interface{}{"delete": "description"}}}},
 		{category: `Disks.Ide`,
 			update: []test{
 				{name: `Disk.Ide.Disk_X DELETE`,
@@ -3388,6 +3403,10 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `Username empty`,
 					input:  map[string]interface{}{"ciuser": string(" ")},
 					output: &ConfigQemu{}}}},
+		{category: `Description`,
+			tests: []test{
+				{input: map[string]interface{}{"description": string("test description")},
+					output: &ConfigQemu{Description: util.Pointer("test description")}}}},
 		{category: `Disks Ide CdRom`,
 			tests: []test{
 				{name: `none`,
