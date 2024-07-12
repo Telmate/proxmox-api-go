@@ -3406,7 +3406,6 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `Username empty`,
 					input:  map[string]interface{}{"ciuser": string(" ")},
 					output: baseConfig(ConfigQemu{})}}},
-
 		{category: `Description`,
 			tests: []test{
 				{input: map[string]interface{}{"description": string("test description")},
@@ -5392,6 +5391,16 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						File:          "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:     true,
 						WorldWideName: "0x5008FA6500D9C8B3"}}}}})}}},
+		{category: `EFIDisk`,
+			tests: []test{
+				{name: `All`,
+					input: map[string]interface{}{"efidisk0": "local-lvm:vm-1000-disk-0,efitype=2m,size=4M"},
+					output: baseConfig(ConfigQemu{EFIDisk: map[string]interface{}{
+						"efitype": "2m",
+						"size":    "4M",
+						"storage": "local-lvm",
+						"file":    "vm-1000-disk-0",
+						"volume":  "local-lvm:vm-1000-disk-0"}})}}},
 		{category: `Iso`,
 			tests: []test{
 				{name: `All`,
@@ -5406,16 +5415,6 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 								File:            "debian-11.0.0-amd64-netinst.iso",
 								Storage:         "local",
 								SizeInKibibytes: "377M"}}}}}})}}},
-		{category: `EFIDisk`,
-			tests: []test{
-				{name: `All`,
-					input: map[string]interface{}{"efidisk0": "local-lvm:vm-1000-disk-0,efitype=2m,size=4M"},
-					output: baseConfig(ConfigQemu{EFIDisk: map[string]interface{}{
-						"efitype": "2m",
-						"size":    "4M",
-						"storage": "local-lvm",
-						"file":    "vm-1000-disk-0",
-						"volume":  "local-lvm:vm-1000-disk-0"}})}}},
 		{category: `Node`,
 			tests: []test{
 				{name: `vmr nil`,
@@ -5436,6 +5435,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `vmr populated`,
 					vmr:    &VmRef{pool: "test"},
 					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName("test"))})}}},
+		{category: `TPM`,
+			tests: []test{
+				{name: `All`,
+					input:  map[string]interface{}{"tpmstate0": string("local-lvm:vm-101-disk-0,size=4M,version=v2.0")},
+					output: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "local-lvm", Version: util.Pointer(TpmVersion("v2.0"))}})}}},
 		{category: `VmID`,
 			tests: []test{
 				{name: `vmr nil`,
@@ -5446,11 +5450,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `vmr populated`,
 					vmr:    &VmRef{vmId: 100},
 					output: baseConfig(ConfigQemu{VmID: 100, Pool: util.Pointer(PoolName(""))})}}},
-		{category: `TPM`,
-			tests: []test{
-				{name: `All`,
-					input:  map[string]interface{}{"tpmstate0": string("local-lvm:vm-101-disk-0,size=4M,version=v2.0")},
-					output: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "local-lvm", Version: util.Pointer(TpmVersion("v2.0"))}})}}}}
+	}
 	for _, test := range tests {
 		for _, subTest := range test.tests {
 			name := test.category
