@@ -630,7 +630,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Description empty`,
 					config:        &ConfigQemu{Description: util.Pointer("")},
 					currentConfig: ConfigQemu{Description: util.Pointer("old description")},
-					output:        map[string]interface{}{"delete": "description"}}}},
+					output:        map[string]interface{}{"description": ""}}}},
 		{category: `Disks.Ide`,
 			update: []test{
 				{name: `Disk.Ide.Disk_X DELETE`,
