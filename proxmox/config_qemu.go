@@ -183,18 +183,14 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Boot != "" {
 		params["boot"] = config.Boot
 	}
+	if config.Description != nil && (*config.Description != "" || currentConfig.Description != nil) {
+		params["description"] = *config.Description
+	}
 	if config.QemuCores != 0 {
 		params["cores"] = config.QemuCores
 	}
 	if config.QemuCpu != "" {
 		params["cpu"] = config.QemuCpu
-	}
-	if config.Description != nil {
-		if *config.Description != "" {
-			params["description"] = *config.Description
-		} else if currentConfig.Description != nil {
-			itemsToDelete += ",description"
-		}
 	}
 	if config.Hookscript != "" {
 		params["hookscript"] = config.Hookscript
