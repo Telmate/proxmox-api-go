@@ -3187,6 +3187,49 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					currentConfig: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 					config:        &ConfigQemu{Iso: &IsoFile{Storage: "NewStorage", File: "file.iso"}},
 					output:        map[string]interface{}{"ide2": "NewStorage:iso/file.iso,media=cdrom"}}}},
+		{category: `Memory`,
+			create: []test{
+				{name: `MinimumCapacityMiB`,
+					config: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					output: map[string]interface{}{
+						"memory":  QemuMemoryBalloonCapacity(1024),
+						"balloon": QemuMemoryBalloonCapacity(1024)}},
+				{name: `Shares`,
+					config: &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(40000))}},
+					output: map[string]interface{}{"shares": QemuMemoryShares(40000)}},
+				{name: `Shares 0`,
+					config: &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
+					output: map[string]interface{}{}}},
+			createUpdate: []test{
+				{name: `CapacityMiB`,
+					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}},
+					output:        map[string]interface{}{"memory": QemuMemoryCapacity(2048)}}},
+			update: []test{
+				{name: `CapacityMiB smaller then current MinimumCapacityMiB`,
+					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					output:        map[string]interface{}{"memory": QemuMemoryCapacity(1024), "balloon": QemuMemoryCapacity(1024), "delete": "shares"}},
+				{name: `CapacityMiB smaller then current MinimumCapacityMiB and MinimumCapacityMiB lowered`,
+					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(512))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					output:        map[string]interface{}{"memory": QemuMemoryCapacity(1024), "balloon": QemuMemoryBalloonCapacity(512)}},
+				{name: `MinimumCapacityMiB`,
+					config:        &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					output:        map[string]interface{}{"balloon": QemuMemoryBalloonCapacity(1024)}},
+				{name: `MinimumCapacityMiB 0`,
+					config:        &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(0))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					output:        map[string]interface{}{"balloon": QemuMemoryBalloonCapacity(0), "delete": "shares"}},
+				{name: `Shares`,
+					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(40000))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
+					output:        map[string]interface{}{"shares": QemuMemoryShares(40000)}},
+				{name: `Shares 0`,
+					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
+					output:        map[string]interface{}{"delete": "shares"}}}},
 		{category: `Tags`,
 			createUpdate: []test{
 				{name: `Tags Empty`,
@@ -3236,6 +3279,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 
 func Test_ConfigQemu_mapToStruct(t *testing.T) {
 	baseConfig := func(config ConfigQemu) *ConfigQemu {
+		if config.Memory == nil {
+			config.Memory = &QemuMemory{}
+		}
 		return &config
 	}
 	parseIP := func(rawIP string) (ip netip.Addr) {
@@ -5415,6 +5461,35 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 								File:            "debian-11.0.0-amd64-netinst.iso",
 								Storage:         "local",
 								SizeInKibibytes: "377M"}}}}}})}}},
+		{category: `Memory`,
+			tests: []test{
+				{name: `All float64`,
+					input: map[string]interface{}{
+						"memory":  float64(1024),
+						"balloon": float64(512),
+						"shares":  float64(50)},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1024)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(512)),
+						Shares:             util.Pointer(QemuMemoryShares(50))}})},
+				{name: `All string`,
+					input: map[string]interface{}{
+						"memory":  "1024",
+						"balloon": "512",
+						"shares":  "50"},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1024)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(512)),
+						Shares:             util.Pointer(QemuMemoryShares(50))}})},
+				{name: `memory`,
+					input:  map[string]interface{}{"memory": float64(2000)},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2000))}})},
+				{name: `balloon`,
+					input:  map[string]interface{}{"balloon": float64(1000)},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}})},
+				{name: `shares`,
+					input:  map[string]interface{}{"shares": float64(100)},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(100))}})}}},
 		{category: `Node`,
 			tests: []test{
 				{name: `vmr nil`,

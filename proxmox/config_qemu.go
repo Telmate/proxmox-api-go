@@ -32,7 +32,6 @@ type (
 type ConfigQemu struct {
 	Agent           *QemuGuestAgent `json:"agent,omitempty"`
 	Args            string          `json:"args,omitempty"`
-	Balloon         int             `json:"balloon,omitempty"` // TODO should probably be a bool
 	Bios            string          `json:"bios,omitempty"`
 	Boot            string          `json:"boot,omitempty"`     // TODO should be an array of custom enums
 	BootDisk        string          `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
@@ -48,9 +47,9 @@ type ConfigQemu struct {
 	Iso             *IsoFile        `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
 	LinkedVmId      uint            `json:"linked_id,omitempty"` // Only returned setting it has no effect
 	Machine         string          `json:"machine,omitempty"`   // TODO should be custom type with enum
-	Memory          int             `json:"memory,omitempty"`    // TODO should be uint
-	Name            string          `json:"name,omitempty"`      // TODO should be custom type as there are character and length limitations
-	Node            string          `json:"node,omitempty"`      // Only returned setting it has no effect, set node in the VmRef instead
+	Memory          *QemuMemory     `json:"memory,omitempty"`
+	Name            string          `json:"name,omitempty"` // TODO should be custom type as there are character and length limitations
+	Node            string          `json:"node,omitempty"` // Only returned setting it has no effect, set node in the VmRef instead
 	Onboot          *bool           `json:"onboot,omitempty"`
 	Pool            *PoolName       `json:"pool,omitempty"`
 	Protection      *bool           `json:"protection,omitempty"`
@@ -82,6 +81,7 @@ type ConfigQemu struct {
 
 const (
 	ConfigQemu_Error_UnableToUpdateWithoutReboot string = "unable to update vm without rebooting"
+	ConfigQemu_Error_MemoryRequired              string = "memory is required during creation"
 )
 
 // Create - Tell Proxmox API to make the VM
@@ -174,9 +174,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Agent != nil {
 		params["agent"] = config.Agent.mapToAPI(currentConfig.Agent)
 	}
-	if config.Balloon >= 1 {
-		params["balloon"] = config.Balloon
-	}
 	if config.Bios != "" {
 		params["bios"] = config.Bios
 	}
@@ -207,9 +204,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	}
 	if config.Machine != "" {
 		params["machine"] = config.Machine
-	}
-	if config.Memory != 0 {
-		params["memory"] = config.Memory
 	}
 	if config.Name != "" {
 		params["name"] = config.Name
@@ -286,6 +280,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.CloudInit != nil {
 		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params, version)
 	}
+	if config.Memory != nil {
+		itemsToDelete += config.Memory.mapToAPI(currentConfig.Memory, params)
+	}
 
 	// Create EFI disk
 	config.CreateQemuEfiParams(params)
@@ -328,6 +325,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 
 	config := ConfigQemu{
 		CloudInit: CloudInit{}.mapToSDK(params),
+		Memory:    QemuMemory{}.mapToSDK(params),
 	}
 
 	if vmr != nil {
@@ -342,12 +340,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["args"]; isSet {
 		config.Args = strings.TrimSpace(params["args"].(string))
-	}
-	if _, isSet := params["balloon"]; isSet {
-		balloon := int(params["balloon"].(float64))
-		if balloon > 0 {
-			config.Balloon = balloon
-		}
 	}
 	//boot by default from hard disk (c), CD-ROM (d), network (n).
 	if _, isSet := params["boot"]; isSet {
@@ -372,18 +364,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["machine"]; isSet {
 		config.Machine = params["machine"].(string)
-	}
-	if _, isSet := params["memory"]; isSet {
-		switch params["memory"].(type) {
-		case float64:
-			config.Memory = int(params["memory"].(float64))
-		case string:
-			mem, err := strconv.ParseFloat(params["memory"].(string), 64)
-			if err != nil {
-				return nil, err
-			}
-			config.Memory = int(mem)
-		}
 	}
 	if _, isSet := params["name"]; isSet {
 		config.Name = params["name"].(string)
@@ -832,6 +812,32 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err error) {
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
+	if current == nil { // Create
+		if config.Memory == nil {
+			return errors.New(ConfigQemu_Error_MemoryRequired)
+		} else {
+			if err = config.Memory.Validate(nil); err != nil {
+				return
+			}
+		}
+		if config.TPM != nil {
+			if err = config.TPM.Validate(nil); err != nil {
+				return
+			}
+		}
+	} else { // Update
+		if config.Memory != nil {
+			if err = config.Memory.Validate(current.Memory); err != nil {
+				return
+			}
+		}
+		if config.TPM != nil {
+			if err = config.TPM.Validate(current.TPM); err != nil {
+				return
+			}
+		}
+	}
+	// Shared
 	if config.Agent != nil {
 		if err = config.Agent.Validate(); err != nil {
 			return
@@ -851,17 +857,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 	if config.Pool != nil && *config.Pool != "" {
 		if err = config.Pool.Validate(); err != nil {
 			return
-		}
-	}
-	if config.TPM != nil {
-		if current == nil {
-			if err = config.TPM.Validate(nil); err != nil {
-				return
-			}
-		} else {
-			if err = config.TPM.Validate(current.TPM); err != nil {
-				return
-			}
 		}
 	}
 	if config.Tags != nil {
