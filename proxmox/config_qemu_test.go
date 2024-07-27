@@ -3187,6 +3187,49 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					currentConfig: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 					config:        &ConfigQemu{Iso: &IsoFile{Storage: "NewStorage", File: "file.iso"}},
 					output:        map[string]interface{}{"ide2": "NewStorage:iso/file.iso,media=cdrom"}}}},
+		{category: `Memory`,
+			create: []test{
+				{name: `MinimumCapacityMiB`,
+					config: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					output: map[string]interface{}{
+						"memory":  QemuMemoryBalloonCapacity(1024),
+						"balloon": QemuMemoryBalloonCapacity(1024)}},
+				{name: `Shares`,
+					config: &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(40000))}},
+					output: map[string]interface{}{"shares": QemuMemoryShares(40000)}},
+				{name: `Shares 0`,
+					config: &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
+					output: map[string]interface{}{}}},
+			createUpdate: []test{
+				{name: `CapacityMiB`,
+					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}},
+					output:        map[string]interface{}{"memory": QemuMemoryCapacity(2048)}}},
+			update: []test{
+				{name: `CapacityMiB smaller then current MinimumCapacityMiB`,
+					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					output:        map[string]interface{}{"memory": QemuMemoryCapacity(1024), "balloon": QemuMemoryCapacity(1024), "delete": "shares"}},
+				{name: `CapacityMiB smaller then current MinimumCapacityMiB and MinimumCapacityMiB lowered`,
+					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(512))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					output:        map[string]interface{}{"memory": QemuMemoryCapacity(1024), "balloon": QemuMemoryBalloonCapacity(512)}},
+				{name: `MinimumCapacityMiB`,
+					config:        &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					output:        map[string]interface{}{"balloon": QemuMemoryBalloonCapacity(1024)}},
+				{name: `MinimumCapacityMiB 0`,
+					config:        &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(0))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					output:        map[string]interface{}{"balloon": QemuMemoryBalloonCapacity(0), "delete": "shares"}},
+				{name: `Shares`,
+					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(40000))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
+					output:        map[string]interface{}{"shares": QemuMemoryShares(40000)}},
+				{name: `Shares 0`,
+					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
+					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
+					output:        map[string]interface{}{"delete": "shares"}}}},
 		{category: `Tags`,
 			createUpdate: []test{
 				{name: `Tags Empty`,
@@ -3235,6 +3278,12 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 }
 
 func Test_ConfigQemu_mapToStruct(t *testing.T) {
+	baseConfig := func(config ConfigQemu) *ConfigQemu {
+		if config.Memory == nil {
+			config.Memory = &QemuMemory{}
+		}
+		return &config
+	}
 	parseIP := func(rawIP string) (ip netip.Addr) {
 		ip, _ = netip.ParseAddr(rawIP)
 		return
@@ -3260,23 +3309,23 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			tests: []test{
 				{name: `ALL`,
 					input: map[string]interface{}{"agent": string("1,freeze-fs-on-backup=1,fstrim_cloned_disks=1,type=virtio")},
-					output: &ConfigQemu{Agent: &QemuGuestAgent{
+					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{
 						Enable: util.Pointer(true),
 						Freeze: util.Pointer(true),
 						FsTrim: util.Pointer(true),
-						Type:   util.Pointer(QemuGuestAgentType_VirtIO)}}},
+						Type:   util.Pointer(QemuGuestAgentType_VirtIO)}})},
 				{name: `Enabled`,
 					input:  map[string]interface{}{"agent": string("1")},
-					output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}}},
+					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}})},
 				{name: `Freeze`,
 					input:  map[string]interface{}{"agent": string("0,freeze-fs-on-backup=1")},
-					output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(false), Freeze: util.Pointer(true)}}},
+					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(false), Freeze: util.Pointer(true)}})},
 				{name: `FsTrim`,
 					input:  map[string]interface{}{"agent": string("0,fstrim_cloned_disks=1")},
-					output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(false), FsTrim: util.Pointer(true)}}},
+					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(false), FsTrim: util.Pointer(true)}})},
 				{name: `Type`,
 					input:  map[string]interface{}{"agent": string("1,type=virtio")},
-					output: &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}}}}},
+					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}})}}},
 		{category: `CloudInit`,
 			tests: []test{
 				{name: `ALL`,
@@ -3291,7 +3340,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						"ciupgrade":    float64(1),
 						"cipassword":   string("Enter123!"),
 						"ciuser":       string("root")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						Custom: &CloudInitCustom{
 							Meta: &CloudInitSnippet{
 								FilePath: "ci-meta.yml",
@@ -3317,45 +3366,45 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						PublicSSHkeys:   util.Pointer(test_data_qemu.PublicKey_Decoded_Output()),
 						UpgradePackages: util.Pointer(true),
 						UserPassword:    util.Pointer("Enter123!"),
-						Username:        util.Pointer("root")}}},
+						Username:        util.Pointer("root")}})},
 				{name: `Custom Meta`,
 					input: map[string]interface{}{"cicustom": string("meta=local-zfs:ci-meta.yml")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						Custom:            &CloudInitCustom{Meta: &CloudInitSnippet{FilePath: "ci-meta.yml", Storage: "local-zfs"}},
-						NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+						NetworkInterfaces: CloudInitNetworkInterfaces{}}})},
 				{name: `Custom Network`,
 					input: map[string]interface{}{"cicustom": string("network=local-lvm:ci-network.yml")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						Custom:            &CloudInitCustom{Network: &CloudInitSnippet{FilePath: "ci-network.yml", Storage: "local-lvm"}},
-						NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+						NetworkInterfaces: CloudInitNetworkInterfaces{}}})},
 				{name: `Custom User`,
 					input: map[string]interface{}{
 						"cicustom": string("user=folder:ci-user.yml")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						Custom:            &CloudInitCustom{User: &CloudInitSnippet{FilePath: "ci-user.yml", Storage: "folder"}},
-						NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+						NetworkInterfaces: CloudInitNetworkInterfaces{}}})},
 				{name: `Custom Vendor`,
 					input: map[string]interface{}{"cicustom": string("vendor=local:snippets/ci-custom.yml")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						Custom:            &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: "snippets/ci-custom.yml", Storage: "local"}},
-						NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+						NetworkInterfaces: CloudInitNetworkInterfaces{}}})},
 				{name: `DNS SearchDomain`,
 					input: map[string]interface{}{"searchdomain": string("example.com")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						DNS: &GuestDNS{
 							SearchDomain: util.Pointer("example.com"),
 							NameServers:  util.Pointer(uninitializedArray[netip.Addr]())},
-						NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+						NetworkInterfaces: CloudInitNetworkInterfaces{}}})},
 				{name: `DNS SearchDomain empty`,
 					input:  map[string]interface{}{"searchdomain": string(" ")},
-					output: &ConfigQemu{}},
+					output: baseConfig(ConfigQemu{})},
 				{name: `DNS NameServers`,
 					input: map[string]interface{}{"nameserver": string("1.1.1.1 8.8.8.8 9.9.9.9")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						DNS: &GuestDNS{
 							SearchDomain: util.Pointer(""),
 							NameServers:  &[]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8"), parseIP("9.9.9.9")}},
-						NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
+						NetworkInterfaces: CloudInitNetworkInterfaces{}}})},
 				{name: `NetworkInterfaces`,
 					input: map[string]interface{}{
 						"ipconfig0":  string("ip=dhcp,ip6=dhcp"),
@@ -3364,7 +3413,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						"ipconfig19": string(""),
 						"ipconfig20": string(" "), // this single space is on porpuse to test if it is ignored
 						"ipconfig31": string("ip=10.20.4.7/22")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						NetworkInterfaces: CloudInitNetworkInterfaces{
 							QemuNetworkInterfaceID0: CloudInitNetworkConfig{
 								IPv4: &CloudInitIPv4Config{DHCP: true},
@@ -3379,73 +3428,73 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 									Address: util.Pointer(IPv6CIDR("2001:0db8:abcd::/48")),
 									Gateway: util.Pointer(IPv6Address("2001:0db8:abcd::1"))}},
 							QemuNetworkInterfaceID31: CloudInitNetworkConfig{
-								IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("10.20.4.7/22"))}}}}}},
+								IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("10.20.4.7/22"))}}}}})},
 				{name: `PublicSSHkeys`,
 					input: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Input()},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						NetworkInterfaces: CloudInitNetworkInterfaces{},
-						PublicSSHkeys:     util.Pointer(test_data_qemu.PublicKey_Decoded_Output())}}},
+						PublicSSHkeys:     util.Pointer(test_data_qemu.PublicKey_Decoded_Output())}})},
 				{name: `UpgradePackages`,
 					input: map[string]interface{}{"ciupgrade": float64(0)},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						NetworkInterfaces: CloudInitNetworkInterfaces{},
-						UpgradePackages:   util.Pointer(false)}}},
+						UpgradePackages:   util.Pointer(false)}})},
 				{name: `UserPassword`,
 					input: map[string]interface{}{"cipassword": string("Enter123!")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						NetworkInterfaces: CloudInitNetworkInterfaces{},
-						UserPassword:      util.Pointer("Enter123!")}}},
+						UserPassword:      util.Pointer("Enter123!")}})},
 				{name: `Username`,
 					input: map[string]interface{}{"ciuser": string("root")},
-					output: &ConfigQemu{CloudInit: &CloudInit{
+					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						NetworkInterfaces: CloudInitNetworkInterfaces{},
-						Username:          util.Pointer("root")}}},
+						Username:          util.Pointer("root")}})},
 				{name: `Username empty`,
 					input:  map[string]interface{}{"ciuser": string(" ")},
-					output: &ConfigQemu{}}}},
+					output: baseConfig(ConfigQemu{})}}},
 		{category: `Description`,
 			tests: []test{
 				{input: map[string]interface{}{"description": string("test description")},
-					output: &ConfigQemu{Description: util.Pointer("test description")}}}},
+					output: baseConfig(ConfigQemu{Description: util.Pointer("test description")})}}},
 		{category: `Disks Ide CdRom`,
 			tests: []test{
 				{name: `none`,
 					input:  map[string]interface{}{"ide1": "none,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}}},
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}})},
 				{name: `passthrough`,
 					input:  map[string]interface{}{"ide2": "cdrom,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}}},
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}})},
 				{name: `iso`,
 					input: map[string]interface{}{"ide3": "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{
 						File:            "debian-11.0.0-amd64-netinst.iso",
 						Storage:         "local",
-						SizeInKibibytes: "377M"}}}}}}}}},
+						SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Disks Ide CloudInit`,
 			tests: []test{
 				{name: `file`,
 					input: map[string]interface{}{"ide0": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{
 						Format:  QemuDiskFormat_Raw,
-						Storage: "Test"}}}}}},
+						Storage: "Test"}}}}})},
 				{name: `lvm`,
 					input: map[string]interface{}{"ide3": "Test:vm-100-cloudinit,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{
 						Format:  QemuDiskFormat_Raw,
-						Storage: "Test"}}}}}}}},
+						Storage: "Test"}}}}})}}},
 		{category: `Disks Ide Disk`,
 			tests: []test{
 				{name: ``,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `ALL`,
 					input: map[string]interface{}{"ide1": "test2:100/vm-100-disk-53.qcow2,aio=io_uring,backup=0,cache=writethrough,discard=on,iops_rd=12,iops_rd_max=13,iops_rd_max_length=4,iops_wr=15,iops_wr_max=14,iops_wr_max_length=5,mbps_rd=1.46,mbps_rd_max=3.57,mbps_wr=2.68,mbps_wr_max=4.55,replicate=0,serial=disk-9763,size=1032G,ssd=1,wwn=0x500F753600A987E1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						AsyncIO: QemuDiskAsyncIO_IOuring,
 						Backup:  false,
 						Bandwidth: QemuDiskBandwidth{
@@ -3464,10 +3513,10 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Serial:          "disk-9763",
 						SizeInKibibytes: 1082130432,
 						Storage:         "test2",
-						WorldWideName:   "0x500F753600A987E1"}}}}}},
+						WorldWideName:   "0x500F753600A987E1"}}}}})},
 				{name: `ALL LinkedClone`,
 					input: map[string]interface{}{"ide1": "test2:110/base-110-disk-1.qcow2/100/vm-100-disk-53.qcow2,aio=io_uring,backup=0,cache=writethrough,discard=on,iops_rd=12,iops_rd_max=13,iops_rd_max_length=4,iops_wr=15,iops_wr_max=14,iops_wr_max_length=5,mbps_rd=1.46,mbps_rd_max=3.57,mbps_wr=2.68,mbps_wr_max=4.55,replicate=0,serial=disk-9763,size=1032G,ssd=1,wwn=0x500679CE00B1DAF4"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						LinkedVmId: 110,
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							AsyncIO: QemuDiskAsyncIO_IOuring,
@@ -3489,206 +3538,206 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Serial:          "disk-9763",
 							SizeInKibibytes: 1082130432,
 							Storage:         "test2",
-							WorldWideName:   "0x500679CE00B1DAF4"}}}}}},
+							WorldWideName:   "0x500679CE00B1DAF4"}}}}})},
 				{name: `aio`,
 					input: map[string]interface{}{"ide2": "test2:100/vm-100-disk-53.qcow2,aio=io_uring"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						AsyncIO:   QemuDiskAsyncIO_IOuring,
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `backup`,
 					input: map[string]interface{}{"ide3": "test2:100/vm-100-disk-53.qcow2,backup=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    false,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `cache`,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2,cache=writethrough"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Cache:     QemuDiskCache_WriteThrough,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `discard`,
 					input: map[string]interface{}{"ide1": "test2:100/vm-100-disk-53.qcow2,discard=on"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Discard:   true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd`,
 					input: map[string]interface{}{"ide2": "test2:100/vm-100-disk-53.qcow2,iops_rd=12"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 12}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd_max`,
 					input: map[string]interface{}{"ide3": "test2:100/vm-100-disk-53.qcow2,iops_rd_max=13"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 13}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd_max_length`,
 					input: map[string]interface{}{"ide3": "test2:100/vm-100-disk-53.qcow2,iops_rd_max_length=2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 2}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr`,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2,iops_wr=15"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 15}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr_max`,
 					input: map[string]interface{}{"ide1": "test2:100/vm-100-disk-53.qcow2,iops_wr_max=14"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 14}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr_max_length`,
 					input: map[string]interface{}{"ide1": "test2:100/vm-100-disk-53.qcow2,iops_wr_max_length=3"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 3}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_rd`,
 					input: map[string]interface{}{"ide2": "test2:100/vm-100-disk-53.qcow2,mbps_rd=1.46"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 1.46}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_rd_max`,
 					input: map[string]interface{}{"ide3": "test2:100/vm-100-disk-53.qcow2,mbps_rd_max=3.57"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 3.57}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_wr`,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2,mbps_wr=2.68"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 2.68}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_wr_max`,
 					input: map[string]interface{}{"ide1": "test2:100/vm-100-disk-53.qcow2,mbps_wr_max=4.55"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.55}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `replicate`,
 					input: map[string]interface{}{"ide2": "test2:100/vm-100-disk-53.qcow2,replicate=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: false,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `serial`,
 					input: map[string]interface{}{"ide3": "test2:100/vm-100-disk-53.qcow2,serial=disk-9763"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint53,
 						Replicate: true,
 						Serial:    "disk-9763",
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `size G`,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2,size=1032G"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint53,
 						Replicate:       true,
 						SizeInKibibytes: 1082130432,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size K`,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2,size=1032K"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint53,
 						Replicate:       true,
 						SizeInKibibytes: 1032,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size M`,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2,size=1032M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint53,
 						Replicate:       true,
 						SizeInKibibytes: 1056768,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size T`,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2,size=2T"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint53,
 						Replicate:       true,
 						SizeInKibibytes: 2147483648,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `ssd`,
 					input: map[string]interface{}{"ide1": "test2:100/vm-100-disk-53.qcow2,ssd=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:     true,
 						EmulateSSD: true,
 						Format:     QemuDiskFormat_Qcow2,
 						Id:         uint53,
 						Replicate:  true,
-						Storage:    "test2"}}}}}},
+						Storage:    "test2"}}}}})},
 				{name: `syntax fileSyntaxVolume`,
 					input: map[string]interface{}{"ide2": "test:vm-100-disk-2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Raw,
 						Id:        uint2,
 						Replicate: true,
 						Storage:   "test",
-						syntax:    diskSyntaxVolume}}}}}},
+						syntax:    diskSyntaxVolume}}}}})},
 				{name: `syntax fileSyntaxVolume LinkedClone`,
 					input: map[string]interface{}{"ide3": "test:base-110-disk-1/vm-100-disk-2"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						LinkedVmId: 110,
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Backup:       true,
@@ -3697,27 +3746,27 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							LinkedDiskId: &uint1,
 							Replicate:    true,
 							Storage:      "test",
-							syntax:       diskSyntaxVolume}}}}}},
+							syntax:       diskSyntaxVolume}}}}})},
 				{name: `wwn`,
 					input: map[string]interface{}{"ide1": "test2:100/vm-100-disk-53.qcow2,wwn=0x500DB82100C6FA59"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Backup:        true,
 						Format:        QemuDiskFormat_Qcow2,
 						Id:            uint53,
 						Replicate:     true,
 						Storage:       "test2",
-						WorldWideName: "0x500DB82100C6FA59"}}}}}}}},
+						WorldWideName: "0x500DB82100C6FA59"}}}}})}}},
 		{category: `Disks Ide Passthrough`,
 			tests: []test{
 				{name: ``,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `All`,
 					input: map[string]interface{}{"ide1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,aio=threads,backup=0,cache=unsafe,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,serial=disk-9763,size=1G,ssd=1,wwn=0x500CBE4300D978A6"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						AsyncIO: QemuDiskAsyncIO_Threads,
 						Backup:  false,
 						Bandwidth: QemuDiskBandwidth{
@@ -3734,198 +3783,198 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Replicate:       false,
 						Serial:          "disk-9763",
 						SizeInKibibytes: 1048576,
-						WorldWideName:   "0x500CBE4300D978A6"}}}}}},
+						WorldWideName:   "0x500CBE4300D978A6"}}}}})},
 				{name: `aio`,
 					input: map[string]interface{}{"ide2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,aio=threads"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						AsyncIO:   QemuDiskAsyncIO_Threads,
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `backup`,
 					input: map[string]interface{}{"ide3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,backup=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    false,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `cache`,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,cache=unsafe"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Cache:     QemuDiskCache_Unsafe,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `discard`,
 					input: map[string]interface{}{"ide1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,discard=on"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Discard:   true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd`,
 					input: map[string]interface{}{"ide2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd=10"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd_max`,
 					input: map[string]interface{}{"ide3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd_max=12"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 12}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd_max_length`,
 					input: map[string]interface{}{"ide3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd_max_length=2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 2}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr`,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr=11"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 11}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr_max`,
 					input: map[string]interface{}{"ide1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr_max=13"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr_max_length`,
 					input: map[string]interface{}{"ide1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr_max_length=3"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 3}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_rd`,
 					input: map[string]interface{}{"ide2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_rd=1.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 1.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_rd_max`,
 					input: map[string]interface{}{"ide3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_rd_max=3.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 3.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_wr`,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_wr=2.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 2.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_wr_max`,
 					input: map[string]interface{}{"ide1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_wr_max=4.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `replicate`,
 					input: map[string]interface{}{"ide2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,replicate=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: false}}}}}},
+						Replicate: false}}}}})},
 				{name: `serial`,
 					input: map[string]interface{}{"ide3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,serial=disk-9763"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate: true,
-						Serial:    "disk-9763"}}}}}},
+						Serial:    "disk-9763"}}}}})},
 				{name: `size G`,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=10G"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 10485760}}}}}},
+						SizeInKibibytes: 10485760}}}}})},
 				{name: `size K`,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=10K"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 10}}}}}},
+						SizeInKibibytes: 10}}}}})},
 				{name: `size M`,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=10M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 10240}}}}}},
+						SizeInKibibytes: 10240}}}}})},
 				{name: `size T`,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=10T"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 10737418240}}}}}},
+						SizeInKibibytes: 10737418240}}}}})},
 				{name: `ssd`,
 					input: map[string]interface{}{"ide1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,ssd=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:     true,
 						EmulateSSD: true,
 						File:       "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate:  true}}}}}},
+						Replicate:  true}}}}})},
 				{name: `wwn`,
 					input: map[string]interface{}{"ide1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,wwn=0x5005AC1200F643B8"},
-					output: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						Backup:        true,
 						File:          "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:     true,
-						WorldWideName: "0x5005AC1200F643B8"}}}}}}}},
+						WorldWideName: "0x5005AC1200F643B8"}}}}})}}},
 		{category: `Disks Sata CdRom`,
 			tests: []test{
 				{name: `none`,
 					input:  map[string]interface{}{"sata5": "none,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{CdRom: &QemuCdRom{}}}}}},
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{CdRom: &QemuCdRom{}}}}})},
 				{name: `passthrough`,
 					input:  map[string]interface{}{"sata4": "cdrom,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}}},
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}})},
 				{name: `iso`,
 					input: map[string]interface{}{"sata3": "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{
 						File:            "debian-11.0.0-amd64-netinst.iso",
 						Storage:         "local",
-						SizeInKibibytes: "377M"}}}}}}}}},
+						SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Disks Sata CloudInit`,
 			tests: []test{
 				{name: `file`,
 					input: map[string]interface{}{"sata4": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{
 						Format:  QemuDiskFormat_Raw,
-						Storage: "Test"}}}}}},
+						Storage: "Test"}}}}})},
 				{name: `lvm`,
 					input: map[string]interface{}{"sata0": "Test:vm-100-cloudinit,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{
 						Format:  QemuDiskFormat_Raw,
-						Storage: "Test"}}}}}}}},
+						Storage: "Test"}}}}})}}},
 		{category: `Disks Sata Disk`,
 			tests: []test{
 				{name: ``,
 					input: map[string]interface{}{"sata0": "test2:100/vm-100-disk-47.qcow2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `ALL`,
 					input: map[string]interface{}{"sata1": "test2:100/vm-100-disk-47.qcow2,aio=native,backup=0,cache=none,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,serial=disk-9763,size=32G,ssd=1,wwn=0x500DFA8900E3C641"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						AsyncIO: QemuDiskAsyncIO_Native,
 						Backup:  false,
 						Bandwidth: QemuDiskBandwidth{
@@ -3944,10 +3993,10 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Serial:          "disk-9763",
 						SizeInKibibytes: 33554432,
 						Storage:         "test2",
-						WorldWideName:   "0x500DFA8900E3C641"}}}}}},
+						WorldWideName:   "0x500DFA8900E3C641"}}}}})},
 				{name: `ALL LinkedClone`,
 					input: map[string]interface{}{"sata1": "test2:110/base-110-disk-1.qcow2/100/vm-100-disk-47.qcow2,aio=native,backup=0,cache=none,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,serial=disk-9763,size=32G,ssd=1,wwn=0x5003B97600A8F2D4"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						LinkedVmId: 110,
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 							AsyncIO: QemuDiskAsyncIO_Native,
@@ -3969,117 +4018,117 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Serial:          "disk-9763",
 							SizeInKibibytes: 33554432,
 							Storage:         "test2",
-							WorldWideName:   "0x5003B97600A8F2D4"}}}}}},
+							WorldWideName:   "0x5003B97600A8F2D4"}}}}})},
 				{name: `aio`,
 					input: map[string]interface{}{"sata2": "test2:100/vm-100-disk-47.qcow2,aio=native"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
 						AsyncIO:   QemuDiskAsyncIO_Native,
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `backup`,
 					input: map[string]interface{}{"sata3": "test2:100/vm-100-disk-47.qcow2,backup=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    false,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `cache`,
 					input: map[string]interface{}{"sata4": "test2:100/vm-100-disk-47.qcow2,cache=none"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Cache:     QemuDiskCache_None,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `discard`,
 					input: map[string]interface{}{"sata5": "test2:100/vm-100-disk-47.qcow2,discard=on"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Discard:   true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd`,
 					input: map[string]interface{}{"sata0": "test2:100/vm-100-disk-47.qcow2,iops_rd=10"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd_max`,
 					input: map[string]interface{}{"sata1": "test2:100/vm-100-disk-47.qcow2,iops_rd_max=12"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 12}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd_max_length`,
 					input: map[string]interface{}{"sata1": "test2:100/vm-100-disk-47.qcow2,iops_rd_max_length=2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 2}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr`,
 					input: map[string]interface{}{"sata2": "test2:100/vm-100-disk-47.qcow2,iops_wr=11"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 11}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr_max`,
 					input: map[string]interface{}{"sata3": "test2:100/vm-100-disk-47.qcow2,iops_wr_max=13"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr_max_length`,
 					input: map[string]interface{}{"sata3": "test2:100/vm-100-disk-47.qcow2,iops_wr_max_length=3"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 3}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_rd`,
 					input: map[string]interface{}{"sata4": "test2:100/vm-100-disk-47.qcow2,mbps_rd=1.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 1.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_rd_max`,
 					input: map[string]interface{}{"sata5": "test2:100/vm-100-disk-47.qcow2,mbps_rd_max=3.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 3.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_wr`,
 					input: map[string]interface{}{"sata0": "test2:100/vm-100-disk-47.qcow2,mbps_wr=2.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup: true,
 						Bandwidth: QemuDiskBandwidth{
 							MBps: QemuDiskBandwidthMBps{
@@ -4087,90 +4136,90 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_wr_max`,
 					input: map[string]interface{}{"sata1": "test2:100/vm-100-disk-47.qcow2,mbps_wr_max=4.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `replicate`,
 					input: map[string]interface{}{"sata2": "test2:100/vm-100-disk-47.qcow2,replicate=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: false,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `serial`,
 					input: map[string]interface{}{"sata3": "test2:100/vm-100-disk-47.qcow2,serial=disk-9763"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint47,
 						Replicate: true,
 						Serial:    "disk-9763",
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `size G`,
 					input: map[string]interface{}{"sata4": "test2:100/vm-100-disk-47.qcow2,size=32G"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint47,
 						Replicate:       true,
 						SizeInKibibytes: 33554432,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size K`,
 					input: map[string]interface{}{"sata4": "test2:100/vm-100-disk-47.qcow2,size=32K"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint47,
 						Replicate:       true,
 						SizeInKibibytes: 32,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size M`,
 					input: map[string]interface{}{"sata4": "test2:100/vm-100-disk-47.qcow2,size=32M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint47,
 						Replicate:       true,
 						SizeInKibibytes: 32768,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size T`,
 					input: map[string]interface{}{"sata4": "test2:100/vm-100-disk-47.qcow2,size=3T"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint47,
 						Replicate:       true,
 						SizeInKibibytes: 3221225472,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `ssd`,
 					input: map[string]interface{}{"sata5": "test2:100/vm-100-disk-47.qcow2,ssd=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:     true,
 						EmulateSSD: true,
 						Format:     QemuDiskFormat_Qcow2,
 						Id:         uint47,
 						Replicate:  true,
-						Storage:    "test2"}}}}}},
+						Storage:    "test2"}}}}})},
 				{name: `syntax fileSyntaxVolume`,
 					input: map[string]interface{}{"sata0": "test:vm-100-disk-2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Raw,
 						Id:        uint2,
 						Replicate: true,
 						Storage:   "test",
-						syntax:    diskSyntaxVolume}}}}}},
+						syntax:    diskSyntaxVolume}}}}})},
 				{name: `syntax fileSyntaxVolume LinkedClone`,
 					input: map[string]interface{}{"sata1": "test:base-110-disk-1/vm-100-disk-2"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						LinkedVmId: 110,
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 							Backup:       true,
@@ -4179,27 +4228,27 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							LinkedDiskId: &uint1,
 							Replicate:    true,
 							Storage:      "test",
-							syntax:       diskSyntaxVolume}}}}}},
+							syntax:       diskSyntaxVolume}}}}})},
 				{name: `wwn`,
 					input: map[string]interface{}{"sata5": "test2:100/vm-100-disk-47.qcow2,wwn=0x5001E48A00D567C9"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 						Backup:        true,
 						Format:        QemuDiskFormat_Qcow2,
 						Id:            uint47,
 						Replicate:     true,
 						Storage:       "test2",
-						WorldWideName: "0x5001E48A00D567C9"}}}}}}}},
+						WorldWideName: "0x5001E48A00D567C9"}}}}})}}},
 		{category: `Disks Sata Passthrough`,
 			tests: []test{
 				{name: ``,
 					input: map[string]interface{}{"sata1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `All`,
 					input: map[string]interface{}{"sata1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,aio=io_uring,backup=0,cache=directsync,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=5,iops_wr=11,iops_wr_max=13,iops_wr_max_length=4,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,serial=disk-9763,size=1G,ssd=1,wwn=500E9FBC00F2A6D3"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						AsyncIO: QemuDiskAsyncIO_IOuring,
 						Backup:  false,
 						Bandwidth: QemuDiskBandwidth{
@@ -4216,198 +4265,198 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Replicate:       false,
 						Serial:          "disk-9763",
 						SizeInKibibytes: 1048576,
-						WorldWideName:   "500E9FBC00F2A6D3"}}}}}},
+						WorldWideName:   "500E9FBC00F2A6D3"}}}}})},
 				{name: `aio`,
 					input: map[string]interface{}{"sata2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,aio=io_uring"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						AsyncIO:   QemuDiskAsyncIO_IOuring,
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `backup`,
 					input: map[string]interface{}{"sata3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,backup=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    false,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `cache`,
 					input: map[string]interface{}{"sata4": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,cache=directsync"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Cache:     QemuDiskCache_DirectSync,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `discard`,
 					input: map[string]interface{}{"sata5": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,discard=on"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Discard:   true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd`,
 					input: map[string]interface{}{"sata0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd=10"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd_max`,
 					input: map[string]interface{}{"sata1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd_max=12"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 12}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd_max_length`,
 					input: map[string]interface{}{"sata1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd_max_length=2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 2}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr`,
 					input: map[string]interface{}{"sata2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr=11"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 11}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr_max`,
 					input: map[string]interface{}{"sata3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr_max=13"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr_max_length`,
 					input: map[string]interface{}{"sata3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr_max_length=3"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 3}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_rd`,
 					input: map[string]interface{}{"sata4": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_rd=1.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 1.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_rd_max`,
 					input: map[string]interface{}{"sata5": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_rd_max=3.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 3.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_wr`,
 					input: map[string]interface{}{"sata0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_wr=2.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 2.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_wr_max`,
 					input: map[string]interface{}{"sata1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_wr_max=4.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `replicate`,
 					input: map[string]interface{}{"sata2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,replicate=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: false}}}}}},
+						Replicate: false}}}}})},
 				{name: `serial`,
 					input: map[string]interface{}{"sata3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,serial=disk-9763"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate: true,
-						Serial:    "disk-9763"}}}}}},
+						Serial:    "disk-9763"}}}}})},
 				{name: `size G`,
 					input: map[string]interface{}{"sata4": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=3G"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 3145728}}}}}},
+						SizeInKibibytes: 3145728}}}}})},
 				{name: `size K`,
 					input: map[string]interface{}{"sata4": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=5789K"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 5789}}}}}},
+						SizeInKibibytes: 5789}}}}})},
 				{name: `size M`,
 					input: map[string]interface{}{"sata4": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=45M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 46080}}}}}},
+						SizeInKibibytes: 46080}}}}})},
 				{name: `size T`,
 					input: map[string]interface{}{"sata4": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=7T"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 7516192768}}}}}},
+						SizeInKibibytes: 7516192768}}}}})},
 				{name: `ssd`,
 					input: map[string]interface{}{"sata5": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,ssd=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:     true,
 						EmulateSSD: true,
 						File:       "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate:  true}}}}}},
+						Replicate:  true}}}}})},
 				{name: `wwn`,
 					input: map[string]interface{}{"sata5": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,wwn=0x5004D2EF00C8B57A"},
-					output: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						Backup:        true,
 						File:          "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:     true,
-						WorldWideName: "0x5004D2EF00C8B57A"}}}}}}}},
+						WorldWideName: "0x5004D2EF00C8B57A"}}}}})}}},
 		{category: `Disks Scsi CdRom`,
 			tests: []test{
 				{name: `none`,
 					input:  map[string]interface{}{"scsi30": "none,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_30: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}}},
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_30: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}})},
 				{name: `passthrough`,
 					input:  map[string]interface{}{"scsi29": "cdrom,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_29: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}}},
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_29: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}})},
 				{name: `iso`,
 					input: map[string]interface{}{"scsi28": "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_28: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_28: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{
 						File:            "debian-11.0.0-amd64-netinst.iso",
 						Storage:         "local",
-						SizeInKibibytes: "377M"}}}}}}}}},
+						SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Disks Scsi CloudInit`,
 			tests: []test{
 				{name: `file`,
 					input: map[string]interface{}{"scsi0": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{
 						Format:  QemuDiskFormat_Raw,
-						Storage: "Test"}}}}}},
+						Storage: "Test"}}}}})},
 				{name: `lvm`,
 					input: map[string]interface{}{"scsi23": "Test:vm-100-cloudinit,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_23: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_23: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{
 						Format:  QemuDiskFormat_Raw,
-						Storage: "Test"}}}}}}}},
+						Storage: "Test"}}}}})}}},
 		{category: `Disks Scsi Disk`,
 			tests: []test{
 				{name: ``,
 					input: map[string]interface{}{"scsi0": "test:100/vm-100-disk-2.qcow2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `ALL`,
 					input: map[string]interface{}{"scsi1": "test:100/vm-100-disk-2.qcow2,aio=threads,backup=0,cache=writeback,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,iothread=1,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,ro=1,serial=disk-9763,size=32G,ssd=1,wwn=0x500AF18700E9CD25"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						AsyncIO: QemuDiskAsyncIO_Threads,
 						Backup:  false,
 						Bandwidth: QemuDiskBandwidth{
@@ -4428,10 +4477,10 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Serial:          "disk-9763",
 						SizeInKibibytes: 33554432,
 						Storage:         "test",
-						WorldWideName:   "0x500AF18700E9CD25"}}}}}},
+						WorldWideName:   "0x500AF18700E9CD25"}}}}})},
 				{name: `ALL LinkedClone`,
 					input: map[string]interface{}{"scsi1": "test:110/base-110-disk-1.qcow2/100/vm-100-disk-2.qcow2,aio=threads,backup=0,cache=writeback,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,iothread=1,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,ro=1,serial=disk-9763,size=32G,ssd=1,wwn=0x500879DC00F3BE6A"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						LinkedVmId: 110,
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							AsyncIO: QemuDiskAsyncIO_Threads,
@@ -4455,224 +4504,224 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Serial:          "disk-9763",
 							SizeInKibibytes: 33554432,
 							Storage:         "test",
-							WorldWideName:   "0x500879DC00F3BE6A"}}}}}},
+							WorldWideName:   "0x500879DC00F3BE6A"}}}}})},
 				{name: `aio`,
 					input: map[string]interface{}{"scsi2": "test:100/vm-100-disk-2.qcow2,aio=threads"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						AsyncIO:   QemuDiskAsyncIO_Threads,
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `backup`,
 					input: map[string]interface{}{"scsi3": "test:100/vm-100-disk-2.qcow2,backup=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    false,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `cache`,
 					input: map[string]interface{}{"scsi4": "test:100/vm-100-disk-2.qcow2,cache=writeback"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Cache:     QemuDiskCache_WriteBack,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `discard`,
 					input: map[string]interface{}{"scsi5": "test:100/vm-100-disk-2.qcow2,discard=on"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Discard:   true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `iops_rd`,
 					input: map[string]interface{}{"scsi6": "test:100/vm-100-disk-2.qcow2,iops_rd=10"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `iops_rd_max`,
 					input: map[string]interface{}{"scsi7": "test:100/vm-100-disk-2.qcow2,iops_rd_max=12"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 12}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `iops_rd_max_length`,
 					input: map[string]interface{}{"scsi7": "test:100/vm-100-disk-2.qcow2,iops_rd_max_length=2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 2}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `iops_wr`,
 					input: map[string]interface{}{"scsi8": "test:100/vm-100-disk-2.qcow2,iops_wr=11"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 11}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `iops_wr_max`,
 					input: map[string]interface{}{"scsi9": "test:100/vm-100-disk-2.qcow2,iops_wr_max=13"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `iops_wr_max_length`,
 					input: map[string]interface{}{"scsi9": "test:100/vm-100-disk-2.qcow2,iops_wr_max_length=3"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 3}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `iothread`,
 					input: map[string]interface{}{"scsi10": "test:100/vm-100-disk-2.qcow2,iothread=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						IOThread:  true,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `mbps_rd`,
 					input: map[string]interface{}{"scsi11": "test:100/vm-100-disk-2.qcow2,mbps_rd=1.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 1.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `mbps_rd_max`,
 					input: map[string]interface{}{"scsi12": "test:100/vm-100-disk-2.qcow2,mbps_rd_max=3.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 3.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `mbps_wr`,
 					input: map[string]interface{}{"scsi13": "test:100/vm-100-disk-2.qcow2,mbps_wr=2.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 2.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `mbps_wr_max`,
 					input: map[string]interface{}{"scsi14": "test:100/vm-100-disk-2.qcow2,mbps_wr_max=4.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `replicate`,
 					input: map[string]interface{}{"scsi15": "test:100/vm-100-disk-2.qcow2,replicate=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: false,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `ro`,
 					input: map[string]interface{}{"scsi16": "test:100/vm-100-disk-2.qcow2,ro=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						ReadOnly:  true,
 						Replicate: true,
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `serial`,
 					input: map[string]interface{}{"scsi17": "test:100/vm-100-disk-2.qcow2,serial=disk-9763"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint2,
 						Replicate: true,
 						Serial:    "disk-9763",
-						Storage:   "test"}}}}}},
+						Storage:   "test"}}}}})},
 				{name: `size G`,
 					input: map[string]interface{}{"scsi18": "test:100/vm-100-disk-2.qcow2,size=32G"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint2,
 						Replicate:       true,
 						SizeInKibibytes: 33554432,
-						Storage:         "test"}}}}}},
+						Storage:         "test"}}}}})},
 				{name: `size K`,
 					input: map[string]interface{}{"scsi18": "test:100/vm-100-disk-2.qcow2,size=32K"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint2,
 						Replicate:       true,
 						SizeInKibibytes: 32,
-						Storage:         "test"}}}}}},
+						Storage:         "test"}}}}})},
 				{name: `size M`,
 					input: map[string]interface{}{"scsi18": "test:100/vm-100-disk-2.qcow2,size=32M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint2,
 						Replicate:       true,
 						SizeInKibibytes: 32768,
-						Storage:         "test"}}}}}},
+						Storage:         "test"}}}}})},
 				{name: `size T`,
 					input: map[string]interface{}{"scsi18": "test:100/vm-100-disk-2.qcow2,size=4T"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint2,
 						Replicate:       true,
 						SizeInKibibytes: 4294967296,
-						Storage:         "test"}}}}}},
+						Storage:         "test"}}}}})},
 				{name: `ssd`,
 					input: map[string]interface{}{"scsi19": "test:100/vm-100-disk-2.qcow2,ssd=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:     true,
 						EmulateSSD: true,
 						Format:     QemuDiskFormat_Qcow2,
 						Id:         uint2,
 						Replicate:  true,
-						Storage:    "test"}}}}}},
+						Storage:    "test"}}}}})},
 				{name: `syntax fileSyntaxVolume`,
 					input: map[string]interface{}{"scsi6": "test:vm-100-disk-2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Raw,
 						Id:        uint2,
 						Replicate: true,
 						Storage:   "test",
-						syntax:    diskSyntaxVolume}}}}}},
+						syntax:    diskSyntaxVolume}}}}})},
 				{name: `syntax fileSyntaxVolume LinkedClone`,
 					input: map[string]interface{}{"scsi7": "test:base-110-disk-1/vm-100-disk-2"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						LinkedVmId: 110,
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Backup:       true,
@@ -4681,27 +4730,27 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							LinkedDiskId: &uint1,
 							Replicate:    true,
 							Storage:      "test",
-							syntax:       diskSyntaxVolume}}}}}},
+							syntax:       diskSyntaxVolume}}}}})},
 				{name: `wwn`,
 					input: map[string]interface{}{"scsi19": "test:100/vm-100-disk-2.qcow2,wwn=0x500E265400A1F3D7"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Backup:        true,
 						Format:        QemuDiskFormat_Qcow2,
 						Id:            uint2,
 						Replicate:     true,
 						Storage:       "test",
-						WorldWideName: "0x500E265400A1F3D7"}}}}}}}},
+						WorldWideName: "0x500E265400A1F3D7"}}}}})}}},
 		{category: `Disks Scsi Passthrough`,
 			tests: []test{
 				{name: ``,
 					input: map[string]interface{}{"scsi0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `All`,
 					input: map[string]interface{}{"scsi1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,aio=threads,backup=0,cache=none,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,iothread=1,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,ro=1,serial=disk-9763,size=1G,ssd=1,wwn=500CB15600D8FE32"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						AsyncIO: QemuDiskAsyncIO_Threads,
 						Backup:  false,
 						Bandwidth: QemuDiskBandwidth{
@@ -4720,212 +4769,212 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Replicate:       false,
 						Serial:          "disk-9763",
 						SizeInKibibytes: 1048576,
-						WorldWideName:   "500CB15600D8FE32"}}}}}},
+						WorldWideName:   "500CB15600D8FE32"}}}}})},
 				{name: `aio`,
 					input: map[string]interface{}{"scsi2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,aio=threads"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						AsyncIO:   QemuDiskAsyncIO_Threads,
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `backup`,
 					input: map[string]interface{}{"scsi3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,backup=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    false,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `cache`,
 					input: map[string]interface{}{"scsi4": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,cache=none"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Cache:     QemuDiskCache_None,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `discard`,
 					input: map[string]interface{}{"scsi5": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,discard=on"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Discard:   true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd`,
 					input: map[string]interface{}{"scsi6": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd=10"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd_max`,
 					input: map[string]interface{}{"scsi7": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd_max=12"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 12}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd_max_length`,
 					input: map[string]interface{}{"scsi7": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd_max_length=2"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 2}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr`,
 					input: map[string]interface{}{"scsi8": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr=11"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 11}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr_max`,
 					input: map[string]interface{}{"scsi9": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr_max=13"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr_max_length`,
 					input: map[string]interface{}{"scsi9": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr_max_length=3"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 3}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iothread`,
 					input: map[string]interface{}{"scsi10": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iothread=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						IOThread:  true,
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_rd`,
 					input: map[string]interface{}{"scsi11": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_rd=1.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 1.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_rd_max`,
 					input: map[string]interface{}{"scsi12": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_rd_max=3.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 3.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_wr`,
 					input: map[string]interface{}{"scsi13": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_wr=2.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 2.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_wr_max`,
 					input: map[string]interface{}{"scsi14": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_wr_max=4.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `replicate`,
 					input: map[string]interface{}{"scsi15": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,replicate=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: false}}}}}},
+						Replicate: false}}}}})},
 				{name: `ro`,
 					input: map[string]interface{}{"scsi16": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,ro=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						ReadOnly:  true,
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `serial`,
 					input: map[string]interface{}{"scsi17": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,serial=disk-9763"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate: true,
-						Serial:    "disk-9763"}}}}}},
+						Serial:    "disk-9763"}}}}})},
 				{name: `size G`,
 					input: map[string]interface{}{"scsi18": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=1G"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 1048576}}}}}},
+						SizeInKibibytes: 1048576}}}}})},
 				{name: `size K`,
 					input: map[string]interface{}{"scsi18": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=1K"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 1}}}}}},
+						SizeInKibibytes: 1}}}}})},
 				{name: `size M`,
 					input: map[string]interface{}{"scsi18": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=1M"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 1024}}}}}},
+						SizeInKibibytes: 1024}}}}})},
 				{name: `size T`,
 					input: map[string]interface{}{"scsi18": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=1T"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 1073741824}}}}}},
+						SizeInKibibytes: 1073741824}}}}})},
 				{name: `ssd`,
 					input: map[string]interface{}{"scsi19": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,ssd=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:     true,
 						EmulateSSD: true,
 						File:       "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate:  true}}}}}},
+						Replicate:  true}}}}})},
 				{name: `wwn`,
 					input: map[string]interface{}{"scsi19": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,wwn=0x5009A4FC00B7C613"},
-					output: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						Backup:        true,
 						File:          "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:     true,
-						WorldWideName: "0x5009A4FC00B7C613"}}}}}}}},
+						WorldWideName: "0x5009A4FC00B7C613"}}}}})}}},
 		{category: `Disks VirtIO CdRom`,
 			tests: []test{
 				{name: `none`,
 					input:  map[string]interface{}{"virtio11": "none,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}}},
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}})},
 				{name: `passthrough`,
 					input:  map[string]interface{}{"virtio10": "cdrom,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}}},
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}})},
 				{name: `iso`,
 					input: map[string]interface{}{"virtio9": "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{
 						File:            "debian-11.0.0-amd64-netinst.iso",
 						Storage:         "local",
-						SizeInKibibytes: "377M"}}}}}}}}},
+						SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Disks VirtIO CloudInit`,
 			tests: []test{
 				{name: `file`,
 					input: map[string]interface{}{"virtio0": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{
 						Format:  QemuDiskFormat_Raw,
-						Storage: "Test"}}}}}},
+						Storage: "Test"}}}}})},
 				{name: `lvm`,
 					input: map[string]interface{}{"virtio7": "Test:vm-100-cloudinit,media=cdrom"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{
 						Format:  QemuDiskFormat_Raw,
-						Storage: "Test"}}}}}}}},
+						Storage: "Test"}}}}})}}},
 		{category: `Disks VirtIO Disk`,
 			tests: []test{
 				{name: ``,
 					input: map[string]interface{}{"virtio0": "test2:100/vm-100-disk-31.qcow2"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `ALL`,
 					input: map[string]interface{}{"virtio1": "test2:100/vm-100-disk-31.qcow2,aio=io_uring,backup=0,cache=directsync,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=2,iops_wr=11,iops_wr_max=13,iops_wr_max_length=3,iothread=1,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,ro=1,serial=disk-9763,size=32G,wwn=0x50015B3900F8EAD2"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						AsyncIO: QemuDiskAsyncIO_IOuring,
 						Backup:  false,
 						Bandwidth: QemuDiskBandwidth{
@@ -4945,10 +4994,10 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Serial:          "disk-9763",
 						SizeInKibibytes: 33554432,
 						Storage:         "test2",
-						WorldWideName:   "0x50015B3900F8EAD2"}}}}}},
+						WorldWideName:   "0x50015B3900F8EAD2"}}}}})},
 				{name: `ALL LinkedClone`,
 					input: map[string]interface{}{"virtio1": "test2:110/base-110-disk-1.qcow2/100/vm-100-disk-31.qcow2,aio=io_uring,backup=0,cache=directsync,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=2,iops_wr=11,iops_wr_max=13,iops_wr_max_length=3,iothread=1,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,ro=1,serial=disk-9763,size=32G,wwn=0x500FA2D000C69587"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						LinkedVmId: 110,
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							AsyncIO: QemuDiskAsyncIO_IOuring,
@@ -4971,108 +5020,108 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Serial:          "disk-9763",
 							SizeInKibibytes: 33554432,
 							Storage:         "test2",
-							WorldWideName:   "0x500FA2D000C69587"}}}}}},
+							WorldWideName:   "0x500FA2D000C69587"}}}}})},
 				{name: `aio`,
 					input: map[string]interface{}{"virtio2": "test2:100/vm-100-disk-31.qcow2,aio=io_uring"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						AsyncIO:   QemuDiskAsyncIO_IOuring,
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `backup`,
 					input: map[string]interface{}{"virtio3": "test2:100/vm-100-disk-31.qcow2,backup=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    false,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `cache`,
 					input: map[string]interface{}{"virtio4": "test2:100/vm-100-disk-31.qcow2,cache=directsync"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Cache:     QemuDiskCache_DirectSync,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `discard`,
 					input: map[string]interface{}{"virtio5": "test2:100/vm-100-disk-31.qcow2,discard=on"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Discard:   true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd`,
 					input: map[string]interface{}{"virtio6": "test2:100/vm-100-disk-31.qcow2,iops_rd=10"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd_max`,
 					input: map[string]interface{}{"virtio7": "test2:100/vm-100-disk-31.qcow2,iops_rd_max=12"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 12}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_rd_max_length`,
 					input: map[string]interface{}{"virtio7": "test2:100/vm-100-disk-31.qcow2,iops_rd_max_length=2"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 2}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr`,
 					input: map[string]interface{}{"virtio8": "test2:100/vm-100-disk-31.qcow2,iops_wr=11"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 11}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr_max`,
 					input: map[string]interface{}{"virtio9": "test2:100/vm-100-disk-31.qcow2,iops_wr_max=13"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iops_wr_max_length`,
 					input: map[string]interface{}{"virtio9": "test2:100/vm-100-disk-31.qcow2,iops_wr_max_length=3"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 3}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `iothread`,
 					input: map[string]interface{}{"virtio10": "test2:100/vm-100-disk-31.qcow2,iothread=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						IOThread:  true,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_rd`,
 					input: map[string]interface{}{"virtio11": "test2:100/vm-100-disk-31.qcow2,mbps_rd=1.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup: true,
 						Bandwidth: QemuDiskBandwidth{
 							MBps: QemuDiskBandwidthMBps{
@@ -5080,108 +5129,108 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_rd_max`,
 					input: map[string]interface{}{"virtio12": "test2:100/vm-100-disk-31.qcow2,mbps_rd_max=3.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 3.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_wr`,
 					input: map[string]interface{}{"virtio13": "test2:100/vm-100-disk-31.qcow2,mbps_wr=2.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 2.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `mbps_wr_max`,
 					input: map[string]interface{}{"virtio14": "test2:100/vm-100-disk-31.qcow2,mbps_wr_max=4.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51}}},
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `replicate`,
 					input: map[string]interface{}{"virtio15": "test2:100/vm-100-disk-31.qcow2,replicate=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: false,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `ro`,
 					input: map[string]interface{}{"virtio0": "test2:100/vm-100-disk-31.qcow2,ro=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						ReadOnly:  true,
 						Replicate: true,
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `serial`,
 					input: map[string]interface{}{"virtio1": "test2:100/vm-100-disk-31.qcow2,serial=disk-9763"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Qcow2,
 						Id:        uint31,
 						Replicate: true,
 						Serial:    "disk-9763",
-						Storage:   "test2"}}}}}},
+						Storage:   "test2"}}}}})},
 				{name: `size G`,
 					input: map[string]interface{}{"virtio2": "test2:100/vm-100-disk-31.qcow2,size=32G"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint31,
 						Replicate:       true,
 						SizeInKibibytes: 33554432,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size K`,
 					input: map[string]interface{}{"virtio2": "test2:100/vm-100-disk-31.qcow2,size=32K"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint31,
 						Replicate:       true,
 						SizeInKibibytes: 32,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size M`,
 					input: map[string]interface{}{"virtio2": "test2:100/vm-100-disk-31.qcow2,size=32M"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint31,
 						Replicate:       true,
 						SizeInKibibytes: 32768,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `size T`,
 					input: map[string]interface{}{"virtio2": "test2:100/vm-100-disk-31.qcow2,size=5T"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:          true,
 						Format:          QemuDiskFormat_Qcow2,
 						Id:              uint31,
 						Replicate:       true,
 						SizeInKibibytes: 5368709120,
-						Storage:         "test2"}}}}}},
+						Storage:         "test2"}}}}})},
 				{name: `syntax fileSyntaxVolume`,
 					input: map[string]interface{}{"virtio7": "test:vm-100-disk-2"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:    true,
 						Format:    QemuDiskFormat_Raw,
 						Id:        uint2,
 						Replicate: true,
 						Storage:   "test",
-						syntax:    diskSyntaxVolume}}}}}},
+						syntax:    diskSyntaxVolume}}}}})},
 				{name: `syntax fileSyntaxVolume LinkedClone`,
 					input: map[string]interface{}{"virtio8": "test:base-110-disk-1/vm-100-disk-2"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						LinkedVmId: 110,
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Backup:       true,
@@ -5190,27 +5239,27 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							LinkedDiskId: &uint1,
 							Replicate:    true,
 							Storage:      "test",
-							syntax:       diskSyntaxVolume}}}}}},
+							syntax:       diskSyntaxVolume}}}}})},
 				{name: `wwn`,
 					input: map[string]interface{}{"virtio2": "test2:100/vm-100-disk-31.qcow2,wwn=0x500D3FAB00B4E672"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Backup:        true,
 						Format:        QemuDiskFormat_Qcow2,
 						Id:            uint31,
 						Replicate:     true,
 						Storage:       "test2",
-						WorldWideName: "0x500D3FAB00B4E672"}}}}}}}},
+						WorldWideName: "0x500D3FAB00B4E672"}}}}})}}},
 		{category: `Disks VirtIO Passthrough`,
 			tests: []test{
 				{name: ``,
 					input: map[string]interface{}{"virtio0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `ALL`,
 					input: map[string]interface{}{"virtio1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,aio=native,backup=0,cache=unsafe,discard=on,iops_rd=10,iops_rd_max=12,iops_rd_max_length=4,iops_wr=11,iops_wr_max=13,iops_wr_max_length=5,iothread=1,mbps_rd=1.51,mbps_rd_max=3.51,mbps_wr=2.51,mbps_wr_max=4.51,replicate=0,ro=1,serial=disk-9763,size=1G,wwn=0x500B6ED600F1C945"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						AsyncIO: QemuDiskAsyncIO_Native,
 						Backup:  false,
 						Bandwidth: QemuDiskBandwidth{
@@ -5228,171 +5277,181 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Replicate:       false,
 						Serial:          "disk-9763",
 						SizeInKibibytes: 1048576,
-						WorldWideName:   "0x500B6ED600F1C945"}}}}}},
+						WorldWideName:   "0x500B6ED600F1C945"}}}}})},
 				{name: `aio`,
 					input: map[string]interface{}{"virtio2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,aio=native"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						AsyncIO:   QemuDiskAsyncIO_Native,
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `backup`,
 					input: map[string]interface{}{"virtio3": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,backup=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    false,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `cache`,
 					input: map[string]interface{}{"virtio4": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,cache=unsafe"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Cache:     QemuDiskCache_Unsafe,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `discard`,
 					input: map[string]interface{}{"virtio5": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,discard=on"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Discard:   true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd`,
 					input: map[string]interface{}{"virtio6": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd=10"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 10}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd_max`,
 					input: map[string]interface{}{"virtio7": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd_max=12"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 12}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_rd_max_length`,
 					input: map[string]interface{}{"virtio7": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_rd_max_length=2"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 2}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr`,
 					input: map[string]interface{}{"virtio8": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr=11"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 11}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr_max`,
 					input: map[string]interface{}{"virtio9": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr_max=13"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 13}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iops_wr_max_length`,
 					input: map[string]interface{}{"virtio9": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iops_wr_max_length=3"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{BurstDuration: 3}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `iothread`,
 					input: map[string]interface{}{"virtio10": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,iothread=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						IOThread:  true,
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_rd`,
 					input: map[string]interface{}{"virtio11": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_rd=1.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 1.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_rd_max`,
 					input: map[string]interface{}{"virtio12": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_rd_max=3.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 3.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_wr`,
 					input: map[string]interface{}{"virtio13": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_wr=2.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 2.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `mbps_wr_max`,
 					input: map[string]interface{}{"virtio14": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,mbps_wr_max=4.51"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 4.51}}},
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `replicate`,
 					input: map[string]interface{}{"virtio15": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,replicate=0"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
-						Replicate: false}}}}}},
+						Replicate: false}}}}})},
 				{name: `ro`,
 					input: map[string]interface{}{"virtio0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,ro=1"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						ReadOnly:  true,
-						Replicate: true}}}}}},
+						Replicate: true}}}}})},
 				{name: `serial`,
 					input: map[string]interface{}{"virtio1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,serial=disk-9763"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:    true,
 						File:      "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate: true,
-						Serial:    "disk-9763"}}}}}},
+						Serial:    "disk-9763"}}}}})},
 				{name: `size G`,
 					input: map[string]interface{}{"virtio2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=1G"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 1048576}}}}}},
+						SizeInKibibytes: 1048576}}}}})},
 				{name: `size K`,
 					input: map[string]interface{}{"virtio2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=1K"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 1}}}}}},
+						SizeInKibibytes: 1}}}}})},
 				{name: `size M`,
 					input: map[string]interface{}{"virtio2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=1M"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 1024}}}}}},
+						SizeInKibibytes: 1024}}}}})},
 				{name: `size T`,
 					input: map[string]interface{}{"virtio2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,size=1T"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:          true,
 						File:            "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:       true,
-						SizeInKibibytes: 1073741824}}}}}},
+						SizeInKibibytes: 1073741824}}}}})},
 				{name: `wwn`,
 					input: map[string]interface{}{"virtio2": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8,wwn=0x5008FA6500D9C8B3"},
-					output: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						Backup:        true,
 						File:          "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:     true,
-						WorldWideName: "0x5008FA6500D9C8B3"}}}}}}}},
+						WorldWideName: "0x5008FA6500D9C8B3"}}}}})}}},
+		{category: `EFIDisk`,
+			tests: []test{
+				{name: `All`,
+					input: map[string]interface{}{"efidisk0": "local-lvm:vm-1000-disk-0,efitype=2m,size=4M"},
+					output: baseConfig(ConfigQemu{EFIDisk: map[string]interface{}{
+						"efitype": "2m",
+						"size":    "4M",
+						"storage": "local-lvm",
+						"file":    "vm-1000-disk-0",
+						"volume":  "local-lvm:vm-1000-disk-0"}})}}},
 		{category: `Iso`,
 			tests: []test{
 				{name: `All`,
 					input: map[string]interface{}{"ide2": "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"},
-					output: &ConfigQemu{
+					output: baseConfig(ConfigQemu{
 						Iso: &IsoFile{
 							File:            "debian-11.0.0-amd64-netinst.iso",
 							Storage:         "local",
@@ -5401,52 +5460,72 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Iso: &IsoFile{
 								File:            "debian-11.0.0-amd64-netinst.iso",
 								Storage:         "local",
-								SizeInKibibytes: "377M"}}}}}}}}},
-		{category: `EFI Disk`,
+								SizeInKibibytes: "377M"}}}}}})}}},
+		{category: `Memory`,
 			tests: []test{
-				{name: `All`,
-					input: map[string]interface{}{"efidisk0": "local-lvm:vm-1000-disk-0,efitype=2m,size=4M"},
-					output: &ConfigQemu{EFIDisk: map[string]interface{}{
-						"efitype": "2m",
-						"size":    "4M",
-						"storage": "local-lvm",
-						"file":    "vm-1000-disk-0",
-						"volume":  "local-lvm:vm-1000-disk-0"}}}}},
+				{name: `All float64`,
+					input: map[string]interface{}{
+						"memory":  float64(1024),
+						"balloon": float64(512),
+						"shares":  float64(50)},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1024)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(512)),
+						Shares:             util.Pointer(QemuMemoryShares(50))}})},
+				{name: `All string`,
+					input: map[string]interface{}{
+						"memory":  "1024",
+						"balloon": "512",
+						"shares":  "50"},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1024)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(512)),
+						Shares:             util.Pointer(QemuMemoryShares(50))}})},
+				{name: `memory`,
+					input:  map[string]interface{}{"memory": float64(2000)},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2000))}})},
+				{name: `balloon`,
+					input:  map[string]interface{}{"balloon": float64(1000)},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}})},
+				{name: `shares`,
+					input:  map[string]interface{}{"shares": float64(100)},
+					output: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(100))}})}}},
 		{category: `Node`,
 			tests: []test{
 				{name: `vmr nil`,
-					output: &ConfigQemu{}},
+					output: baseConfig(ConfigQemu{})},
 				{name: `vmr empty`,
 					vmr:    &VmRef{node: ""},
-					output: &ConfigQemu{Pool: util.Pointer(PoolName(""))}},
+					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})},
 				{name: `vmr populated`,
 					vmr:    &VmRef{node: "test"},
-					output: &ConfigQemu{Node: "test", Pool: util.Pointer(PoolName(""))}}}},
+					output: baseConfig(ConfigQemu{Node: "test", Pool: util.Pointer(PoolName(""))})}}},
 		{category: `Pool`,
 			tests: []test{
 				{name: `vmr nil`,
-					output: &ConfigQemu{}},
+					output: baseConfig(ConfigQemu{})},
 				{name: `vmr empty`,
 					vmr:    &VmRef{pool: ""},
-					output: &ConfigQemu{Pool: util.Pointer(PoolName(""))}},
+					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})},
 				{name: `vmr populated`,
 					vmr:    &VmRef{pool: "test"},
-					output: &ConfigQemu{Pool: util.Pointer(PoolName("test"))}}}},
-		{category: `VmID`,
-			tests: []test{
-				{name: `vmr nil`,
-					output: &ConfigQemu{}},
-				{name: `vmr empty`,
-					vmr:    &VmRef{vmId: 0},
-					output: &ConfigQemu{Pool: util.Pointer(PoolName(""))}},
-				{name: `vmr populated`,
-					vmr:    &VmRef{vmId: 100},
-					output: &ConfigQemu{VmID: 100, Pool: util.Pointer(PoolName(""))}}}},
+					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName("test"))})}}},
 		{category: `TPM`,
 			tests: []test{
 				{name: `All`,
 					input:  map[string]interface{}{"tpmstate0": string("local-lvm:vm-101-disk-0,size=4M,version=v2.0")},
-					output: &ConfigQemu{TPM: &TpmState{Storage: "local-lvm", Version: util.Pointer(TpmVersion("v2.0"))}}}}}}
+					output: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "local-lvm", Version: util.Pointer(TpmVersion("v2.0"))}})}}},
+		{category: `VmID`,
+			tests: []test{
+				{name: `vmr nil`,
+					output: baseConfig(ConfigQemu{})},
+				{name: `vmr empty`,
+					vmr:    &VmRef{vmId: 0},
+					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})},
+				{name: `vmr populated`,
+					vmr:    &VmRef{vmId: 100},
+					output: baseConfig(ConfigQemu{VmID: 100, Pool: util.Pointer(PoolName(""))})}}},
+	}
 	for _, test := range tests {
 		for _, subTest := range test.tests {
 			name := test.category
@@ -5534,6 +5613,12 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					Burst:      0,
 					Concurrent: 10}}}
 	}
+	baseConfig := func(config ConfigQemu) ConfigQemu {
+		if config.Memory == nil {
+			config.Memory = &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}
+		}
+		return config
+	}
 	validCloudInit := QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}
 	validTags := func() []Tag {
 		array := test_data_tag.Tag_Legal()
@@ -5557,15 +5642,15 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 	}{
 		{category: `Agent`,
 			valid: []test{
-				{input: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("isa"))}}}},
+				{input: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("isa"))}})}},
 			invalid: []test{
-				{input: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("test"))}},
+				{input: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("test"))}}),
 					err: errors.New(QemuGuestAgentType_Error_Invalid)}}},
 		{category: `CloudInit`,
 			valid: []test{
 				{name: `All v7`,
 					version: Version{Major: 7, Minor: 255, Patch: 255},
-					input: ConfigQemu{CloudInit: &CloudInit{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						Custom: &CloudInitCustom{
 							Meta:    &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Legal())},
 							Network: &CloudInitSnippet{FilePath: ""},
@@ -5612,10 +5697,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 								IPv6: util.Pointer(CloudInitIPv6Config{
 									Gateway: util.Pointer(IPv6Address("")),
 									SLAAC:   true})}},
-						UpgradePackages: util.Pointer(false)}}},
+						UpgradePackages: util.Pointer(false)}})},
 				{name: `All v8`,
 					version: Version{Major: 8},
-					input: ConfigQemu{CloudInit: &CloudInit{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						Custom: &CloudInitCustom{
 							Meta:    &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Legal())},
 							Network: &CloudInitSnippet{FilePath: ""},
@@ -5662,481 +5747,481 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 								IPv6: util.Pointer(CloudInitIPv6Config{
 									Gateway: util.Pointer(IPv6Address("")),
 									SLAAC:   true})}},
-						UpgradePackages: util.Pointer(true)}}}},
+						UpgradePackages: util.Pointer(true)}})}},
 			invalid: []test{
 				{name: `errors.New(CloudInit_Error_UpgradePackagesPre8)`,
 					version: Version{Major: 7, Minor: 255, Patch: 255},
-					input:   ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}},
+					input:   baseConfig(ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}}),
 					err:     errors.New(CloudInit_Error_UpgradePackagesPre8)},
 				{name: `errors.New(CloudInitSnippetPath_Error_InvalidCharacters)`,
-					input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Meta: &CloudInitSnippet{
-						FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Character_Illegal()[0])}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Meta: &CloudInitSnippet{
+						FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Character_Illegal()[0])}}}}),
 					err: errors.New(CloudInitSnippetPath_Error_InvalidCharacters)},
 				{name: `errors.New(CloudInitSnippetPath_Error_InvalidPath)`,
-					input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Network: &CloudInitSnippet{
-						FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_InvalidPath())}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Network: &CloudInitSnippet{
+						FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_InvalidPath())}}}}),
 					err: errors.New(CloudInitSnippetPath_Error_InvalidPath)},
 				{name: `errors.New(CloudInitSnippetPath_Error_MaxLength)`,
-					input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{User: &CloudInitSnippet{
-						FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Illegal())}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{User: &CloudInitSnippet{
+						FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Max_Illegal())}}}}),
 					err: errors.New(CloudInitSnippetPath_Error_MaxLength)},
 				{name: `errors.New(CloudInitSnippetPath_Error_Relative)`,
-					input: ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Relative())}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{Vendor: &CloudInitSnippet{FilePath: CloudInitSnippetPath(test_data_qemu.CloudInitSnippetPath_Relative())}}}}),
 					err:   errors.New(CloudInitSnippetPath_Error_Relative)},
 				{name: `errors.New(QemuNetworkInterfaceID_Error_Invalid)`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
-						32: CloudInitNetworkConfig{}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+						32: CloudInitNetworkConfig{}}}}),
 					err: errors.New(QemuNetworkInterfaceID_Error_Invalid)},
 				{name: `CloudInitNetworkInterfaces IPv4 Address Mutually exclusive with DHCP`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID5: CloudInitNetworkConfig{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID5: CloudInitNetworkConfig{
 						IPv4: util.Pointer(CloudInitIPv4Config{
 							Address: util.Pointer(IPv4CIDR("192.168.45.1/24")),
-							DHCP:    true})}}}},
+							DHCP:    true})}}}}),
 					err: errors.New(CloudInitIPv4Config_Error_DhcpAddressMutuallyExclusive)},
 				{name: `CloudInitNetworkInterfaces IPv4 Gateway Mutually exclusive with DHCP`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID6: CloudInitNetworkConfig{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID6: CloudInitNetworkConfig{
 						IPv4: util.Pointer(CloudInitIPv4Config{
 							Gateway: util.Pointer(IPv4Address("192.168.45.1")),
-							DHCP:    true})}}}},
+							DHCP:    true})}}}}),
 					err: errors.New(CloudInitIPv4Config_Error_DhcpGatewayMutuallyExclusive)},
 				{name: `CloudInitNetworkInterfaces IPv4 Address errors.New(IPv4CIDR_Error_Invalid)`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID7: CloudInitNetworkConfig{
-						IPv4: util.Pointer(CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("192.168.45.1"))})}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID7: CloudInitNetworkConfig{
+						IPv4: util.Pointer(CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("192.168.45.1"))})}}}}),
 					err: errors.New(IPv4CIDR_Error_Invalid)},
 				{name: `CloudInitNetworkInterfaces IPv4 Gateway errors.New(IPv4Address_Error_Invalid)`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID8: CloudInitNetworkConfig{
-						IPv4: util.Pointer(CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.45.1/24"))})}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID8: CloudInitNetworkConfig{
+						IPv4: util.Pointer(CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.45.1/24"))})}}}}),
 					err: errors.New(IPv4Address_Error_Invalid)},
 				{name: `CloudInitNetworkInterfaces IPv6 Address Mutually exclusive with DHCP`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID17: CloudInitNetworkConfig{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID17: CloudInitNetworkConfig{
 						IPv6: util.Pointer(CloudInitIPv6Config{
 							Address: util.Pointer(IPv6CIDR("2001:0db8:85a3::/64")),
-							DHCP:    true})}}}},
+							DHCP:    true})}}}}),
 					err: errors.New(CloudInitIPv6Config_Error_DhcpAddressMutuallyExclusive)},
 				{name: `CloudInitNetworkInterfaces IPv6 Address Mutually exclusive with SLAAC`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID18: CloudInitNetworkConfig{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID18: CloudInitNetworkConfig{
 						IPv6: util.Pointer(CloudInitIPv6Config{
 							Address: util.Pointer(IPv6CIDR("2001:0db8:85a3::/64")),
-							SLAAC:   true})}}}},
+							SLAAC:   true})}}}}),
 					err: errors.New(CloudInitIPv6Config_Error_SlaacAddressMutuallyExclusive)},
 				{name: `CloudInitNetworkInterfaces IPv6 DHCP Mutually exclusive with SLAAC`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID19: CloudInitNetworkConfig{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID19: CloudInitNetworkConfig{
 						IPv6: util.Pointer(CloudInitIPv6Config{
 							DHCP:  true,
-							SLAAC: true})}}}},
+							SLAAC: true})}}}}),
 					err: errors.New(CloudInitIPv6Config_Error_DhcpSlaacMutuallyExclusive)},
 				{name: `CloudInitNetworkInterfaces IPv6 Gateway Mutually exclusive with DHCP`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID20: CloudInitNetworkConfig{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID20: CloudInitNetworkConfig{
 						IPv6: util.Pointer(CloudInitIPv6Config{
 							Gateway: util.Pointer(IPv6Address("3f6d:5b2a:1e4d:7c91:abcd:1234:5678:9abc")),
-							DHCP:    true})}}}},
+							DHCP:    true})}}}}),
 					err: errors.New(CloudInitIPv6Config_Error_DhcpGatewayMutuallyExclusive)},
 				{name: `CloudInitNetworkInterfaces IPv6 Gateway Mutually exclusive with SLAAC`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID21: CloudInitNetworkConfig{
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID21: CloudInitNetworkConfig{
 						IPv6: util.Pointer(CloudInitIPv6Config{
 							Gateway: util.Pointer(IPv6Address("3f6d:5b2a:1e4d:7c91:abcd:1234:5678:9abc")),
-							SLAAC:   true})}}}},
+							SLAAC:   true})}}}}),
 					err: errors.New(CloudInitIPv6Config_Error_SlaacGatewayMutuallyExclusive)},
 				{name: `CloudInitNetworkInterfaces IPv6 Address errors.New(IPv6CIDR_Error_Invalid)`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID22: CloudInitNetworkConfig{
-						IPv6: util.Pointer(CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR("3f6d:5b2a:1e4d:7c91:abcd:1234:5678:9abc"))})}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID22: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR("3f6d:5b2a:1e4d:7c91:abcd:1234:5678:9abc"))})}}}}),
 					err: errors.New(IPv6CIDR_Error_Invalid)},
 				{name: `CloudInitNetworkInterfaces IPv6 Gateway errors.New(IPv6Address_Error_Invalid)`,
-					input: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID23: CloudInitNetworkConfig{
-						IPv6: util.Pointer(CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::/64"))})}}}},
+					input: baseConfig(ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{QemuNetworkInterfaceID23: CloudInitNetworkConfig{
+						IPv6: util.Pointer(CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::/64"))})}}}}),
 					err: errors.New(IPv6Address_Error_Invalid)}}},
 		{category: `Disks`,
 			valid: []test{
 				{name: `Empty 0`,
-					input: ConfigQemu{Disks: &QemuStorages{}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{}})},
 				{name: `Empty 1`,
-					input: ConfigQemu{Disks: &QemuStorages{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{}},
 						Sata:   &QemuSataDisks{Disk_0: &QemuSataStorage{}},
 						Scsi:   &QemuScsiDisks{Disk_0: &QemuScsiStorage{}},
-						VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}}}},
+						VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}})}},
 			invalid: []test{
 				{name: `MutuallyExclusive Ide 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
 						CdRom:     &QemuCdRom{},
-						CloudInit: &QemuCloudInitDisk{}}}}},
+						CloudInit: &QemuCloudInitDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{
 						CdRom: &QemuCdRom{},
-						Disk:  &QemuIdeDisk{}}}}},
+						Disk:  &QemuIdeDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 2`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{
 						CdRom:       &QemuCdRom{},
-						Passthrough: &QemuIdePassthrough{}}}}},
+						Passthrough: &QemuIdePassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 3`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{
 						CloudInit: &QemuCloudInitDisk{},
-						Disk:      &QemuIdeDisk{}}}}},
+						Disk:      &QemuIdeDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 4`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
 						CloudInit:   &QemuCloudInitDisk{},
-						Passthrough: &QemuIdePassthrough{}}}}},
+						Passthrough: &QemuIdePassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 5`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{
 						Disk:        &QemuIdeDisk{},
-						Passthrough: &QemuIdePassthrough{}}}}},
+						Passthrough: &QemuIdePassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 6`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{
 						CdRom:     &QemuCdRom{},
 						CloudInit: &QemuCloudInitDisk{},
-						Disk:      &QemuIdeDisk{}}}}},
+						Disk:      &QemuIdeDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 7`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{
 						CloudInit:   &QemuCloudInitDisk{},
 						Disk:        &QemuIdeDisk{},
-						Passthrough: &QemuIdePassthrough{}}}}},
+						Passthrough: &QemuIdePassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 8`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
 						CdRom:       &QemuCdRom{},
 						Disk:        &QemuIdeDisk{},
-						Passthrough: &QemuIdePassthrough{}}}}},
+						Passthrough: &QemuIdePassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 9`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{
 						CdRom:       &QemuCdRom{},
 						CloudInit:   &QemuCloudInitDisk{},
-						Passthrough: &QemuIdePassthrough{}}}}},
+						Passthrough: &QemuIdePassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Ide 10`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{
 						CdRom:       &QemuCdRom{},
 						CloudInit:   &QemuCloudInitDisk{},
 						Disk:        &QemuIdeDisk{},
-						Passthrough: &QemuIdePassthrough{}}}}},
+						Passthrough: &QemuIdePassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{
 						CdRom:     &QemuCdRom{},
-						CloudInit: &QemuCloudInitDisk{}}}}},
+						CloudInit: &QemuCloudInitDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{
 						CdRom: &QemuCdRom{},
-						Disk:  &QemuSataDisk{}}}}},
+						Disk:  &QemuSataDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 2`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{
 						CdRom:       &QemuCdRom{},
-						Passthrough: &QemuSataPassthrough{}}}}},
+						Passthrough: &QemuSataPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 3`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{
 						CloudInit: &QemuCloudInitDisk{},
-						Disk:      &QemuSataDisk{}}}}},
+						Disk:      &QemuSataDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 4`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{
 						CloudInit:   &QemuCloudInitDisk{},
-						Passthrough: &QemuSataPassthrough{}}}}},
+						Passthrough: &QemuSataPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 5`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{
 						Disk:        &QemuSataDisk{},
-						Passthrough: &QemuSataPassthrough{}}}}},
+						Passthrough: &QemuSataPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 6`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{
 						CdRom:     &QemuCdRom{},
 						CloudInit: &QemuCloudInitDisk{},
-						Disk:      &QemuSataDisk{}}}}},
+						Disk:      &QemuSataDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 7`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{
 						CloudInit:   &QemuCloudInitDisk{},
 						Disk:        &QemuSataDisk{},
-						Passthrough: &QemuSataPassthrough{}}}}},
+						Passthrough: &QemuSataPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 8`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{
 						CdRom:       &QemuCdRom{},
 						Disk:        &QemuSataDisk{},
-						Passthrough: &QemuSataPassthrough{}}}}},
+						Passthrough: &QemuSataPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 9`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{
 						CdRom:       &QemuCdRom{},
 						CloudInit:   &QemuCloudInitDisk{},
-						Passthrough: &QemuSataPassthrough{}}}}},
+						Passthrough: &QemuSataPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Sata 10`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{
 						CdRom:       &QemuCdRom{},
 						CloudInit:   &QemuCloudInitDisk{},
 						Disk:        &QemuSataDisk{},
-						Passthrough: &QemuSataPassthrough{}}}}},
+						Passthrough: &QemuSataPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{
 						CdRom:     &QemuCdRom{},
-						CloudInit: &QemuCloudInitDisk{}}}}},
+						CloudInit: &QemuCloudInitDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{
 						CdRom: &QemuCdRom{},
-						Disk:  &QemuScsiDisk{}}}}},
+						Disk:  &QemuScsiDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 2`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{
 						CdRom:       &QemuCdRom{},
-						Passthrough: &QemuScsiPassthrough{}}}}},
+						Passthrough: &QemuScsiPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 3`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{
 						CloudInit: &QemuCloudInitDisk{},
-						Disk:      &QemuScsiDisk{}}}}},
+						Disk:      &QemuScsiDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 4`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{
 						CloudInit:   &QemuCloudInitDisk{},
-						Passthrough: &QemuScsiPassthrough{}}}}},
+						Passthrough: &QemuScsiPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 5`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{
 						Disk:        &QemuScsiDisk{},
-						Passthrough: &QemuScsiPassthrough{}}}}},
+						Passthrough: &QemuScsiPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 6`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{
 						CdRom:     &QemuCdRom{},
 						CloudInit: &QemuCloudInitDisk{},
-						Disk:      &QemuScsiDisk{}}}}},
+						Disk:      &QemuScsiDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 7`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{
 						CloudInit:   &QemuCloudInitDisk{},
 						Disk:        &QemuScsiDisk{},
-						Passthrough: &QemuScsiPassthrough{}}}}},
+						Passthrough: &QemuScsiPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 8`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{
 						CdRom:       &QemuCdRom{},
 						Disk:        &QemuScsiDisk{},
-						Passthrough: &QemuScsiPassthrough{}}}}},
+						Passthrough: &QemuScsiPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 9`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{
 						CdRom:       &QemuCdRom{},
 						CloudInit:   &QemuCloudInitDisk{},
-						Passthrough: &QemuScsiPassthrough{}}}}},
+						Passthrough: &QemuScsiPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive Scsi 10`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{
 						CdRom:       &QemuCdRom{},
 						CloudInit:   &QemuCloudInitDisk{},
 						Disk:        &QemuScsiDisk{},
-						Passthrough: &QemuScsiPassthrough{}}}}},
+						Passthrough: &QemuScsiPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{
 						CdRom:     &QemuCdRom{},
-						CloudInit: &QemuCloudInitDisk{}}}}},
+						CloudInit: &QemuCloudInitDisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{
 						CdRom: &QemuCdRom{},
-						Disk:  &QemuVirtIODisk{}}}}},
+						Disk:  &QemuVirtIODisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 2`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{
 						CdRom:       &QemuCdRom{},
-						Passthrough: &QemuVirtIOPassthrough{}}}}},
+						Passthrough: &QemuVirtIOPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 3`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{
 						CloudInit: &QemuCloudInitDisk{},
-						Disk:      &QemuVirtIODisk{}}}}},
+						Disk:      &QemuVirtIODisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 4`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{
 						CloudInit:   &QemuCloudInitDisk{},
-						Passthrough: &QemuVirtIOPassthrough{}}}}},
+						Passthrough: &QemuVirtIOPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 5`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{
 						Disk:        &QemuVirtIODisk{},
-						Passthrough: &QemuVirtIOPassthrough{}}}}},
+						Passthrough: &QemuVirtIOPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 6`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{
 						CdRom:     &QemuCdRom{},
 						CloudInit: &QemuCloudInitDisk{},
-						Disk:      &QemuVirtIODisk{}}}}},
+						Disk:      &QemuVirtIODisk{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 7`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{
 						CloudInit:   &QemuCloudInitDisk{},
 						Disk:        &QemuVirtIODisk{},
-						Passthrough: &QemuVirtIOPassthrough{}}}}},
+						Passthrough: &QemuVirtIOPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 8`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{
 						CdRom:       &QemuCdRom{},
 						Disk:        &QemuVirtIODisk{},
-						Passthrough: &QemuVirtIOPassthrough{}}}}},
+						Passthrough: &QemuVirtIOPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 9`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{
 						CdRom:       &QemuCdRom{},
 						CloudInit:   &QemuCloudInitDisk{},
-						Passthrough: &QemuVirtIOPassthrough{}}}}},
+						Passthrough: &QemuVirtIOPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)},
 				{name: `MutuallyExclusive VirtIO 10`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{
 						CdRom:       &QemuCdRom{},
 						CloudInit:   &QemuCloudInitDisk{},
 						Disk:        &QemuVirtIODisk{},
-						Passthrough: &QemuVirtIOPassthrough{}}}}},
+						Passthrough: &QemuVirtIOPassthrough{}}}}}),
 					err: errors.New(Error_QemuDisk_MutuallyExclusive)}}},
 		{category: `Disks CdRom`,
 			valid: []test{
-				{input: ConfigQemu{Disks: &QemuStorages{
+				{input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 					Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}},
 					Sata:   &QemuSataDisks{Disk_0: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}}}},
 					Scsi:   &QemuScsiDisks{Disk_0: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}},
-					VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}}}}}}}},
+					VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}}}}}})}},
 			invalid: []test{
 				{name: `Ide errors.New(Error_IsoFile_File) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}}),
 					err:   errors.New(Error_IsoFile_File)},
 				{name: `Ide errors.New(Error_IsoFile_File) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{Storage: "test"}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{Storage: "test"}}}}}}),
 					err:   errors.New(Error_IsoFile_File)},
 				{name: `Ide errors.New(Error_IsoFile_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test"}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test"}}}}}}),
 					err:   errors.New(Error_IsoFile_Storage)},
 				{name: `Ide errors.New(Error_QemuCdRom_MutuallyExclusive)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}}),
 					err:   errors.New(Error_QemuCdRom_MutuallyExclusive)},
 				{name: `Sata errors.New(Error_IsoFile_File) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}}),
 					err:   errors.New(Error_IsoFile_File)},
 				{name: `Sata errors.New(Error_IsoFile_File) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{Storage: "test"}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{Storage: "test"}}}}}}),
 					err:   errors.New(Error_IsoFile_File)},
 				{name: `Sata errors.New(Error_IsoFile_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test"}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test"}}}}}}),
 					err:   errors.New(Error_IsoFile_Storage)},
 				{name: `Sata errors.New(Error_QemuCdRom_MutuallyExclusive)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}}),
 					err:   errors.New(Error_QemuCdRom_MutuallyExclusive)},
 				{name: `Scsi errors.New(Error_IsoFile_File) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}}),
 					err:   errors.New(Error_IsoFile_File)},
 				{name: `Scsi errors.New(Error_IsoFile_File) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{Storage: "test"}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{Storage: "test"}}}}}}),
 					err:   errors.New(Error_IsoFile_File)},
 				{name: `Scsi errors.New(Error_IsoFile_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test"}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test"}}}}}}),
 					err:   errors.New(Error_IsoFile_Storage)},
 				{name: `Scsi errors.New(Error_QemuCdRom_MutuallyExclusive)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}}),
 					err:   errors.New(Error_QemuCdRom_MutuallyExclusive)},
 				{name: `VirtIO errors.New(Error_IsoFile_File) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}}),
 					err:   errors.New(Error_IsoFile_File)},
 				{name: `VirtIO errors.New(Error_IsoFile_File) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{Storage: "test"}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{Storage: "test"}}}}}}),
 					err:   errors.New(Error_IsoFile_File)},
 				{name: `VirtIO errors.New(Error_IsoFile_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test"}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test"}}}}}}),
 					err:   errors.New(Error_IsoFile_Storage)},
 				{name: `VirtIO errors.New(Error_QemuCdRom_MutuallyExclusive)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}}),
 					err:   errors.New(Error_QemuCdRom_MutuallyExclusive)}}},
 		{category: `Disks CloudInit`,
 			valid: []test{
 				{name: `Ide`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit}}}})},
 				{name: `Sata`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &validCloudInit}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &validCloudInit}}}})},
 				{name: `Scsi`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &validCloudInit}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &validCloudInit}}}})},
 				{name: `VirtIO`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit}}}})}},
 			invalid: []test{
 				{name: `Duplicate errors.New(Error_QemuCloudInitDisk_OnlyOne)`,
-					input: ConfigQemu{Disks: &QemuStorages{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit}},
 						Sata:   &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &validCloudInit}},
 						Scsi:   &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &validCloudInit}},
-						VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit}}}},
+						VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit}}}}),
 					err: errors.New(Error_QemuCloudInitDisk_OnlyOne)},
 				{name: `Duplicate Ide errors.New(Error_QemuCloudInitDisk_OnlyOne)`,
-					input: ConfigQemu{Disks: &QemuStorages{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						Ide: &QemuIdeDisks{
 							Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit},
-							Disk_1: &QemuIdeStorage{CloudInit: &validCloudInit}}}},
+							Disk_1: &QemuIdeStorage{CloudInit: &validCloudInit}}}}),
 					err: errors.New(Error_QemuCloudInitDisk_OnlyOne)},
 				{name: `Duplicate Sata errors.New(Error_QemuCloudInitDisk_OnlyOne)`,
-					input: ConfigQemu{Disks: &QemuStorages{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						Sata: &QemuSataDisks{
 							Disk_0: &QemuSataStorage{CloudInit: &validCloudInit},
-							Disk_1: &QemuSataStorage{CloudInit: &validCloudInit}}}},
+							Disk_1: &QemuSataStorage{CloudInit: &validCloudInit}}}}),
 					err: errors.New(Error_QemuCloudInitDisk_OnlyOne)},
 				{name: `Duplicate Scsi errors.New(Error_QemuCloudInitDisk_OnlyOne)`,
-					input: ConfigQemu{Disks: &QemuStorages{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						Scsi: &QemuScsiDisks{
 							Disk_0: &QemuScsiStorage{CloudInit: &validCloudInit},
-							Disk_1: &QemuScsiStorage{CloudInit: &validCloudInit}}}},
+							Disk_1: &QemuScsiStorage{CloudInit: &validCloudInit}}}}),
 					err: errors.New(Error_QemuCloudInitDisk_OnlyOne)},
 				{name: `Duplicate VirtIO errors.New(Error_QemuCloudInitDisk_OnlyOne)`,
-					input: ConfigQemu{Disks: &QemuStorages{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						VirtIO: &QemuVirtIODisks{
 							Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit},
-							Disk_1: &QemuVirtIOStorage{CloudInit: &validCloudInit}}}},
+							Disk_1: &QemuVirtIOStorage{CloudInit: &validCloudInit}}}}),
 					err: errors.New(Error_QemuCloudInitDisk_OnlyOne)},
 				{name: `Ide QemuDiskFormat("").Error() 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Ide QemuDiskFormat("").Error() 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Storage: "test"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Storage: "test"}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Ide errors.New(Error_QemuCloudInitDisk_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}}),
 					err:   errors.New(Error_QemuCloudInitDisk_Storage)},
 				{name: `Sata QemuDiskFormat("").Error() 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Sata QemuDiskFormat("").Error() 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Storage: "test"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Storage: "test"}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Sata errors.New(Error_QemuCloudInitDisk_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}}),
 					err:   errors.New(Error_QemuCloudInitDisk_Storage)},
 				{name: `Scsi QemuDiskFormat("").Error() 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Scsi QemuDiskFormat("").Error() 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Storage: "test"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Storage: "test"}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Scsi errors.New(Error_QemuCloudInitDisk_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}}),
 					err:   errors.New(Error_QemuCloudInitDisk_Storage)},
 				{name: `VirtIO QemuDiskFormat("").Error() 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `VirtIO QemuDiskFormat("").Error() 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Storage: "test"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Storage: "test"}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `VirtIO errors.New(Error_QemuCloudInitDisk_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}}),
 					err:   errors.New(Error_QemuCloudInitDisk_Storage)}}},
 		{category: `Disks Disk`,
 			valid: []test{
-				{input: ConfigQemu{Disks: &QemuStorages{
+				{input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 					Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Bandwidth:       BandwidthValid0(),
@@ -6168,267 +6253,267 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						Format:          QemuDiskFormat_Vmdk,
 						SizeInKibibytes: 18742,
 						Storage:         "test",
-						WorldWideName:   "0x500C0D0E0F101112"}}}}}}},
+						WorldWideName:   "0x500C0D0E0F101112"}}}}})}},
 			invalid: []test{
 				{name: `Ide QemuDiskFormat("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Ide QemuDiskAsyncIO("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{AsyncIO: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{AsyncIO: "invalid"}}}}}),
 					err:   QemuDiskAsyncIO("").Error()},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Ide QemuDiskCache("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Cache: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Cache: "invalid"}}}}}),
 					err:   QemuDiskCache("").Error()},
 				{name: `Ide QemuDiskFormat("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{Format: ""}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{Format: ""}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Ide errors.New(Error_QemuDiskSerial_IllegalCharacter)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format: QemuDiskFormat_Raw,
-						Serial: "!@^$^&$^&"}}}}},
+						Serial: "!@^$^&$^&"}}}}}),
 					err: errors.New(Error_QemuDiskSerial_IllegalCharacter)},
 				{name: `Ide errors.New(Error_QemuDiskSerial_IllegalLength)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format: QemuDiskFormat_Raw,
-						Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}},
+						Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}}),
 					err: errors.New(Error_QemuDiskSerial_IllegalLength)},
 				{name: `Ide errors.New(QemuDiskSize_Error_Minimum)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
-						SizeInKibibytes: 4096}}}}},
+						SizeInKibibytes: 4096}}}}}),
 					err: errors.New(QemuDiskSize_Error_Minimum)},
 				{name: `Ide errors.New(Error_QemuDisk_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: qemuDiskSize_Minimum,
-						Storage:         ""}}}}},
+						Storage:         ""}}}}}),
 					err: errors.New(Error_QemuDisk_Storage)},
 				{name: `Ide errors.New(Error_QemuWorldWideName_Invalid)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 32,
 						Storage:         "Test",
-						WorldWideName:   "0xG123456789ABCDE"}}}}},
+						WorldWideName:   "0xG123456789ABCDE"}}}}}),
 					err: errors.New(Error_QemuWorldWideName_Invalid)},
 				{name: `Sata QemuDiskFormat("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Sata QemuDiskAsyncIO("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{AsyncIO: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{AsyncIO: "invalid"}}}}}),
 					err:   QemuDiskAsyncIO("").Error()},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Sata QemuDiskCache("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{Cache: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{Cache: "invalid"}}}}}),
 					err:   QemuDiskCache("").Error()},
 				{name: `Sata QemuDiskFormat("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{Format: ""}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{Format: ""}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Sata errors.New(Error_QemuDiskSerial_IllegalCharacter)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format: QemuDiskFormat_Raw,
-						Serial: "!@^$^&$^&"}}}}},
+						Serial: "!@^$^&$^&"}}}}}),
 					err: errors.New(Error_QemuDiskSerial_IllegalCharacter)},
 				{name: `Sata errors.New(Error_QemuDiskSerial_IllegalLength)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format: QemuDiskFormat_Raw,
-						Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}},
+						Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}}),
 					err: errors.New(Error_QemuDiskSerial_IllegalLength)},
 				{name: `Sata errors.New(QemuDiskSize_Error_Minimum)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
-						SizeInKibibytes: 4096}}}}},
+						SizeInKibibytes: 4096}}}}}),
 					err: errors.New(QemuDiskSize_Error_Minimum)},
 				{name: `Sata errors.New(Error_QemuDisk_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: qemuDiskSize_Minimum,
-						Storage:         ""}}}}},
+						Storage:         ""}}}}}),
 					err: errors.New(Error_QemuDisk_Storage)},
 				{name: `Sata errors.New(Error_QemuWorldWideName_Invalid)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 32,
 						Storage:         "Test",
-						WorldWideName:   "500A1B2C3D4E5F60"}}}}},
+						WorldWideName:   "500A1B2C3D4E5F60"}}}}}),
 					err: errors.New(Error_QemuWorldWideName_Invalid)},
 				{name: `Scsi QemuDiskFormat("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Disk: &QemuScsiDisk{}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Disk: &QemuScsiDisk{}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Scsi QemuDiskAsyncIO("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Disk: &QemuScsiDisk{AsyncIO: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Disk: &QemuScsiDisk{AsyncIO: "invalid"}}}}}),
 					err:   QemuDiskAsyncIO("").Error()},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{Disk: &QemuScsiDisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Scsi QemuDiskCache("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{Disk: &QemuScsiDisk{Cache: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{Disk: &QemuScsiDisk{Cache: "invalid"}}}}}),
 					err:   QemuDiskCache("").Error()},
 				{name: `Scsi QemuDiskFormat("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{Disk: &QemuScsiDisk{Format: ""}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{Disk: &QemuScsiDisk{Format: ""}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `Scsi errors.New(Error_QemuDiskSerial_IllegalCharacter)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format: QemuDiskFormat_Raw,
-						Serial: "!@^$^&$^&"}}}}},
+						Serial: "!@^$^&$^&"}}}}}),
 					err: errors.New(Error_QemuDiskSerial_IllegalCharacter)},
 				{name: `Scsi errors.New(Error_QemuDiskSerial_IllegalLength)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format: QemuDiskFormat_Raw,
-						Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}},
+						Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}}),
 					err: errors.New(Error_QemuDiskSerial_IllegalLength)},
 				{name: `Scsi errors.New(QemuDiskSize_Error_Minimum)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
-						SizeInKibibytes: 0}}}}},
+						SizeInKibibytes: 0}}}}}),
 					err: errors.New(QemuDiskSize_Error_Minimum)},
 				{name: `Scsi errors.New(Error_QemuDisk_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: qemuDiskSize_Minimum,
-						Storage:         ""}}}}},
+						Storage:         ""}}}}}),
 					err: errors.New(Error_QemuDisk_Storage)},
 				{name: `Scsi errors.New(Error_QemuWorldWideName_Invalid)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 32,
 						Storage:         "Test",
-						WorldWideName:   "0x5009876543210DEFG"}}}}},
+						WorldWideName:   "0x5009876543210DEFG"}}}}}),
 					err: errors.New(Error_QemuWorldWideName_Invalid)},
 				{name: `VirtIO QemuDiskFormat("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `VirtIO QemuDiskAsyncIO("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{AsyncIO: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{AsyncIO: "invalid"}}}}}),
 					err:   QemuDiskAsyncIO("").Error()},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `VirtIO QemuDiskCache("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Cache: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Cache: "invalid"}}}}}),
 					err:   QemuDiskCache("").Error()},
 				{name: `VirtIO QemuDiskFormat("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Format: ""}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Format: ""}}}}}),
 					err:   QemuDiskFormat("").Error()},
 				{name: `VirtIO errors.New(Error_QemuDiskSerial_IllegalCharacter)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format: QemuDiskFormat_Raw,
-						Serial: "!@^$^&$^&"}}}}},
+						Serial: "!@^$^&$^&"}}}}}),
 					err: errors.New(Error_QemuDiskSerial_IllegalCharacter)},
 				{name: `VirtIO errors.New(Error_QemuDiskSerial_IllegalLength)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format: QemuDiskFormat_Raw,
-						Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}},
+						Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}}),
 					err: errors.New(Error_QemuDiskSerial_IllegalLength)},
 				{name: `VirtIO errors.New(QemuDiskSize_Error_Minimum)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
-						SizeInKibibytes: 1024}}}}},
+						SizeInKibibytes: 1024}}}}}),
 					err: errors.New(QemuDiskSize_Error_Minimum)},
 				{name: `VirtIO errors.New(Error_QemuDisk_Storage)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: qemuDiskSize_Minimum,
-						Storage:         ""}}}}},
+						Storage:         ""}}}}}),
 					err: errors.New(Error_QemuDisk_Storage)},
 				{name: `VirtIO errors.New(Error_QemuWorldWideName_Invalid)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 32,
 						Storage:         "Test",
-						WorldWideName:   "500C0D0E0F10111"}}}}},
+						WorldWideName:   "500C0D0E0F10111"}}}}}),
 					err: errors.New(Error_QemuWorldWideName_Invalid)}}},
 		{category: `Disks Passthrough`,
 			valid: []test{
-				{input: ConfigQemu{Disks: &QemuStorages{
+				{input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 					Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						AsyncIO:       QemuDiskAsyncIO_IOuring,
 						Bandwidth:     BandwidthValid3(),
@@ -6452,209 +6537,325 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						Bandwidth:     BandwidthValid0(),
 						Cache:         QemuDiskCache_WriteThrough,
 						File:          "test",
-						WorldWideName: "0x5004A3B2C1D0E0F1"}}}}}}},
+						WorldWideName: "0x5004A3B2C1D0E0F1"}}}}})}},
 			invalid: []test{
 				{name: `Ide QemuDiskAsyncIO("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{AsyncIO: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{AsyncIO: "invalid"}}}}}),
 					err:   QemuDiskAsyncIO("").Error()},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Ide errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Ide QemuDiskCache("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Cache: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{Cache: "invalid"}}}}}),
 					err:   QemuDiskCache("").Error()},
 				{name: `Ide errors.New(Error_QemuDisk_File)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{File: ""}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{File: ""}}}}}),
 					err:   errors.New(Error_QemuDisk_File)},
 				{name: `Ide errors.New(Error_QemuDiskSerial_IllegalCharacter)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{File: "/dev/disk/by-id/scsi1", Serial: "!@^$^&$^&"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{File: "/dev/disk/by-id/scsi1", Serial: "!@^$^&$^&"}}}}}),
 					err:   errors.New(Error_QemuDiskSerial_IllegalCharacter)},
 				{name: `Ide errors.New(Error_QemuDiskSerial_IllegalLength)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{File: "/dev/disk/by-id/scsi1", Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{File: "/dev/disk/by-id/scsi1", Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}}),
 					err:   errors.New(Error_QemuDiskSerial_IllegalLength)},
 				{name: `Ide errors.New(Error_QemuWorldWideName_Invalid)`,
-					input: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "5001A2B3C4D5E6F7"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "5001A2B3C4D5E6F7"}}}}}),
 					err:   errors.New(Error_QemuWorldWideName_Invalid)},
 				{name: `Sata QemuDiskAsyncIO("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{AsyncIO: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{AsyncIO: "invalid"}}}}}),
 					err:   QemuDiskAsyncIO("").Error()},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Sata errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Sata QemuDiskCache("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Cache: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Passthrough: &QemuSataPassthrough{Cache: "invalid"}}}}}),
 					err:   QemuDiskCache("").Error()},
 				{name: `Sata errors.New(Error_QemuDisk_File)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{File: ""}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Passthrough: &QemuSataPassthrough{File: ""}}}}}),
 					err:   errors.New(Error_QemuDisk_File)},
 				{name: `Sata errors.New(Error_QemuDiskSerial_IllegalCharacter)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{File: "/dev/disk/by-id/scsi1", Serial: "!@^$^&$^&"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{File: "/dev/disk/by-id/scsi1", Serial: "!@^$^&$^&"}}}}}),
 					err:   errors.New(Error_QemuDiskSerial_IllegalCharacter)},
 				{name: `Sata errors.New(Error_QemuDiskSerial_IllegalLength)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{File: "/dev/disk/by-id/scsi1", Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{File: "/dev/disk/by-id/scsi1", Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}}),
 					err:   errors.New(Error_QemuDiskSerial_IllegalLength)},
 				{name: `Sata errors.New(Error_QemuWorldWideName_Invalid)`,
-					input: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x500B0A09080706050"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x500B0A09080706050"}}}}}),
 					err:   errors.New(Error_QemuWorldWideName_Invalid)},
 				{name: `Scsi QemuDiskAsyncIO("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{AsyncIO: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{AsyncIO: "invalid"}}}}}),
 					err:   QemuDiskAsyncIO("").Error()},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `Scsi errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `Scsi QemuDiskCache("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Cache: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{Cache: "invalid"}}}}}),
 					err:   QemuDiskCache("").Error()},
 				{name: `Scsi errors.New(Error_QemuDisk_File)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{File: ""}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{File: ""}}}}}),
 					err:   errors.New(Error_QemuDisk_File)},
 				{name: `Scsi errors.New(Error_QemuDiskSerial_IllegalCharacter)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{File: "/dev/disk/by-id/scsi1", Serial: "!@^$^&$^&"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{File: "/dev/disk/by-id/scsi1", Serial: "!@^$^&$^&"}}}}}),
 					err:   errors.New(Error_QemuDiskSerial_IllegalCharacter)},
 				{name: `Scsi errors.New(Error_QemuDiskSerial_IllegalLength)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{File: "/dev/disk/by-id/scsi1", Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{File: "/dev/disk/by-id/scsi1", Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}}),
 					err:   errors.New(Error_QemuDiskSerial_IllegalLength)},
 				{name: `Scsi errors.New(Error_QemuWorldWideName_Invalid)`,
-					input: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "500F1E2D3C4B5A69!"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "500F1E2D3C4B5A69!"}}}}}),
 					err:   errors.New(Error_QemuWorldWideName_Invalid)},
 				{name: `VirtIO QemuDiskAsyncIO("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{AsyncIO: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{AsyncIO: "invalid"}}}}}),
 					err:   QemuDiskAsyncIO("").Error()},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Burst: 9}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{ReadLimit: QemuDiskBandwidthIopsLimit{Concurrent: 8}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthIopsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Burst: 7}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitBurst)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{Iops: QemuDiskBandwidthIops{WriteLimit: QemuDiskBandwidthIopsLimit{Concurrent: 6}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthIopsLimitConcurrent)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 0`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{ReadLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthMBpsLimitBurst) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Burst: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitBurst)},
 				{name: `VirtIO errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent) 1`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Bandwidth: QemuDiskBandwidth{MBps: QemuDiskBandwidthMBps{WriteLimit: QemuDiskBandwidthMBpsLimit{Concurrent: 0.99}}}}}}}}),
 					err:   errors.New(Error_QemuDiskBandwidthMBpsLimitConcurrent)},
 				{name: `VirtIO QemuDiskCache("").Error()`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Cache: "invalid"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{Cache: "invalid"}}}}}),
 					err:   QemuDiskCache("").Error()},
 				{name: `VirtIO errors.New(Error_QemuDisk_File)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: ""}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: ""}}}}}),
 					err:   errors.New(Error_QemuDisk_File)},
 				{name: `VirtIO errors.New(Error_QemuDiskSerial_IllegalCharacter)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", Serial: "!@^$^&$^&"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", Serial: "!@^$^&$^&"}}}}}),
 					err:   errors.New(Error_QemuDiskSerial_IllegalCharacter)},
 				{name: `VirtIO errors.New(Error_QemuDiskSerial_IllegalLength)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", Serial: QemuDiskSerial(test_data_qemu.QemuDiskSerial_Max_Illegal())}}}}}),
 					err:   errors.New(Error_QemuDiskSerial_IllegalLength)},
 				{name: `VirtIO errors.New(Error_QemuWorldWideName_Invalid)`,
-					input: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}},
+					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}}),
 					err:   errors.New(Error_QemuWorldWideName_Invalid)}}},
+		{category: `Memory`,
+			valid: []test{
+				{name: `Create CapacityMiB only`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}})},
+				{name: `Update new.CapacityMiB smaller then current.MinimumCapacityMiB`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}},
+					current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}}},
+				{name: `Update new.CapacityMiB smaller then current.MinimumCapacityMiB and MinimumCapacityMiB lowered`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}},
+					current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}}},
+				{name: `Create new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}})},
+				{name: `Update new.CapacityMiB == new.MinimumCapacityMiB && new.CapacityMiB > current.CapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1500)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1500))}},
+					current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}}},
+				{name: `Update new.MinimumCapacityMiB > current.MinimumCapacityMiB && new.MinimumCapacityMiB < new.CapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(3000)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}},
+					current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1500))}}},
+				{name: `Create new.Shares(qemuMemoryShares_Max) new.CapacityMiB & new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(qemuMemoryShares_Max))}})},
+				{name: `Create new.Shares new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(0))}})},
+				{name: `Create new.Shares(0) new.CapacityMiB & new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(0))}})},
+				{name: `Update new.Shares(0) current.CapacityMiB == current.MinimumCapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1000)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}}}},
+			invalid: []test{
+				{name: `Create new.CapacityMiB(0)`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(0))}}),
+					err:   errors.New(QemuMemoryCapacity_Error_Minimum)},
+				{name: `Update new.CapacityMiB(0)`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(0))}},
+					current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}},
+					err:     errors.New(QemuMemoryCapacity_Error_Minimum)},
+				{name: `Create new.CapacityMiB > qemuMemoryCapacity_Max`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(qemuMemoryCapacity_Max + 1))}}),
+					err:   errors.New(QemuMemoryCapacity_Error_Maximum)},
+				{name: `Update new.CapacityMiB > qemuMemoryCapacity_Max`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(qemuMemoryCapacity_Max + 1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(qemuMemoryCapacity_Max))}},
+					err:     errors.New(QemuMemoryCapacity_Error_Maximum)},
+				{name: `Update new.CapacityMiB(0)`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(0))}},
+					current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}},
+					err:     errors.New(QemuMemoryCapacity_Error_Minimum)},
+				{name: `Create new.MinimumCapacityMiB to big`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(qemuMemoryBalloonCapacity_Max + 1))}}),
+					err:   errors.New(QemuMemoryBalloonCapacity_Error_Invalid)},
+				{name: `Update new.MinimumCapacityMiB to big`,
+					input:   ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(qemuMemoryBalloonCapacity_Max + 1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}},
+					err:     errors.New(QemuMemoryBalloonCapacity_Error_Invalid)},
+				{name: `Create new.MinimumCapacityMiB > new.CapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1000)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}}),
+					err: errors.New(QemuMemory_Error_MinimumCapacityMiB_GreaterThan_CapacityMiB)},
+				{name: `Create new.Shares(1)`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(1))}}),
+					err:   errors.New(QemuMemory_Error_NoMemoryCapacity)},
+				{name: `Create new.Shares() too big and new.CapacityMiB & new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(qemuMemoryShares_Max + 1))}}),
+					err: errors.New(QemuMemoryShares_Error_Invalid)},
+				{name: `Update new.Shares() too big and new.CapacityMiB & new.MinimumCapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(qemuMemoryShares_Max + 1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(512)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(256)),
+						Shares:             util.Pointer(QemuMemoryShares(1))}},
+					err: errors.New(QemuMemoryShares_Error_Invalid)},
+				{name: `Create new.Shares(1) when new.CapacityMiB == new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(1))}}),
+					err:   errors.New(QemuMemory_Error_NoMemoryCapacity)},
+				{name: `Update new.Shares(1) when current.CapacityMiB == current.MinimumCapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1000)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}},
+					err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)},
+				{name: `Update new.Shares(1) new.CapacityMiB == current.MinimumCapacityMiB & MinimumCapacityMiB not updated`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB: util.Pointer(QemuMemoryCapacity(1024)),
+						Shares:      util.Pointer(QemuMemoryShares(1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(2048)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)},
+				{name: `Update new.Shares(1) new.MinimumCapacityMiB == current.CapacityMiB & CapacityMiB not updated`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048)),
+						Shares:             util.Pointer(QemuMemoryShares(1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(2048)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)}}},
 		{category: `PoolName`,
 			valid: []test{
 				{name: ``,
-					input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Legal()))}},
+					input: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Legal()))})},
 				{name: `Empty`,
-					input: ConfigQemu{Pool: util.Pointer(PoolName(""))}}},
+					input: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})}},
 			invalid: []test{
 				{name: `Length`,
-					input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Max_Illegal()))},
+					input: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Max_Illegal()))}),
 					err:   errors.New(PoolName_Error_Length)},
 				{name: `Characters`,
-					input: ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Error_Characters()[0]))},
+					input: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Error_Characters()[0]))}),
 					err:   errors.New(PoolName_Error_Characters)}}},
 		{category: `Tags`,
 			valid: []test{
-				{input: ConfigQemu{Tags: util.Pointer(validTags())}}},
+				{input: baseConfig(ConfigQemu{Tags: util.Pointer(validTags())})}},
 			invalid: []test{
 				{name: `errors.New(Tag_Error_Invalid)`,
-					input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Illegal())})},
+					input: baseConfig(ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Illegal())})}),
 					err:   errors.New(Tag_Error_Invalid)},
 				{name: `errors.New(Tag_Error_Duplicate)`,
-					input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Max_Legal()), Tag(test_data_tag.Tag_Max_Legal())})},
+					input: baseConfig(ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Max_Legal()), Tag(test_data_tag.Tag_Max_Legal())})}),
 					err:   errors.New(Tag_Error_Duplicate)},
 				{name: `errors.New(Tag_Error_Empty)`,
-					input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Empty())})},
+					input: baseConfig(ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Empty())})}),
 					err:   errors.New(Tag_Error_Empty)},
 				{name: `errors.New(Tag_Error_MaxLength)`,
-					input: ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Max_Illegal())})},
+					input: baseConfig(ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Max_Illegal())})}),
 					err:   errors.New(Tag_Error_MaxLength)}}},
 		{category: `TPM`,
 			valid: []test{
 				{name: `Create`,
-					input: ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v2.0"))}}},
+					input: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v2.0"))}})},
 				{name: `Update`,
 					input:   ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v2.0"))}},
 					current: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v1.2"))}}},
@@ -6663,17 +6864,17 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					current: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v1.2"))}}}},
 			invalid: []test{
 				{name: `errors.New(storage is required) Create`,
-					input: ConfigQemu{TPM: &TpmState{Storage: ""}},
+					input: baseConfig(ConfigQemu{TPM: &TpmState{Storage: ""}}),
 					err:   errors.New("storage is required")},
 				{name: `errors.New(storage is required) Update`,
 					input:   ConfigQemu{TPM: &TpmState{Storage: ""}},
 					current: &ConfigQemu{TPM: &TpmState{}},
 					err:     errors.New("storage is required")},
 				{name: `errors.New(TmpState_Error_VersionRequired) Create`,
-					input: ConfigQemu{TPM: &TpmState{Storage: "test", Version: nil}},
+					input: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "test", Version: nil}}),
 					err:   errors.New(TmpState_Error_VersionRequired)},
 				{name: `errors.New(TmpVersion_Error_Invalid) Create`,
-					input: ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion(""))}},
+					input: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion(""))}}),
 					err:   errors.New(TpmVersion_Error_Invalid)},
 				{name: `errors.New(TmpVersion_Error_Invalid) Update`,
 					input:   ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion(""))}},

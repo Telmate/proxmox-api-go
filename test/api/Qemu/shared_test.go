@@ -34,7 +34,7 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 		Name:         "test-qemu01",
 		Bios:         "seabios",
 		Tablet:       util.Pointer(true),
-		Memory:       128,
+		Memory:       &pxapi.QemuMemory{CapacityMiB: util.Pointer(pxapi.QemuMemoryCapacity(128))},
 		QemuOs:       "l26",
 		QemuCores:    1,
 		QemuSockets:  1,
