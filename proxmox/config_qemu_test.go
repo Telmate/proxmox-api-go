@@ -5614,6 +5614,9 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					Concurrent: 10}}}
 	}
 	baseConfig := func(config ConfigQemu) ConfigQemu {
+		if config.Memory == nil {
+			config.Memory = &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}
+		}
 		return config
 	}
 	validCloudInit := QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}
@@ -6704,6 +6707,122 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				{name: `VirtIO errors.New(Error_QemuWorldWideName_Invalid)`,
 					input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}}),
 					err:   errors.New(Error_QemuWorldWideName_Invalid)}}},
+		{category: `Memory`,
+			valid: []test{
+				{name: `Create CapacityMiB only`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}})},
+				{name: `Update new.CapacityMiB smaller then current.MinimumCapacityMiB`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}},
+					current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}}},
+				{name: `Update new.CapacityMiB smaller then current.MinimumCapacityMiB and MinimumCapacityMiB lowered`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}},
+					current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}}},
+				{name: `Create new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}})},
+				{name: `Update new.CapacityMiB == new.MinimumCapacityMiB && new.CapacityMiB > current.CapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1500)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1500))}},
+					current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}}},
+				{name: `Update new.MinimumCapacityMiB > current.MinimumCapacityMiB && new.MinimumCapacityMiB < new.CapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(3000)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}},
+					current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1500))}}},
+				{name: `Create new.Shares(qemuMemoryShares_Max) new.CapacityMiB & new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(qemuMemoryShares_Max))}})},
+				{name: `Create new.Shares new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(0))}})},
+				{name: `Create new.Shares(0) new.CapacityMiB & new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(0))}})},
+				{name: `Update new.Shares(0) current.CapacityMiB == current.MinimumCapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1000)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}}}},
+			invalid: []test{
+				{name: `Create new.CapacityMiB(0)`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(0))}}),
+					err:   errors.New(QemuMemoryCapacity_Error_Minimum)},
+				{name: `Update new.CapacityMiB(0)`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(0))}},
+					current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}},
+					err:     errors.New(QemuMemoryCapacity_Error_Minimum)},
+				{name: `Create new.CapacityMiB > qemuMemoryCapacity_Max`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(qemuMemoryCapacity_Max + 1))}}),
+					err:   errors.New(QemuMemoryCapacity_Error_Maximum)},
+				{name: `Update new.CapacityMiB > qemuMemoryCapacity_Max`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(qemuMemoryCapacity_Max + 1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(qemuMemoryCapacity_Max))}},
+					err:     errors.New(QemuMemoryCapacity_Error_Maximum)},
+				{name: `Update new.CapacityMiB(0)`,
+					input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(0))}},
+					current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}},
+					err:     errors.New(QemuMemoryCapacity_Error_Minimum)},
+				{name: `Create new.MinimumCapacityMiB to big`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(qemuMemoryBalloonCapacity_Max + 1))}}),
+					err:   errors.New(QemuMemoryBalloonCapacity_Error_Invalid)},
+				{name: `Update new.MinimumCapacityMiB to big`,
+					input:   ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(qemuMemoryBalloonCapacity_Max + 1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}},
+					err:     errors.New(QemuMemoryBalloonCapacity_Error_Invalid)},
+				{name: `Create new.MinimumCapacityMiB > new.CapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1000)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}}),
+					err: errors.New(QemuMemory_Error_MinimumCapacityMiB_GreaterThan_CapacityMiB)},
+				{name: `Create new.Shares(1)`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(1))}}),
+					err:   errors.New(QemuMemory_Error_NoMemoryCapacity)},
+				{name: `Create new.Shares() too big and new.CapacityMiB & new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(qemuMemoryShares_Max + 1))}}),
+					err: errors.New(QemuMemoryShares_Error_Invalid)},
+				{name: `Update new.Shares() too big and new.CapacityMiB & new.MinimumCapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
+						Shares:             util.Pointer(QemuMemoryShares(qemuMemoryShares_Max + 1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(512)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(256)),
+						Shares:             util.Pointer(QemuMemoryShares(1))}},
+					err: errors.New(QemuMemoryShares_Error_Invalid)},
+				{name: `Create new.Shares(1) when new.CapacityMiB == new.MinimumCapacityMiB`,
+					input: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(1))}}),
+					err:   errors.New(QemuMemory_Error_NoMemoryCapacity)},
+				{name: `Update new.Shares(1) when current.CapacityMiB == current.MinimumCapacityMiB`,
+					input: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(1000)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}},
+					err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)},
+				{name: `Update new.Shares(1) new.CapacityMiB == current.MinimumCapacityMiB & MinimumCapacityMiB not updated`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB: util.Pointer(QemuMemoryCapacity(1024)),
+						Shares:      util.Pointer(QemuMemoryShares(1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(2048)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)},
+				{name: `Update new.Shares(1) new.MinimumCapacityMiB == current.CapacityMiB & CapacityMiB not updated`,
+					input: ConfigQemu{Memory: &QemuMemory{
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048)),
+						Shares:             util.Pointer(QemuMemoryShares(1))}},
+					current: &ConfigQemu{Memory: &QemuMemory{
+						CapacityMiB:        util.Pointer(QemuMemoryCapacity(2048)),
+						MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)}}},
 		{category: `PoolName`,
 			valid: []test{
 				{name: ``,
