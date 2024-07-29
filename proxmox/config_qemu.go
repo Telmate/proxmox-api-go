@@ -63,7 +63,6 @@ type ConfigQemu struct {
 	QemuPCIDevices  QemuDevices     `json:"hostpci,omitempty"` // TODO should be a struct
 	QemuPxe         bool            `json:"pxe,omitempty"`
 	QemuSerials     QemuDevices     `json:"serial,omitempty"`  // TODO should be a struct
-	QemuSockets     int             `json:"sockets,omitempty"` // TODO should be uint
 	QemuUnusedDisks QemuDevices     `json:"unused,omitempty"`  // TODO should be a struct
 	QemuUsbs        QemuDevices     `json:"usb,omitempty"`     // TODO should be a struct
 	QemuVcpus       int             `json:"vcpus,omitempty"`   // TODO should be uint
@@ -135,9 +134,6 @@ func (config *ConfigQemu) defaults() {
 	if config.QemuSerials == nil {
 		config.QemuSerials = QemuDevices{}
 	}
-	if config.QemuSockets == 0 {
-		config.QemuSockets = 1
-	}
 	if config.QemuUnusedDisks == nil {
 		config.QemuUnusedDisks = QemuDevices{}
 	}
@@ -208,9 +204,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	}
 	if config.Scsihw != "" {
 		params["scsihw"] = config.Scsihw
-	}
-	if config.QemuSockets != 0 {
-		params["sockets"] = config.QemuSockets
 	}
 	if config.Startup != "" {
 		params["startup"] = config.Startup
@@ -372,9 +365,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["ostype"]; isSet {
 		config.QemuOs = params["ostype"].(string)
-	}
-	if _, isSet := params["sockets"]; isSet {
-		config.QemuSockets = int(params["sockets"].(float64))
 	}
 	if _, isSet := params["vcpus"]; isSet {
 		vCpu := int(params["vcpus"].(float64))

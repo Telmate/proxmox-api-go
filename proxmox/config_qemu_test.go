@@ -190,6 +190,10 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{CPU: &QemuCPU{Numa: util.Pointer(true)}},
 					currentConfig: ConfigQemu{CPU: &QemuCPU{Numa: util.Pointer(false)}},
 					output:        map[string]interface{}{"numa": 1}},
+				{name: `Sockets`,
+					config:        &ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(3))}},
+					currentConfig: ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(2))}},
+					output:        map[string]interface{}{"sockets": 3}},
 			}},
 		{category: `CloudInit`, // Create CloudInit no need for update as update and create behave the same. will be changed in the future
 			createUpdate: []test{
@@ -3344,14 +3348,16 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 			tests: []test{
 				{name: `all`,
 					input: map[string]interface{}{
-						"cores": float64(10),
-						"numa":  float64(0),
+						"cores":   float64(10),
+						"numa":    float64(0),
+						"sockets": float64(4),
 					},
 					output: baseConfig(ConfigQemu{
 						CPU: &QemuCPU{
-							Cores: util.Pointer(QemuCpuCores(10)),
-							Numa:  util.Pointer(false)},
-					})},
+							Cores:   util.Pointer(QemuCpuCores(10)),
+							Numa:    util.Pointer(false),
+							Sockets: util.Pointer(QemuCpuSockets(4)),
+						}})},
 				{name: `cores`,
 					input:  map[string]interface{}{"cores": float64(1)},
 					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}})},
@@ -3361,6 +3367,9 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `numa false`,
 					input:  map[string]interface{}{"numa": float64(0)},
 					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Numa: util.Pointer(false)}})},
+				{name: `sockets`,
+					input:  map[string]interface{}{"sockets": float64(1)},
+					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(1))}})},
 			}},
 		{category: `CloudInit`,
 			tests: []test{

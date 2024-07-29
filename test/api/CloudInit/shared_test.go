@@ -33,10 +33,10 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 		Memory: &pxapi.QemuMemory{CapacityMiB: util.Pointer(pxapi.QemuMemoryCapacity(2048))},
 		QemuOs: "l26",
 		CPU: &pxapi.QemuCPU{
-			Cores: util.Pointer(pxapi.QemuCpuCores(1)),
-			Numa:  util.Pointer(false),
+			Cores:   util.Pointer(pxapi.QemuCpuCores(1)),
+			Numa:    util.Pointer(false),
+			Sockets: util.Pointer(pxapi.QemuCpuSockets(1)),
 		},
-		QemuSockets:  1,
 		QemuCpu:      "kvm64",
 		QemuKVM:      util.Pointer(true),
 		Hotplug:      "network,disk,usb",

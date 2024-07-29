@@ -32,3 +32,29 @@ func Test_QemuCpuCores_Validate(t *testing.T) {
 		})
 	}
 }
+
+func Test_QemuCpuSockets_Validate(t *testing.T) {
+	testData := []struct {
+		name   string
+		input  QemuCpuSockets
+		output error
+	}{
+		// Invalid
+		{name: "Invalid errors.New(CpuSockets_Error_LowerBound)",
+			input:  0,
+			output: errors.New(QemuCpuSockets_Error_LowerBound)},
+		{name: "Invalid errors.New(CpuSockets_Error_UpperBound)",
+			input:  5,
+			output: errors.New(QemuCpuSockets_Error_UpperBound)},
+		// Valid
+		{name: "Valid LowerBound",
+			input: 1},
+		{name: "Valid UpperBound",
+			input: 4},
+	}
+	for _, test := range testData {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.input.Validate(), test.output, test.name)
+		})
+	}
+}
