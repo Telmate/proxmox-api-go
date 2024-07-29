@@ -6,11 +6,15 @@ import (
 
 type QemuCPU struct {
 	Cores *QemuCpuCores `json:"cores,omitempty"` // Required during creation
+	Numa  *bool         `json:"numa,omitempty"`
 }
 
 func (cpu QemuCPU) mapToApi(params map[string]interface{}) {
 	if cpu.Cores != nil {
 		params["cores"] = int(*cpu.Cores)
+	}
+	if cpu.Numa != nil {
+		params["numa"] = Btoi(*cpu.Numa)
 	}
 }
 
@@ -19,6 +23,10 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 	if v, isSet := params["cores"]; isSet {
 		tmp := QemuCpuCores(v.(float64))
 		cpu.Cores = &tmp
+	}
+	if v, isSet := params["numa"]; isSet {
+		tmp := v.(float64) == 1
+		cpu.Numa = &tmp
 	}
 	return &cpu
 }

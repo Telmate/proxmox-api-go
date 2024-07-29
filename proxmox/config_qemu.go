@@ -59,7 +59,6 @@ type ConfigQemu struct {
 	QemuIso         string          `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
 	QemuKVM         *bool           `json:"kvm,omitempty"`
 	QemuNetworks    QemuDevices     `json:"network,omitempty"` // TODO should be a struct
-	QemuNuma        *bool           `json:"numa,omitempty"`
 	QemuOs          string          `json:"ostype,omitempty"`
 	QemuPCIDevices  QemuDevices     `json:"hostpci,omitempty"` // TODO should be a struct
 	QemuPxe         bool            `json:"pxe,omitempty"`
@@ -197,9 +196,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	}
 	if config.Name != "" {
 		params["name"] = config.Name
-	}
-	if config.QemuNuma != nil {
-		params["numa"] = *config.QemuNuma
 	}
 	if config.Onboot != nil {
 		params["onboot"] = *config.Onboot
@@ -373,9 +369,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["kvm"]; isSet {
 		config.QemuKVM = util.Pointer(Itob(int(params["kvm"].(float64))))
-	}
-	if _, isSet := params["numa"]; isSet {
-		config.QemuNuma = util.Pointer(Itob(int(params["numa"].(float64))))
 	}
 	if _, isSet := params["ostype"]; isSet {
 		config.QemuOs = params["ostype"].(string)
