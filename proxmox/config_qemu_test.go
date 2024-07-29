@@ -180,6 +180,12 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
 					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0"}}}},
+		{category: `CPU`,
+			createUpdate: []test{
+				{name: `Cores`,
+					config:        &ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}},
+					currentConfig: ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(2))}},
+					output:        map[string]interface{}{"cores": 1}}}},
 		{category: `CloudInit`, // Create CloudInit no need for update as update and create behave the same. will be changed in the future
 			createUpdate: []test{
 				{name: `CloudInit=nil`,
@@ -3279,6 +3285,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 
 func Test_ConfigQemu_mapToStruct(t *testing.T) {
 	baseConfig := func(config ConfigQemu) *ConfigQemu {
+		if config.CPU == nil {
+			config.CPU = &QemuCPU{}
+		}
 		if config.Memory == nil {
 			config.Memory = &QemuMemory{}
 		}
@@ -3326,6 +3335,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `Type`,
 					input:  map[string]interface{}{"agent": string("1,type=virtio")},
 					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}})}}},
+		{category: `CPU`,
+			tests: []test{
+				{name: `cores`,
+					input:  map[string]interface{}{"cores": float64(1)},
+					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}})}}},
 		{category: `CloudInit`,
 			tests: []test{
 				{name: `ALL`,

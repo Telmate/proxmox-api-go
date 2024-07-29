@@ -35,6 +35,7 @@ type ConfigQemu struct {
 	Bios            string          `json:"bios,omitempty"`
 	Boot            string          `json:"boot,omitempty"`     // TODO should be an array of custom enums
 	BootDisk        string          `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
+	CPU             *QemuCPU        `json:"cpu,omitempty"`
 	CloudInit       *CloudInit      `json:"cloudinit,omitempty"`
 	Description     *string         `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
@@ -53,7 +54,6 @@ type ConfigQemu struct {
 	Onboot          *bool           `json:"onboot,omitempty"`
 	Pool            *PoolName       `json:"pool,omitempty"`
 	Protection      *bool           `json:"protection,omitempty"`
-	QemuCores       int             `json:"cores,omitempty"`   // TODO should be uint
 	QemuCpu         string          `json:"cpu,omitempty"`     // TODO should be custom type with enum
 	QemuDisks       QemuDevices     `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
 	QemuIso         string          `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
@@ -114,9 +114,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.Protection == nil {
 		config.Protection = util.Pointer(false)
-	}
-	if config.QemuCores == 0 {
-		config.QemuCores = 1
 	}
 	if config.QemuCpu == "" {
 		config.QemuCpu = "host"
@@ -182,9 +179,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	}
 	if config.Description != nil && (*config.Description != "" || currentConfig.Description != nil) {
 		params["description"] = *config.Description
-	}
-	if config.QemuCores != 0 {
-		params["cores"] = config.QemuCores
 	}
 	if config.QemuCpu != "" {
 		params["cpu"] = config.QemuCpu
@@ -273,6 +267,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		}
 	}
 
+	if config.CPU != nil {
+		config.CPU.mapToApi(params)
+	}
 	if config.CloudInit != nil {
 		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params, version)
 	}
@@ -320,6 +317,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	// cores:2 ostype:l26
 
 	config := ConfigQemu{
+		CPU:       QemuCPU{}.mapToSDK(params),
 		CloudInit: CloudInit{}.mapToSDK(params),
 		Memory:    QemuMemory{}.mapToSDK(params),
 	}
@@ -369,9 +367,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if itemValue, isSet := params["tpmstate0"]; isSet {
 		config.TPM = TpmState{}.mapToSDK(itemValue.(string))
-	}
-	if _, isSet := params["cores"]; isSet {
-		config.QemuCores = int(params["cores"].(float64))
 	}
 	if _, isSet := params["cpu"]; isSet {
 		config.QemuCpu = params["cpu"].(string)
