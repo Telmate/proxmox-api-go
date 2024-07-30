@@ -37,6 +37,10 @@ type QemuCPU struct {
 	VirtualCores *CpuVirtualCores `json:"vcores,omitempty"`
 }
 
+const (
+	QemuCPU_Error_CoresRequired string = "cores is required"
+)
+
 func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}) (delete string) {
 	if cpu.Cores != nil {
 		params["cores"] = int(*cpu.Cores)
@@ -76,6 +80,27 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 		cpu.VirtualCores = &tmp
 	}
 	return &cpu
+}
+
+func (cpu QemuCPU) Validate(current *QemuCPU) (err error) {
+	if cpu.Cores != nil {
+		if err = cpu.Cores.Validate(); err != nil {
+			return
+		}
+	} else if current == nil {
+		return errors.New(QemuCPU_Error_CoresRequired)
+	}
+	if cpu.Sockets != nil {
+		if err = cpu.Sockets.Validate(); err != nil {
+			return
+		}
+	}
+	if cpu.VirtualCores != nil {
+		if err = cpu.VirtualCores.Validate(cpu.Cores, cpu.Sockets, current); err != nil {
+			return
+		}
+	}
+	return
 }
 
 // min value 1, max value of 128

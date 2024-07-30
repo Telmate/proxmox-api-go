@@ -84,6 +84,57 @@ func Test_CpuVirtualCores_Validate(t *testing.T) {
 	}
 }
 
+func Test_QemuCPU_Validate(t *testing.T) {
+	baseConfig := func(config QemuCPU) *QemuCPU {
+		if config.Cores == nil {
+			config.Cores = util.Pointer(QemuCpuCores(1))
+		}
+		return &config
+	}
+	testData := []struct {
+		name    string
+		input   QemuCPU
+		current *QemuCPU
+		output  error
+	}{
+		// Invalid
+		{name: `Invalid errors.New(QemuCpuCores_Error_LowerBound)`,
+			input:  QemuCPU{Cores: util.Pointer(QemuCpuCores(0))},
+			output: errors.New(QemuCpuCores_Error_LowerBound)},
+		{name: `Invalid errors.New(QemuCPU_Error_CoresRequired)`,
+			input:  QemuCPU{},
+			output: errors.New(QemuCPU_Error_CoresRequired)},
+		{name: `Invalid errors.New(QemuCpuSockets_Error_LowerBound)`,
+			input:  *baseConfig(QemuCPU{Sockets: util.Pointer(QemuCpuSockets(0))}),
+			output: errors.New(QemuCpuSockets_Error_LowerBound)},
+		{name: `Invalid CpuVirtualCores(1).Error() 1 1`,
+			input: QemuCPU{
+				Cores:        util.Pointer(QemuCpuCores(1)),
+				Sockets:      util.Pointer(QemuCpuSockets(1)),
+				VirtualCores: util.Pointer(CpuVirtualCores(2))},
+			output: CpuVirtualCores(1).Error()},
+		// Valid
+		{name: `Valid Maximum`,
+			input: QemuCPU{
+				Cores:        util.Pointer(QemuCpuCores(128)),
+				Sockets:      util.Pointer(QemuCpuSockets(4)),
+				VirtualCores: util.Pointer(CpuVirtualCores(512))}},
+		{name: `Valid Minimum`,
+			input: QemuCPU{
+				Cores:        util.Pointer(QemuCpuCores(128)),
+				Sockets:      util.Pointer(QemuCpuSockets(4)),
+				VirtualCores: util.Pointer(CpuVirtualCores(0))}},
+		{name: `Valid Update`,
+			input:   QemuCPU{},
+			current: &QemuCPU{}},
+	}
+	for _, test := range testData {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.input.Validate(test.current), test.output, test.name)
+		})
+	}
+}
+
 func Test_QemuCpuCores_Validate(t *testing.T) {
 	testData := []struct {
 		name   string

@@ -5678,6 +5678,9 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					Concurrent: 10}}}
 	}
 	baseConfig := func(config ConfigQemu) ConfigQemu {
+		if config.CPU == nil {
+			config.CPU = &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}
+		}
 		if config.Memory == nil {
 			config.Memory = &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}
 		}
@@ -5710,6 +5713,43 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			invalid: []test{
 				{input: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("test"))}}),
 					err: errors.New(QemuGuestAgentType_Error_Invalid)}}},
+		{category: `CPU`,
+			valid: []test{
+				{name: `Maximum`,
+					input: baseConfig(ConfigQemu{CPU: &QemuCPU{
+						Cores:        util.Pointer(QemuCpuCores(128)),
+						Sockets:      util.Pointer(QemuCpuSockets(4)),
+						VirtualCores: util.Pointer(CpuVirtualCores(512))}})},
+				{name: `Minimum`,
+					input: baseConfig(ConfigQemu{CPU: &QemuCPU{
+						Cores:        util.Pointer(QemuCpuCores(128)),
+						Sockets:      util.Pointer(QemuCpuSockets(4)),
+						VirtualCores: util.Pointer(CpuVirtualCores(0))}})},
+				{name: `Update`,
+					input:   baseConfig(ConfigQemu{CPU: &QemuCPU{}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+			},
+			invalid: []test{
+				{name: `Create erross.New(ConfigQemu_Error_CpuRequired)`,
+					err: errors.New(ConfigQemu_Error_CpuRequired)},
+				{name: `errors.New(QemuCpuCores_Error_LowerBound)`,
+					input: ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(0))}},
+					err:   errors.New(QemuCpuCores_Error_LowerBound)},
+				{name: `errors.New(QemuCPU_Error_CoresRequired)`,
+					input: ConfigQemu{CPU: &QemuCPU{}},
+					err:   errors.New(QemuCPU_Error_CoresRequired)},
+				{name: `errors.New(QemuCpuSockets_Error_LowerBound)`,
+					input: baseConfig(ConfigQemu{CPU: &QemuCPU{
+						Cores:   util.Pointer(QemuCpuCores(1)),
+						Sockets: util.Pointer(QemuCpuSockets(0))}}),
+					err: errors.New(QemuCpuSockets_Error_LowerBound)},
+				{name: `CpuVirtualCores(1).Error() 1 1`,
+					input: ConfigQemu{CPU: &QemuCPU{
+						Cores:        util.Pointer(QemuCpuCores(1)),
+						Sockets:      util.Pointer(QemuCpuSockets(1)),
+						VirtualCores: util.Pointer(CpuVirtualCores(2))}},
+					err: CpuVirtualCores(1).Error()},
+			}},
 		{category: `CloudInit`,
 			valid: []test{
 				{name: `All v7`,

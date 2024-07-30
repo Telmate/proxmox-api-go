@@ -78,6 +78,7 @@ type ConfigQemu struct {
 
 const (
 	ConfigQemu_Error_UnableToUpdateWithoutReboot string = "unable to update vm without rebooting"
+	ConfigQemu_Error_CpuRequired                 string = "cpu is required during creation"
 	ConfigQemu_Error_MemoryRequired              string = "memory is required during creation"
 )
 
@@ -777,6 +778,13 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
 	if current == nil { // Create
+		if config.CPU == nil {
+			return errors.New(ConfigQemu_Error_CpuRequired)
+		} else {
+			if err = config.CPU.Validate(nil); err != nil {
+				return
+			}
+		}
 		if config.Memory == nil {
 			return errors.New(ConfigQemu_Error_MemoryRequired)
 		} else {
@@ -790,6 +798,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 			}
 		}
 	} else { // Update
+		if config.CPU != nil {
+			if err = config.CPU.Validate(current.CPU); err != nil {
+				return
+			}
+		}
 		if config.Memory != nil {
 			if err = config.Memory.Validate(current.Memory); err != nil {
 				return
