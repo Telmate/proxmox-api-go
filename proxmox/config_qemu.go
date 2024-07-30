@@ -65,7 +65,6 @@ type ConfigQemu struct {
 	QemuSerials     QemuDevices     `json:"serial,omitempty"`  // TODO should be a struct
 	QemuUnusedDisks QemuDevices     `json:"unused,omitempty"`  // TODO should be a struct
 	QemuUsbs        QemuDevices     `json:"usb,omitempty"`     // TODO should be a struct
-	QemuVcpus       int             `json:"vcpus,omitempty"`   // TODO should be uint
 	QemuVga         QemuDevice      `json:"vga,omitempty"`     // TODO should be a struct
 	RNGDrive        QemuDevice      `json:"rng0,omitempty"`    // TODO should be a struct
 	Scsihw          string          `json:"scsihw,omitempty"`  // TODO should be custom type with enum
@@ -214,9 +213,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Tags != nil {
 		params["tags"] = Tag("").mapToApi(*config.Tags)
 	}
-	if config.QemuVcpus >= 1 {
-		params["vcpus"] = config.QemuVcpus
-	}
 	if config.Smbios1 != "" {
 		params["smbios1"] = config.Smbios1
 	}
@@ -257,7 +253,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	}
 
 	if config.CPU != nil {
-		config.CPU.mapToApi(params)
+		itemsToDelete += config.CPU.mapToApi(currentConfig.CPU, params)
 	}
 	if config.CloudInit != nil {
 		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params, version)
@@ -365,12 +361,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["ostype"]; isSet {
 		config.QemuOs = params["ostype"].(string)
-	}
-	if _, isSet := params["vcpus"]; isSet {
-		vCpu := int(params["vcpus"].(float64))
-		if vCpu > 0 {
-			config.QemuVcpus = vCpu
-		}
 	}
 	if _, isSet := params["protection"]; isSet {
 		config.Protection = util.Pointer(Itob(int(params["protection"].(float64))))

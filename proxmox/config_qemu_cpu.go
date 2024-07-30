@@ -2,15 +2,42 @@ package proxmox
 
 import (
 	"errors"
+	"strconv"
 )
 
-type QemuCPU struct {
-	Cores   *QemuCpuCores   `json:"cores,omitempty"` // Required during creation
-	Numa    *bool           `json:"numa,omitempty"`
-	Sockets *QemuCpuSockets `json:"sockets,omitempty"`
+// min value 0 is unset, max value 512. is QemuCpuCores * CpuSockets
+type CpuVirtualCores uint16
+
+func (cores CpuVirtualCores) Error() error {
+	return errors.New("CpuVirtualCores may have a maximum of " + strconv.FormatInt(int64(cores), 10))
 }
 
-func (cpu QemuCPU) mapToApi(params map[string]interface{}) {
+func (vCores CpuVirtualCores) Validate(cores *QemuCpuCores, sockets *QemuCpuSockets, current *QemuCPU) error {
+	var usedCores, usedSockets CpuVirtualCores
+	if cores != nil {
+		usedCores = CpuVirtualCores(*cores)
+	} else if current != nil && current.Cores != nil {
+		usedCores = CpuVirtualCores(*current.Cores)
+	}
+	if sockets != nil {
+		usedSockets = CpuVirtualCores(*sockets)
+	} else if current != nil && current.Sockets != nil {
+		usedSockets = CpuVirtualCores(*current.Sockets)
+	}
+	if vCores > usedCores*usedSockets {
+		return (usedCores * usedSockets).Error()
+	}
+	return nil
+}
+
+type QemuCPU struct {
+	Cores        *QemuCpuCores    `json:"cores,omitempty"` // Required during creation
+	Numa         *bool            `json:"numa,omitempty"`
+	Sockets      *QemuCpuSockets  `json:"sockets,omitempty"`
+	VirtualCores *CpuVirtualCores `json:"vcores,omitempty"`
+}
+
+func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}) (delete string) {
 	if cpu.Cores != nil {
 		params["cores"] = int(*cpu.Cores)
 	}
@@ -20,6 +47,14 @@ func (cpu QemuCPU) mapToApi(params map[string]interface{}) {
 	if cpu.Sockets != nil {
 		params["sockets"] = int(*cpu.Sockets)
 	}
+	if cpu.VirtualCores != nil {
+		if *cpu.VirtualCores != 0 {
+			params["vcpus"] = int(*cpu.VirtualCores)
+		} else if current != nil && current.VirtualCores != nil {
+			delete += ",vcpus"
+		}
+	}
+	return
 }
 
 func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
@@ -35,6 +70,10 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 	if v, isSet := params["sockets"]; isSet {
 		tmp := QemuCpuSockets(v.(float64))
 		cpu.Sockets = &tmp
+	}
+	if value, isSet := params["vcpus"]; isSet {
+		tmp := CpuVirtualCores((value.(float64)))
+		cpu.VirtualCores = &tmp
 	}
 	return &cpu
 }

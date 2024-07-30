@@ -181,6 +181,10 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0"}}}},
 		{category: `CPU`,
+			create: []test{
+				{name: `VirtualCores 0`,
+					config: &ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(0))}},
+					output: map[string]interface{}{}}},
 			createUpdate: []test{
 				{name: `Cores`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}},
@@ -194,6 +198,16 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(3))}},
 					currentConfig: ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(2))}},
 					output:        map[string]interface{}{"sockets": 3}},
+				{name: `VirtualCores`,
+					config:        &ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(4))}},
+					currentConfig: ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(12))}},
+					output:        map[string]interface{}{"vcpus": 4}},
+			},
+			update: []test{
+				{name: `VirtualCores 0`,
+					config:        &ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(0))}},
+					currentConfig: ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(4))}},
+					output:        map[string]interface{}{"delete": "vcpus"}},
 			}},
 		{category: `CloudInit`, // Create CloudInit no need for update as update and create behave the same. will be changed in the future
 			createUpdate: []test{
@@ -3351,12 +3365,14 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						"cores":   float64(10),
 						"numa":    float64(0),
 						"sockets": float64(4),
+						"vcpus":   float64(40),
 					},
 					output: baseConfig(ConfigQemu{
 						CPU: &QemuCPU{
-							Cores:   util.Pointer(QemuCpuCores(10)),
-							Numa:    util.Pointer(false),
-							Sockets: util.Pointer(QemuCpuSockets(4)),
+							Cores:        util.Pointer(QemuCpuCores(10)),
+							Numa:         util.Pointer(false),
+							Sockets:      util.Pointer(QemuCpuSockets(4)),
+							VirtualCores: util.Pointer(CpuVirtualCores(40)),
 						}})},
 				{name: `cores`,
 					input:  map[string]interface{}{"cores": float64(1)},
@@ -3370,6 +3386,9 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `sockets`,
 					input:  map[string]interface{}{"sockets": float64(1)},
 					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(1))}})},
+				{name: `vcpus`,
+					input:  map[string]interface{}{"vcpus": float64(1)},
+					output: baseConfig(ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(1))}})},
 			}},
 		{category: `CloudInit`,
 			tests: []test{
