@@ -85,11 +85,11 @@ func Test_CpuVirtualCores_Validate(t *testing.T) {
 }
 
 func Test_QemuCPU_Validate(t *testing.T) {
-	baseConfig := func(config QemuCPU) *QemuCPU {
+	baseConfig := func(config QemuCPU) QemuCPU {
 		if config.Cores == nil {
 			config.Cores = util.Pointer(QemuCpuCores(1))
 		}
-		return &config
+		return config
 	}
 	testData := []struct {
 		name    string
@@ -105,7 +105,7 @@ func Test_QemuCPU_Validate(t *testing.T) {
 			input:  QemuCPU{},
 			output: errors.New(QemuCPU_Error_CoresRequired)},
 		{name: `Invalid errors.New(QemuCpuSockets_Error_LowerBound)`,
-			input:  *baseConfig(QemuCPU{Sockets: util.Pointer(QemuCpuSockets(0))}),
+			input:  baseConfig(QemuCPU{Sockets: util.Pointer(QemuCpuSockets(0))}),
 			output: errors.New(QemuCpuSockets_Error_LowerBound)},
 		{name: `Invalid CpuVirtualCores(1).Error() 1 1`,
 			input: QemuCPU{
