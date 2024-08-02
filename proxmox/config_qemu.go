@@ -54,7 +54,6 @@ type ConfigQemu struct {
 	Onboot          *bool           `json:"onboot,omitempty"`
 	Pool            *PoolName       `json:"pool,omitempty"`
 	Protection      *bool           `json:"protection,omitempty"`
-	QemuCpu         string          `json:"cpu,omitempty"`     // TODO should be custom type with enum
 	QemuDisks       QemuDevices     `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
 	QemuIso         string          `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
 	QemuKVM         *bool           `json:"kvm,omitempty"`
@@ -112,9 +111,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.Protection == nil {
 		config.Protection = util.Pointer(false)
-	}
-	if config.QemuCpu == "" {
-		config.QemuCpu = "host"
 	}
 	if config.QemuDisks == nil {
 		config.QemuDisks = QemuDevices{}
@@ -174,9 +170,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	}
 	if config.Description != nil && (*config.Description != "" || currentConfig.Description != nil) {
 		params["description"] = *config.Description
-	}
-	if config.QemuCpu != "" {
-		params["cpu"] = config.QemuCpu
 	}
 	if config.Hookscript != "" {
 		params["hookscript"] = config.Hookscript
@@ -254,7 +247,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	}
 
 	if config.CPU != nil {
-		itemsToDelete += config.CPU.mapToApi(currentConfig.CPU, params)
+		itemsToDelete += config.CPU.mapToApi(currentConfig.CPU, params, version)
 	}
 	if config.CloudInit != nil {
 		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params, version)
@@ -353,9 +346,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if itemValue, isSet := params["tpmstate0"]; isSet {
 		config.TPM = TpmState{}.mapToSDK(itemValue.(string))
-	}
-	if _, isSet := params["cpu"]; isSet {
-		config.QemuCpu = params["cpu"].(string)
 	}
 	if _, isSet := params["kvm"]; isSet {
 		config.QemuKVM = util.Pointer(Itob(int(params["kvm"].(float64))))
@@ -781,7 +771,7 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		if config.CPU == nil {
 			return errors.New(ConfigQemu_Error_CpuRequired)
 		} else {
-			if err = config.CPU.Validate(nil); err != nil {
+			if err = config.CPU.Validate(nil, version); err != nil {
 				return
 			}
 		}
@@ -799,7 +789,7 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 	} else { // Update
 		if config.CPU != nil {
-			if err = config.CPU.Validate(current.CPU); err != nil {
+			if err = config.CPU.Validate(current.CPU, version); err != nil {
 				return
 			}
 		}

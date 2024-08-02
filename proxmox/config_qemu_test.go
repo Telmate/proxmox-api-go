@@ -198,6 +198,21 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(3))}},
 					currentConfig: ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(2))}},
 					output:        map[string]interface{}{"sockets": 3}},
+				{name: `Type lower`,
+					config:        &ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(cpuType_X86_64_v2_AES_Lower)}},
+					currentConfig: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
+					version:       Version{}.max(),
+					output:        map[string]interface{}{"cpu": string(CpuType_X86_64_v2_AES)}},
+				{name: `Type normal`,
+					config:        &ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_X86_64_v2_AES)}},
+					currentConfig: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
+					version:       Version{}.max(),
+					output:        map[string]interface{}{"cpu": string(CpuType_X86_64_v2_AES)}},
+				{name: `Type weird`,
+					config:        &ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType("X_-8-_6_-6-4---V_-2-aE--s__"))}},
+					currentConfig: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
+					version:       Version{}.max(),
+					output:        map[string]interface{}{"cpu": string(CpuType_X86_64_v2_AES)}},
 				{name: `VirtualCores`,
 					config:        &ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(4))}},
 					currentConfig: ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(12))}},
@@ -3377,6 +3392,12 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `cores`,
 					input:  map[string]interface{}{"cores": float64(1)},
 					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}})},
+				{name: `cpu model only`,
+					input:  map[string]interface{}{"cpu": string(CpuType_X86_64_v2_AES)},
+					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType("x86-64-v2-AES"))}})},
+				{name: `cpu with flags`,
+					input:  map[string]interface{}{"cpu": "x86-64-v2-AES,something"},
+					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_X86_64_v2_AES)}})},
 				{name: `numa true`,
 					input:  map[string]interface{}{"numa": float64(1)},
 					output: baseConfig(ConfigQemu{CPU: &QemuCPU{Numa: util.Pointer(true)}})},
@@ -5680,6 +5701,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 	baseConfig := func(config ConfigQemu) ConfigQemu {
 		if config.CPU == nil {
 			config.CPU = &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}
+		} else if config.CPU.Cores == nil {
+			config.CPU.Cores = util.Pointer(QemuCpuCores(1))
 		}
 		if config.Memory == nil {
 			config.Memory = &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}
@@ -5715,6 +5738,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					err: errors.New(QemuGuestAgentType_Error_Invalid)}}},
 		{category: `CPU`,
 			valid: []test{
+				// TODO add missing valid cores, socket test
 				{name: `Maximum`,
 					input: baseConfig(ConfigQemu{CPU: &QemuCPU{
 						Cores:        util.Pointer(QemuCpuCores(128)),
@@ -5728,6 +5752,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				{name: `Update`,
 					input:   baseConfig(ConfigQemu{CPU: &QemuCPU{}}),
 					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Type empty`,
+					input: baseConfig(ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType(""))}})},
+				{name: `Type host`,
+					input: baseConfig(ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}})},
 			},
 			invalid: []test{
 				{name: `Create erross.New(ConfigQemu_Error_CpuRequired)`,
@@ -5749,6 +5777,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						Sockets:      util.Pointer(QemuCpuSockets(1)),
 						VirtualCores: util.Pointer(CpuVirtualCores(2))}},
 					err: CpuVirtualCores(1).Error()},
+				{name: `Type`,
+					input:   baseConfig(ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType("invalid"))}}),
+					version: Version{}.max(),
+					err:     CpuType("").Error(Version{}.max())},
 			}},
 		{category: `CloudInit`,
 			valid: []test{

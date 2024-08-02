@@ -2,8 +2,262 @@ package proxmox
 
 import (
 	"errors"
+	"slices"
 	"strconv"
+	"strings"
 )
+
+type CpuType string // enum
+
+const (
+	CpuType_Intel486                          CpuType = "486"
+	CpuType_AmdAthlon                         CpuType = "athlon"
+	CpuType_IntelBroadwell                    CpuType = "Broadwell"
+	cpuType_IntelBroadwell_Lower              CpuType = "broadwell"
+	CpuType_IntelBroadwellIBRS                CpuType = "Broadwell-IBRS"
+	cpuType_IntelBroadwellIBRS_Lower          CpuType = "broadwellibrs"
+	CpuType_IntelBroadwellNoTSX               CpuType = "Broadwell-noTSX"
+	cpuType_IntelBroadwellNoTSX_Lower         CpuType = "broadwellnotsx"
+	CpuType_IntelBroadwellNoTSXIBRS           CpuType = "Broadwell-noTSX-IBRS"
+	cpuType_IntelBroadwellNoTSXIBRS_Lower     CpuType = "broadwellnotsxibrs"
+	CpuType_IntelCascadelakeServer            CpuType = "Cascadelake-Server"
+	cpuType_IntelCascadelakeServer_Lower      CpuType = "cascadelakeserver"
+	CpuType_IntelCascadelakeServerNoTSX       CpuType = "Cascadelake-Server-noTSX"
+	cpuType_IntelCascadelakeServerNoTSX_Lower CpuType = "cascadelakeservernotsx"
+	CpuType_IntelCascadelakeServerV2          CpuType = "Cascadelake-Server-V2"
+	cpuType_IntelCascadelakeServerV2_Lower    CpuType = "cascadelakeserverv2"
+	CpuType_IntelCascadelakeServerV4          CpuType = "Cascadelake-Server-V4"
+	cpuType_IntelCascadelakeServerV4_Lower    CpuType = "cascadelakeserverv4"
+	CpuType_IntelCascadelakeServerV5          CpuType = "Cascadelake-Server-V5"
+	cpuType_IntelCascadelakeServerV5_Lower    CpuType = "cascadelakeserverv5"
+	CpuType_IntelConroe                       CpuType = "Conroe"
+	cpuType_IntelConroe_Lower                 CpuType = "conroe"
+	CpuType_IntelCooperlake                   CpuType = "Cooperlake"
+	cpuType_IntelCooperlake_Lower             CpuType = "cooperlake"
+	CpuType_IntelCooperlakeV2                 CpuType = "Cooperlake-V2"
+	cpuType_IntelCooperlakeV2_Lower           CpuType = "cooperlakev2"
+	CpuType_IntelCore2Duo                     CpuType = "core2duo"
+	CpuType_IntelCoreDuo                      CpuType = "coreduo"
+	CpuType_AmdEPYC                           CpuType = "EPYC"
+	cpuType_AmdEPYC_Lower                     CpuType = "epyc"
+	CpuType_AmdEPYCIBPB                       CpuType = "EPYC-IBPB"
+	cpuType_AmdEPYCIBPB_Lower                 CpuType = "epycibpb"
+	CpuType_AmdEPYCMilan                      CpuType = "EPYC-Milan"
+	cpuType_AmdEPYCMilan_Lower                CpuType = "epycmilan"
+	CpuType_AmdEPYCRome                       CpuType = "EPYC-Rome"
+	cpuType_AmdEPYCRome_Lower                 CpuType = "epycrome"
+	CpuType_AmdEPYCRomeV2                     CpuType = "EPYC-Rome-v2"
+	cpuType_AmdEPYCRomeV2_Lower               CpuType = "epycromev2"
+	CpuType_AmdEPYCV3                         CpuType = "EPYC-v3"
+	cpuType_AmdEPYCV3_Lower                   CpuType = "epycv3"
+	CpuType_Host                              CpuType = "host"
+	CpuType_IntelHaswell                      CpuType = "Haswell"
+	cpuType_IntelHaswell_Lower                CpuType = "haswell"
+	CpuType_IntelHaswellIBRS                  CpuType = "Haswell-IBRS"
+	cpuType_IntelHaswellIBRS_Lower            CpuType = "haswellibrs"
+	CpuType_IntelHaswellNoTSX                 CpuType = "Haswell-noTSX"
+	cpuType_IntelHaswellNoTSX_Lower           CpuType = "haswellnotsx"
+	CpuType_IntelHaswellNoTSXIBRS             CpuType = "Haswell-noTSX-IBRS"
+	cpuType_IntelHaswellNoTSXIBRS_Lower       CpuType = "haswellnotsxibrs"
+	CpuType_IntelIcelakeClient                CpuType = "Icelake-Client"
+	cpuType_IntelIcelakeClient_Lower          CpuType = "icelakeclient"
+	CpuType_IntelIcelakeClientNoTSX           CpuType = "Icelake-Client-noTSX"
+	cpuType_IntelIcelakeClientNoTSX_Lower     CpuType = "icelakeclientnotsx"
+	CpuType_IntelIcelakeServer                CpuType = "Icelake-Server"
+	cpuType_IntelIcelakeServer_Lower          CpuType = "icelakeserver"
+	CpuType_IntelIcelakeServerNoTSX           CpuType = "Icelake-Server-noTSX"
+	cpuType_IntelIcelakeServerNoTSX_Lower     CpuType = "icelakeservernotsx"
+	CpuType_IntelIcelakeServerV3              CpuType = "Icelake-Server-v3"
+	cpuType_IntelIcelakeServerV3_Lower        CpuType = "icelakeserverv3"
+	CpuType_IntelIcelakeServerV4              CpuType = "Icelake-Server-v4"
+	cpuType_IntelIcelakeServerV4_Lower        CpuType = "icelakeserverv4"
+	CpuType_IntelIcelakeServerV5              CpuType = "Icelake-Server-v5"
+	cpuType_IntelIcelakeServerV5_Lower        CpuType = "icelakeserverv5"
+	CpuType_IntelIcelakeServerV6              CpuType = "Icelake-Server-v6"
+	cpuType_IntelIcelakeServerV6_Lower        CpuType = "icelakeserverv6"
+	CpuType_IntelIvybridge                    CpuType = "IvyBridge"
+	cpuType_IntelIvybridge_Lower              CpuType = "ivybridge"
+	CpuType_IntelIvybridgeIBRS                CpuType = "IvyBridge-IBRS"
+	cpuType_IntelIvybridgeIBRS_Lower          CpuType = "ivyBridgeibrs"
+	CpuType_IntelKnightsmill                  CpuType = "KnightsMill"
+	cpuType_IntelKnightsmill_Lower            CpuType = "knightsmill"
+	CpuType_QemuKvm32                         CpuType = "kvm32"
+	CpuType_QemuKvm64                         CpuType = "kvm64"
+	CpuType_QemuMax                           CpuType = "max"
+	CpuType_IntelNahalem                      CpuType = "Nahalem"
+	cpuType_IntelNahalem_Lower                CpuType = "nahalem"
+	CpuType_IntelNahalemIBRS                  CpuType = "Nahalem-IRBS"
+	cpuType_IntelNahalemIBRS_Lower            CpuType = "nahalemibrs"
+	CpuType_AmdOpteronG1                      CpuType = "Opteron_G1"
+	cpuType_AmdOpteronG1_Lower                CpuType = "opterong1"
+	CpuType_AmdOpteronG2                      CpuType = "Opteron_G2"
+	cpuType_AmdOpteronG2_Lower                CpuType = "opterong2"
+	CpuType_AmdOpteronG3                      CpuType = "Opteron_G3"
+	cpuType_AmdOpteronG3_Lower                CpuType = "opterong3"
+	CpuType_AmdOpteronG4                      CpuType = "Opteron_G4"
+	cpuType_AmdOpteronG4_Lower                CpuType = "opterong4"
+	CpuType_AmdOpteronG5                      CpuType = "Opteron_G5"
+	cpuType_AmdOpteronG5_Lower                CpuType = "opterong5"
+	CpuType_IntelPenrym                       CpuType = "Penrym"
+	cpuType_IntelPenrym_Lower                 CpuType = "penrym"
+	CpuType_IntelPentium                      CpuType = "pentium"
+	CpuType_IntelPentium2                     CpuType = "pentium2"
+	CpuType_IntelPentium3                     CpuType = "pentium3"
+	CpuType_AmdPhenom                         CpuType = "phenom"
+	CpuType_Qemu32                            CpuType = "qemu32"
+	CpuType_Qemu64                            CpuType = "qemu64"
+	CpuType_IntelSandyBridge                  CpuType = "SandyBridge"
+	cpuType_IntelSandyBridge_Lower            CpuType = "sandybridge"
+	CpuType_IntelSandybridgeIBRS              CpuType = "SandyBridge-IBRS"
+	cpuType_IntelSandybridgeIBRS_Lower        CpuType = "sandybridgeibrs"
+	CpuType_IntelSapphireRapids               CpuType = "SapphireRapids"
+	cpuType_IntelSapphireRapids_Lower         CpuType = "sapphirerapids"
+	CpuType_IntelSkylakeClient                CpuType = "Skylake-Client"
+	cpuType_IntelSkylakeClient_Lower          CpuType = "skylakeclient"
+	CpuType_IntelSkylakeClientIBRS            CpuType = "Skylake-Client-IBRS"
+	cpuType_IntelSkylakeClientIBRS_Lower      CpuType = "skylakeclientibrs"
+	CpuType_IntelSkylakeClientNoTSXIBRS       CpuType = "Skylake-Client-noTSX-IBRS"
+	cpuType_IntelSkylakeClientNoTSXIBRS_Lower CpuType = "skylakeclientnotsxibrs"
+	CpuType_IntelSkylakeClientV4              CpuType = "Skylake-Client-v4"
+	cpuType_IntelSkylakeClientV4_Lower        CpuType = "skylakeclientv4"
+	CpuType_IntelSkylakeServer                CpuType = "Skylake-Server"
+	cpuType_IntelSkylakeServer_Lower          CpuType = "skylakeserver"
+	CpuType_IntelSkylakeServerIBRS            CpuType = "Skylake-Server-IBRS"
+	cpuType_IntelSkylakeServerIBRS_Lower      CpuType = "skylakeserveribrs"
+	CpuType_IntelSkylakeServerNoTSXIBRS       CpuType = "Skylake-Server-noTSX-IBRS"
+	cpuType_IntelSkylakeServerNoTSXIBRS_Lower CpuType = "skylakeservernotsxibrs"
+	CpuType_IntelSkylakeServerV4              CpuType = "Skylake-Server-v4"
+	cpuType_IntelSkylakeServerV4_Lower        CpuType = "skylakeserverv4"
+	CpuType_IntelSkylakeServerV5              CpuType = "Skylake-Server-v5"
+	cpuType_IntelSkylakeServerV5_Lower        CpuType = "skylakeserverv5"
+	CpuType_IntelWestmere                     CpuType = "Westmere"
+	cpuType_IntelWestmere_Lower               CpuType = "westmere"
+	CpuType_IntelWestmereIBRS                 CpuType = "Westmere-IBRS"
+	cpuType_IntelWestmereIBRS_Lower           CpuType = "westmereibrs"
+	CpuType_X86_64_v2                         CpuType = "x86-64-v2"
+	cpuType_X86_64_v2_Lower                   CpuType = "x8664v2"
+	CpuType_X86_64_v2_AES                     CpuType = "x86-64-v2-AES"
+	cpuType_X86_64_v2_AES_Lower               CpuType = "x8664v2aes"
+	CpuType_X86_64_v3                         CpuType = "x86-64-v3"
+	cpuType_X86_64_v3_Lower                   CpuType = "x8664v3"
+	CpuType_X86_64_v4                         CpuType = "x86-64-v4"
+	cpuType_X86_64_v4_Lower                   CpuType = "x8664v4"
+)
+
+func (CpuType) CpuBase() map[CpuType]CpuType {
+	return map[CpuType]CpuType{
+		CpuType_AmdAthlon:                         CpuType_AmdAthlon,
+		CpuType_AmdPhenom:                         CpuType_AmdPhenom,
+		CpuType_Intel486:                          CpuType_Intel486,
+		CpuType_IntelCore2Duo:                     CpuType_IntelCore2Duo,
+		CpuType_IntelCoreDuo:                      CpuType_IntelCoreDuo,
+		CpuType_IntelPentium:                      CpuType_IntelPentium,
+		CpuType_IntelPentium2:                     CpuType_IntelPentium2,
+		CpuType_IntelPentium3:                     CpuType_IntelPentium3,
+		CpuType_QemuKvm32:                         CpuType_QemuKvm32,
+		CpuType_QemuKvm64:                         CpuType_QemuKvm64,
+		CpuType_QemuMax:                           CpuType_QemuMax,
+		CpuType_Qemu32:                            CpuType_Qemu32,
+		CpuType_Qemu64:                            CpuType_Qemu64,
+		CpuType_Host:                              CpuType_Host,
+		cpuType_AmdEPYC_Lower:                     CpuType_AmdEPYC,
+		cpuType_AmdEPYCIBPB_Lower:                 CpuType_AmdEPYCIBPB,
+		cpuType_AmdEPYCMilan_Lower:                CpuType_AmdEPYCMilan,
+		cpuType_AmdEPYCRome_Lower:                 CpuType_AmdEPYCRome,
+		cpuType_AmdOpteronG1_Lower:                CpuType_AmdOpteronG1,
+		cpuType_AmdOpteronG2_Lower:                CpuType_AmdOpteronG2,
+		cpuType_AmdOpteronG3_Lower:                CpuType_AmdOpteronG3,
+		cpuType_AmdOpteronG4_Lower:                CpuType_AmdOpteronG4,
+		cpuType_AmdOpteronG5_Lower:                CpuType_AmdOpteronG5,
+		cpuType_IntelBroadwell_Lower:              CpuType_IntelBroadwell,
+		cpuType_IntelBroadwellIBRS_Lower:          CpuType_IntelBroadwellIBRS,
+		cpuType_IntelBroadwellNoTSX_Lower:         CpuType_IntelBroadwellNoTSX,
+		cpuType_IntelBroadwellNoTSXIBRS_Lower:     CpuType_IntelBroadwellNoTSXIBRS,
+		cpuType_IntelCascadelakeServer_Lower:      CpuType_IntelCascadelakeServer,
+		cpuType_IntelCascadelakeServerNoTSX_Lower: CpuType_IntelCascadelakeServerNoTSX,
+		cpuType_IntelConroe_Lower:                 CpuType_IntelConroe,
+		cpuType_IntelHaswell_Lower:                CpuType_IntelHaswell,
+		cpuType_IntelHaswellIBRS_Lower:            CpuType_IntelHaswellIBRS,
+		cpuType_IntelHaswellNoTSX_Lower:           CpuType_IntelHaswellNoTSX,
+		cpuType_IntelHaswellNoTSXIBRS_Lower:       CpuType_IntelHaswellNoTSXIBRS,
+		cpuType_IntelIcelakeClient_Lower:          CpuType_IntelIcelakeClient,
+		cpuType_IntelIcelakeClientNoTSX_Lower:     CpuType_IntelIcelakeClientNoTSX,
+		cpuType_IntelIcelakeServer_Lower:          CpuType_IntelIcelakeServer,
+		cpuType_IntelIcelakeServerNoTSX_Lower:     CpuType_IntelIcelakeServerNoTSX,
+		cpuType_IntelIvybridge_Lower:              CpuType_IntelIvybridge,
+		cpuType_IntelIvybridgeIBRS_Lower:          CpuType_IntelIvybridgeIBRS,
+		cpuType_IntelKnightsmill_Lower:            CpuType_IntelKnightsmill,
+		cpuType_IntelNahalem_Lower:                CpuType_IntelNahalem,
+		cpuType_IntelNahalemIBRS_Lower:            CpuType_IntelNahalemIBRS,
+		cpuType_IntelPenrym_Lower:                 CpuType_IntelPenrym,
+		cpuType_IntelSandyBridge_Lower:            CpuType_IntelSandyBridge,
+		cpuType_IntelSandybridgeIBRS_Lower:        CpuType_IntelSandybridgeIBRS,
+		cpuType_IntelSkylakeClient_Lower:          CpuType_IntelSkylakeClient,
+		cpuType_IntelSkylakeClientIBRS_Lower:      CpuType_IntelSkylakeClientIBRS,
+		cpuType_IntelSkylakeClientNoTSXIBRS_Lower: CpuType_IntelSkylakeClientNoTSXIBRS,
+		cpuType_IntelSkylakeServer_Lower:          CpuType_IntelSkylakeServer,
+		cpuType_IntelSkylakeServerIBRS_Lower:      CpuType_IntelSkylakeServerIBRS,
+		cpuType_IntelSkylakeServerNoTSXIBRS_Lower: CpuType_IntelSkylakeServerNoTSXIBRS,
+		cpuType_IntelWestmere_Lower:               CpuType_IntelWestmere,
+		cpuType_IntelWestmereIBRS_Lower:           CpuType_IntelWestmereIBRS,
+	}
+}
+
+func (CpuType) CpuV8(cpus map[CpuType]CpuType) {
+	cpus[cpuType_IntelCascadelakeServerV2_Lower] = CpuType_IntelCascadelakeServerV2
+	cpus[cpuType_IntelCascadelakeServerV4_Lower] = CpuType_IntelCascadelakeServerV4
+	cpus[cpuType_IntelCascadelakeServerV5_Lower] = CpuType_IntelCascadelakeServerV5
+	cpus[cpuType_IntelCooperlake_Lower] = CpuType_IntelCooperlake
+	cpus[cpuType_IntelCooperlakeV2_Lower] = CpuType_IntelCooperlakeV2
+	cpus[cpuType_AmdEPYCRomeV2_Lower] = CpuType_AmdEPYCRomeV2
+	cpus[cpuType_AmdEPYCV3_Lower] = CpuType_AmdEPYCV3
+	cpus[cpuType_IntelIcelakeServerV3_Lower] = CpuType_IntelIcelakeServerV3
+	cpus[cpuType_IntelIcelakeServerV4_Lower] = CpuType_IntelIcelakeServerV4
+	cpus[cpuType_IntelIcelakeServerV5_Lower] = CpuType_IntelIcelakeServerV5
+	cpus[cpuType_IntelIcelakeServerV6_Lower] = CpuType_IntelIcelakeServerV6
+	cpus[cpuType_IntelSapphireRapids_Lower] = CpuType_IntelSapphireRapids
+	cpus[cpuType_IntelSkylakeClientV4_Lower] = CpuType_IntelSkylakeClientV4
+	cpus[cpuType_IntelSkylakeServerV4_Lower] = CpuType_IntelSkylakeServerV4
+	cpus[cpuType_IntelSkylakeServerV5_Lower] = CpuType_IntelSkylakeServerV5
+	cpus[cpuType_X86_64_v2_Lower] = CpuType_X86_64_v2
+	cpus[cpuType_X86_64_v2_AES_Lower] = CpuType_X86_64_v2_AES
+	cpus[cpuType_X86_64_v3_Lower] = CpuType_X86_64_v3
+	cpus[cpuType_X86_64_v4_Lower] = CpuType_X86_64_v4
+}
+
+func (CpuType) Error(version Version) error {
+	// v7
+	cpus := CpuType("").CpuBase()
+	if !version.Smaller(Version{Major: 8}) { // v8
+		CpuType("").CpuV8(cpus)
+	}
+	cpusConverted := make([]string, len(cpus))
+	var index int
+	for _, e := range cpus {
+		cpusConverted[index] = string(e)
+		index++
+	}
+	slices.Sort(cpusConverted)
+	return errors.New("cpuType can only be one of the following values: " + strings.Join(cpusConverted, ", "))
+}
+
+func (cpu CpuType) mapToApi(version Version) CpuType {
+	cpus := CpuType("").CpuBase()
+	if !version.Smaller(Version{Major: 8}) {
+		cpu.CpuV8(cpus)
+	}
+	if v, ok := cpus[CpuType(strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", "")))]; ok {
+		return v
+	}
+	return ""
+}
+
+func (cpu CpuType) Validate(version Version) error {
+	if cpu == "" || cpu.mapToApi(version) != "" {
+		return nil
+	}
+	return CpuType("").Error(version)
+}
 
 // min value 0 is unset, max value 512. is QemuCpuCores * CpuSockets
 type CpuVirtualCores uint16
@@ -34,6 +288,7 @@ type QemuCPU struct {
 	Cores        *QemuCpuCores    `json:"cores,omitempty"` // Required during creation
 	Numa         *bool            `json:"numa,omitempty"`
 	Sockets      *QemuCpuSockets  `json:"sockets,omitempty"`
+	Type         *CpuType         `json:"type,omitempty"`
 	VirtualCores *CpuVirtualCores `json:"vcores,omitempty"`
 }
 
@@ -41,7 +296,7 @@ const (
 	QemuCPU_Error_CoresRequired string = "cores is required"
 )
 
-func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}) (delete string) {
+func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, version Version) (delete string) {
 	if cpu.Cores != nil {
 		params["cores"] = int(*cpu.Cores)
 	}
@@ -50,6 +305,13 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}) (de
 	}
 	if cpu.Sockets != nil {
 		params["sockets"] = int(*cpu.Sockets)
+	}
+	if cpu.Type != nil {
+		var tmpCpu string
+		if *cpu.Type != "" {
+			tmpCpu = string(cpu.Type.mapToApi(version))
+		}
+		params["cpu"] = tmpCpu
 	}
 	if cpu.VirtualCores != nil {
 		if *cpu.VirtualCores != 0 {
@@ -67,6 +329,11 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 		tmp := QemuCpuCores(v.(float64))
 		cpu.Cores = &tmp
 	}
+	if v, isSet := params["cpu"]; isSet {
+		cpuParams := strings.SplitN(v.(string), ",", 2)
+		tmpType := (CpuType)(cpuParams[0])
+		cpu.Type = &tmpType
+	}
 	if v, isSet := params["numa"]; isSet {
 		tmp := v.(float64) == 1
 		cpu.Numa = &tmp
@@ -82,7 +349,7 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 	return &cpu
 }
 
-func (cpu QemuCPU) Validate(current *QemuCPU) (err error) {
+func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
 	if cpu.Cores != nil {
 		if err = cpu.Cores.Validate(); err != nil {
 			return
@@ -92,6 +359,11 @@ func (cpu QemuCPU) Validate(current *QemuCPU) (err error) {
 	}
 	if cpu.Sockets != nil {
 		if err = cpu.Sockets.Validate(); err != nil {
+			return
+		}
+	}
+	if cpu.Type != nil {
+		if err = cpu.Type.Validate(version); err != nil {
 			return
 		}
 	}
