@@ -259,6 +259,17 @@ func (cpu CpuType) Validate(version Version) error {
 	return CpuType("").Error(version)
 }
 
+type CpuUnits uint32 // min value 0 is unset, max value of 262144
+
+const CpuUnits_Error_Maximum string = "maximum value of CpuUnits is 262144"
+
+func (units CpuUnits) Validate() error {
+	if units > 262144 {
+		return errors.New(CpuUnits_Error_Maximum)
+	}
+	return nil
+}
+
 // min value 0 is unset, max value 512. is QemuCpuCores * CpuSockets
 type CpuVirtualCores uint16
 
@@ -289,6 +300,7 @@ type QemuCPU struct {
 	Numa         *bool            `json:"numa,omitempty"`
 	Sockets      *QemuCpuSockets  `json:"sockets,omitempty"`
 	Type         *CpuType         `json:"type,omitempty"`
+	Units        *CpuUnits        `json:"units,omitempty"`
 	VirtualCores *CpuVirtualCores `json:"vcores,omitempty"`
 }
 
@@ -313,6 +325,13 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, ver
 		}
 		params["cpu"] = tmpCpu
 	}
+	if cpu.Units != nil {
+		if *cpu.Units != 0 {
+			params["cpuunits"] = int(*cpu.Units)
+		} else if current != nil {
+			delete += ",cpuunits"
+		}
+	}
 	if cpu.VirtualCores != nil {
 		if *cpu.VirtualCores != 0 {
 			params["vcpus"] = int(*cpu.VirtualCores)
@@ -333,6 +352,10 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 		cpuParams := strings.SplitN(v.(string), ",", 2)
 		tmpType := (CpuType)(cpuParams[0])
 		cpu.Type = &tmpType
+	}
+	if v, isSet := params["cpuunits"]; isSet {
+		tmp := CpuUnits((v.(float64)))
+		cpu.Units = &tmp
 	}
 	if v, isSet := params["numa"]; isSet {
 		tmp := v.(float64) == 1
@@ -364,6 +387,11 @@ func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
 	}
 	if cpu.Type != nil {
 		if err = cpu.Type.Validate(version); err != nil {
+			return
+		}
+	}
+	if cpu.Units != nil {
+		if err = cpu.Units.Validate(); err != nil {
 			return
 		}
 	}

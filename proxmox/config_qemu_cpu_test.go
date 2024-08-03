@@ -70,6 +70,27 @@ func Test_CpuType_Validate(t *testing.T) {
 	}
 }
 
+func Test_CpuUnits_Validate(t *testing.T) {
+	testData := []struct {
+		name   string
+		input  CpuUnits
+		output error
+	}{
+		{name: `Invalid errors.New(CpuUnits_Error_Maximum)`,
+			input:  262145,
+			output: errors.New(CpuUnits_Error_Maximum)},
+		{name: `Valid minimum`,
+			input: 0},
+		{name: `Valid maximum`,
+			input: 262144},
+	}
+	for _, test := range testData {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.input.Validate(), test.output, test.name)
+		})
+	}
+}
+
 func Test_CpuVirtualCores_Validate(t *testing.T) {
 	type testInput struct {
 		virtualCores CpuVirtualCores
@@ -173,6 +194,9 @@ func Test_QemuCPU_Validate(t *testing.T) {
 		{name: `Invalid errors.New(QemuCpuSockets_Error_LowerBound)`,
 			input:  testInput{config: baseConfig(QemuCPU{Sockets: util.Pointer(QemuCpuSockets(0))})},
 			output: errors.New(QemuCpuSockets_Error_LowerBound)},
+		{name: `Invalid errors.New(CpuUnits_Error_Maximum)`,
+			input:  testInput{config: baseConfig(QemuCPU{Units: util.Pointer(CpuUnits(262145))})},
+			output: errors.New(CpuUnits_Error_Maximum)},
 		{name: `Invalid CpuVirtualCores(1).Error() 1 1`,
 			input: testInput{config: QemuCPU{
 				Cores:        util.Pointer(QemuCpuCores(1)),
@@ -191,6 +215,7 @@ func Test_QemuCPU_Validate(t *testing.T) {
 					Cores:        util.Pointer(QemuCpuCores(128)),
 					Sockets:      util.Pointer(QemuCpuSockets(4)),
 					Type:         util.Pointer(CpuType(cpuType_AmdEPYCRomeV2_Lower)),
+					Units:        util.Pointer(CpuUnits(262144)),
 					VirtualCores: util.Pointer(CpuVirtualCores(512))},
 				version: Version{}.max()}},
 		{name: `Valid Minimum`,
@@ -198,6 +223,7 @@ func Test_QemuCPU_Validate(t *testing.T) {
 				Cores:        util.Pointer(QemuCpuCores(128)),
 				Sockets:      util.Pointer(QemuCpuSockets(4)),
 				Type:         util.Pointer(CpuType("")),
+				Units:        util.Pointer(CpuUnits(0)),
 				VirtualCores: util.Pointer(CpuVirtualCores(0))},
 				version: Version{}.max()}},
 		{name: `Valid Update`,
