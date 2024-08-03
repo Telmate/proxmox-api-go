@@ -271,8 +271,7 @@ func (units CpuUnits) Validate() error {
 	return nil
 }
 
-// min value 0 is unset, max value 512. is QemuCpuCores * CpuSockets
-type CpuVirtualCores uint16
+type CpuVirtualCores uint16 // min value 0 is unset, max value 512. is QemuCpuCores * CpuSockets
 
 func (cores CpuVirtualCores) Error() error {
 	return errors.New("CpuVirtualCores may have a maximum of " + strconv.FormatInt(int64(cores), 10))
@@ -471,8 +470,7 @@ func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
 	return
 }
 
-// min value 1, max value of 128
-type QemuCpuCores uint8
+type QemuCpuCores uint8 // min value 1, max value of 128
 
 const (
 	QemuCpuCores_Error_LowerBound string = "minimum value of QemuCpuCores is 1"
@@ -489,8 +487,7 @@ func (cores QemuCpuCores) Validate() error {
 	return nil
 }
 
-// min value 1, max value 4
-type QemuCpuSockets uint8
+type QemuCpuSockets uint8 // min value 1, max value 4
 
 const (
 	QemuCpuSockets_Error_LowerBound string = "minimum value of QemuCpuSockets is 1"
