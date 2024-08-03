@@ -3,6 +3,7 @@ package proxmox
 import (
 	"errors"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -296,6 +297,7 @@ func (vCores CpuVirtualCores) Validate(cores *QemuCpuCores, sockets *QemuCpuSock
 }
 
 type QemuCPU struct {
+	Affinity     *[]uint          `json:"affinity,omitempty"`
 	Cores        *QemuCpuCores    `json:"cores,omitempty"` // Required during creation
 	Numa         *bool            `json:"numa,omitempty"`
 	Sockets      *QemuCpuSockets  `json:"sockets,omitempty"`
@@ -309,6 +311,13 @@ const (
 )
 
 func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, version Version) (delete string) {
+	if cpu.Affinity != nil {
+		if len(*cpu.Affinity) != 0 {
+			params["affinity"] = cpu.mapToApiAffinity(*cpu.Affinity)
+		} else if current != nil && current.Affinity != nil {
+			params["affinity"] = ""
+		}
+	}
 	if cpu.Cores != nil {
 		params["cores"] = int(*cpu.Cores)
 	}
@@ -342,8 +351,49 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, ver
 	return
 }
 
+func (QemuCPU) mapToApiAffinity(affinity []uint) string {
+	sort.Slice(affinity, func(i, j int) bool {
+		return affinity[i] < affinity[j]
+	})
+	var builder strings.Builder
+	rangeStart, rangeEnd := affinity[0], affinity[0]
+	for i := 1; i < len(affinity); i++ {
+		if affinity[i] == affinity[i-1] {
+			continue
+		}
+		if affinity[i] == rangeEnd+1 {
+			// Continue the range
+			rangeEnd = affinity[i]
+		} else {
+			// Close the current range and start a new range
+			if rangeStart == rangeEnd {
+				builder.WriteString(strconv.Itoa(int(rangeStart)) + ",")
+			} else {
+				builder.WriteString(strconv.Itoa(int(rangeStart)) + "-" + strconv.Itoa(int(rangeEnd)) + ",")
+			}
+			rangeStart, rangeEnd = affinity[i], affinity[i]
+		}
+	}
+	// Append the last range
+	if rangeStart == rangeEnd {
+		builder.WriteString(strconv.Itoa(int(rangeStart)))
+	} else {
+		builder.WriteString(strconv.Itoa(int(rangeStart)) + "-" + strconv.Itoa(int(rangeEnd)))
+	}
+	return builder.String()
+}
+
 func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 	var cpu QemuCPU
+	if v, isSet := params["affinity"]; isSet {
+		var tmp []uint
+		if v.(string) != "" {
+			tmp = QemuCPU{}.mapToSdkAffinity(v.(string))
+		} else {
+			tmp = make([]uint, 0)
+		}
+		cpu.Affinity = &tmp
+	}
 	if v, isSet := params["cores"]; isSet {
 		tmp := QemuCpuCores(v.(float64))
 		cpu.Cores = &tmp
@@ -370,6 +420,24 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 		cpu.VirtualCores = &tmp
 	}
 	return &cpu
+}
+
+func (QemuCPU) mapToSdkAffinity(rawAffinity string) []uint {
+	result := make([]uint, 0)
+	for _, e := range strings.Split(rawAffinity, ",") {
+		if strings.Contains(e, "-") {
+			bounds := strings.Split(e, "-")
+			start, _ := strconv.Atoi(bounds[0])
+			end, _ := strconv.Atoi(bounds[1])
+			for i := start; i <= end; i++ {
+				result = append(result, uint(i))
+			}
+		} else {
+			num, _ := strconv.Atoi(e)
+			result = append(result, uint(num))
+		}
+	}
+	return result
 }
 
 func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
