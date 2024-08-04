@@ -8,6 +8,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_CpuLimit_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  CpuLimit
+		output error
+	}{
+		{name: "Valid minimum",
+			input: 0},
+		{name: "Valid maximum",
+			input: 128},
+		{name: "Invalid maximum",
+			input:  129,
+			output: errors.New(CpuLimit_Error_Maximum)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
 func Test_CpuType_Error(t *testing.T) {
 	testData := []struct {
 		name    string
@@ -185,6 +206,9 @@ func Test_QemuCPU_Validate(t *testing.T) {
 		output error
 	}{
 		// Invalid
+		{name: `Invalid errors.New(CpuLimit_Error_Maximum)`,
+			input:  testInput{config: QemuCPU{Limit: util.Pointer(CpuLimit(129))}},
+			output: errors.New(CpuLimit_Error_Maximum)},
 		{name: `Invalid errors.New(QemuCpuCores_Error_LowerBound)`,
 			input:  testInput{config: QemuCPU{Cores: util.Pointer(QemuCpuCores(0))}},
 			output: errors.New(QemuCpuCores_Error_LowerBound)},
@@ -213,6 +237,7 @@ func Test_QemuCPU_Validate(t *testing.T) {
 			input: testInput{
 				config: QemuCPU{
 					Cores:        util.Pointer(QemuCpuCores(128)),
+					Limit:        util.Pointer(CpuLimit(128)),
 					Sockets:      util.Pointer(QemuCpuSockets(4)),
 					Type:         util.Pointer(CpuType(cpuType_AmdEPYCRomeV2_Lower)),
 					Units:        util.Pointer(CpuUnits(262144)),
@@ -221,6 +246,7 @@ func Test_QemuCPU_Validate(t *testing.T) {
 		{name: `Valid Minimum`,
 			input: testInput{config: QemuCPU{
 				Cores:        util.Pointer(QemuCpuCores(128)),
+				Limit:        util.Pointer(CpuLimit(0)),
 				Sockets:      util.Pointer(QemuCpuSockets(4)),
 				Type:         util.Pointer(CpuType("")),
 				Units:        util.Pointer(CpuUnits(0)),

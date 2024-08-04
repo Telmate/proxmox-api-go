@@ -6,7 +6,20 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/parse"
 )
+
+type CpuLimit uint8 // min value 0 is unlimited, max value of 128
+
+const CpuLimit_Error_Maximum string = "maximum value of CpuLimit is 128"
+
+func (limit CpuLimit) Validate() error {
+	if limit > 128 {
+		return errors.New(CpuLimit_Error_Maximum)
+	}
+	return nil
+}
 
 type CpuType string // enum
 
@@ -298,6 +311,7 @@ func (vCores CpuVirtualCores) Validate(cores *QemuCpuCores, sockets *QemuCpuSock
 type QemuCPU struct {
 	Affinity     *[]uint          `json:"affinity,omitempty"`
 	Cores        *QemuCpuCores    `json:"cores,omitempty"` // Required during creation
+	Limit        *CpuLimit        `json:"limit,omitempty"`
 	Numa         *bool            `json:"numa,omitempty"`
 	Sockets      *QemuCpuSockets  `json:"sockets,omitempty"`
 	Type         *CpuType         `json:"type,omitempty"`
@@ -319,6 +333,13 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, ver
 	}
 	if cpu.Cores != nil {
 		params["cores"] = int(*cpu.Cores)
+	}
+	if cpu.Limit != nil {
+		if *cpu.Limit != 0 {
+			params["cpulimit"] = int(*cpu.Limit)
+		} else if current != nil && current.Limit != nil {
+			delete += ",cpulimit"
+		}
 	}
 	if cpu.Numa != nil {
 		params["numa"] = Btoi(*cpu.Numa)
@@ -402,6 +423,11 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 		tmpType := (CpuType)(cpuParams[0])
 		cpu.Type = &tmpType
 	}
+	if v, isSet := params["cpulimit"]; isSet {
+		tmp, _ := parse.Uint(v)
+		tmpCast := CpuLimit(tmp)
+		cpu.Limit = &tmpCast
+	}
 	if v, isSet := params["cpuunits"]; isSet {
 		tmp := CpuUnits((v.(float64)))
 		cpu.Units = &tmp
@@ -440,6 +466,11 @@ func (QemuCPU) mapToSdkAffinity(rawAffinity string) []uint {
 }
 
 func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
+	if cpu.Limit != nil {
+		if err = cpu.Limit.Validate(); err != nil {
+			return
+		}
+	}
 	if cpu.Cores != nil {
 		if err = cpu.Cores.Validate(); err != nil {
 			return
