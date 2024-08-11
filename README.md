@@ -347,7 +347,7 @@ Kickstart auto install
 - network eth1
 - sshd (with preshared key/password)
 
-Network is temprorarily eth1 during the pre-provision phase.
+Network is temporarily eth1 during the pre-provision phase.
 
 ## Test
 
