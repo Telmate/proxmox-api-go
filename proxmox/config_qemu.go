@@ -40,6 +40,7 @@ type ConfigQemu struct {
 	Description     *string         `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
 	EFIDisk         QemuDevice      `json:"efidisk,omitempty"`   // TODO should be a struct
+	Storage         string          `json:"storage,omitempty"`   // for clone
 	FullClone       *int            `json:"fullclone,omitempty"` // TODO should probably be a bool
 	HaGroup         string          `json:"hagroup,omitempty"`
 	HaState         string          `json:"hastate,omitempty"` // TODO should be custom type with enum
@@ -849,13 +850,16 @@ storage:xxx
 */
 func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
-	var storage string
+	storage := config.Storage
 	fullClone := "1"
 	if config.FullClone != nil {
 		fullClone = strconv.Itoa(*config.FullClone)
 	}
-	if disk0Storage, ok := config.QemuDisks[0]["storage"].(string); ok && len(disk0Storage) > 0 {
-		storage = disk0Storage
+	// if storage is not set, use the storage of the first disk
+	if storage == "" && len(config.QemuDisks) > 0 {
+		if disk0Storage, ok := config.QemuDisks[0]["storage"].(string); ok && len(disk0Storage) > 0 {
+			storage = disk0Storage
+		}
 	}
 	params := map[string]interface{}{
 		"newid":  vmr.vmId,

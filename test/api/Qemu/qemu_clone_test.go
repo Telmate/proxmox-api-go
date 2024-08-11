@@ -35,6 +35,27 @@ func Test_Clone_Qemu_VM(t *testing.T) {
 
 }
 
+func Test_Clone_Qemu_VM_To_Different_Storage(t *testing.T) {
+	Test := api_test.Test{}
+	_ = Test.CreateTest()
+	config := _create_vm_spec(false)
+
+	config.Create(_create_vmref(), Test.GetClient())
+
+	cloneConfig := _create_vm_spec(false)
+
+	fullClone := 1
+
+	cloneConfig.Name = "test-qemu02"
+	cloneConfig.FullClone = &fullClone
+	cloneConfig.Storage = "other-storage"
+
+	err := cloneConfig.CloneVm(_create_vmref(), _create_clone_vmref(), Test.GetClient())
+
+	require.NoError(t, err)
+
+}
+
 func Test_Qemu_VM_Is_Cloned(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
