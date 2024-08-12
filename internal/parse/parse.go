@@ -5,6 +5,11 @@ import (
 	"strconv"
 )
 
+const (
+	InvalidType = "invalid type"
+	Negative    = "negative value"
+)
+
 func Int(input interface{}) (int, error) {
 	switch input := input.(type) {
 	case float64:
@@ -16,7 +21,7 @@ func Int(input interface{}) (int, error) {
 		}
 		return int(mem), nil
 	}
-	return 0, nil
+	return 0, errors.New(InvalidType)
 }
 
 func Uint(input interface{}) (uint, error) {
@@ -25,7 +30,7 @@ func Uint(input interface{}) (uint, error) {
 		return 0, err
 	}
 	if tmpInt < 0 {
-		return 0, errors.New("negative value")
+		return 0, errors.New(Negative)
 	}
 	return uint(tmpInt), nil
 }
