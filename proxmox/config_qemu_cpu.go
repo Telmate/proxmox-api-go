@@ -709,6 +709,13 @@ func (QemuCPU) mapToSdkAffinity(rawAffinity string) []uint {
 }
 
 func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
+	if cpu.Cores != nil {
+		if err = cpu.Cores.Validate(); err != nil {
+			return
+		}
+	} else if current == nil {
+		return errors.New(QemuCPU_Error_CoresRequired)
+	}
 	if cpu.Flags != nil {
 		if err = cpu.Flags.Validate(); err != nil {
 			return
@@ -718,13 +725,6 @@ func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
 		if err = cpu.Limit.Validate(); err != nil {
 			return
 		}
-	}
-	if cpu.Cores != nil {
-		if err = cpu.Cores.Validate(); err != nil {
-			return
-		}
-	} else if current == nil {
-		return errors.New(QemuCPU_Error_CoresRequired)
 	}
 	if cpu.Sockets != nil {
 		if err = cpu.Sockets.Validate(); err != nil {

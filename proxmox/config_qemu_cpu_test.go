@@ -283,7 +283,7 @@ func Test_QemuCPU_Validate(t *testing.T) {
 	}{
 		// Invalid
 		{name: `Invalid errors.New(CpuLimit_Error_Maximum)`,
-			input:  testInput{config: QemuCPU{Limit: util.Pointer(CpuLimit(129))}},
+			input:  testInput{config: baseConfig(QemuCPU{Limit: util.Pointer(CpuLimit(129))})},
 			output: errors.New(CpuLimit_Error_Maximum)},
 		{name: `Invalid errors.New(QemuCpuCores_Error_LowerBound)`,
 			input:  testInput{config: QemuCPU{Cores: util.Pointer(QemuCpuCores(0))}},
@@ -304,52 +304,52 @@ func Test_QemuCPU_Validate(t *testing.T) {
 				VirtualCores: util.Pointer(CpuVirtualCores(2))}},
 			output: CpuVirtualCores(1).Error()},
 		{name: `Invalid Flags.AES errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				AES: util.Pointer(TriBool(2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				AES: util.Pointer(TriBool(2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.AmdNoSSB errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				AmdNoSSB: util.Pointer(TriBool(-2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				AmdNoSSB: util.Pointer(TriBool(-2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.AmdSSBD errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				AmdSSBD: util.Pointer(TriBool(2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				AmdSSBD: util.Pointer(TriBool(2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.HvEvmcs errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				HvEvmcs: util.Pointer(TriBool(-2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				HvEvmcs: util.Pointer(TriBool(-2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.HvTlbFlush errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				HvTlbFlush: util.Pointer(TriBool(2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				HvTlbFlush: util.Pointer(TriBool(2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.Ibpb errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				Ibpb: util.Pointer(TriBool(-2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				Ibpb: util.Pointer(TriBool(-2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.MdClear errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				MdClear: util.Pointer(TriBool(2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				MdClear: util.Pointer(TriBool(2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.PCID errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				PCID: util.Pointer(TriBool(-2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				PCID: util.Pointer(TriBool(-2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.Pdpe1GB errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				Pdpe1GB: util.Pointer(TriBool(2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				Pdpe1GB: util.Pointer(TriBool(2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.SSBD errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				SSBD: util.Pointer(TriBool(-2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				SSBD: util.Pointer(TriBool(-2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.SpecCtrl errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				SpecCtrl: util.Pointer(TriBool(2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				SpecCtrl: util.Pointer(TriBool(2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Flags.VirtSSBD errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
-				VirtSSBD: util.Pointer(TriBool(-2))})}},
+			input: testInput{config: baseConfig(QemuCPU{Flags: util.Pointer(CpuFlags{
+				VirtSSBD: util.Pointer(TriBool(-2))})})},
 			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Type`,
 			input: testInput{
