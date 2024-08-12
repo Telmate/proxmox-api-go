@@ -10,6 +10,225 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/parse"
 )
 
+type CpuFlags struct {
+	AES        *TriBool `json:"aes,omitempty"`        // Activate AES instruction set for HW acceleration.
+	AmdNoSSB   *TriBool `json:"amdnossb,omitempty"`   // Notifies guest OS that host is not vulnerable for Spectre on AMD CPUs.
+	AmdSSBD    *TriBool `json:"amdssbd,omitempty"`    // Improves Spectre mitigation performance with AMD CPUs, best used with "VirtSSBD".
+	HvEvmcs    *TriBool `json:"hvevmcs,omitempty"`    // Improve performance for nested virtualization. Only supported on Intel CPUs.
+	HvTlbFlush *TriBool `json:"hvtlbflush,omitempty"` // Improve performance in overcommitted Windows guests. May lead to guest bluescreens on old CPUs.
+	Ibpb       *TriBool `json:"ibpb,omitempty"`       // Allows improved Spectre mitigation with AMD CPUs.
+	MdClear    *TriBool `json:"mdclear,omitempty"`    // Required to let the guest OS know if MDS is mitigated correctly.
+	PCID       *TriBool `json:"pcid,omitempty"`       // Meltdown fix cost reduction on Westmere, Sandy-, and IvyBridge Intel CPUs.
+	Pdpe1GB    *TriBool `json:"pdpe1gb,omitempty"`    // Allow guest OS to use 1GB size pages, if host HW supports it.
+	SSBD       *TriBool `json:"ssbd,omitempty"`       // Protection for "Speculative Store Bypass" for Intel models.
+	SpecCtrl   *TriBool `json:"specctrl,omitempty"`   // Allows improved Spectre mitigation with Intel CPUs.
+	VirtSSBD   *TriBool `json:"cirtssbd,omitempty"`   // Basis for "Speculative Store Bypass" protection for AMD models.
+}
+
+func (flags CpuFlags) mapToApi(current *CpuFlags) string {
+	var builder strings.Builder
+	var AES, AmdNoSSB, AmdSSBD, HvEvmcs, HvTlbFlush, Ibpb, MdClear, PCID, Pdpe1GB, SSBD, SpecCtrl, VirtSSBD TriBool
+	if current != nil {
+		if current.AES != nil {
+			AES = *current.AES
+		}
+		if current.AmdNoSSB != nil {
+			AmdNoSSB = *current.AmdNoSSB
+		}
+		if current.AmdSSBD != nil {
+			AmdSSBD = *current.AmdSSBD
+		}
+		if current.HvEvmcs != nil {
+			HvEvmcs = *current.HvEvmcs
+		}
+		if current.HvTlbFlush != nil {
+			HvTlbFlush = *current.HvTlbFlush
+		}
+		if current.Ibpb != nil {
+			Ibpb = *current.Ibpb
+		}
+		if current.MdClear != nil {
+			MdClear = *current.MdClear
+		}
+		if current.PCID != nil {
+			PCID = *current.PCID
+		}
+		if current.Pdpe1GB != nil {
+			Pdpe1GB = *current.Pdpe1GB
+		}
+		if current.SSBD != nil {
+			SSBD = *current.SSBD
+		}
+		if current.SpecCtrl != nil {
+			SpecCtrl = *current.SpecCtrl
+		}
+		if current.VirtSSBD != nil {
+			VirtSSBD = *current.VirtSSBD
+		}
+	}
+	if flags.AES != nil {
+		AES = *flags.AES
+	}
+	if flags.AmdNoSSB != nil {
+		AmdNoSSB = *flags.AmdNoSSB
+	}
+	if flags.AmdSSBD != nil {
+		AmdSSBD = *flags.AmdSSBD
+	}
+	if flags.HvEvmcs != nil {
+		HvEvmcs = *flags.HvEvmcs
+	}
+	if flags.HvTlbFlush != nil {
+		HvTlbFlush = *flags.HvTlbFlush
+	}
+	if flags.Ibpb != nil {
+		Ibpb = *flags.Ibpb
+	}
+	if flags.MdClear != nil {
+		MdClear = *flags.MdClear
+	}
+	if flags.PCID != nil {
+		PCID = *flags.PCID
+	}
+	if flags.Pdpe1GB != nil {
+		Pdpe1GB = *flags.Pdpe1GB
+	}
+	if flags.SSBD != nil {
+		SSBD = *flags.SSBD
+	}
+	if flags.SpecCtrl != nil {
+		SpecCtrl = *flags.SpecCtrl
+	}
+	if flags.VirtSSBD != nil {
+		VirtSSBD = *flags.VirtSSBD
+	}
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(AES, "aes"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(AmdNoSSB, "amd-no-ssb"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(AmdSSBD, "amd-ssbd"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(HvEvmcs, "hv-evmcs"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(HvTlbFlush, "hv-tlbflush"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(Ibpb, "ibpb"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(MdClear, "md-clear"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(PCID, "pcid"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(Pdpe1GB, "pdpe1gb"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(SSBD, "ssbd"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(SpecCtrl, "spec-ctrl"))
+	builder.WriteString(CpuFlags{}.mapToApiSubroutine(VirtSSBD, "virt-ssbd"))
+	return builder.String()
+}
+
+func (CpuFlags) mapToApiSubroutine(flag TriBool, flagName string) string {
+	if flag == TriBoolTrue {
+		return ";+" + flagName
+	}
+	if flag == TriBoolFalse {
+		return ";-" + flagName
+	}
+	return ""
+}
+
+func (CpuFlags) mapToSDK(flags []string) *CpuFlags {
+	var isSet bool
+	setFlags := CpuFlags{
+		AES:        CpuFlags{}.mapToSdkSubroutine(flags, "aes", &isSet),
+		AmdNoSSB:   CpuFlags{}.mapToSdkSubroutine(flags, "amd-no-ssb", &isSet),
+		AmdSSBD:    CpuFlags{}.mapToSdkSubroutine(flags, "amd-ssbd", &isSet),
+		HvEvmcs:    CpuFlags{}.mapToSdkSubroutine(flags, "hv-evmcs", &isSet),
+		HvTlbFlush: CpuFlags{}.mapToSdkSubroutine(flags, "hv-tlbflush", &isSet),
+		Ibpb:       CpuFlags{}.mapToSdkSubroutine(flags, "ibpb", &isSet),
+		MdClear:    CpuFlags{}.mapToSdkSubroutine(flags, "md-clear", &isSet),
+		PCID:       CpuFlags{}.mapToSdkSubroutine(flags, "pcid", &isSet),
+		Pdpe1GB:    CpuFlags{}.mapToSdkSubroutine(flags, "pdpe1gb", &isSet),
+		SSBD:       CpuFlags{}.mapToSdkSubroutine(flags, "ssbd", &isSet),
+		SpecCtrl:   CpuFlags{}.mapToSdkSubroutine(flags, "spec-ctrl", &isSet),
+		VirtSSBD:   CpuFlags{}.mapToSdkSubroutine(flags, "virt-ssbd", &isSet),
+	}
+	if isSet {
+		return &setFlags
+	}
+	return nil
+}
+
+func (CpuFlags) mapToSdkSubroutine(flags []string, flag string, isSet *bool) *TriBool {
+	var tmp TriBool
+	for _, e := range flags {
+		if e[1:] == flag {
+			if e[:1] == "+" {
+				tmp = TriBoolTrue
+			} else {
+				tmp = TriBoolFalse
+			}
+			*isSet = true
+			return &tmp
+		}
+	}
+	return nil
+}
+
+func (flags CpuFlags) Validate() (err error) {
+	if flags.AES != nil {
+		if err = flags.AES.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.AmdNoSSB != nil {
+		if err = flags.AmdNoSSB.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.AmdSSBD != nil {
+		if err = flags.AmdSSBD.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.HvEvmcs != nil {
+		if err = flags.HvEvmcs.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.HvTlbFlush != nil {
+		if err = flags.HvTlbFlush.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.Ibpb != nil {
+		if err = flags.Ibpb.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.MdClear != nil {
+		if err = flags.MdClear.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.PCID != nil {
+		if err = flags.PCID.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.Pdpe1GB != nil {
+		if err = flags.Pdpe1GB.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.SSBD != nil {
+		if err = flags.SSBD.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.SpecCtrl != nil {
+		if err = flags.SpecCtrl.Validate(); err != nil {
+			return err
+		}
+	}
+	if flags.VirtSSBD != nil {
+		if err = flags.VirtSSBD.Validate(); err != nil {
+			return err
+		}
+	}
+	return
+}
+
 type CpuLimit uint8 // min value 0 is unlimited, max value of 128
 
 const CpuLimit_Error_Maximum string = "maximum value of CpuLimit is 128"
@@ -255,13 +474,13 @@ func (CpuType) Error(version Version) error {
 	return errors.New("cpuType can only be one of the following values: " + strings.Join(cpusConverted, ", "))
 }
 
-func (cpu CpuType) mapToApi(version Version) CpuType {
+func (cpu CpuType) mapToApi(version Version) string {
 	cpus := CpuType("").CpuBase()
 	if !version.Smaller(Version{Major: 8}) {
 		cpu.CpuV8(cpus)
 	}
 	if v, ok := cpus[CpuType(strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", "")))]; ok {
-		return v
+		return string(v)
 	}
 	return ""
 }
@@ -311,6 +530,7 @@ func (vCores CpuVirtualCores) Validate(cores *QemuCpuCores, sockets *QemuCpuSock
 type QemuCPU struct {
 	Affinity     *[]uint          `json:"affinity,omitempty"`
 	Cores        *QemuCpuCores    `json:"cores,omitempty"` // Required during creation
+	Flags        *CpuFlags        `json:"flags,omitempty"`
 	Limit        *CpuLimit        `json:"limit,omitempty"`
 	Numa         *bool            `json:"numa,omitempty"`
 	Sockets      *QemuCpuSockets  `json:"sockets,omitempty"`
@@ -347,12 +567,32 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, ver
 	if cpu.Sockets != nil {
 		params["sockets"] = int(*cpu.Sockets)
 	}
-	if cpu.Type != nil {
-		var tmpCpu string
-		if *cpu.Type != "" {
-			tmpCpu = string(cpu.Type.mapToApi(version))
+	if cpu.Flags != nil || cpu.Type != nil {
+		var cpuType, flags string
+		if current == nil { // Create
+			if cpu.Flags != nil {
+				flags = cpu.Flags.mapToApi(nil)
+			}
+			if cpu.Type != nil {
+				cpuType = cpu.Type.mapToApi(version)
+			}
+		} else { // Update
+			if cpu.Flags != nil {
+				flags = cpu.Flags.mapToApi(current.Flags)
+			} else {
+				flags = CpuFlags{}.mapToApi(current.Flags)
+			}
+			if cpu.Type != nil {
+				cpuType = cpu.Type.mapToApi(version)
+			} else if current.Type != nil {
+				cpuType = current.Type.mapToApi(version)
+			}
 		}
-		params["cpu"] = tmpCpu
+		if flags != "" {
+			params["cpu"] = cpuType + "," + flags[1:]
+		} else if cpuType != "" {
+			params["cpu"] = cpuType
+		}
 	}
 	if cpu.Units != nil {
 		if *cpu.Units != 0 {
@@ -422,6 +662,9 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 		cpuParams := strings.SplitN(v.(string), ",", 2)
 		tmpType := (CpuType)(cpuParams[0])
 		cpu.Type = &tmpType
+		if len(cpuParams) > 1 {
+			cpu.Flags = CpuFlags{}.mapToSDK(strings.Split(cpuParams[1], ";"))
+		}
 	}
 	if v, isSet := params["cpulimit"]; isSet {
 		tmp, _ := parse.Uint(v)
@@ -466,6 +709,11 @@ func (QemuCPU) mapToSdkAffinity(rawAffinity string) []uint {
 }
 
 func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
+	if cpu.Flags != nil {
+		if err = cpu.Flags.Validate(); err != nil {
+			return
+		}
+	}
 	if cpu.Limit != nil {
 		if err = cpu.Limit.Validate(); err != nil {
 			return

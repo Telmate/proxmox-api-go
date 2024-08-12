@@ -8,6 +8,82 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_CpuFlags_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  CpuFlags
+		output error
+	}{
+		{name: `Valid`,
+			input: CpuFlags{
+				AES:        util.Pointer(TriBoolTrue),
+				AmdNoSSB:   util.Pointer(TriBoolFalse),
+				AmdSSBD:    util.Pointer(TriBoolNone),
+				HvEvmcs:    util.Pointer(TriBoolTrue),
+				HvTlbFlush: util.Pointer(TriBoolFalse),
+				Ibpb:       util.Pointer(TriBoolNone),
+				MdClear:    util.Pointer(TriBoolTrue),
+				PCID:       util.Pointer(TriBoolFalse),
+				Pdpe1GB:    util.Pointer(TriBoolNone),
+				SSBD:       util.Pointer(TriBoolTrue),
+				SpecCtrl:   util.Pointer(TriBoolFalse),
+				VirtSSBD:   util.Pointer(TriBoolNone)}},
+		{name: `Invalid AES`,
+			input: CpuFlags{
+				AES: util.Pointer(TriBool(2))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid AmdNoSSB`,
+			input: CpuFlags{
+				AmdNoSSB: util.Pointer(TriBool(-2))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid AmdSSBD`,
+			input: CpuFlags{
+				AmdSSBD: util.Pointer(TriBool(27))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid HvEvmcs`,
+			input: CpuFlags{
+				HvEvmcs: util.Pointer(TriBool(-32))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid HvTlbFlush`,
+			input: CpuFlags{
+				HvTlbFlush: util.Pointer(TriBool(2))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Ibpb`,
+			input: CpuFlags{
+				Ibpb: util.Pointer(TriBool(-52))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid MdClear`,
+			input: CpuFlags{
+				MdClear: util.Pointer(TriBool(52))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid PCID`,
+			input: CpuFlags{
+				PCID: util.Pointer(TriBool(-82))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Pdpe1GB`,
+			input: CpuFlags{
+				Pdpe1GB: util.Pointer(TriBool(2))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid SSBD`,
+			input: CpuFlags{
+				SSBD: util.Pointer(TriBool(-3))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid SpecCtrl`,
+			input: CpuFlags{
+				SpecCtrl: util.Pointer(TriBool(2))},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid VirtSSBD`,
+			input: CpuFlags{
+				VirtSSBD: util.Pointer(TriBool(-2))},
+			output: errors.New(TriBool_Error_Invalid)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
 func Test_CpuLimit_Validate(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -227,6 +303,54 @@ func Test_QemuCPU_Validate(t *testing.T) {
 				Sockets:      util.Pointer(QemuCpuSockets(1)),
 				VirtualCores: util.Pointer(CpuVirtualCores(2))}},
 			output: CpuVirtualCores(1).Error()},
+		{name: `Invalid Flags.AES errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				AES: util.Pointer(TriBool(2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.AmdNoSSB errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				AmdNoSSB: util.Pointer(TriBool(-2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.AmdSSBD errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				AmdSSBD: util.Pointer(TriBool(2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.HvEvmcs errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				HvEvmcs: util.Pointer(TriBool(-2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.HvTlbFlush errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				HvTlbFlush: util.Pointer(TriBool(2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.Ibpb errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				Ibpb: util.Pointer(TriBool(-2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.MdClear errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				MdClear: util.Pointer(TriBool(2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.PCID errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				PCID: util.Pointer(TriBool(-2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.Pdpe1GB errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				Pdpe1GB: util.Pointer(TriBool(2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.SSBD errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				SSBD: util.Pointer(TriBool(-2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.SpecCtrl errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				SpecCtrl: util.Pointer(TriBool(2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
+		{name: `Invalid Flags.VirtSSBD errors.New(TriBool_Error_Invalid)`,
+			input: testInput{config: QemuCPU{Flags: util.Pointer(CpuFlags{
+				VirtSSBD: util.Pointer(TriBool(-2))})}},
+			output: errors.New(TriBool_Error_Invalid)},
 		{name: `Invalid Type`,
 			input: testInput{
 				config:  baseConfig(QemuCPU{Type: util.Pointer(CpuType("gibbers"))}),
@@ -236,7 +360,20 @@ func Test_QemuCPU_Validate(t *testing.T) {
 		{name: `Valid Maximum`,
 			input: testInput{
 				config: QemuCPU{
-					Cores:        util.Pointer(QemuCpuCores(128)),
+					Cores: util.Pointer(QemuCpuCores(128)),
+					Flags: util.Pointer(CpuFlags{
+						AES:        util.Pointer(TriBoolTrue),
+						AmdNoSSB:   util.Pointer(TriBoolFalse),
+						AmdSSBD:    util.Pointer(TriBoolNone),
+						HvEvmcs:    util.Pointer(TriBoolTrue),
+						HvTlbFlush: util.Pointer(TriBoolFalse),
+						Ibpb:       util.Pointer(TriBoolNone),
+						MdClear:    util.Pointer(TriBoolTrue),
+						PCID:       util.Pointer(TriBoolFalse),
+						Pdpe1GB:    util.Pointer(TriBoolNone),
+						SSBD:       util.Pointer(TriBoolTrue),
+						SpecCtrl:   util.Pointer(TriBoolFalse),
+						VirtSSBD:   util.Pointer(TriBoolNone)}),
 					Limit:        util.Pointer(CpuLimit(128)),
 					Sockets:      util.Pointer(QemuCpuSockets(4)),
 					Type:         util.Pointer(CpuType(cpuType_AmdEPYCRomeV2_Lower)),
@@ -246,6 +383,7 @@ func Test_QemuCPU_Validate(t *testing.T) {
 		{name: `Valid Minimum`,
 			input: testInput{config: QemuCPU{
 				Cores:        util.Pointer(QemuCpuCores(128)),
+				Flags:        util.Pointer(CpuFlags{}),
 				Limit:        util.Pointer(CpuLimit(0)),
 				Sockets:      util.Pointer(QemuCpuSockets(4)),
 				Type:         util.Pointer(CpuType("")),
