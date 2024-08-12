@@ -6058,7 +6058,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					err: errors.New(QemuGuestAgentType_Error_Invalid)}}},
 		{category: `CPU`,
 			valid: []test{
-				// TODO add missing valid cores, socket test
+				{name: `Cores`,
+					input: baseConfig(ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}})},
 				{name: `Maximum`,
 					input: baseConfig(ConfigQemu{CPU: &QemuCPU{
 						Cores:        util.Pointer(QemuCpuCores(128)),
@@ -6102,6 +6103,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					input: baseConfig(ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(128))}})},
 				{name: `Limit minimum`,
 					input: baseConfig(ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(0))}})},
+				{name: `Sockets`,
+					input: baseConfig(ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(1))}})},
 				{name: `Type empty`,
 					input: baseConfig(ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType(""))}})},
 				{name: `Type host`,
