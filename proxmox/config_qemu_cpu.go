@@ -28,164 +28,108 @@ type CpuFlags struct {
 func (flags CpuFlags) mapToApi(current *CpuFlags) (string, bool) {
 	var builder strings.Builder
 	var isSet bool
-	var AES, AmdNoSSB, AmdSSBD, HvEvmcs, HvTlbFlush, Ibpb, MdClear, PCID, Pdpe1GB, SSBD, SpecCtrl, VirtSSBD TriBool
+
+	flagNames := []string{
+		"aes",
+		"amd-no-ssb",
+		"amd-ssbd",
+		"hv-evmcs",
+		"hv-tlbflush",
+		"ibpb",
+		"md-clear",
+		"pcid",
+		"pdpe1gb",
+		"ssbd",
+		"spec-ctrl",
+		"virt-ssbd"}
+
+	flagValues := []*TriBool{
+		flags.AES,
+		flags.AmdNoSSB,
+		flags.AmdSSBD,
+		flags.HvEvmcs,
+		flags.HvTlbFlush,
+		flags.Ibpb,
+		flags.MdClear,
+		flags.PCID,
+		flags.Pdpe1GB,
+		flags.SSBD,
+		flags.SpecCtrl,
+		flags.VirtSSBD}
+
+	var currentValues []*TriBool
 	if current != nil {
-		if current.AES != nil {
-			AES = *current.AES
-			isSet = true
+		currentValues = []*TriBool{
+			current.AES,
+			current.AmdNoSSB,
+			current.AmdSSBD,
+			current.HvEvmcs,
+			current.HvTlbFlush,
+			current.Ibpb,
+			current.MdClear,
+			current.PCID,
+			current.Pdpe1GB,
+			current.SSBD,
+			current.SpecCtrl,
+			current.VirtSSBD,
 		}
-		if current.AmdNoSSB != nil {
-			AmdNoSSB = *current.AmdNoSSB
+	} else {
+		currentValues = make([]*TriBool, len(flagValues))
+	}
+
+	for i, value := range flagValues {
+		if value != nil {
+			switch *value {
+			case TriBoolTrue:
+				builder.WriteString(";+" + flagNames[i])
+			case TriBoolFalse:
+				builder.WriteString(";-" + flagNames[i])
+			}
 			isSet = true
-		}
-		if current.AmdSSBD != nil {
-			AmdSSBD = *current.AmdSSBD
-			isSet = true
-		}
-		if current.HvEvmcs != nil {
-			HvEvmcs = *current.HvEvmcs
-			isSet = true
-		}
-		if current.HvTlbFlush != nil {
-			HvTlbFlush = *current.HvTlbFlush
-			isSet = true
-		}
-		if current.Ibpb != nil {
-			Ibpb = *current.Ibpb
-			isSet = true
-		}
-		if current.MdClear != nil {
-			MdClear = *current.MdClear
-			isSet = true
-		}
-		if current.PCID != nil {
-			PCID = *current.PCID
-			isSet = true
-		}
-		if current.Pdpe1GB != nil {
-			Pdpe1GB = *current.Pdpe1GB
-			isSet = true
-		}
-		if current.SSBD != nil {
-			SSBD = *current.SSBD
-			isSet = true
-		}
-		if current.SpecCtrl != nil {
-			SpecCtrl = *current.SpecCtrl
-			isSet = true
-		}
-		if current.VirtSSBD != nil {
-			VirtSSBD = *current.VirtSSBD
+		} else if currentValues[i] != nil {
+			switch *currentValues[i] {
+			case TriBoolTrue:
+				builder.WriteString(";+" + flagNames[i])
+			case TriBoolFalse:
+				builder.WriteString(";-" + flagNames[i])
+			}
 			isSet = true
 		}
 	}
-	if flags.AES != nil {
-		AES = *flags.AES
-		isSet = true
-	}
-	if flags.AmdNoSSB != nil {
-		AmdNoSSB = *flags.AmdNoSSB
-		isSet = true
-	}
-	if flags.AmdSSBD != nil {
-		AmdSSBD = *flags.AmdSSBD
-		isSet = true
-	}
-	if flags.HvEvmcs != nil {
-		HvEvmcs = *flags.HvEvmcs
-		isSet = true
-	}
-	if flags.HvTlbFlush != nil {
-		HvTlbFlush = *flags.HvTlbFlush
-		isSet = true
-	}
-	if flags.Ibpb != nil {
-		Ibpb = *flags.Ibpb
-		isSet = true
-	}
-	if flags.MdClear != nil {
-		MdClear = *flags.MdClear
-		isSet = true
-	}
-	if flags.PCID != nil {
-		PCID = *flags.PCID
-		isSet = true
-	}
-	if flags.Pdpe1GB != nil {
-		Pdpe1GB = *flags.Pdpe1GB
-		isSet = true
-	}
-	if flags.SSBD != nil {
-		SSBD = *flags.SSBD
-		isSet = true
-	}
-	if flags.SpecCtrl != nil {
-		SpecCtrl = *flags.SpecCtrl
-		isSet = true
-	}
-	if flags.VirtSSBD != nil {
-		VirtSSBD = *flags.VirtSSBD
-		isSet = true
-	}
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(AES, "aes"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(AmdNoSSB, "amd-no-ssb"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(AmdSSBD, "amd-ssbd"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(HvEvmcs, "hv-evmcs"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(HvTlbFlush, "hv-tlbflush"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(Ibpb, "ibpb"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(MdClear, "md-clear"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(PCID, "pcid"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(Pdpe1GB, "pdpe1gb"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(SSBD, "ssbd"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(SpecCtrl, "spec-ctrl"))
-	builder.WriteString(CpuFlags{}.mapToApiSubroutine(VirtSSBD, "virt-ssbd"))
 	return builder.String(), isSet
 }
 
-func (CpuFlags) mapToApiSubroutine(flag TriBool, flagName string) string {
-	if flag == TriBoolTrue {
-		return ";+" + flagName
-	}
-	if flag == TriBoolFalse {
-		return ";-" + flagName
-	}
-	return ""
-}
-
 func (CpuFlags) mapToSDK(flags []string) *CpuFlags {
-	var isSet bool
-	setFlags := CpuFlags{
-		AES:        CpuFlags{}.mapToSdkSubroutine(flags, "aes", &isSet),
-		AmdNoSSB:   CpuFlags{}.mapToSdkSubroutine(flags, "amd-no-ssb", &isSet),
-		AmdSSBD:    CpuFlags{}.mapToSdkSubroutine(flags, "amd-ssbd", &isSet),
-		HvEvmcs:    CpuFlags{}.mapToSdkSubroutine(flags, "hv-evmcs", &isSet),
-		HvTlbFlush: CpuFlags{}.mapToSdkSubroutine(flags, "hv-tlbflush", &isSet),
-		Ibpb:       CpuFlags{}.mapToSdkSubroutine(flags, "ibpb", &isSet),
-		MdClear:    CpuFlags{}.mapToSdkSubroutine(flags, "md-clear", &isSet),
-		PCID:       CpuFlags{}.mapToSdkSubroutine(flags, "pcid", &isSet),
-		Pdpe1GB:    CpuFlags{}.mapToSdkSubroutine(flags, "pdpe1gb", &isSet),
-		SSBD:       CpuFlags{}.mapToSdkSubroutine(flags, "ssbd", &isSet),
-		SpecCtrl:   CpuFlags{}.mapToSdkSubroutine(flags, "spec-ctrl", &isSet),
-		VirtSSBD:   CpuFlags{}.mapToSdkSubroutine(flags, "virt-ssbd", &isSet),
+	flagMap := map[string]rune{}
+	for _, e := range flags {
+		flagMap[e[1:]] = rune(e[0])
 	}
-	if isSet {
-		return &setFlags
+	return &CpuFlags{
+		AES:        CpuFlags{}.mapToSdkSubroutine(flagMap, "aes"),
+		AmdNoSSB:   CpuFlags{}.mapToSdkSubroutine(flagMap, "amd-no-ssb"),
+		AmdSSBD:    CpuFlags{}.mapToSdkSubroutine(flagMap, "amd-ssbd"),
+		HvEvmcs:    CpuFlags{}.mapToSdkSubroutine(flagMap, "hv-evmcs"),
+		HvTlbFlush: CpuFlags{}.mapToSdkSubroutine(flagMap, "hv-tlbflush"),
+		Ibpb:       CpuFlags{}.mapToSdkSubroutine(flagMap, "ibpb"),
+		MdClear:    CpuFlags{}.mapToSdkSubroutine(flagMap, "md-clear"),
+		PCID:       CpuFlags{}.mapToSdkSubroutine(flagMap, "pcid"),
+		Pdpe1GB:    CpuFlags{}.mapToSdkSubroutine(flagMap, "pdpe1gb"),
+		SSBD:       CpuFlags{}.mapToSdkSubroutine(flagMap, "ssbd"),
+		SpecCtrl:   CpuFlags{}.mapToSdkSubroutine(flagMap, "spec-ctrl"),
+		VirtSSBD:   CpuFlags{}.mapToSdkSubroutine(flagMap, "virt-ssbd"),
 	}
-	return nil
 }
 
-func (CpuFlags) mapToSdkSubroutine(flags []string, flag string, isSet *bool) *TriBool {
+func (CpuFlags) mapToSdkSubroutine(flags map[string]rune, flag string) *TriBool {
 	var tmp TriBool
-	for _, e := range flags {
-		if e[1:] == flag {
-			if e[:1] == "+" {
-				tmp = TriBoolTrue
-			} else {
-				tmp = TriBoolFalse
-			}
-			*isSet = true
-			return &tmp
+	if v, isSet := flags[flag]; isSet {
+		switch v {
+		case '+':
+			tmp = TriBoolTrue
+		case '-':
+			tmp = TriBoolFalse
 		}
+		return &tmp
 	}
 	return nil
 }
@@ -695,7 +639,7 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 		cpuParams := strings.SplitN(v.(string), ",", 2)
 		tmpType := (CpuType)(cpuParams[0])
 		cpu.Type = &tmpType
-		if len(cpuParams) > 1 {
+		if len(cpuParams) > 1 && len(cpuParams[1]) > 6 {
 			// `flags=` is the 6 characters bieng removed from the start of the string
 			cpu.Flags = CpuFlags{}.mapToSDK(strings.Split(cpuParams[1][6:], ";"))
 		}
