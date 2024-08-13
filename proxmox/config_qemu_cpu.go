@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Telmate/proxmox-api-go/internal/parse"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 type CpuFlags struct {
@@ -623,22 +624,18 @@ func (QemuCPU) mapToApiAffinity(affinity []uint) string {
 func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 	var cpu QemuCPU
 	if v, isSet := params["affinity"]; isSet {
-		var tmp []uint
 		if v.(string) != "" {
-			tmp = QemuCPU{}.mapToSdkAffinity(v.(string))
+			cpu.Affinity = util.Pointer(QemuCPU{}.mapToSdkAffinity(v.(string)))
 		} else {
-			tmp = make([]uint, 0)
+			cpu.Affinity = util.Pointer(make([]uint, 0))
 		}
-		cpu.Affinity = &tmp
 	}
 	if v, isSet := params["cores"]; isSet {
-		tmp := QemuCpuCores(v.(float64))
-		cpu.Cores = &tmp
+		cpu.Cores = util.Pointer(QemuCpuCores(v.(float64)))
 	}
 	if v, isSet := params["cpu"]; isSet {
 		cpuParams := strings.SplitN(v.(string), ",", 2)
-		tmpType := (CpuType)(cpuParams[0])
-		cpu.Type = &tmpType
+		cpu.Type = util.Pointer((CpuType)(cpuParams[0]))
 		if len(cpuParams) > 1 && len(cpuParams[1]) > 6 {
 			// `flags=` is the 6 characters bieng removed from the start of the string
 			cpu.Flags = CpuFlags{}.mapToSDK(strings.Split(cpuParams[1][6:], ";"))
@@ -646,24 +643,19 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 	}
 	if v, isSet := params["cpulimit"]; isSet {
 		tmp, _ := parse.Uint(v)
-		tmpCast := CpuLimit(tmp)
-		cpu.Limit = &tmpCast
+		cpu.Limit = util.Pointer(CpuLimit(tmp))
 	}
 	if v, isSet := params["cpuunits"]; isSet {
-		tmp := CpuUnits((v.(float64)))
-		cpu.Units = &tmp
+		cpu.Units = util.Pointer(CpuUnits((v.(float64))))
 	}
 	if v, isSet := params["numa"]; isSet {
-		tmp := v.(float64) == 1
-		cpu.Numa = &tmp
+		cpu.Numa = util.Pointer(v.(float64) == 1)
 	}
 	if v, isSet := params["sockets"]; isSet {
-		tmp := QemuCpuSockets(v.(float64))
-		cpu.Sockets = &tmp
+		cpu.Sockets = util.Pointer(QemuCpuSockets(v.(float64)))
 	}
 	if value, isSet := params["vcpus"]; isSet {
-		tmp := CpuVirtualCores((value.(float64)))
-		cpu.VirtualCores = &tmp
+		cpu.VirtualCores = util.Pointer(CpuVirtualCores((value.(float64))))
 	}
 	return &cpu
 }
