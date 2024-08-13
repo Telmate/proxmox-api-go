@@ -28,6 +28,9 @@ func Test_Int(t *testing.T) {
 		{name: `string positive`,
 			input:  "1",
 			output: 1},
+		{name: `invalid type`,
+			input: interface{}(nil),
+			err:   true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -64,6 +67,9 @@ func Test_Uint(t *testing.T) {
 		{name: `string positive`,
 			input:  "1",
 			output: 1},
+		{name: `invalid type`,
+			input: interface{}(nil),
+			err:   true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
