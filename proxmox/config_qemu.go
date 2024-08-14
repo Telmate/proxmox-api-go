@@ -1161,8 +1161,8 @@ func (c ConfigQemu) CreateQemuNetworksParams(params map[string]interface{}) {
 		case nil, "":
 			// Generate random Mac based on time
 			macaddr := make(net.HardwareAddr, 6)
-			rand.Seed(time.Now().UnixNano())
-			rand.Read(macaddr)
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			r.Read(macaddr)
 			macaddr[0] = (macaddr[0] | 2) & 0xfe // fix from github issue #18
 			macAddr = strings.ToUpper(fmt.Sprintf("%v", macaddr))
 
