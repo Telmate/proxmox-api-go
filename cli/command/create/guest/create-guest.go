@@ -5,6 +5,7 @@ import (
 
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/Telmate/proxmox-api-go/cli/command/create"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
@@ -33,12 +34,28 @@ func createGuest(args []string, IDtype string) (err error) {
 		}
 		err = config.CreateLxc(vmr, c)
 	case "QemuGuest":
-		var config *proxmox.ConfigQemu
-		config, err = proxmox.NewConfigQemuFromJson(cli.NewConfig())
-		if err != nil {
-			return
-		}
-		err = config.Create(vmr, c)
+		// var config *proxmox.ConfigQemu
+		// config, err = proxmox.NewConfigQemuFromJson(cli.NewConfig())
+		// if err != nil {
+		// return
+		// }
+
+		_, err = proxmox.ConfigQemu{
+			CPU: &proxmox.QemuCPU{
+				Affinity: util.Pointer([]uint{0, 1, 2}),
+				Cores:    util.Pointer(proxmox.QemuCpuCores(4)),
+				// Flags: &proxmox.CpuFlags{
+				// 	AES: util.Pointer(proxmox.TriBoolFalse),
+				// },
+				Limit:        util.Pointer(proxmox.CpuLimit(65)),
+				Numa:         util.Pointer(bool(true)),
+				Sockets:      util.Pointer(proxmox.QemuCpuSockets(1)),
+				Type:         util.Pointer(proxmox.CpuType("athlon")),
+				Units:        util.Pointer(proxmox.CpuUnits(1024)),
+				VirtualCores: util.Pointer(proxmox.CpuVirtualCores(2)),
+			},
+		}.Update(true, vmr, c)
+		// err = config.Create(vmr, c)
 	}
 	if err != nil {
 		return

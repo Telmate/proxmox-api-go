@@ -2341,6 +2341,25 @@ func (Version) mapToSDK(params map[string]interface{}) (version Version) {
 	return
 }
 
+// return the maximum version, used during testing
+func (version Version) max() Version {
+	newVersion := Version{
+		Major: 255,
+		Minor: 255,
+		Patch: 255,
+	}
+	if version.Major != 0 {
+		newVersion.Major = version.Major
+	}
+	if version.Minor != 0 {
+		newVersion.Minor = version.Minor
+	}
+	if version.Patch != 0 {
+		newVersion.Patch = version.Patch
+	}
+	return newVersion
+}
+
 // Smaller returns true if the version is less than the other version.
 func (v Version) Smaller(other Version) bool {
 	return uint32(v.Major)*256*256+uint32(v.Minor)*256+uint32(v.Patch) < uint32(other.Major)*256*256+uint32(other.Minor)*256+uint32(other.Patch)

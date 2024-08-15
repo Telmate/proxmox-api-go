@@ -35,6 +35,7 @@ type ConfigQemu struct {
 	Bios            string          `json:"bios,omitempty"`
 	Boot            string          `json:"boot,omitempty"`     // TODO should be an array of custom enums
 	BootDisk        string          `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
+	CPU             *QemuCPU        `json:"cpu,omitempty"`
 	CloudInit       *CloudInit      `json:"cloudinit,omitempty"`
 	Description     *string         `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
@@ -53,21 +54,16 @@ type ConfigQemu struct {
 	Onboot          *bool           `json:"onboot,omitempty"`
 	Pool            *PoolName       `json:"pool,omitempty"`
 	Protection      *bool           `json:"protection,omitempty"`
-	QemuCores       int             `json:"cores,omitempty"`   // TODO should be uint
-	QemuCpu         string          `json:"cpu,omitempty"`     // TODO should be custom type with enum
 	QemuDisks       QemuDevices     `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
 	QemuIso         string          `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
 	QemuKVM         *bool           `json:"kvm,omitempty"`
 	QemuNetworks    QemuDevices     `json:"network,omitempty"` // TODO should be a struct
-	QemuNuma        *bool           `json:"numa,omitempty"`
 	QemuOs          string          `json:"ostype,omitempty"`
 	QemuPCIDevices  QemuDevices     `json:"hostpci,omitempty"` // TODO should be a struct
 	QemuPxe         bool            `json:"pxe,omitempty"`
 	QemuSerials     QemuDevices     `json:"serial,omitempty"`  // TODO should be a struct
-	QemuSockets     int             `json:"sockets,omitempty"` // TODO should be uint
 	QemuUnusedDisks QemuDevices     `json:"unused,omitempty"`  // TODO should be a struct
 	QemuUsbs        QemuDevices     `json:"usb,omitempty"`     // TODO should be a struct
-	QemuVcpus       int             `json:"vcpus,omitempty"`   // TODO should be uint
 	QemuVga         QemuDevice      `json:"vga,omitempty"`     // TODO should be a struct
 	RNGDrive        QemuDevice      `json:"rng0,omitempty"`    // TODO should be a struct
 	Scsihw          string          `json:"scsihw,omitempty"`  // TODO should be custom type with enum
@@ -81,6 +77,7 @@ type ConfigQemu struct {
 
 const (
 	ConfigQemu_Error_UnableToUpdateWithoutReboot string = "unable to update vm without rebooting"
+	ConfigQemu_Error_CpuRequired                 string = "cpu is required during creation"
 	ConfigQemu_Error_MemoryRequired              string = "memory is required during creation"
 )
 
@@ -115,12 +112,6 @@ func (config *ConfigQemu) defaults() {
 	if config.Protection == nil {
 		config.Protection = util.Pointer(false)
 	}
-	if config.QemuCores == 0 {
-		config.QemuCores = 1
-	}
-	if config.QemuCpu == "" {
-		config.QemuCpu = "host"
-	}
 	if config.QemuDisks == nil {
 		config.QemuDisks = QemuDevices{}
 	}
@@ -138,9 +129,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.QemuSerials == nil {
 		config.QemuSerials = QemuDevices{}
-	}
-	if config.QemuSockets == 0 {
-		config.QemuSockets = 1
 	}
 	if config.QemuUnusedDisks == nil {
 		config.QemuUnusedDisks = QemuDevices{}
@@ -183,12 +171,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Description != nil && (*config.Description != "" || currentConfig.Description != nil) {
 		params["description"] = *config.Description
 	}
-	if config.QemuCores != 0 {
-		params["cores"] = config.QemuCores
-	}
-	if config.QemuCpu != "" {
-		params["cpu"] = config.QemuCpu
-	}
 	if config.Hookscript != "" {
 		params["hookscript"] = config.Hookscript
 	}
@@ -204,9 +186,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Name != "" {
 		params["name"] = config.Name
 	}
-	if config.QemuNuma != nil {
-		params["numa"] = *config.QemuNuma
-	}
 	if config.Onboot != nil {
 		params["onboot"] = *config.Onboot
 	}
@@ -219,9 +198,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Scsihw != "" {
 		params["scsihw"] = config.Scsihw
 	}
-	if config.QemuSockets != 0 {
-		params["sockets"] = config.QemuSockets
-	}
 	if config.Startup != "" {
 		params["startup"] = config.Startup
 	}
@@ -230,9 +206,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	}
 	if config.Tags != nil {
 		params["tags"] = Tag("").mapToApi(*config.Tags)
-	}
-	if config.QemuVcpus >= 1 {
-		params["vcpus"] = config.QemuVcpus
 	}
 	if config.Smbios1 != "" {
 		params["smbios1"] = config.Smbios1
@@ -273,6 +246,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		}
 	}
 
+	if config.CPU != nil {
+		itemsToDelete += config.CPU.mapToApi(currentConfig.CPU, params, version)
+	}
 	if config.CloudInit != nil {
 		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params, version)
 	}
@@ -320,6 +296,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	// cores:2 ostype:l26
 
 	config := ConfigQemu{
+		CPU:       QemuCPU{}.mapToSDK(params),
 		CloudInit: CloudInit{}.mapToSDK(params),
 		Memory:    QemuMemory{}.mapToSDK(params),
 	}
@@ -370,29 +347,11 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	if itemValue, isSet := params["tpmstate0"]; isSet {
 		config.TPM = TpmState{}.mapToSDK(itemValue.(string))
 	}
-	if _, isSet := params["cores"]; isSet {
-		config.QemuCores = int(params["cores"].(float64))
-	}
-	if _, isSet := params["cpu"]; isSet {
-		config.QemuCpu = params["cpu"].(string)
-	}
 	if _, isSet := params["kvm"]; isSet {
 		config.QemuKVM = util.Pointer(Itob(int(params["kvm"].(float64))))
 	}
-	if _, isSet := params["numa"]; isSet {
-		config.QemuNuma = util.Pointer(Itob(int(params["numa"].(float64))))
-	}
 	if _, isSet := params["ostype"]; isSet {
 		config.QemuOs = params["ostype"].(string)
-	}
-	if _, isSet := params["sockets"]; isSet {
-		config.QemuSockets = int(params["sockets"].(float64))
-	}
-	if _, isSet := params["vcpus"]; isSet {
-		vCpu := int(params["vcpus"].(float64))
-		if vCpu > 0 {
-			config.QemuVcpus = vCpu
-		}
 	}
 	if _, isSet := params["protection"]; isSet {
 		config.Protection = util.Pointer(Itob(int(params["protection"].(float64))))
@@ -809,6 +768,13 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
 	if current == nil { // Create
+		if config.CPU == nil {
+			return errors.New(ConfigQemu_Error_CpuRequired)
+		} else {
+			if err = config.CPU.Validate(nil, version); err != nil {
+				return
+			}
+		}
 		if config.Memory == nil {
 			return errors.New(ConfigQemu_Error_MemoryRequired)
 		} else {
@@ -822,6 +788,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 			}
 		}
 	} else { // Update
+		if config.CPU != nil {
+			if err = config.CPU.Validate(current.CPU, version); err != nil {
+				return
+			}
+		}
 		if config.Memory != nil {
 			if err = config.Memory.Validate(current.Memory); err != nil {
 				return
@@ -1190,8 +1161,8 @@ func (c ConfigQemu) CreateQemuNetworksParams(params map[string]interface{}) {
 		case nil, "":
 			// Generate random Mac based on time
 			macaddr := make(net.HardwareAddr, 6)
-			rand.Seed(time.Now().UnixNano())
-			rand.Read(macaddr)
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			r.Read(macaddr)
 			macaddr[0] = (macaddr[0] | 2) & 0xfe // fix from github issue #18
 			macAddr = strings.ToUpper(fmt.Sprintf("%v", macaddr))
 

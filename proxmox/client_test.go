@@ -94,6 +94,38 @@ func Test_Version_mapToSDK(t *testing.T) {
 	}
 }
 
+func Test_Version_max(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  Version
+		output Version
+	}{
+		{name: `max`,
+			input:  Version{1, 5, 7},
+			output: Version{1, 5, 7}},
+		{name: `max Major, Minor, Patch`,
+			input:  Version{0, 0, 0},
+			output: Version{255, 255, 255}},
+		{name: `max Major, Patch`,
+			input:  Version{0, 5, 0},
+			output: Version{255, 5, 255}},
+		{name: `max Minor`,
+			input:  Version{1, 0, 7},
+			output: Version{1, 255, 7}},
+		{name: `max Minor, Patch`,
+			input:  Version{1, 0, 0},
+			output: Version{1, 255, 255}},
+		{name: `max Patch`,
+			input:  Version{1, 5, 0},
+			output: Version{1, 5, 255}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.max())
+		})
+	}
+}
+
 func Test_Version_Smaller(t *testing.T) {
 	type input struct {
 		a Version

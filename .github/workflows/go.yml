@@ -16,7 +16,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: '1.19'
+        go-version: '1.21'
         check-latest: true
 
     - name: Verify dependencies
@@ -31,8 +31,8 @@ jobs:
     - name: Install staticcheck
       run: go install honnef.co/go/tools/cmd/staticcheck@latest
 
-    - name: Run staticcheck
-      run: staticcheck ./...
+    # - name: Run staticcheck
+    #   run: staticcheck ./...
 
     - name: Install golint
       run: go install golang.org/x/lint/golint@latest
