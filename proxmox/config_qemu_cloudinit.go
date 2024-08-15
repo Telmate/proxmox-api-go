@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 var regexMultipleNewlineEncoded = regexp.MustCompile(`(%0A)+`)
@@ -140,13 +142,11 @@ func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 		set = true
 	}
 	if v, isSet := params["cipassword"]; isSet {
-		tmp := v.(string)
-		ci.UserPassword = &tmp
+		ci.UserPassword = util.Pointer(v.(string))
 		set = true
 	}
 	if v, isSet := params["ciupgrade"]; isSet {
-		tmp := Itob(int(v.(float64)))
-		ci.UpgradePackages = &tmp
+		ci.UpgradePackages = util.Pointer(Itob(int(v.(float64))))
 		set = true
 	}
 	if v, isSet := params["ciuser"]; isSet {
@@ -157,8 +157,7 @@ func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 		}
 	}
 	if v, isSet := params["sshkeys"]; isSet {
-		tmp := sshKeyUrlDecode(v.(string))
-		ci.PublicSSHkeys = &tmp
+		ci.PublicSSHkeys = util.Pointer(sshKeyUrlDecode(v.(string)))
 		set = true
 	}
 	var dnsSet bool

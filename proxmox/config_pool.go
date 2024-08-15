@@ -4,6 +4,8 @@ import (
 	"errors"
 	"regexp"
 	"strconv"
+
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 func ListPools(c *Client) ([]PoolName, error) {
@@ -69,8 +71,7 @@ func (ConfigPool) mapToSDK(params map[string]interface{}) (config ConfigPool) {
 		config.Name = PoolName(v.(string))
 	}
 	if v, isSet := params["comment"]; isSet {
-		tmp := v.(string)
-		config.Comment = &tmp
+		config.Comment = util.Pointer(v.(string))
 	}
 	if v, isSet := params["members"]; isSet {
 		guests := make([]uint, 0)
