@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -200,15 +201,15 @@ func (name SnapshotName) Validate() error {
 	regex, _ := regexp.Compile(`^([a-zA-Z])([a-z]|[A-Z]|[0-9]|_|-){2,39}$`)
 	if !regex.Match([]byte(name)) {
 		if len(name) < 3 {
-			return fmt.Errorf(SnapshotName_Error_MinLength)
+			return errors.New(SnapshotName_Error_MinLength)
 		}
 		if len(name) > 40 {
-			return fmt.Errorf(SnapshotName_Error_MaxLength)
+			return errors.New(SnapshotName_Error_MaxLength)
 		}
 		if !unicode.IsLetter(rune(name[0])) {
-			return fmt.Errorf(SnapshotName_Error_StartNoLetter)
+			return errors.New(SnapshotName_Error_StartNoLetter)
 		}
-		return fmt.Errorf(SnapshotName_Error_IllegalCharacters)
+		return errors.New(SnapshotName_Error_IllegalCharacters)
 	}
 	return nil
 }

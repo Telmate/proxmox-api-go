@@ -406,7 +406,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 			id := rxDeviceID.FindStringSubmatch(unusedDiskName)
 			diskID, err := strconv.Atoi(id[0])
 			if err != nil {
-				return nil, fmt.Errorf(fmt.Sprintf("Unable to parse unused disk id from input string '%v' tried to convert '%v' to integer.", unusedDiskName, diskID))
+				return nil, fmt.Errorf("unable to parse unused disk id from input string '%v' tried to convert '%v' to integer", unusedDiskName, diskID)
 			}
 			finalDiskConfMap["slot"] = diskID
 
@@ -1407,7 +1407,7 @@ const (
 
 func (id QemuNetworkInterfaceID) Validate() error {
 	if id > 31 {
-		return fmt.Errorf(QemuNetworkInterfaceID_Error_Invalid)
+		return errors.New(QemuNetworkInterfaceID_Error_Invalid)
 	}
 	return nil
 }

@@ -1,7 +1,7 @@
 package proxmox
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/Telmate/proxmox-api-go/internal/parse"
 )
@@ -87,7 +87,7 @@ func (config QemuMemory) Validate(current *QemuMemory) error {
 			return err
 		}
 		if config.CapacityMiB != nil && QemuMemoryCapacity(*config.MinimumCapacityMiB) > *config.CapacityMiB {
-			return fmt.Errorf(QemuMemory_Error_MinimumCapacityMiB_GreaterThan_CapacityMiB)
+			return errors.New(QemuMemory_Error_MinimumCapacityMiB_GreaterThan_CapacityMiB)
 		}
 		eventualMinimumCapacityMiB = *config.MinimumCapacityMiB
 		eventualCapacityMiB = QemuMemoryCapacity(eventualMinimumCapacityMiB)
@@ -103,7 +103,7 @@ func (config QemuMemory) Validate(current *QemuMemory) error {
 		eventualCapacityMiB = *current.CapacityMiB
 	}
 	if eventualCapacityMiB == 0 {
-		return fmt.Errorf(QemuMemory_Error_NoMemoryCapacity)
+		return errors.New(QemuMemory_Error_NoMemoryCapacity)
 	}
 	if config.Shares != nil {
 		if err := config.Shares.Validate(); err != nil {
@@ -111,7 +111,7 @@ func (config QemuMemory) Validate(current *QemuMemory) error {
 		}
 		if *config.Shares > 0 {
 			if eventualCapacityMiB == QemuMemoryCapacity(eventualMinimumCapacityMiB) {
-				return fmt.Errorf(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)
+				return errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)
 			}
 		}
 	}
@@ -127,7 +127,7 @@ const (
 
 func (m QemuMemoryBalloonCapacity) Validate() error {
 	if m > qemuMemoryBalloonCapacity_Max {
-		return fmt.Errorf(QemuMemoryBalloonCapacity_Error_Invalid)
+		return errors.New(QemuMemoryBalloonCapacity_Error_Invalid)
 	}
 	return nil
 }
@@ -142,10 +142,10 @@ const (
 
 func (m QemuMemoryCapacity) Validate() error {
 	if m == 0 {
-		return fmt.Errorf(QemuMemoryCapacity_Error_Minimum)
+		return errors.New(QemuMemoryCapacity_Error_Minimum)
 	}
 	if m > qemuMemoryCapacity_Max {
-		return fmt.Errorf(QemuMemoryCapacity_Error_Maximum)
+		return errors.New(QemuMemoryCapacity_Error_Maximum)
 	}
 	return nil
 }
@@ -159,7 +159,7 @@ const (
 
 func (m QemuMemoryShares) Validate() error {
 	if m > qemuMemoryShares_Max {
-		return fmt.Errorf(QemuMemoryShares_Error_Invalid)
+		return errors.New(QemuMemoryShares_Error_Invalid)
 	}
 	return nil
 }
