@@ -7,38 +7,59 @@ on:
     branches: [master]
 
 jobs:
-
-  audit:
+  setup:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-
+    - name: Checkout code
+      uses: actions/checkout@v2
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
         go-version: '1.19'
         check-latest: true
 
-    - name: Verify dependencies
-      run: go mod verify
+  verify-dependencies:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Verify dependencies
+        run: go mod verify
 
-    - name: Build
-      run: go build -v ./...
+  build:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Build
+        run: go build -v ./...
 
-    - name: Run go vet
-      run: go vet ./...
+  vet:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Run go vet
+        run: go vet ./...
 
-    - name: Install staticcheck
-      run: go install honnef.co/go/tools/cmd/staticcheck@latest
+  staticcheck:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+      - name: Run staticcheck
+        run: staticcheck ./...
 
-    - name: Run staticcheck
-      run: staticcheck ./...
+  golint:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Install golint
+        run: go install golang.org/x/lint/golint@latest
+      - name: Run golint
+        run: golint ./...
 
-    - name: Install golint
-      run: go install golang.org/x/lint/golint@latest
-
-    - name: Run golint
-      run: golint ./...
-
-    - name: Run proxmox unit tests
-      run: go test -race -vet=off ./proxmox/... ./internal/...
+  test:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Run proxmox unit tests
+        run: go test -race -vet=off ./proxmox/... ./internal/...
