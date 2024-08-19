@@ -148,9 +148,11 @@ createQemu JSON Sample:
 ```json
 {
   "name": "golang1.test.com",
-  "desc": "Test proxmox-api-go",
-  "memory": 2048,
-  "os": "l26",
+  "description": "Test proxmox-api-go",
+  "memory": {
+    "capacity": 2048
+  },
+  "ostype": "l26",
   "cores": 2,
   "sockets": 1,
   "iso": {
@@ -179,8 +181,7 @@ createQemu JSON Sample:
     "1": {
       "model": "virtio",
       "bridge": "vmbr0",
-      "firwall": true,
-      "backup": true,
+      "firewall": true,
       "tag": -1
     }
   },
@@ -203,9 +204,11 @@ cloneQemu JSON Sample:
 ```json
 {
   "name": "golang2.test.com",
-  "desc": "Test proxmox-api-go clone",
+  "description": "Test proxmox-api-go clone",
   "storage": "local",
-  "memory": 2048,
+  "memory": {
+    "capacity": 2048
+  },
   "cores": 2,
   "sockets": 1,
   "fullclone": 1
@@ -217,16 +220,31 @@ cloneQemu cloud-init JSON Sample:
 ```json
 {
   "name": "cloudinit.test.com",
-  "desc": "Test proxmox-api-go clone",
+  "description": "Test proxmox-api-go clone",
   "storage": "local",
-  "memory": 2048,
+  "memory": {
+    "capacity": 2048
+  },
   "cores": 2,
   "sockets": 1,
-  "ipconfig": {
-    "0": "gw=10.0.2.2,ip=10.0.2.17/24"
-  },
-  "sshkeys": "...",
-  "nameserver": "8.8.8.8"
+  "cloudinit": {
+    "ipconfig": {
+      "0": {
+        "ip4": {
+          "address": "10.0.2.17/24",
+          "gateway": "10.0.2.2"
+        }
+      }
+    },
+    "sshkeys": [
+      "..."
+    ],
+    "dns": {
+      "nameservers": [
+        "8.8.8.8"
+      ]
+    }
+  }
 }
 ```
 
@@ -330,14 +348,101 @@ createStorage JSON Sample:
 Cloud-init VMs must be cloned from a cloud-init ready template.
 See: https://pve.proxmox.com/wiki/Cloud-Init_Support
 
-- ciuser - User name to change ssh keys and password for instead of the image’s configured default user.
-- cipassword - Password to assign the user.
-- cicustom - Specify custom files to replace the automatically generated ones at start.
-- searchdomain - Sets DNS search domains for a container.
-- nameserver - Sets DNS server IP address for a container.
-- sshkeys - public ssh keys, one per line
-- ipconfig0 - [gw=<GatewayIPv4>] [,gw6=<GatewayIPv6>] [,ip=<IPv4Format/CIDR>] [,ip6=<IPv6Format/CIDR>]
-- ipconfig1 - optional, same as ipconfig0 format
+- `username` - User name to change ssh keys and password for instead of the image’s configured default user.
+- `userpassword` - Password to assign the user.
+- `cicustom` - Specify custom files to replace the automatically generated ones at start, as JSON object of:
+  - `meta` - JSON object of:
+    - `path` - as string
+    - `storage` - as string
+  - `network` - JSON object of:
+    - `path` - as string
+    - `storage` - as string
+  - `user` - JSON object of:
+    - `path` - as string
+    - `storage` - as string
+  - `vendor` - JSON object of:
+    - `path` - as string
+    - `storage` - as string
+- `dns` - Sets DNS settings, as JSON object of:
+  - `nameservers` - Sets DNS server IP address for a VM, as list of stings.
+  - `searchdomain` - Sets DNS search domains for a VM, as string.
+- `sshkeys` - public ssh keys, as list of strings.
+- `ipconfig` - Sets IP configuration for network interfaces, as dictionary of interface index number to JSON object:
+  - `ip4` - for IPv4, as JSON object of:
+    - `address` - IPv4Format/CIDR
+    - `dhcp` - true/false
+    - `gateway` - GatewayIPv4
+  - `ip6` - for IPv6, as JSON object of:
+    - `address` - IPv6Format/CIDR
+    - `dhcp` - true/false
+    - `gateway` - GatewayIPv6
+    - `slaac` - true/false
+- `ciupgrade` - If true does a package update after startup
+
+Example:
+
+```json
+{
+  "cloudinit": {
+    "username": "test",
+    "userpassword": "passw0rd",
+    "cicustom": {
+      "meta": {
+        "path": "path/to/meta",
+        "storage": "local"
+      },
+      "network": {
+        "path": "path/to/network",
+        "storage": "local"
+      },
+      "user": {
+        "path": "path/to/user",
+        "storage": "local"
+      },
+      "vendor": {
+        "path": "path/to/vendor",
+        "storage": "local"
+      }
+    },
+    "dns": {
+      "nameservers": [
+        "8.8.8.8"
+      ],
+      "searchdomain": "test.com"
+    },
+    "sshkeys": [
+      "...",
+      "..."
+    ],
+    "ipconfig": {
+      "0": {
+        "ip4": {
+          "address": "10.0.2.17/24",
+          "gateway": "10.0.2.2"
+        },
+        "ip6": {
+          "address": "2001:0db8:0:2::17/64",
+          "gateway": "2001:0db8:0:2::2"
+        }
+      },
+      "1": {
+        "ip4": {
+          "dhcp": true
+        },
+        "ip6": {
+          "dhcp": true
+        }
+      },
+      "2": {
+        "ip6": {
+          "slaac": true
+        }
+      }
+    },
+    "ciupgrade": true
+  }
+}
+```
 
 ### ISO requirements (non cloud-init)
 
@@ -347,7 +452,7 @@ Kickstart auto install
 - network eth1
 - sshd (with preshared key/password)
 
-Network is temprorarily eth1 during the pre-provision phase.
+Network is temporarily eth1 during the pre-provision phase.
 
 ## Test
 
