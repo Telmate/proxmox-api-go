@@ -40,7 +40,7 @@ type ConfigQemu struct {
 	Description     *string         `json:"description,omitempty"`
 	Disks           *QemuStorages   `json:"disks,omitempty"`
 	EFIDisk         QemuDevice      `json:"efidisk,omitempty"`   // TODO should be a struct
-	Storage         string          `json:"storage,omitempty"`   // for clone
+	Storage         string          `json:"storage,omitempty"`   // this value is only used when doing a full clone and is never returned
 	FullClone       *int            `json:"fullclone,omitempty"` // TODO should probably be a bool
 	HaGroup         string          `json:"hagroup,omitempty"`
 	HaState         string          `json:"hastate,omitempty"` // TODO should be custom type with enum
