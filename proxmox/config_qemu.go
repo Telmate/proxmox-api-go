@@ -868,7 +868,6 @@ var (
 	rxUnusedDiskName = regexp.MustCompile(`^(unused)\d+`)
 	rxNicName        = regexp.MustCompile(`net\d+`)
 	rxMpName         = regexp.MustCompile(`mp\d+`)
-	rxSerialName     = regexp.MustCompile(`serial\d+`)
 	rxUsbName        = regexp.MustCompile(`usb\d+`)
 	rxPCIName        = regexp.MustCompile(`hostpci\d+`)
 )
