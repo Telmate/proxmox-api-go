@@ -38,7 +38,7 @@ const (
 	SerialInterface_Errors_Empty           string = "path or socket must be set"
 )
 
-var regexSerialPortPath = regexp.MustCompile(`^/dev/.*$`)
+var regexSerialPortPath = regexp.MustCompile(`^/dev/.+$`)
 
 func (port SerialInterface) mapToAPI(id SerialID, params map[string]interface{}) {
 	tmpPath := "socket"

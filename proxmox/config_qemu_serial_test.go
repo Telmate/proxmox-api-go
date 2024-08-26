@@ -100,6 +100,9 @@ func Test_SerialPath_Validate(t *testing.T) {
 		{name: `Invalid errors.New(SerialPath_Errors_Invalid)`,
 			input:  "ttyS0",
 			output: errors.New(SerialPath_Errors_Invalid)},
+		{name: `Invalid /dev/ only`,
+			input:  "/dev/",
+			output: errors.New(SerialPath_Errors_Invalid)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
