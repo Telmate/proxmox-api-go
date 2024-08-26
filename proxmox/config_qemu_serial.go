@@ -33,6 +33,11 @@ type SerialInterface struct {
 	Socket bool       `json:"socket,omitempty"` // If true, the serial device is a socket. Mutually exclusive with path.
 }
 
+const (
+	SerialInterface_Errors_MutualExclusive string = "path and socket are mutually exclusive"
+	SerialInterface_Errors_Empty           string = "path or socket must be set"
+)
+
 var regexSerialPortPath = regexp.MustCompile(`^/dev/.*$`)
 
 func (port SerialInterface) mapToAPI(id SerialID, params map[string]interface{}) {
@@ -55,15 +60,14 @@ func (SerialInterface) mapToSDK(v string) SerialInterface {
 
 func (port SerialInterface) Validate() error {
 	if port.Path != "" && port.Socket {
-		return errors.New(SerialPath_Errors_MutualExclusive)
+		return errors.New(SerialInterface_Errors_MutualExclusive)
 	}
 	if !port.Socket {
 		if port.Path == "" {
-			return errors.New(SerialPath_Errors_Empty)
+			return errors.New(SerialInterface_Errors_Empty)
 		}
-		matches, _ := regexp.MatchString(regexSerialPortPath.String(), string(port.Path))
-		if !matches {
-			return errors.New(SerialPath_Errors_Invalid)
+		if err := port.Path.Validate(); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -131,8 +135,12 @@ func (s SerialInterfaces) Validate() error {
 
 type SerialPath string
 
-const (
-	SerialPath_Errors_MutualExclusive string = "path and socket are mutually exclusive"
-	SerialPath_Errors_Empty           string = "path or socket must be set"
-	SerialPath_Errors_Invalid         string = "path must start with /dev/"
-)
+const SerialPath_Errors_Invalid string = "path must start with /dev/"
+
+func (path SerialPath) Validate() error {
+	matches, _ := regexp.MatchString(regexSerialPortPath.String(), string(path))
+	if !matches {
+		return errors.New(SerialPath_Errors_Invalid)
+	}
+	return nil
+}

@@ -40,12 +40,12 @@ func Test_SerialPort_Validate(t *testing.T) {
 			input: SerialInterface{Socket: true}},
 		{name: `Valid Socket + Delete`,
 			input: SerialInterface{Socket: true, Delete: true}},
-		{name: `Invalid errors.New(SerialPath_Errors_MutualExclusive)`,
+		{name: `Invalid errors.New(SerialInterface_Errors_MutualExclusive)`,
 			input:  SerialInterface{Path: "/dev/ttyS0", Socket: true},
-			output: errors.New(SerialPath_Errors_MutualExclusive)},
-		{name: `Invalid errors.New(SerialPath_Errors_Empty)`,
+			output: errors.New(SerialInterface_Errors_MutualExclusive)},
+		{name: `Invalid errors.New(SerialInterface_Errors_Empty)`,
 			input:  SerialInterface{},
-			output: errors.New(SerialPath_Errors_Empty)},
+			output: errors.New(SerialInterface_Errors_Empty)},
 		{name: `Invalid errors.New(SerialPath_Errors_Invalid)`,
 			input:  SerialInterface{Path: "ttyS0"},
 			output: errors.New(SerialPath_Errors_Invalid)},
@@ -74,12 +74,31 @@ func Test_SerialInterfaces_Validate(t *testing.T) {
 			output: errors.New(SerialID_Errors_Invalid)},
 		{name: `Invalid errors.New(SerialPath_Errors_MutualExclusive)`,
 			input:  SerialInterfaces{SerialID0: SerialInterface{Path: "/dev/ttyS0", Socket: true}},
-			output: errors.New(SerialPath_Errors_MutualExclusive)},
-		{name: `Invalid errors.New(SerialPath_Errors_Empty)`,
+			output: errors.New(SerialInterface_Errors_MutualExclusive)},
+		{name: `Invalid errors.New(SerialInterface_Errors_Empty)`,
 			input:  SerialInterfaces{SerialID0: SerialInterface{}},
-			output: errors.New(SerialPath_Errors_Empty)},
+			output: errors.New(SerialInterface_Errors_Empty)},
 		{name: `Invalid errors.New(SerialPath_Errors_Invalid)`,
 			input:  SerialInterfaces{SerialID0: SerialInterface{Path: "ttyS0"}},
+			output: errors.New(SerialPath_Errors_Invalid)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
+func Test_SerialPath_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  SerialPath
+		output error
+	}{
+		{name: `Valid`,
+			input: "/dev/ttyS0"},
+		{name: `Invalid errors.New(SerialPath_Errors_Invalid)`,
+			input:  "ttyS0",
 			output: errors.New(SerialPath_Errors_Invalid)},
 	}
 	for _, test := range tests {
