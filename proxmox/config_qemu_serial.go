@@ -59,6 +59,9 @@ func (SerialInterface) mapToSDK(v string) SerialInterface {
 }
 
 func (port SerialInterface) Validate() error {
+	if port.Delete {
+		return nil
+	}
 	if port.Path != "" && port.Socket {
 		return errors.New(SerialInterface_Errors_MutualExclusive)
 	}

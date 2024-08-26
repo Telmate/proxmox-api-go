@@ -69,6 +69,9 @@ func Test_SerialInterfaces_Validate(t *testing.T) {
 				SerialID1: SerialInterface{Path: "/dev/ttyS1", Delete: true},
 				SerialID2: SerialInterface{Socket: true},
 				SerialID3: SerialInterface{Socket: true, Delete: true}}},
+		{name: `Valid delete`,
+			input: SerialInterfaces{
+				SerialID1: SerialInterface{Delete: true}}},
 		{name: `Invalid errors.New(SerialID_Errors_Invalid)`,
 			input:  SerialInterfaces{4: SerialInterface{Delete: true}},
 			output: errors.New(SerialID_Errors_Invalid)},

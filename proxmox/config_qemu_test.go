@@ -7464,7 +7464,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						SerialID0: SerialInterface{Path: "/dev/ttyS0"},
 						SerialID1: SerialInterface{Path: "/dev/ttyS1", Delete: true},
 						SerialID2: SerialInterface{Socket: true},
-						SerialID3: SerialInterface{Socket: true, Delete: true}}})}},
+						SerialID3: SerialInterface{Socket: true, Delete: true}}})},
+				{name: `delete`,
+					input: baseConfig(ConfigQemu{Serials: SerialInterfaces{
+						SerialID3: SerialInterface{Delete: true}}})}},
 			invalid: []test{
 				{name: `errors.New(SerialID_Errors_Invalid)`,
 					input: baseConfig(ConfigQemu{Serials: SerialInterfaces{4: SerialInterface{}}}),
