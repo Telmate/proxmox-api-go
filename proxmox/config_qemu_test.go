@@ -81,7 +81,6 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 		createUpdate []test // value of currentConfig wil be used for update and ignored for create
 		update       []test
 	}{
-		// TODO add option for create and update, as the crate and update are the same for many settings like 'Agent'
 		{category: `Agent`,
 			create: []test{
 				{name: `Agent=nil`,
@@ -3479,6 +3478,64 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
 					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
 					output:        map[string]interface{}{"delete": "shares"}}}},
+		{category: `Serials`,
+			createUpdate: []test{
+				{name: `delete non existing`,
+					config: &ConfigQemu{Serials: SerialInterfaces{
+						SerialID0: SerialInterface{Delete: true},
+						SerialID2: SerialInterface{Delete: true}}},
+					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+						SerialID1: SerialInterface{Socket: true},
+						SerialID3: SerialInterface{Path: "/dev/tty2"}}},
+					output: map[string]interface{}{}},
+				{name: `add`,
+					config: &ConfigQemu{Serials: SerialInterfaces{
+						SerialID1: SerialInterface{Path: "/dev/tty6"},
+						SerialID3: SerialInterface{Socket: true}}},
+					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+						SerialID0: SerialInterface{},
+						SerialID2: SerialInterface{}}},
+					output: map[string]interface{}{
+						"serial1": "/dev/tty6",
+						"serial3": "socket"}}},
+			update: []test{
+				{name: `existing socket no change`,
+					config: &ConfigQemu{Serials: SerialInterfaces{
+						SerialID0: SerialInterface{Socket: true}}},
+					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+						SerialID0: SerialInterface{Socket: true}}},
+					output: map[string]interface{}{}},
+				{name: `existing path no change`,
+					config: &ConfigQemu{Serials: SerialInterfaces{
+						SerialID1: SerialInterface{Path: "/dev/tty3"}}},
+					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+						SerialID1: SerialInterface{Path: "/dev/tty3"}}},
+					output: map[string]interface{}{}},
+				{name: `existing path to path`,
+					config: &ConfigQemu{Serials: SerialInterfaces{
+						SerialID2: SerialInterface{Path: "/dev/tty3"}}},
+					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+						SerialID2: SerialInterface{Path: "/dev/tty7"}}},
+					output: map[string]interface{}{"serial2": "/dev/tty3"}},
+				{name: `existing socket to path`,
+					config: &ConfigQemu{Serials: SerialInterfaces{
+						SerialID3: SerialInterface{Path: "/dev/tty2"}}},
+					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+						SerialID3: SerialInterface{Socket: true}}},
+					output: map[string]interface{}{"serial3": "/dev/tty2"}},
+				{name: `existing path to socket`,
+					config: &ConfigQemu{Serials: SerialInterfaces{
+						SerialID1: SerialInterface{Socket: true}}},
+					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+						SerialID1: SerialInterface{Path: "/dev/tty7"}}},
+					output: map[string]interface{}{"serial1": "socket"}},
+				{name: `delete existing`,
+					config: &ConfigQemu{Serials: SerialInterfaces{SerialID2: SerialInterface{Delete: true}}},
+					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+						SerialID0: SerialInterface{Socket: true},
+						SerialID2: SerialInterface{Path: "/dev/tty78"}}},
+					output: map[string]interface{}{"delete": "serial2"}}},
+		},
 		{category: `Tags`,
 			createUpdate: []test{
 				{name: `Tags Empty`,
@@ -5915,6 +5972,25 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `vmr populated`,
 					vmr:    &VmRef{pool: "test"},
 					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName("test"))})}}},
+		{category: `Serials`,
+			tests: []test{
+				{name: `All`,
+					input: map[string]interface{}{
+						"serial2": "/dev/tty1",
+						"serial0": "socket",
+						"serial3": "/dev/tty3",
+						"serial1": "socket"},
+					output: baseConfig(ConfigQemu{Serials: SerialInterfaces{
+						SerialID0: SerialInterface{Socket: true},
+						SerialID1: SerialInterface{Socket: true},
+						SerialID2: SerialInterface{Path: "/dev/tty1"},
+						SerialID3: SerialInterface{Path: "/dev/tty3"}}})},
+				{name: `single path`,
+					input:  map[string]interface{}{"serial3": "/dev/test/tty7"},
+					output: baseConfig(ConfigQemu{Serials: SerialInterfaces{SerialID3: SerialInterface{Path: "/dev/test/tty7"}}})},
+				{name: `single socket`,
+					input:  map[string]interface{}{"serial2": "socket"},
+					output: baseConfig(ConfigQemu{Serials: SerialInterfaces{SerialID2: SerialInterface{Socket: true}}})}}},
 		{category: `TPM`,
 			tests: []test{
 				{name: `All`,
@@ -7381,6 +7457,30 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				{name: `Characters`,
 					input: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Error_Characters()[0]))}),
 					err:   errors.New(PoolName_Error_Characters)}}},
+		{category: `Serials`,
+			valid: []test{
+				{name: `all`,
+					input: baseConfig(ConfigQemu{Serials: SerialInterfaces{
+						SerialID0: SerialInterface{Path: "/dev/ttyS0"},
+						SerialID1: SerialInterface{Path: "/dev/ttyS1", Delete: true},
+						SerialID2: SerialInterface{Socket: true},
+						SerialID3: SerialInterface{Socket: true, Delete: true}}})},
+				{name: `delete`,
+					input: baseConfig(ConfigQemu{Serials: SerialInterfaces{
+						SerialID3: SerialInterface{Delete: true}}})}},
+			invalid: []test{
+				{name: `errors.New(SerialID_Errors_Invalid)`,
+					input: baseConfig(ConfigQemu{Serials: SerialInterfaces{4: SerialInterface{}}}),
+					err:   errors.New(SerialID_Errors_Invalid)},
+				{name: `errors.New(SerialInterface_Errors_MutualExclusive)`,
+					input: baseConfig(ConfigQemu{Serials: SerialInterfaces{SerialID0: SerialInterface{Path: "/dev/ttyS1", Socket: true}}}),
+					err:   errors.New(SerialInterface_Errors_MutualExclusive)},
+				{name: `errors.New(SerialInterface_Errors_Empty)`,
+					input: baseConfig(ConfigQemu{Serials: SerialInterfaces{SerialID1: SerialInterface{}}}),
+					err:   errors.New(SerialInterface_Errors_Empty)},
+				{name: `errors.New(SerialPath_Errors_Invalid)`,
+					input: baseConfig(ConfigQemu{Serials: SerialInterfaces{SerialID2: SerialInterface{Path: "invalid"}}}),
+					err:   errors.New(SerialPath_Errors_Invalid)}}},
 		{category: `Tags`,
 			valid: []test{
 				{input: baseConfig(ConfigQemu{Tags: util.Pointer(validTags())})}},
