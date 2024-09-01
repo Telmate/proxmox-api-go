@@ -347,7 +347,7 @@ const (
 	cpuType_X86_64_v4_Lower                   CpuType = "x8664v4"
 )
 
-func (CpuType) CpuBase() map[CpuType]CpuType {
+func (CpuType) cpuBase() map[CpuType]CpuType {
 	return map[CpuType]CpuType{
 		CpuType_AmdAthlon:                         CpuType_AmdAthlon,
 		CpuType_AmdPhenom:                         CpuType_AmdPhenom,
@@ -406,7 +406,7 @@ func (CpuType) CpuBase() map[CpuType]CpuType {
 	}
 }
 
-func (CpuType) CpuV8(cpus map[CpuType]CpuType) {
+func (CpuType) cpuV8(cpus map[CpuType]CpuType) {
 	cpus[cpuType_IntelCascadelakeServerV2_Lower] = CpuType_IntelCascadelakeServerV2
 	cpus[cpuType_IntelCascadelakeServerV4_Lower] = CpuType_IntelCascadelakeServerV4
 	cpus[cpuType_IntelCascadelakeServerV5_Lower] = CpuType_IntelCascadelakeServerV5
@@ -430,9 +430,9 @@ func (CpuType) CpuV8(cpus map[CpuType]CpuType) {
 
 func (CpuType) Error(version Version) error {
 	// v7
-	cpus := CpuType("").CpuBase()
+	cpus := CpuType("").cpuBase()
 	if !version.Smaller(Version{Major: 8}) { // v8
-		CpuType("").CpuV8(cpus)
+		CpuType("").cpuV8(cpus)
 	}
 	cpusConverted := make([]string, len(cpus))
 	var index int
@@ -445,9 +445,9 @@ func (CpuType) Error(version Version) error {
 }
 
 func (cpu CpuType) mapToApi(version Version) string {
-	cpus := CpuType("").CpuBase()
+	cpus := CpuType("").cpuBase()
 	if !version.Smaller(Version{Major: 8}) {
-		cpu.CpuV8(cpus)
+		cpu.cpuV8(cpus)
 	}
 	if v, ok := cpus[CpuType(strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", "")))]; ok {
 		return string(v)
