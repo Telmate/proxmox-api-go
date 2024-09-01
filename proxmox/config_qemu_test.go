@@ -6121,10 +6121,15 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		err     error
 		version Version
 	}
+	type testType struct {
+		create       []test
+		createUpdate []test // value of currentConfig wil be used for update and ignored for create
+		update       []test
+	}
 	tests := []struct {
 		category string
-		valid    []test
-		invalid  []test
+		valid    testType
+		invalid  testType
 	}{
 		{category: `Agent`,
 			valid: []test{
@@ -7526,22 +7531,42 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					current: &ConfigQemu{TPM: &TpmState{}},
 					err:     errors.New(TpmVersion_Error_Invalid)}}}}
 	for _, test := range tests {
-		for _, subTest := range test.valid {
-			name := test.category + "/Valid"
-			if len(test.valid) > 1 {
+		for _, subTest := range append(test.valid.create, test.valid.createUpdate...) {
+			name := test.category + "/Valid/Create"
+			if len(test.valid.create)+len(test.valid.createUpdate) > 1 {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.input.Validate(subTest.current, subTest.version), subTest.err, name)
+				require.Equal(t, subTest.err, subTest.input.Validate(nil, subTest.version), name)
 			})
 		}
-		for _, subTest := range test.invalid {
-			name := test.category + "/Invalid"
-			if len(test.invalid) > 1 {
+		for _, subTest := range append(test.valid.update, test.valid.createUpdate...) {
+			name := test.category + "/Valid/Update"
+			if len(test.valid.update)+len(test.valid.createUpdate) > 1 {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.input.Validate(subTest.current, subTest.version), subTest.err, name)
+				require.NotNil(t, subTest.current)
+				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current, subTest.version), name)
+			})
+		}
+		for _, subTest := range append(test.invalid.create, test.invalid.createUpdate...) {
+			name := test.category + "/Invalid/Create"
+			if len(test.invalid.create)+len(test.invalid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(nil, subTest.version), name)
+			})
+		}
+		for _, subTest := range append(test.invalid.update, test.invalid.createUpdate...) {
+			name := test.category + "/Invalid/Update"
+			if len(test.invalid.update)+len(test.invalid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.NotNil(t, subTest.current)
+				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current, subTest.version), name)
 			})
 		}
 	}
