@@ -72,6 +72,9 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 				delete += ",ciuser"
 			}
 		}
+		if config.UserPassword != nil && *config.UserPassword == "" {
+			delete += ",cipassword"
+		}
 		if config.DNS != nil {
 			if config.DNS.SearchDomain != nil {
 				if *config.DNS.SearchDomain != "" {
