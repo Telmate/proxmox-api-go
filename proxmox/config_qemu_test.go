@@ -593,6 +593,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output: map[string]interface{}{}},
 				{name: `CloudInit Username empty`,
 					config: &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
+					output: map[string]interface{}{}},
+				{name: `CloudInit UserPassword empty`,
+					config: &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("")}},
 					output: map[string]interface{}{}}},
 			update: []test{
 				{name: `CloudInit Custom clear`,
@@ -863,7 +866,11 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `CloudInit Username empty`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
 					currentConfig: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
-					output:        map[string]interface{}{"delete": "ciuser"}}}},
+					output:        map[string]interface{}{"delete": "ciuser"}},
+				{name: `CloudInit UserPassword empty`,
+					config:        &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("")}},
+					currentConfig: ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Abc123!")}},
+					output:        map[string]interface{}{"delete": "cipassword"}}}},
 		{category: `Description`,
 			create: []test{
 				{name: `Description empty`,
