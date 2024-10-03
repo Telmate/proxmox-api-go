@@ -53,15 +53,15 @@ func (QemuGuestAgent) mapToSDK(params string) *QemuGuestAgent {
 	config.Enable = &tmpEnable
 	tmpParams := splitStringOfSettings(params)
 	if v, isSet := tmpParams["freeze-fs-on-backup"]; isSet {
-		tmpBool, _ := strconv.ParseBool(v.(string))
+		tmpBool, _ := strconv.ParseBool(v)
 		config.Freeze = &tmpBool
 	}
 	if v, isSet := tmpParams["fstrim_cloned_disks"]; isSet {
-		tmpBool, _ := strconv.ParseBool(v.(string))
+		tmpBool, _ := strconv.ParseBool(v)
 		config.FsTrim = &tmpBool
 	}
 	if v, isSet := tmpParams["type"]; isSet {
-		config.Type = util.Pointer(QemuGuestAgentType(v.(string)))
+		config.Type = util.Pointer(QemuGuestAgentType(v))
 	}
 	return &config
 }

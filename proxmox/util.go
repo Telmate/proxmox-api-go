@@ -244,9 +244,9 @@ func isIPv6(address string) bool {
 	return strings.Count(address, ":") > 2
 }
 
-func splitStringOfSettings(settings string) map[string]interface{} {
+func splitStringOfSettings(settings string) map[string]string {
 	settingValuePairs := strings.Split(settings, ",")
-	settingMap := map[string]interface{}{}
+	settingMap := map[string]string{}
 	for _, e := range settingValuePairs {
 		keyValuePair := strings.SplitN(e, "=", 2)
 		var value string
