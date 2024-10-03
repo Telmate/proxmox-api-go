@@ -72,6 +72,9 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 				delete += ",ciuser"
 			}
 		}
+		if config.UserPassword != nil && *config.UserPassword == "" {
+			delete += ",cipassword"
+		}
 		if config.DNS != nil {
 			if config.DNS.SearchDomain != nil {
 				if *config.DNS.SearchDomain != "" {
@@ -128,7 +131,7 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 	if config.UpgradePackages != nil && !version.Smaller(Version{Major: 8}) {
 		params["ciupgrade"] = Btoi(*config.UpgradePackages)
 	}
-	if config.UserPassword != nil {
+	if config.UserPassword != nil && *config.UserPassword != "" {
 		params["cipassword"] = *config.UserPassword
 	}
 	return
