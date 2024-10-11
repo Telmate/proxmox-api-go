@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
-	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,50 +28,50 @@ type (
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
-	Agent           *QemuGuestAgent  `json:"agent,omitempty"`
-	Args            string           `json:"args,omitempty"`
-	Bios            string           `json:"bios,omitempty"`
-	Boot            string           `json:"boot,omitempty"`     // TODO should be an array of custom enums
-	BootDisk        string           `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
-	CPU             *QemuCPU         `json:"cpu,omitempty"`
-	CloudInit       *CloudInit       `json:"cloudinit,omitempty"`
-	Description     *string          `json:"description,omitempty"`
-	Disks           *QemuStorages    `json:"disks,omitempty"`
-	EFIDisk         QemuDevice       `json:"efidisk,omitempty"`   // TODO should be a struct
-	FullClone       *int             `json:"fullclone,omitempty"` // TODO should probably be a bool
-	HaGroup         string           `json:"hagroup,omitempty"`
-	HaState         string           `json:"hastate,omitempty"` // TODO should be custom type with enum
-	Hookscript      string           `json:"hookscript,omitempty"`
-	Hotplug         string           `json:"hotplug,omitempty"`   // TODO should be a struct
-	Iso             *IsoFile         `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
-	LinkedVmId      uint             `json:"linked_id,omitempty"` // Only returned setting it has no effect
-	Machine         string           `json:"machine,omitempty"`   // TODO should be custom type with enum
-	Memory          *QemuMemory      `json:"memory,omitempty"`
-	Name            string           `json:"name,omitempty"` // TODO should be custom type as there are character and length limitations
-	Node            string           `json:"node,omitempty"` // Only returned setting it has no effect, set node in the VmRef instead
-	Onboot          *bool            `json:"onboot,omitempty"`
-	Pool            *PoolName        `json:"pool,omitempty"`
-	Protection      *bool            `json:"protection,omitempty"`
-	QemuDisks       QemuDevices      `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
-	QemuIso         string           `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
-	QemuKVM         *bool            `json:"kvm,omitempty"`
-	QemuNetworks    QemuDevices      `json:"network,omitempty"` // TODO should be a struct
-	QemuOs          string           `json:"ostype,omitempty"`
-	QemuPCIDevices  QemuDevices      `json:"hostpci,omitempty"` // TODO should be a struct
-	QemuPxe         bool             `json:"pxe,omitempty"`
-	QemuUnusedDisks QemuDevices      `json:"unused,omitempty"` // TODO should be a struct
-	QemuUsbs        QemuDevices      `json:"usb,omitempty"`    // TODO should be a struct
-	QemuVga         QemuDevice       `json:"vga,omitempty"`    // TODO should be a struct
-	RNGDrive        QemuDevice       `json:"rng0,omitempty"`   // TODO should be a struct
-	Scsihw          string           `json:"scsihw,omitempty"` // TODO should be custom type with enum
-	Serials         SerialInterfaces `json:"serials,omitempty"`
-	Smbios1         string           `json:"smbios1,omitempty"` // TODO should be custom type with enum?
-	Startup         string           `json:"startup,omitempty"` // TODO should be a struct?
-	Storage         string           `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
-	TPM             *TpmState        `json:"tpm,omitempty"`
-	Tablet          *bool            `json:"tablet,omitempty"`
-	Tags            *[]Tag           `json:"tags,omitempty"`
-	VmID            int              `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
+	Agent           *QemuGuestAgent       `json:"agent,omitempty"`
+	Args            string                `json:"args,omitempty"`
+	Bios            string                `json:"bios,omitempty"`
+	Boot            string                `json:"boot,omitempty"`     // TODO should be an array of custom enums
+	BootDisk        string                `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
+	CPU             *QemuCPU              `json:"cpu,omitempty"`
+	CloudInit       *CloudInit            `json:"cloudinit,omitempty"`
+	Description     *string               `json:"description,omitempty"`
+	Disks           *QemuStorages         `json:"disks,omitempty"`
+	EFIDisk         QemuDevice            `json:"efidisk,omitempty"`   // TODO should be a struct
+	FullClone       *int                  `json:"fullclone,omitempty"` // TODO should probably be a bool
+	HaGroup         string                `json:"hagroup,omitempty"`
+	HaState         string                `json:"hastate,omitempty"` // TODO should be custom type with enum
+	Hookscript      string                `json:"hookscript,omitempty"`
+	Hotplug         string                `json:"hotplug,omitempty"`   // TODO should be a struct
+	Iso             *IsoFile              `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
+	LinkedVmId      uint                  `json:"linked_id,omitempty"` // Only returned setting it has no effect
+	Machine         string                `json:"machine,omitempty"`   // TODO should be custom type with enum
+	Memory          *QemuMemory           `json:"memory,omitempty"`
+	Name            string                `json:"name,omitempty"` // TODO should be custom type as there are character and length limitations
+	Networks        QemuNetworkInterfaces `json:"networks,omitempty"`
+	Node            string                `json:"node,omitempty"` // Only returned setting it has no effect, set node in the VmRef instead
+	Onboot          *bool                 `json:"onboot,omitempty"`
+	Pool            *PoolName             `json:"pool,omitempty"`
+	Protection      *bool                 `json:"protection,omitempty"`
+	QemuDisks       QemuDevices           `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
+	QemuIso         string                `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
+	QemuKVM         *bool                 `json:"kvm,omitempty"`
+	QemuOs          string                `json:"ostype,omitempty"`
+	QemuPCIDevices  QemuDevices           `json:"hostpci,omitempty"` // TODO should be a struct
+	QemuPxe         bool                  `json:"pxe,omitempty"`
+	QemuUnusedDisks QemuDevices           `json:"unused,omitempty"` // TODO should be a struct
+	QemuUsbs        QemuDevices           `json:"usb,omitempty"`    // TODO should be a struct
+	QemuVga         QemuDevice            `json:"vga,omitempty"`    // TODO should be a struct
+	RNGDrive        QemuDevice            `json:"rng0,omitempty"`   // TODO should be a struct
+	Scsihw          string                `json:"scsihw,omitempty"` // TODO should be custom type with enum
+	Serials         SerialInterfaces      `json:"serials,omitempty"`
+	Smbios1         string                `json:"smbios1,omitempty"` // TODO should be custom type with enum?
+	Startup         string                `json:"startup,omitempty"` // TODO should be a struct?
+	Storage         string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
+	TPM             *TpmState             `json:"tpm,omitempty"`
+	Tablet          *bool                 `json:"tablet,omitempty"`
+	Tags            *[]Tag                `json:"tags,omitempty"`
+	VmID            int                   `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
 }
 
 const (
@@ -118,9 +116,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.QemuKVM == nil {
 		config.QemuKVM = util.Pointer(true)
-	}
-	if config.QemuNetworks == nil {
-		config.QemuNetworks = QemuDevices{}
 	}
 	if config.QemuOs == "" {
 		config.QemuOs = "other"
@@ -264,7 +259,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	config.CreateQemuRngParams(params)
 
 	// Create networks config.
-	config.CreateQemuNetworksParams(params)
+	itemsToDelete += config.Networks.mapToAPI(currentConfig.Networks, params)
 
 	// Create vga config.
 	vgaParam := QemuDeviceParam{}
@@ -433,54 +428,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		}
 	}
 
-	// Add networks.
-	nicNames := []string{}
-
-	for k := range params {
-		if nicName := rxNicName.FindStringSubmatch(k); len(nicName) > 0 {
-			nicNames = append(nicNames, nicName[0])
-		}
-	}
-
-	if len(nicNames) > 0 {
-		config.QemuNetworks = QemuDevices{}
-		for _, nicName := range nicNames {
-			nicConfStr := params[nicName]
-			nicConfList := strings.Split(nicConfStr.(string), ",")
-
-			id := rxDeviceID.FindStringSubmatch(nicName)
-			nicID, _ := strconv.Atoi(id[0])
-			model, macaddr := ParseSubConf(nicConfList[0], "=")
-
-			// Add model and MAC address.
-			nicConfMap := QemuDevice{
-				"id":      nicID,
-				"model":   model,
-				"macaddr": macaddr,
-			}
-
-			// Add rest of device config.
-			nicConfMap.readDeviceConfig(nicConfList[1:])
-			switch nicConfMap["firewall"] {
-			case 1:
-				nicConfMap["firewall"] = true
-			case 0:
-				nicConfMap["firewall"] = false
-			}
-			switch nicConfMap["link_down"] {
-			case 1:
-				nicConfMap["link_down"] = true
-			case 0:
-				nicConfMap["link_down"] = false
-			}
-
-			// And device config to networks.
-			if len(nicConfMap) > 0 {
-				config.QemuNetworks[nicID] = nicConfMap
-			}
-		}
-	}
-
+	config.Networks = QemuNetworkInterfaces{}.mapToSDK(params)
 	config.Serials = SerialInterfaces{}.mapToSDK(params)
 
 	// Add usbs
@@ -1121,70 +1069,6 @@ func FormatUsbParam(usb QemuDevice) string {
 	usbConfParam = usbConfParam.createDeviceParam(usb, []string{})
 
 	return strings.Join(usbConfParam, ",")
-}
-
-// Create parameters for each Nic device.
-func (c ConfigQemu) CreateQemuNetworksParams(params map[string]interface{}) {
-	// For new style with multi net device.
-	for nicID, nicConfMap := range c.QemuNetworks {
-
-		nicConfParam := QemuDeviceParam{}
-
-		// Set Nic name.
-		qemuNicName := "net" + strconv.Itoa(nicID)
-
-		// Set Mac address.
-		var macAddr string
-		switch nicConfMap["macaddr"] {
-		case nil, "":
-			// Generate random Mac based on time
-			macaddr := make(net.HardwareAddr, 6)
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			r.Read(macaddr)
-			macaddr[0] = (macaddr[0] | 2) & 0xfe // fix from github issue #18
-			macAddr = strings.ToUpper(fmt.Sprintf("%v", macaddr))
-
-			// Add Mac to source map so it will be returned. (useful for some use case like Terraform)
-			nicConfMap["macaddr"] = macAddr
-		case "repeatable":
-			// Generate deterministic Mac based on VmID and NicID
-			// Assume that rare VM has more than 32 nics
-			macaddr := make(net.HardwareAddr, 6)
-			pairing := c.VmID<<5 | nicID
-			// Linux MAC vendor - 00:18:59
-			macaddr[0] = 0x00
-			macaddr[1] = 0x18
-			macaddr[2] = 0x59
-			macaddr[3] = byte((pairing >> 16) & 0xff)
-			macaddr[4] = byte((pairing >> 8) & 0xff)
-			macaddr[5] = byte(pairing & 0xff)
-			// Convert to string
-			macAddr = strings.ToUpper(fmt.Sprintf("%v", macaddr))
-
-			// Add Mac to source map so it will be returned. (useful for some use case like Terraform)
-			nicConfMap["macaddr"] = macAddr
-		default:
-			macAddr = nicConfMap["macaddr"].(string)
-		}
-
-		// use model=mac format for older proxmox compatibility as the parameters which will be sent to Proxmox API.
-		nicConfParam = append(nicConfParam, fmt.Sprintf("%v=%v", nicConfMap["model"], macAddr))
-
-		// Set bridge if not nat.
-		if nicConfMap["bridge"].(string) != "nat" {
-			bridge := fmt.Sprintf("bridge=%v", nicConfMap["bridge"])
-			nicConfParam = append(nicConfParam, bridge)
-		}
-
-		// Keys that are not used as real/direct conf.
-		ignoredKeys := []string{"id", "bridge", "macaddr", "model"}
-
-		// Rest of config.
-		nicConfParam = nicConfParam.createDeviceParam(nicConfMap, ignoredKeys)
-
-		// Add nic to Qemu prams.
-		params[qemuNicName] = strings.Join(nicConfParam, ",")
-	}
 }
 
 // Create RNG parameter.

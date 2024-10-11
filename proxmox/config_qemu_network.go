@@ -1,6 +1,11 @@
 package proxmox
 
-import "errors"
+import (
+	"errors"
+)
+
+type QemuNetworkInterface struct {
+}
 
 type QemuNetworkInterfaceID uint8
 
@@ -47,5 +52,15 @@ func (id QemuNetworkInterfaceID) Validate() error {
 	if id > QemuNetworkInterfaceIDMaximum {
 		return errors.New(QemuNetworkInterfaceID_Error_Invalid)
 	}
+	return nil
+}
+
+type QemuNetworkInterfaces map[QemuNetworkInterfaceID]QemuNetworkInterface
+
+func (config QemuNetworkInterfaces) mapToAPI(current QemuNetworkInterfaces, params map[string]interface{}) (delete string) {
+	return
+}
+
+func (QemuNetworkInterfaces) mapToSDK(params map[string]interface{}) QemuNetworkInterfaces {
 	return nil
 }
