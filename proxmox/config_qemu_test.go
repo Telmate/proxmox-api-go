@@ -3485,6 +3485,21 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
 					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
 					output:        map[string]interface{}{"delete": "shares"}}}},
+		{category: `Pool`,
+			create: []test{
+				{name: `Pool personal`,
+					config: &ConfigQemu{Pool: util.Pointer(PoolName("personal"))},
+					output: map[string]interface{}{"pool": PoolName("personal")}}},
+			createUpdate: []test{
+				{name: `Pool shared`,
+					config:        &ConfigQemu{Pool: util.Pointer(PoolName("shared"))},
+					currentConfig: ConfigQemu{Pool: util.Pointer(PoolName("personal"))},
+					output:        map[string]interface{}{"pool": PoolName("shared")}}},
+			update: []test{
+				{name: `Pool shared`,
+					config:        &ConfigQemu{Pool: util.Pointer(PoolName("shared"))},
+					currentConfig: ConfigQemu{Pool: util.Pointer(PoolName("personal"))},
+					output:        map[string]interface{}{"pool": PoolName("shared")}}}},
 		{category: `Serials`,
 			createUpdate: []test{
 				{name: `delete non existing`,

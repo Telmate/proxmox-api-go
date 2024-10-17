@@ -187,6 +187,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Onboot != nil {
 		params["onboot"] = *config.Onboot
 	}
+	if config.Pool != nil {
+		params["pool"] = *config.Pool
+	}
 	if config.Protection != nil {
 		params["protection"] = *config.Protection
 	}
@@ -723,11 +726,6 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		}
 		if err = resizeNewDisks(vmr, client, newConfig.Disks, nil); err != nil {
 			return
-		}
-		if newConfig.Pool != nil && *newConfig.Pool != "" { // add guest to pool
-			if err = newConfig.Pool.addGuests_Unsafe(client, []uint{uint(vmr.vmId)}, nil, version); err != nil {
-				return
-			}
 		}
 		if err = client.insertCachedPermission(permissionPath(permissionCategory_GuestPath) + "/" + permissionPath(strconv.Itoa(vmr.vmId))); err != nil {
 			return
