@@ -10,7 +10,6 @@ func Tag_Character_Illegal() []string {
 		`Tag with space`,
 		`Tag&`,
 		`Tag*Name`,
-		`Tag-Name`,
 		`Tag#Name`,
 		`Tag(Name)`,
 		`Tag/Name`,
@@ -65,5 +64,6 @@ func Tag_Legal() []string {
 		`python`,
 		`72d1109e_97f6_41e7_96cc_18a8b7dc19dc`,
 		`dash-tag`,
+		`TagName`,
 	}, Tag_Max_Legal())
 }
