@@ -187,9 +187,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Onboot != nil {
 		params["onboot"] = *config.Onboot
 	}
-	if config.Pool != nil {
-		params["pool"] = *config.Pool
-	}
 	if config.Protection != nil {
 		params["protection"] = *config.Protection
 	}
@@ -719,6 +716,11 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		_, params, err = newConfig.mapToAPI(ConfigQemu{}, version)
 		if err != nil {
 			return
+		}
+		// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
+		// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
+		if newConfig.Pool != nil && *newConfig.Pool != "" {
+			params["pool"] = *newConfig.Pool
 		}
 		exitStatus, err = client.CreateQemuVm(vmr.node, params)
 		if err != nil {
