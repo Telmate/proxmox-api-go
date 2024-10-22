@@ -717,17 +717,17 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		if err != nil {
 			return
 		}
+		// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
+		// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
+		if newConfig.Pool != nil && *newConfig.Pool != "" {
+			params["pool"] = *newConfig.Pool
+		}
 		exitStatus, err = client.CreateQemuVm(vmr.node, params)
 		if err != nil {
 			return false, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}
 		if err = resizeNewDisks(vmr, client, newConfig.Disks, nil); err != nil {
 			return
-		}
-		if newConfig.Pool != nil && *newConfig.Pool != "" { // add guest to pool
-			if err = newConfig.Pool.addGuests_Unsafe(client, []uint{uint(vmr.vmId)}, nil, version); err != nil {
-				return
-			}
 		}
 		if err = client.insertCachedPermission(permissionPath(permissionCategory_GuestPath) + "/" + permissionPath(strconv.Itoa(vmr.vmId))); err != nil {
 			return
