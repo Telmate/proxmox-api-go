@@ -5,6 +5,8 @@ import (
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 type QemuMTU struct {
@@ -157,6 +159,67 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 	return builder.String()
 }
 
+func (QemuNetworkInterface) mapToSDK(rawParams string) (config QemuNetworkInterface) {
+	modelAndMac := strings.SplitN(rawParams, ",", 2)
+	modelAndMac = strings.Split(modelAndMac[0], "=")
+	var model QemuNetworkModel
+	if len(modelAndMac) == 2 {
+		model = QemuNetworkModel(modelAndMac[0])
+		config.Model = &model
+		mac, _ := net.ParseMAC(modelAndMac[1])
+		config.MAC = &mac
+	}
+	params := splitStringOfSettings(rawParams)
+	if v, isSet := params["bridge"]; isSet {
+		config.Bridge = &v
+	}
+	if v, isSet := params["link_down"]; isSet {
+		config.Connected = util.Pointer(v == "0")
+	} else {
+		config.Connected = util.Pointer(true)
+	}
+	if v, isSet := params["firewall"]; isSet {
+		config.Firewall = util.Pointer(v == "1")
+	} else {
+		config.Firewall = util.Pointer(false)
+	}
+	if model == QemuNetworkModelVirtIO {
+		if v, isSet := params["mtu"]; isSet {
+			var mtu QemuMTU
+			if v == "1" {
+				mtu.Inherit = true
+			} else {
+				tmpMtu, _ := strconv.Atoi(v)
+				mtu.Value = MTU(tmpMtu)
+			}
+			config.MTU = &mtu
+		}
+	}
+	if v, isSet := params["queues"]; isSet {
+		tmpQueue, _ := strconv.Atoi(v)
+		config.MultiQueue = util.Pointer(QemuNetworkQueue(tmpQueue))
+	}
+	if v, isSet := params["rate"]; isSet {
+		config.RateLimitKBps = QemuNetworkRate(0).mapToSDK(v)
+	}
+	if v, isSet := params["tag"]; isSet {
+		tmpVlan, _ := strconv.Atoi(v)
+		config.NativeVlan = util.Pointer(Vlan(tmpVlan))
+	}
+	if v, isSet := params["trunks"]; isSet {
+		rawVlans := strings.Split(v, ";")
+		vlans := make(Vlans, len(rawVlans))
+		for i, e := range rawVlans {
+			tmpVlan, _ := strconv.Atoi(e)
+			vlans[i] = Vlan(tmpVlan)
+		}
+		config.TaggedVlans = &vlans
+	} else {
+		config.TaggedVlans = &Vlans{}
+	}
+	return
+}
+
 type QemuNetworkInterfaceID uint8
 
 const (
@@ -230,6 +293,15 @@ func (config QemuNetworkInterfaces) mapToAPI(current QemuNetworkInterfaces, para
 }
 
 func (QemuNetworkInterfaces) mapToSDK(params map[string]interface{}) QemuNetworkInterfaces {
+	interfaces := QemuNetworkInterfaces{}
+	for i := 0; i < 31; i++ {
+		if rawInterface, isSet := params["net"+strconv.Itoa(i)]; isSet {
+			interfaces[QemuNetworkInterfaceID(i)] = QemuNetworkInterface{}.mapToSDK(rawInterface.(string))
+		}
+	}
+	if len(interfaces) > 0 {
+		return interfaces
+	}
 	return nil
 }
 
@@ -308,4 +380,20 @@ func (rate QemuNetworkRate) mapToApiUnsafe(builder *strings.Builder) {
 		prefixRate := "000" + rawRate
 		builder.WriteString(strings.TrimRight(",rate=0."+prefixRate[length:], "0"))
 	}
+}
+
+func (QemuNetworkRate) mapToSDK(rawRate string) *QemuNetworkRate {
+	splitRate := strings.Split(rawRate, ".")
+	var rate int
+	switch len(splitRate) {
+	case 1:
+		if splitRate[0] != "0" {
+			rate, _ = strconv.Atoi(splitRate[0] + "000")
+		}
+	case 2:
+		// Pad the fractional part to ensure it has at least 3 digits
+		fractional := splitRate[1] + "000"
+		rate, _ = strconv.Atoi(splitRate[0] + fractional[:3])
+	}
+	return util.Pointer(QemuNetworkRate(rate))
 }
