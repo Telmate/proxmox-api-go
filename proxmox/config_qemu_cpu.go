@@ -287,10 +287,10 @@ const (
 	CpuType_QemuKvm32                         CpuType = "kvm32"
 	CpuType_QemuKvm64                         CpuType = "kvm64"
 	CpuType_QemuMax                           CpuType = "max"
-	CpuType_IntelNahalem                      CpuType = "Nahalem"
-	cpuType_IntelNahalem_Lower                CpuType = "nahalem"
-	CpuType_IntelNahalemIBRS                  CpuType = "Nahalem-IRBS"
-	cpuType_IntelNahalemIBRS_Lower            CpuType = "nahalemibrs"
+	CpuType_IntelNehalem                      CpuType = "Nehalem"
+	cpuType_IntelNehalem_Lower                CpuType = "nehalem"
+	CpuType_IntelNehalemIBRS                  CpuType = "Nehalem-IRBS"
+	cpuType_IntelNehalemIBRS_Lower            CpuType = "nehalemibrs"
 	CpuType_AmdOpteronG1                      CpuType = "Opteron_G1"
 	cpuType_AmdOpteronG1_Lower                CpuType = "opterong1"
 	CpuType_AmdOpteronG2                      CpuType = "Opteron_G2"
@@ -390,8 +390,8 @@ func (CpuType) cpuBase() map[CpuType]CpuType {
 		cpuType_IntelIvybridge_Lower:              CpuType_IntelIvybridge,
 		cpuType_IntelIvybridgeIBRS_Lower:          CpuType_IntelIvybridgeIBRS,
 		cpuType_IntelKnightsmill_Lower:            CpuType_IntelKnightsmill,
-		cpuType_IntelNahalem_Lower:                CpuType_IntelNahalem,
-		cpuType_IntelNahalemIBRS_Lower:            CpuType_IntelNahalemIBRS,
+		cpuType_IntelNehalem_Lower:                CpuType_IntelNehalem,
+		cpuType_IntelNehalemIBRS_Lower:            CpuType_IntelNehalemIBRS,
 		cpuType_IntelPenrym_Lower:                 CpuType_IntelPenrym,
 		cpuType_IntelSandyBridge_Lower:            CpuType_IntelSandyBridge,
 		cpuType_IntelSandybridgeIBRS_Lower:        CpuType_IntelSandybridgeIBRS,
