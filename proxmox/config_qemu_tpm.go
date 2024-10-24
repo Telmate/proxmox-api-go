@@ -33,7 +33,7 @@ func (TpmState) mapToSDK(param string) *TpmState {
 		tmp.Storage = splitString[0]
 	}
 	if itemValue, isSet := setting["version"]; isSet {
-		tmp.Version = util.Pointer(TpmVersion(itemValue.(string)))
+		tmp.Version = util.Pointer(TpmVersion(itemValue))
 	}
 	return &tmp
 

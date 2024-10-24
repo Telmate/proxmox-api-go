@@ -94,9 +94,9 @@ type qemuCdRom struct {
 	SizeInKibibytes string
 }
 
-func (qemuCdRom) mapToStruct(diskData string, settings map[string]interface{}) *qemuCdRom {
+func (qemuCdRom) mapToStruct(diskData string, settings map[string]string) *qemuCdRom {
 	if setting, isSet := settings["media"]; isSet {
-		if setting.(string) != "cdrom" {
+		if setting != "cdrom" {
 			return nil
 		}
 	} else {
@@ -128,7 +128,7 @@ func (qemuCdRom) mapToStruct(diskData string, settings map[string]interface{}) *
 							CdRom:           true,
 							Storage:         tmpStorage[0],
 							File:            tmpFile[1],
-							SizeInKibibytes: setting.(string),
+							SizeInKibibytes: setting,
 						}
 					}
 				} else {
@@ -341,7 +341,7 @@ func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId uint, currentStorage string
 }
 
 // Maps all the disk related settings to our own data structure.
-func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, linkedVmId *uint) *qemuDisk {
+func (qemuDisk) mapToStruct(diskData string, settings map[string]string, linkedVmId *uint) *qemuDisk {
 	disk := qemuDisk{Backup: true}
 
 	if diskData[0:1] == "/" {
@@ -358,79 +358,79 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]interface{}, li
 	disk.Replicate = true
 
 	if value, isSet := settings["aio"]; isSet {
-		disk.AsyncIO = QemuDiskAsyncIO(value.(string))
+		disk.AsyncIO = QemuDiskAsyncIO(value)
 	}
 	if value, isSet := settings["backup"]; isSet {
-		disk.Backup, _ = strconv.ParseBool(value.(string))
+		disk.Backup, _ = strconv.ParseBool(value)
 	}
 	if value, isSet := settings["cache"]; isSet {
-		disk.Cache = QemuDiskCache(value.(string))
+		disk.Cache = QemuDiskCache(value)
 	}
 	if value, isSet := settings["discard"]; isSet {
-		if value.(string) == "on" {
+		if value == "on" {
 			disk.Discard = true
 		}
 	}
 	if value, isSet := settings["iops_rd"]; isSet {
-		tmp, _ := strconv.Atoi(value.(string))
+		tmp, _ := strconv.Atoi(value)
 		disk.Bandwidth.Iops.ReadLimit.Concurrent = QemuDiskBandwidthIopsLimitConcurrent(tmp)
 	}
 	if value, isSet := settings["iops_rd_max"]; isSet {
-		tmp, _ := strconv.Atoi(value.(string))
+		tmp, _ := strconv.Atoi(value)
 		disk.Bandwidth.Iops.ReadLimit.Burst = QemuDiskBandwidthIopsLimitBurst(tmp)
 	}
 	if value, isSet := settings["iops_rd_max_length"]; isSet {
-		tmp, _ := strconv.Atoi(value.(string))
+		tmp, _ := strconv.Atoi(value)
 		disk.Bandwidth.Iops.ReadLimit.BurstDuration = uint(tmp)
 	}
 	if value, isSet := settings["iops_wr"]; isSet {
-		tmp, _ := strconv.Atoi(value.(string))
+		tmp, _ := strconv.Atoi(value)
 		disk.Bandwidth.Iops.WriteLimit.Concurrent = QemuDiskBandwidthIopsLimitConcurrent(tmp)
 	}
 	if value, isSet := settings["iops_wr_max"]; isSet {
-		tmp, _ := strconv.Atoi(value.(string))
+		tmp, _ := strconv.Atoi(value)
 		disk.Bandwidth.Iops.WriteLimit.Burst = QemuDiskBandwidthIopsLimitBurst(tmp)
 	}
 	if value, isSet := settings["iops_wr_max_length"]; isSet {
-		tmp, _ := strconv.Atoi(value.(string))
+		tmp, _ := strconv.Atoi(value)
 		disk.Bandwidth.Iops.WriteLimit.BurstDuration = uint(tmp)
 	}
 	if value, isSet := settings["iothread"]; isSet {
-		disk.IOThread, _ = strconv.ParseBool(value.(string))
+		disk.IOThread, _ = strconv.ParseBool(value)
 	}
 	if value, isSet := settings["mbps_rd"]; isSet {
-		tmp, _ := strconv.ParseFloat(value.(string), 32)
+		tmp, _ := strconv.ParseFloat(value, 32)
 		disk.Bandwidth.MBps.ReadLimit.Concurrent = QemuDiskBandwidthMBpsLimitConcurrent(math.Round(tmp*100) / 100)
 	}
 	if value, isSet := settings["mbps_rd_max"]; isSet {
-		tmp, _ := strconv.ParseFloat(value.(string), 32)
+		tmp, _ := strconv.ParseFloat(value, 32)
 		disk.Bandwidth.MBps.ReadLimit.Burst = QemuDiskBandwidthMBpsLimitBurst(math.Round(tmp*100) / 100)
 	}
 	if value, isSet := settings["mbps_wr"]; isSet {
-		tmp, _ := strconv.ParseFloat(value.(string), 32)
+		tmp, _ := strconv.ParseFloat(value, 32)
 		disk.Bandwidth.MBps.WriteLimit.Concurrent = QemuDiskBandwidthMBpsLimitConcurrent(math.Round(tmp*100) / 100)
 	}
 	if value, isSet := settings["mbps_wr_max"]; isSet {
-		tmp, _ := strconv.ParseFloat(value.(string), 32)
+		tmp, _ := strconv.ParseFloat(value, 32)
 		disk.Bandwidth.MBps.WriteLimit.Burst = QemuDiskBandwidthMBpsLimitBurst(math.Round(tmp*100) / 100)
 	}
 	if value, isSet := settings["replicate"]; isSet {
-		disk.Replicate, _ = strconv.ParseBool(value.(string))
+		disk.Replicate, _ = strconv.ParseBool(value)
 	}
 	if value, isSet := settings["ro"]; isSet {
-		disk.ReadOnly, _ = strconv.ParseBool(value.(string))
+		disk.ReadOnly, _ = strconv.ParseBool(value)
 	}
 	if value, isSet := settings["serial"]; isSet {
-		disk.Serial = QemuDiskSerial(value.(string))
+		disk.Serial = QemuDiskSerial(value)
 	}
 	if value, isSet := settings["size"]; isSet {
-		disk.SizeInKibibytes = QemuDiskSize(0).parse(value.(string))
+		disk.SizeInKibibytes = QemuDiskSize(0).parse(value)
 	}
 	if value, isSet := settings["ssd"]; isSet {
-		disk.EmulateSSD, _ = strconv.ParseBool(value.(string))
+		disk.EmulateSSD, _ = strconv.ParseBool(value)
 	}
 	if value, isSet := settings["wwn"]; isSet {
-		disk.WorldWideName = QemuWorldWideName(value.(string))
+		disk.WorldWideName = QemuWorldWideName(value)
 	}
 	return &disk
 }
