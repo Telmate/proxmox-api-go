@@ -8,14 +8,17 @@ import (
 
 type Vlan uint16 // 0-4095, 0 means no vlan
 
-const Vlan_Error_Invalid string = "vlan tag must be in the range 0-4095"
+const (
+	VlanMaximum        Vlan   = 4095
+	Vlan_Error_Invalid string = "vlan tag must be in the range 0-4095"
+)
 
 func (config Vlan) String() string {
 	return strconv.FormatInt(int64(config), 10)
 }
 
 func (config Vlan) Validate() error {
-	if config > 4095 {
+	if config > VlanMaximum {
 		return errors.New(Vlan_Error_Invalid)
 	}
 	return nil
@@ -41,7 +44,6 @@ func (config *Vlans) mapToApiUnsafe() string {
 	return builder.String()
 }
 
-// TODO test
 func (config Vlans) Validate() error {
 	for _, vlan := range config {
 		if err := vlan.Validate(); err != nil {
