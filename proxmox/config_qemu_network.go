@@ -3,6 +3,7 @@ package proxmox
 import (
 	"errors"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,8 @@ type QemuMTU struct {
 	Value   MTU  `json:"value,omitempty"`
 }
 
+const QemuMTU_Error_Invalid string = "inherit and value are mutually exclusive"
+
 // unsafe requires caller to check for nil
 func (config *QemuMTU) mapToApiUnsafe(builder *strings.Builder) {
 	if config.Inherit {
@@ -24,6 +27,22 @@ func (config *QemuMTU) mapToApiUnsafe(builder *strings.Builder) {
 		builder.WriteString(",mtu=" + strconv.Itoa(int(config.Value)))
 	}
 }
+
+func (config QemuMTU) Validate() error {
+	if config.Inherit {
+		if config.Value != 0 {
+			return errors.New(QemuMTU_Error_Invalid)
+		}
+		return nil
+	}
+	return config.Value.Validate()
+}
+
+const (
+	QemuNetworkInterface_Error_BridgeRequired string = "bridge is required during creation"
+	QemuNetworkInterface_Error_ModelRequired  string = "model is required during creation"
+	QemuNetworkInterface_Error_MtuNoEffect    string = "mtu has no effect when model is not virtio"
+)
 
 // if we get more edge cases, we should give every model its own struct
 type QemuNetworkInterface struct {
@@ -220,6 +239,61 @@ func (QemuNetworkInterface) mapToSDK(rawParams string) (config QemuNetworkInterf
 	return
 }
 
+func (config QemuNetworkInterface) Validate(current *QemuNetworkInterface) error {
+	if config.Delete {
+		return nil
+	}
+	var model QemuNetworkModel
+	if current != nil { // Update
+		if current.Model != nil {
+			model = *current.Model
+		}
+	} else { // Create
+		if config.Bridge == nil {
+			return errors.New(QemuNetworkInterface_Error_BridgeRequired)
+		}
+		if config.Model == nil {
+			return errors.New(QemuNetworkInterface_Error_ModelRequired)
+		}
+	}
+	// shared
+	if config.Model != nil {
+		if err := config.Model.Validate(); err != nil {
+			return err
+		}
+		model = QemuNetworkModel((*config.Model).String())
+	}
+	if config.MTU != nil {
+		if model != QemuNetworkModelVirtIO && (config.MTU.Inherit || config.MTU.Value != 0) {
+			return errors.New(QemuNetworkInterface_Error_MtuNoEffect)
+		}
+		if err := config.MTU.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.MultiQueue != nil {
+		if err := config.MultiQueue.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.RateLimitKBps != nil {
+		if err := config.RateLimitKBps.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.NativeVlan != nil {
+		if err := config.NativeVlan.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.TaggedVlans != nil {
+		if err := config.TaggedVlans.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type QemuNetworkInterfaceID uint8
 
 const (
@@ -305,6 +379,22 @@ func (QemuNetworkInterfaces) mapToSDK(params map[string]interface{}) QemuNetwork
 	return nil
 }
 
+func (config QemuNetworkInterfaces) Validate(current QemuNetworkInterfaces) error {
+	for i, e := range config {
+		if err := i.Validate(); err != nil {
+			return err
+		}
+		var currentInterface *QemuNetworkInterface
+		if v, isSet := current[i]; isSet {
+			currentInterface = &v
+		}
+		if err := e.Validate(currentInterface); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type QemuNetworkModel string // enum
 
 const (
@@ -347,6 +437,18 @@ func (QemuNetworkModel) enumMap() map[QemuNetworkModel]QemuNetworkModel {
 		QemuNetworkModelVmxNet3:            QemuNetworkModelVmxNet3}
 }
 
+func (QemuNetworkModel) Error() error {
+	models := QemuNetworkModel("").enumMap()
+	modelsConverted := make([]string, len(models))
+	var index int
+	for _, e := range models {
+		modelsConverted[index] = string(e)
+		index++
+	}
+	slices.Sort(modelsConverted)
+	return errors.New("qemuNetworkModel can only be one of the following values: " + strings.Join(modelsConverted, ", "))
+}
+
 // returns the model with proper dashes, underscores and capitalization
 func (model QemuNetworkModel) String() string {
 	models := QemuNetworkModel("").enumMap()
@@ -356,9 +458,33 @@ func (model QemuNetworkModel) String() string {
 	return ""
 }
 
+func (model QemuNetworkModel) Validate() error {
+	if model.String() != "" {
+		return nil
+	}
+	return QemuNetworkModel("").Error()
+}
+
 type QemuNetworkQueue uint8 // 0-64, 0 to disable
 
+const (
+	QemuNetworkQueueMaximum        QemuNetworkQueue = 64
+	QemuNetworkQueue_Error_Invalid string           = "network queue must be in the range 0-64"
+)
+
+func (queue QemuNetworkQueue) Validate() error {
+	if queue > QemuNetworkQueueMaximum {
+		return errors.New(QemuNetworkQueue_Error_Invalid)
+	}
+	return nil
+}
+
 type QemuNetworkRate uint32 // 0-10240000
+
+const (
+	QemuNetworkRate_Error_Invalid string          = "network rate must be in the range 0-10240000"
+	QemuNetworkRateMaximum        QemuNetworkRate = 10240000
+)
 
 // unsafe requires caller to check for nil
 func (rate QemuNetworkRate) mapToApiUnsafe(builder *strings.Builder) {
@@ -396,4 +522,11 @@ func (QemuNetworkRate) mapToSDK(rawRate string) *QemuNetworkRate {
 		rate, _ = strconv.Atoi(splitRate[0] + fractional[:3])
 	}
 	return util.Pointer(QemuNetworkRate(rate))
+}
+
+func (rate QemuNetworkRate) Validate() error {
+	if rate > QemuNetworkRateMaximum {
+		return errors.New(QemuNetworkRate_Error_Invalid)
+	}
+	return nil
 }

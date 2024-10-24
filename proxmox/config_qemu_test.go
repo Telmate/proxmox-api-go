@@ -3,6 +3,7 @@ package proxmox
 import (
 	"crypto"
 	"errors"
+	"net"
 	"net/netip"
 	"testing"
 
@@ -41,6 +42,23 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 	parseIP := func(rawIP string) (ip netip.Addr) {
 		ip, _ = netip.ParseAddr(rawIP)
 		return
+	}
+	parseMAC := func(rawMAC string) (mac net.HardwareAddr) {
+		mac, _ = net.ParseMAC(rawMAC)
+		return
+	}
+	networkInterface := func() QemuNetworkInterface {
+		return QemuNetworkInterface{
+			Bridge:        util.Pointer("vmbr0"),
+			Connected:     util.Pointer(false),
+			Firewall:      util.Pointer(true),
+			MAC:           util.Pointer(parseMAC("52:54:00:12:34:56")),
+			MTU:           util.Pointer(QemuMTU{Value: 1500}),
+			Model:         util.Pointer(QemuNetworkModel("virtio")),
+			MultiQueue:    util.Pointer(QemuNetworkQueue(5)),
+			RateLimitKBps: util.Pointer(QemuNetworkRate(45)),
+			NativeVlan:    util.Pointer(Vlan(23)),
+			TaggedVlans:   util.Pointer(Vlans{12, 23, 45})}
 	}
 	format_Raw := QemuDiskFormat_Raw
 	float10 := QemuDiskBandwidthMBpsLimitConcurrent(10.3)
@@ -3767,6 +3785,10 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		ip, _ = netip.ParseAddr(rawIP)
 		return
 	}
+	parseMAC := func(rawMAC string) (mac net.HardwareAddr) {
+		mac, _ = net.ParseMAC(rawMAC)
+		return
+	}
 	uint1 := uint(1)
 	uint2 := uint(2)
 	uint31 := uint(31)
@@ -6487,6 +6509,15 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		}
 		return config
 	}
+	baseNetwork := func(id QemuNetworkInterfaceID, config QemuNetworkInterface) QemuNetworkInterfaces {
+		if config.Bridge == nil {
+			config.Bridge = util.Pointer("vmbr0")
+		}
+		if config.Model == nil {
+			config.Model = util.Pointer(QemuNetworkModelVirtIO)
+		}
+		return QemuNetworkInterfaces{id: config}
+	}
 	validCloudInit := QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}
 	validTags := func() []Tag {
 		array := test_data_tag.Tag_Legal()
@@ -7887,6 +7918,124 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							CapacityMiB:        util.Pointer(QemuMemoryCapacity(2048)),
 							MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
 						err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)}}}},
+		{category: `Network`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `Delete`,
+						input:   baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{Delete: true}}}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{}}}},
+					{name: `MTU inherit model=virtio`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID0,
+							QemuNetworkInterface{MTU: &QemuMTU{Inherit: true}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{
+							QemuNetworkInterfaceID0: QemuNetworkInterface{}}}},
+					{name: `MTU value`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID1,
+							QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelVirtIO),
+								MTU:   &QemuMTU{Value: 1500}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID1: QemuNetworkInterface{}}}},
+					{name: `MTU empty e1000`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID2,
+							QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelE1000),
+								MTU:   &QemuMTU{}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{}}}},
+					{name: `MTU empty virtio`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID2,
+							QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelVirtIO),
+								MTU:   &QemuMTU{}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{}}}},
+					{name: `Model`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID3,
+							QemuNetworkInterface{Model: util.Pointer(QemuNetworkModel("e1000"))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{}}}},
+					{name: `MultiQueue`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID4,
+							QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(1))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{}}}},
+					{name: `RateLimitKBps`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID5,
+							QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(10240000))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{}}}},
+					{name: `NativeVlan`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID6,
+							QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(56))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{}}}},
+					{name: `TaggedVlans`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID7,
+							QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{0, 4095})})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{}}}}},
+				update: []test{
+					{name: `MTU model change`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID0,
+							QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelE1000)})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+							Model: util.Pointer(QemuNetworkModelVirtIO),
+							MTU:   &QemuMTU{Inherit: true}}}}},
+					{name: `Update no Bridge && no Model`,
+						input:   baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{}}}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{}}}}}},
+			invalid: testType{
+				create: []test{
+					{name: `no Bridge`,
+						input: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{}}}),
+						err:   errors.New(QemuNetworkInterface_Error_BridgeRequired)},
+					{name: `no Model`,
+						input: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{Bridge: util.Pointer("vmbr0")}}}),
+						err:   errors.New(QemuNetworkInterface_Error_ModelRequired)}},
+				createUpdate: []test{
+					{name: `errors.New(MTU_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(
+							QemuNetworkInterfaceID11, QemuNetworkInterface{MTU: &QemuMTU{Value: 575}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{}}},
+						err:     errors.New(MTU_Error_Invalid)},
+					{name: `errors.New(QemuMTU_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(
+							QemuNetworkInterfaceID12, QemuNetworkInterface{MTU: &QemuMTU{Inherit: true, Value: 1500}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{}}},
+						err:     errors.New(QemuMTU_Error_Invalid)},
+					{name: `errors.New(QemuNetworkInterface_Error_MtuNoEffect) MTU inherit`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(
+							QemuNetworkInterfaceID12, QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelE100082544gc),
+								MTU:   &QemuMTU{Inherit: true}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{}}},
+						err:     errors.New(QemuNetworkInterface_Error_MtuNoEffect)},
+					{name: `errors.New(QemuNetworkInterface_Error_MtuNoEffect) MTU value`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(
+							QemuNetworkInterfaceID12, QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelE1000),
+								MTU:   &QemuMTU{Value: 1500}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{}}},
+						err:     errors.New(QemuNetworkInterface_Error_MtuNoEffect)},
+					{name: `model`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID13, QemuNetworkInterface{
+							Model: util.Pointer(QemuNetworkModel("invalid"))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{}}},
+						err:     QemuNetworkModel("").Error()},
+					{name: `errors.New(QemuNetworkQueue_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID14, QemuNetworkInterface{
+							MultiQueue: util.Pointer(QemuNetworkQueue(75))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{}}},
+						err:     errors.New(QemuNetworkQueue_Error_Invalid)},
+					{name: `errors.New(QemuNetworkRate_Error_Invalid)`,
+						input: baseConfig(
+							ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID15, QemuNetworkInterface{
+								RateLimitKBps: util.Pointer(QemuNetworkRate(10240001))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{}}},
+						err:     errors.New(QemuNetworkRate_Error_Invalid)},
+					{name: `NativeVlan errors.New(Vlan_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID16, QemuNetworkInterface{
+							NativeVlan: util.Pointer(Vlan(4096))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{}}},
+						err:     errors.New(Vlan_Error_Invalid)},
+					{name: `TaggedVlans errors.New(Vlan_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID17, QemuNetworkInterface{
+							TaggedVlans: util.Pointer(Vlans{4096})})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{}}},
+						err:     errors.New(Vlan_Error_Invalid)}}}},
 		{category: `PoolName`,
 			valid: testType{
 				createUpdate: []test{

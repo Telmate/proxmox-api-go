@@ -704,6 +704,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
+		if config.Networks != nil {
+			if err = config.Networks.Validate(nil); err != nil {
+				return
+			}
+		}
 		if config.TPM != nil {
 			if err = config.TPM.Validate(nil); err != nil {
 				return
@@ -717,6 +722,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 		if config.Memory != nil {
 			if err = config.Memory.Validate(current.Memory); err != nil {
+				return
+			}
+		}
+		if config.Networks != nil {
+			if err = config.Networks.Validate(current.Networks); err != nil {
 				return
 			}
 		}
