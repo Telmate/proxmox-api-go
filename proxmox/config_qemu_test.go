@@ -6160,8 +6160,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						NativeVlan:    util.Pointer(Vlan(12)),
 						TaggedVlans:   util.Pointer(Vlans{34, 18, 25})}}})},
 				{name: `all virtio`,
-					input: map[string]interface{}{"net1": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID1: QemuNetworkInterface{
+					input: map[string]interface{}{"net31": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID31: QemuNetworkInterface{
 						Bridge:        util.Pointer("vmbr0"),
 						Connected:     util.Pointer(false),
 						Firewall:      util.Pointer(true),
@@ -6173,8 +6173,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						NativeVlan:    util.Pointer(Vlan(12)),
 						TaggedVlans:   util.Pointer(Vlans{34, 18, 25})}}})},
 				{name: `Bridge`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net2": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{
 						Bridge:      util.Pointer("vmbr0"),
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
@@ -6182,67 +6182,64 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `Model and Mac`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net3": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `Connected false`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,link_down=1"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net4": "virtio=BC:24:11:E1:BB:5D,link_down=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{
 						Connected:   util.Pointer(false),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `Connected true`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,link_down=0"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net5": "virtio=BC:24:11:E1:BB:5D,link_down=0"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `Connected unset`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net6": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `Firwall true`,
-					input: map[string]interface{}{
-						"net0": "virtio=BC:24:11:E1:BB:5D,firewall=1"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net7": "virtio=BC:24:11:E1:BB:5D,firewall=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(true),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `Firwall false`,
-					input: map[string]interface{}{
-						"net0": "virtio=BC:24:11:E1:BB:5D,firewall=0"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net8": "virtio=BC:24:11:E1:BB:5D,firewall=0"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `Firwall unset`,
-					input: map[string]interface{}{
-						"net0": "virtio=BC:24:11:E1:BB:5D"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net9": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `MTU value`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,mtu=1500"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net10": "virtio=BC:24:11:E1:BB:5D,mtu=1500"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6250,8 +6247,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `MTU inherit`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,mtu=1"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net11": "virtio=BC:24:11:E1:BB:5D,mtu=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6259,8 +6256,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `MultiQueue disable`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net12": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6276,16 +6273,16 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps disable`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net13": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						Model:       util.Pointer(QemuNetworkModelVirtIO),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 0.001`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,rate=0.001"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net14": "virtio=BC:24:11:E1:BB:5D,rate=0.001"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{
 						Connected:     util.Pointer(true),
 						Firewall:      util.Pointer(false),
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6293,8 +6290,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						RateLimitKBps: util.Pointer(QemuNetworkRate(1)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 0.01`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,rate=0.010"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net15": "virtio=BC:24:11:E1:BB:5D,rate=0.010"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{
 						Connected:     util.Pointer(true),
 						Firewall:      util.Pointer(false),
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6302,8 +6299,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						RateLimitKBps: util.Pointer(QemuNetworkRate(10)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 0.1`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,rate=0.1"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net16": "virtio=BC:24:11:E1:BB:5D,rate=0.1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{
 						Connected:     util.Pointer(true),
 						Firewall:      util.Pointer(false),
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6311,8 +6308,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						RateLimitKBps: util.Pointer(QemuNetworkRate(100)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 1`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,rate=1"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net17": "virtio=BC:24:11:E1:BB:5D,rate=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{
 						Connected:     util.Pointer(true),
 						Firewall:      util.Pointer(false),
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6320,8 +6317,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						RateLimitKBps: util.Pointer(QemuNetworkRate(1000)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 1.264`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,rate=1.264"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net18": "virtio=BC:24:11:E1:BB:5D,rate=1.264"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{
 						Connected:     util.Pointer(true),
 						Firewall:      util.Pointer(false),
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6329,8 +6326,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						RateLimitKBps: util.Pointer(QemuNetworkRate(1264)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 15.264`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,rate=15.264"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net19": "virtio=BC:24:11:E1:BB:5D,rate=15.264"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{
 						Connected:     util.Pointer(true),
 						Firewall:      util.Pointer(false),
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6338,8 +6335,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						RateLimitKBps: util.Pointer(QemuNetworkRate(15264)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `NaitiveVlan`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,tag=1"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net20": "virtio=BC:24:11:E1:BB:5D,tag=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID20: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
@@ -6347,8 +6344,8 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						NativeVlan:  util.Pointer(Vlan(1)),
 						TaggedVlans: util.Pointer(Vlans{})}}})},
 				{name: `TaggedVlans`,
-					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,trunks=1;63;21"},
-					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+					input: map[string]interface{}{"net21": "virtio=BC:24:11:E1:BB:5D,trunks=1;63;21"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{
 						Connected:   util.Pointer(true),
 						Firewall:    util.Pointer(false),
 						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),

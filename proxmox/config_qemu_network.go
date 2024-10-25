@@ -348,6 +348,8 @@ func (id QemuNetworkInterfaceID) Validate() error {
 
 type QemuNetworkInterfaces map[QemuNetworkInterfaceID]QemuNetworkInterface
 
+const QemuNetworkInterfacesAmount = uint8(QemuNetworkInterfaceIDMaximum) + 1
+
 func (config QemuNetworkInterfaces) mapToAPI(current QemuNetworkInterfaces, params map[string]interface{}) (delete string) {
 	for i, e := range config {
 		if v, isSet := current[i]; isSet { // Update
@@ -368,8 +370,8 @@ func (config QemuNetworkInterfaces) mapToAPI(current QemuNetworkInterfaces, para
 
 func (QemuNetworkInterfaces) mapToSDK(params map[string]interface{}) QemuNetworkInterfaces {
 	interfaces := QemuNetworkInterfaces{}
-	for i := 0; i < 31; i++ {
-		if rawInterface, isSet := params["net"+strconv.Itoa(i)]; isSet {
+	for i := uint8(0); i < QemuNetworkInterfacesAmount; i++ {
+		if rawInterface, isSet := params["net"+strconv.Itoa(int(i))]; isSet {
 			interfaces[QemuNetworkInterfaceID(i)] = QemuNetworkInterface{}.mapToSDK(rawInterface.(string))
 		}
 	}
