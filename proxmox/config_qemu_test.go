@@ -3534,11 +3534,11 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `MAC`,
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
 						Model: util.Pointer(QemuNetworkModelE1000),
-						MAC:   util.Pointer(net.HardwareAddr(parseMAC("00:11:22:33:44:55")))}}},
+						MAC:   util.Pointer(net.HardwareAddr(parseMAC("BC:11:22:33:44:55")))}}},
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
 						Model: util.Pointer(QemuNetworkModelVirtIO),
-						MAC:   util.Pointer(net.HardwareAddr(parseMAC("00:11:22:33:44:56")))}}},
-					output: map[string]interface{}{"net5": "e1000=00:11:22:33:44:55"}},
+						MAC:   util.Pointer(net.HardwareAddr(parseMAC("bc:11:22:33:44:56")))}}},
+					output: map[string]interface{}{"net5": "e1000=BC:11:22:33:44:55"}},
 				{name: `MTU.Inherit model=virtio`,
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{
 						Model: util.Pointer(QemuNetworkModelVirtIO),
