@@ -261,19 +261,19 @@ func (CloudInitCustom) mapToSDK(raw string) *CloudInitCustom {
 	var config CloudInitCustom
 	params := splitStringOfSettings(raw)
 	if v, isSet := params["meta"]; isSet {
-		config.Meta = CloudInitSnippet{}.mapToSDK(v.(string))
+		config.Meta = CloudInitSnippet{}.mapToSDK(v)
 		set = true
 	}
 	if v, isSet := params["network"]; isSet {
-		config.Network = CloudInitSnippet{}.mapToSDK(v.(string))
+		config.Network = CloudInitSnippet{}.mapToSDK(v)
 		set = true
 	}
 	if v, isSet := params["user"]; isSet {
-		config.User = CloudInitSnippet{}.mapToSDK(v.(string))
+		config.User = CloudInitSnippet{}.mapToSDK(v)
 		set = true
 	}
 	if v, isSet := params["vendor"]; isSet {
-		config.Vendor = CloudInitSnippet{}.mapToSDK(v.(string))
+		config.Vendor = CloudInitSnippet{}.mapToSDK(v)
 		set = true
 	}
 	if set {
@@ -505,32 +505,32 @@ func (CloudInitNetworkConfig) mapToSDK(param string) (config CloudInitNetworkCon
 	var ipv6 CloudInitIPv6Config
 	if v, isSet := params["ip"]; isSet {
 		ipv4Set = true
-		if v.(string) == "dhcp" {
+		if v == "dhcp" {
 			ipv4.DHCP = true
 		} else {
-			tmp := IPv4CIDR(v.(string))
+			tmp := IPv4CIDR(v)
 			ipv4.Address = &tmp
 		}
 	}
 	if v, isSet := params["gw"]; isSet {
 		ipv4Set = true
-		tmp := IPv4Address(v.(string))
+		tmp := IPv4Address(v)
 		ipv4.Gateway = &tmp
 	}
 	if v, isSet := params["ip6"]; isSet {
 		ipv6Set = true
-		if v.(string) == "dhcp" {
+		if v == "dhcp" {
 			ipv6.DHCP = true
-		} else if v.(string) == "auto" {
+		} else if v == "auto" {
 			ipv6.SLAAC = true
 		} else {
-			tmp := IPv6CIDR(v.(string))
+			tmp := IPv6CIDR(v)
 			ipv6.Address = &tmp
 		}
 	}
 	if v, isSet := params["gw6"]; isSet {
 		ipv6Set = true
-		tmp := IPv6Address(v.(string))
+		tmp := IPv6Address(v)
 		ipv6.Gateway = &tmp
 	}
 	if ipv4Set {

@@ -93,11 +93,11 @@ func Test_floatToTrimmedString(t *testing.T) {
 func Test_splitStringOfSettings(t *testing.T) {
 	testData := []struct {
 		Input  string
-		Output map[string]interface{}
+		Output map[string]string
 	}{
 		{
 			Input: "setting=a,thing=b,randomString,doubleTest=value=equals,object=test",
-			Output: map[string]interface{}{
+			Output: map[string]string{
 				"setting":      "a",
 				"thing":        "b",
 				"randomString": "",

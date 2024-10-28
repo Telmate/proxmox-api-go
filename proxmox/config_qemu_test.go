@@ -3,6 +3,7 @@ package proxmox
 import (
 	"crypto"
 	"errors"
+	"net"
 	"net/netip"
 	"testing"
 
@@ -41,6 +42,23 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 	parseIP := func(rawIP string) (ip netip.Addr) {
 		ip, _ = netip.ParseAddr(rawIP)
 		return
+	}
+	parseMAC := func(rawMAC string) (mac net.HardwareAddr) {
+		mac, _ = net.ParseMAC(rawMAC)
+		return
+	}
+	networkInterface := func() QemuNetworkInterface {
+		return QemuNetworkInterface{
+			Bridge:        util.Pointer("vmbr0"),
+			Connected:     util.Pointer(false),
+			Firewall:      util.Pointer(true),
+			MAC:           util.Pointer(parseMAC("52:54:00:12:34:56")),
+			MTU:           util.Pointer(QemuMTU{Value: 1500}),
+			Model:         util.Pointer(QemuNetworkModel("virtio")),
+			MultiQueue:    util.Pointer(QemuNetworkQueue(5)),
+			RateLimitKBps: util.Pointer(QemuNetworkRate(45)),
+			NativeVlan:    util.Pointer(Vlan(23)),
+			TaggedVlans:   util.Pointer(Vlans{12, 23, 45})}
 	}
 	format_Raw := QemuDiskFormat_Raw
 	float10 := QemuDiskBandwidthMBpsLimitConcurrent(10.3)
@@ -3485,6 +3503,176 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
 					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
 					output:        map[string]interface{}{"delete": "shares"}}}},
+		{category: `Networks`,
+			create: []test{
+				{name: `Delete`,
+					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+						Bridge:        util.Pointer("vmbr0"),
+						Connected:     util.Pointer(true),
+						Delete:        true,
+						Firewall:      util.Pointer(true),
+						MAC:           util.Pointer(net.HardwareAddr("00:11:22:33:44:55")),
+						Model:         util.Pointer(QemuNetworkModelVirtIO),
+						MultiQueue:    util.Pointer(QemuNetworkQueue(4)),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(45)),
+						NativeVlan:    util.Pointer(Vlan(23))}}},
+					output: map[string]interface{}{}}},
+			createUpdate: []test{
+				{name: `Bridge`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{Bridge: util.Pointer("vmbr0")}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{Bridge: util.Pointer("vmbr1")}}},
+					output:        map[string]interface{}{"net0": ",bridge=vmbr0"}},
+				{name: `Connected true`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID1: QemuNetworkInterface{Connected: util.Pointer(true)}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID1: QemuNetworkInterface{Connected: util.Pointer(false)}}},
+					output:        map[string]interface{}{"net1": ""}},
+				{name: `Connected false`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{Connected: util.Pointer(false)}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{Connected: util.Pointer(true)}}},
+					output:        map[string]interface{}{"net2": ",link_down=1"}},
+				{name: `Firewall true`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{Firewall: util.Pointer(true)}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{Firewall: util.Pointer(false)}}},
+					output:        map[string]interface{}{"net3": ",firewall=1"}},
+				{name: `Firewall false`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{Firewall: util.Pointer(false)}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{Firewall: util.Pointer(true)}}},
+					output:        map[string]interface{}{"net4": ""}},
+				{name: `MAC`,
+					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
+						Model: util.Pointer(QemuNetworkModelE1000),
+						MAC:   util.Pointer(net.HardwareAddr(parseMAC("BC:11:22:33:44:55")))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
+						Model: util.Pointer(QemuNetworkModelVirtIO),
+						MAC:   util.Pointer(net.HardwareAddr(parseMAC("bc:11:22:33:44:56")))}}},
+					output: map[string]interface{}{"net5": "e1000=BC:11:22:33:44:55"}},
+				{name: `MTU.Inherit model=virtio`,
+					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{
+						Model: util.Pointer(QemuNetworkModelVirtIO),
+						MTU:   util.Pointer(QemuMTU{Inherit: true})}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
+					output:        map[string]interface{}{"net6": "virtio,mtu=1"}},
+				{name: `MTU.Value model=none`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1400)})}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
+					output:        map[string]interface{}{"net7": ""}},
+				{name: `MTU.Value model=virtio`,
+					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{
+						Model: util.Pointer(QemuNetworkModelVirtIO),
+						MTU:   util.Pointer(QemuMTU{Value: MTU(1400)})}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
+					output:        map[string]interface{}{"net7": "virtio,mtu=1400"}},
+				{name: `MTU.Value=0 model=virtio`,
+					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{
+						Model: util.Pointer(QemuNetworkModelVirtIO),
+						MTU:   util.Pointer(QemuMTU{Value: MTU(0)})}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{})}}},
+					output:        map[string]interface{}{"net8": "virtio"}},
+				{name: `Model`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{Model: util.Pointer(qemuNetworkModelE100082544gc_Lower)}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelVirtIO)}}},
+					output:        map[string]interface{}{"net9": "e1000-82544gc"}},
+				{name: `Model invalid`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{Model: util.Pointer(QemuNetworkModel("gibberish"))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelVirtIO)}}},
+					output:        map[string]interface{}{"net10": ""}},
+				{name: `MultiQueue set`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(4))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(2))}}},
+					output:        map[string]interface{}{"net11": ",queues=4"}},
+				{name: `MultiQueue unset`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(0))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(2))}}},
+					output:        map[string]interface{}{"net12": ""}},
+				{name: `RateLimitKBps 0`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(0))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					output:        map[string]interface{}{"net13": ""}},
+				{name: `RateLimitKBps 0.007`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(7))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					output:        map[string]interface{}{"net13": ",rate=0.007"}},
+				{name: `RateLimitKBps 0.07`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(70))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					output:        map[string]interface{}{"net14": ",rate=0.07"}},
+				{name: `RateLimitKBps 0.7`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(700))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					output:        map[string]interface{}{"net15": ",rate=0.7"}},
+				{name: `RateLimitKBps 7`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(7000))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					output:        map[string]interface{}{"net16": ",rate=7"}},
+				{name: `RateLimitKBps 7.546`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(7546))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					output:        map[string]interface{}{"net17": ",rate=7.546"}},
+				{name: `RateLimitKBps 734.546`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(734546))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					output:        map[string]interface{}{"net18": ",rate=734.546"}},
+				{name: `NativeVlan unset`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(0))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(2))}}},
+					output:        map[string]interface{}{"net19": ""}},
+				{name: `NativeVlan set`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID20: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(83))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID20: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(2))}}},
+					output:        map[string]interface{}{"net20": ",tag=83"}},
+				{name: `TaggedVlans set`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{10, 43, 23})}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{12, 56})}}},
+					output:        map[string]interface{}{"net21": ",trunks=10;43;23"}},
+				{name: `TaggedVlans unset`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{})}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{12, 56})}}},
+					output:        map[string]interface{}{"net22": ""}}},
+			update: []test{
+				{name: `Bridge replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID31: QemuNetworkInterface{Bridge: util.Pointer("vmbr45")}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID31: networkInterface()}},
+					output:        map[string]interface{}{"net31": "virtio=52:54:00:12:34:56,bridge=vmbr45,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
+				{name: `Connected replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID30: QemuNetworkInterface{Connected: util.Pointer(true)}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID30: networkInterface()}},
+					output:        map[string]interface{}{"net30": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
+				{name: `Firewall replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID29: QemuNetworkInterface{Firewall: util.Pointer(false)}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID29: networkInterface()}},
+					output:        map[string]interface{}{"net29": "virtio=52:54:00:12:34:56,bridge=vmbr0,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
+				{name: `MAC replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{MAC: util.Pointer(net.HardwareAddr(parseMAC("00:11:22:33:44:55")))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: networkInterface()}},
+					output:        map[string]interface{}{"net28": "virtio=00:11:22:33:44:55,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
+				{name: `MTU replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID27: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1400)})}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID27: networkInterface()}},
+					output:        map[string]interface{}{"net27": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1400,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
+				{name: `Model replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID26: QemuNetworkInterface{Model: util.Pointer(qemuNetworkModelE100082544gc_Lower)}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID26: networkInterface()}},
+					output:        map[string]interface{}{"net26": "e1000-82544gc=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
+				{name: `MultiQueue replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID25: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(4))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID25: networkInterface()}},
+					output:        map[string]interface{}{"net25": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=4,rate=0.045,tag=23,trunks=12;23;45"}},
+				{name: `RateLimitKBps replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(539))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: networkInterface()}},
+					output:        map[string]interface{}{"net24": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.539,tag=23,trunks=12;23;45"}},
+				{name: `NaitiveVlan replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID23: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(0))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID23: networkInterface()}},
+					output:        map[string]interface{}{"net23": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,trunks=12;23;45"}},
+				{name: `TaggedVlans replace`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{10, 70, 18})}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: networkInterface()}},
+					output:        map[string]interface{}{"net22": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=10;70;18"}},
+				{name: `Delete`,
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{Delete: true}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{}}},
+					output:        map[string]interface{}{"delete": "net21"}}}},
 		{category: `Serials`,
 			createUpdate: []test{
 				{name: `delete non existing`,
@@ -3602,6 +3790,10 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 	}
 	parseIP := func(rawIP string) (ip netip.Addr) {
 		ip, _ = netip.ParseAddr(rawIP)
+		return
+	}
+	parseMAC := func(rawMAC string) (mac net.HardwareAddr) {
+		mac, _ = net.ParseMAC(rawMAC)
 		return
 	}
 	uint1 := uint(1)
@@ -5959,6 +6151,215 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `shares`,
 					input:  map[string]interface{}{"shares": float64(100)},
 					output: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(100))}})}}},
+		{category: `Networks`,
+			tests: []test{
+				{name: `all e1000`,
+					input: map[string]interface{}{"net0": "e1000=BC:24:11:E1:BB:5D,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+						Bridge:    util.Pointer("vmbr0"),
+						Connected: util.Pointer(false),
+						Firewall:  util.Pointer(true),
+						MAC:       util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						// MTU is only supported for virtio
+						Model:         util.Pointer(QemuNetworkModelE1000),
+						MultiQueue:    util.Pointer(QemuNetworkQueue(23)),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(1530)),
+						NativeVlan:    util.Pointer(Vlan(12)),
+						TaggedVlans:   util.Pointer(Vlans{34, 18, 25})}}})},
+				{name: `all virtio`,
+					input: map[string]interface{}{"net31": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID31: QemuNetworkInterface{
+						Bridge:        util.Pointer("vmbr0"),
+						Connected:     util.Pointer(false),
+						Firewall:      util.Pointer(true),
+						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						MTU:           util.Pointer(QemuMTU{Value: 1395}),
+						Model:         util.Pointer(QemuNetworkModelVirtIO),
+						MultiQueue:    util.Pointer(QemuNetworkQueue(23)),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(1530)),
+						NativeVlan:    util.Pointer(Vlan(12)),
+						TaggedVlans:   util.Pointer(Vlans{34, 18, 25})}}})},
+				{name: `Bridge`,
+					input: map[string]interface{}{"net2": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{
+						Bridge:      util.Pointer("vmbr0"),
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `Model and Mac`,
+					input: map[string]interface{}{"net3": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `Connected false`,
+					input: map[string]interface{}{"net4": "virtio=BC:24:11:E1:BB:5D,link_down=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{
+						Connected:   util.Pointer(false),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `Connected true`,
+					input: map[string]interface{}{"net5": "virtio=BC:24:11:E1:BB:5D,link_down=0"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `Connected unset`,
+					input: map[string]interface{}{"net6": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `Firwall true`,
+					input: map[string]interface{}{"net7": "virtio=BC:24:11:E1:BB:5D,firewall=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(true),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `Firwall false`,
+					input: map[string]interface{}{"net8": "virtio=BC:24:11:E1:BB:5D,firewall=0"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `Firwall unset`,
+					input: map[string]interface{}{"net9": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `MTU value`,
+					input: map[string]interface{}{"net10": "virtio=BC:24:11:E1:BB:5D,mtu=1500"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						MTU:         &QemuMTU{Value: 1500},
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `MTU inherit`,
+					input: map[string]interface{}{"net11": "virtio=BC:24:11:E1:BB:5D,mtu=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						MTU:         &QemuMTU{Inherit: true},
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `MultiQueue disable`,
+					input: map[string]interface{}{"net12": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `MultiQueue enable`,
+					input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,queues=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MultiQueue:  util.Pointer(QemuNetworkQueue(1)),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `RateLimitKBps disable`,
+					input: map[string]interface{}{"net13": "virtio=BC:24:11:E1:BB:5D"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `RateLimitKBps 0.001`,
+					input: map[string]interface{}{"net14": "virtio=BC:24:11:E1:BB:5D,rate=0.001"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{
+						Connected:     util.Pointer(true),
+						Firewall:      util.Pointer(false),
+						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:         util.Pointer(QemuNetworkModelVirtIO),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(1)),
+						TaggedVlans:   util.Pointer(Vlans{})}}})},
+				{name: `RateLimitKBps 0.01`,
+					input: map[string]interface{}{"net15": "virtio=BC:24:11:E1:BB:5D,rate=0.010"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{
+						Connected:     util.Pointer(true),
+						Firewall:      util.Pointer(false),
+						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:         util.Pointer(QemuNetworkModelVirtIO),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(10)),
+						TaggedVlans:   util.Pointer(Vlans{})}}})},
+				{name: `RateLimitKBps 0.1`,
+					input: map[string]interface{}{"net16": "virtio=BC:24:11:E1:BB:5D,rate=0.1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{
+						Connected:     util.Pointer(true),
+						Firewall:      util.Pointer(false),
+						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:         util.Pointer(QemuNetworkModelVirtIO),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(100)),
+						TaggedVlans:   util.Pointer(Vlans{})}}})},
+				{name: `RateLimitKBps 1`,
+					input: map[string]interface{}{"net17": "virtio=BC:24:11:E1:BB:5D,rate=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{
+						Connected:     util.Pointer(true),
+						Firewall:      util.Pointer(false),
+						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:         util.Pointer(QemuNetworkModelVirtIO),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(1000)),
+						TaggedVlans:   util.Pointer(Vlans{})}}})},
+				{name: `RateLimitKBps 1.264`,
+					input: map[string]interface{}{"net18": "virtio=BC:24:11:E1:BB:5D,rate=1.264"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{
+						Connected:     util.Pointer(true),
+						Firewall:      util.Pointer(false),
+						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:         util.Pointer(QemuNetworkModelVirtIO),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(1264)),
+						TaggedVlans:   util.Pointer(Vlans{})}}})},
+				{name: `RateLimitKBps 15.264`,
+					input: map[string]interface{}{"net19": "virtio=BC:24:11:E1:BB:5D,rate=15.264"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{
+						Connected:     util.Pointer(true),
+						Firewall:      util.Pointer(false),
+						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:         util.Pointer(QemuNetworkModelVirtIO),
+						RateLimitKBps: util.Pointer(QemuNetworkRate(15264)),
+						TaggedVlans:   util.Pointer(Vlans{})}}})},
+				{name: `NaitiveVlan`,
+					input: map[string]interface{}{"net20": "virtio=BC:24:11:E1:BB:5D,tag=1"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID20: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						NativeVlan:  util.Pointer(Vlan(1)),
+						TaggedVlans: util.Pointer(Vlans{})}}})},
+				{name: `TaggedVlans`,
+					input: map[string]interface{}{"net21": "virtio=BC:24:11:E1:BB:5D,trunks=1;63;21"},
+					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{
+						Connected:   util.Pointer(true),
+						Firewall:    util.Pointer(false),
+						MAC:         util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
+						Model:       util.Pointer(QemuNetworkModelVirtIO),
+						TaggedVlans: util.Pointer(Vlans{1, 63, 21})}}})},
+			},
+		},
 		{category: `Node`,
 			tests: []test{
 				{name: `vmr nil`,
@@ -6111,6 +6512,15 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			config.Memory = &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}
 		}
 		return config
+	}
+	baseNetwork := func(id QemuNetworkInterfaceID, config QemuNetworkInterface) QemuNetworkInterfaces {
+		if config.Bridge == nil {
+			config.Bridge = util.Pointer("vmbr0")
+		}
+		if config.Model == nil {
+			config.Model = util.Pointer(QemuNetworkModelVirtIO)
+		}
+		return QemuNetworkInterfaces{id: config}
 	}
 	validCloudInit := QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}
 	validTags := func() []Tag {
@@ -7512,6 +7922,124 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							CapacityMiB:        util.Pointer(QemuMemoryCapacity(2048)),
 							MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
 						err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)}}}},
+		{category: `Network`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `Delete`,
+						input:   baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{Delete: true}}}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{}}}},
+					{name: `MTU inherit model=virtio`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID0,
+							QemuNetworkInterface{MTU: &QemuMTU{Inherit: true}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{
+							QemuNetworkInterfaceID0: QemuNetworkInterface{}}}},
+					{name: `MTU value`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID1,
+							QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelVirtIO),
+								MTU:   &QemuMTU{Value: 1500}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID1: QemuNetworkInterface{}}}},
+					{name: `MTU empty e1000`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID2,
+							QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelE1000),
+								MTU:   &QemuMTU{}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{}}}},
+					{name: `MTU empty virtio`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID2,
+							QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelVirtIO),
+								MTU:   &QemuMTU{}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{}}}},
+					{name: `Model`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID3,
+							QemuNetworkInterface{Model: util.Pointer(QemuNetworkModel("e1000"))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{}}}},
+					{name: `MultiQueue`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID4,
+							QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(1))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{}}}},
+					{name: `RateLimitKBps`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID5,
+							QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(10240000))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{}}}},
+					{name: `NativeVlan`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID6,
+							QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(56))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{}}}},
+					{name: `TaggedVlans`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID7,
+							QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{0, 4095})})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{}}}}},
+				update: []test{
+					{name: `MTU model change`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID0,
+							QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelE1000)})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
+							Model: util.Pointer(QemuNetworkModelVirtIO),
+							MTU:   &QemuMTU{Inherit: true}}}}},
+					{name: `Update no Bridge && no Model`,
+						input:   baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{}}}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{}}}}}},
+			invalid: testType{
+				create: []test{
+					{name: `no Bridge`,
+						input: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{}}}),
+						err:   errors.New(QemuNetworkInterface_Error_BridgeRequired)},
+					{name: `no Model`,
+						input: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{Bridge: util.Pointer("vmbr0")}}}),
+						err:   errors.New(QemuNetworkInterface_Error_ModelRequired)}},
+				createUpdate: []test{
+					{name: `errors.New(MTU_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(
+							QemuNetworkInterfaceID11, QemuNetworkInterface{MTU: &QemuMTU{Value: 575}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{}}},
+						err:     errors.New(MTU_Error_Invalid)},
+					{name: `errors.New(QemuMTU_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(
+							QemuNetworkInterfaceID12, QemuNetworkInterface{MTU: &QemuMTU{Inherit: true, Value: 1500}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{}}},
+						err:     errors.New(QemuMTU_Error_Invalid)},
+					{name: `errors.New(QemuNetworkInterface_Error_MtuNoEffect) MTU inherit`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(
+							QemuNetworkInterfaceID12, QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelE100082544gc),
+								MTU:   &QemuMTU{Inherit: true}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{}}},
+						err:     errors.New(QemuNetworkInterface_Error_MtuNoEffect)},
+					{name: `errors.New(QemuNetworkInterface_Error_MtuNoEffect) MTU value`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(
+							QemuNetworkInterfaceID12, QemuNetworkInterface{
+								Model: util.Pointer(QemuNetworkModelE1000),
+								MTU:   &QemuMTU{Value: 1500}})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{}}},
+						err:     errors.New(QemuNetworkInterface_Error_MtuNoEffect)},
+					{name: `model`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID13, QemuNetworkInterface{
+							Model: util.Pointer(QemuNetworkModel("invalid"))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{}}},
+						err:     QemuNetworkModel("").Error()},
+					{name: `errors.New(QemuNetworkQueue_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID14, QemuNetworkInterface{
+							MultiQueue: util.Pointer(QemuNetworkQueue(75))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{}}},
+						err:     errors.New(QemuNetworkQueue_Error_Invalid)},
+					{name: `errors.New(QemuNetworkRate_Error_Invalid)`,
+						input: baseConfig(
+							ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID15, QemuNetworkInterface{
+								RateLimitKBps: util.Pointer(QemuNetworkRate(10240001))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{}}},
+						err:     errors.New(QemuNetworkRate_Error_Invalid)},
+					{name: `NativeVlan errors.New(Vlan_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID16, QemuNetworkInterface{
+							NativeVlan: util.Pointer(Vlan(4096))})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{}}},
+						err:     errors.New(Vlan_Error_Invalid)},
+					{name: `TaggedVlans errors.New(Vlan_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID17, QemuNetworkInterface{
+							TaggedVlans: util.Pointer(Vlans{4096})})}),
+						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{}}},
+						err:     errors.New(Vlan_Error_Invalid)}}}},
 		{category: `PoolName`,
 			valid: testType{
 				createUpdate: []test{
@@ -7651,24 +8179,5 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current, subTest.version), name)
 			})
 		}
-	}
-}
-
-func Test_QemuNetworkInterfaceID_Validate(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  QemuNetworkInterfaceID
-		output error
-	}{
-		{name: "Valid",
-			input: QemuNetworkInterfaceID0},
-		{name: "Invalid",
-			input:  32,
-			output: errors.New(QemuNetworkInterfaceID_Error_Invalid)},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, test.input.Validate())
-		})
 	}
 }

@@ -1,6 +1,8 @@
 package api_test
 
 import (
+	"net"
+
 	"github.com/Telmate/proxmox-api-go/internal/util"
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
 )
@@ -20,15 +22,7 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 	disks[0]["storage"] = "local"
 	disks[0]["size"] = "1G"
 
-	networks := make(pxapi.QemuDevices)
-	if network {
-		networks[0] = make(map[string]interface{})
-		networks[0]["bridge"] = "vmbr0"
-		networks[0]["firewall"] = "true"
-		networks[0]["id"] = "0"
-		networks[0]["macaddr"] = "B6:8F:9D:7C:8F:BC"
-		networks[0]["model"] = "virtio"
-	}
+	mac, _ := net.ParseMAC("B6:8F:9D:7C:8F:BC")
 
 	config := pxapi.ConfigQemu{
 		Name:   "test-qemu01",
@@ -42,13 +36,17 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 			Sockets: util.Pointer(pxapi.QemuCpuSockets(1)),
 			Type:    util.Pointer(pxapi.CpuType_QemuKvm64),
 		},
-		QemuKVM:      util.Pointer(true),
-		Hotplug:      "network,disk,usb",
-		QemuNetworks: networks,
-		QemuIso:      "none",
-		Boot:         "order=ide2;net0",
-		Scsihw:       "virtio-scsi-pci",
-		QemuDisks:    disks,
+		QemuKVM: util.Pointer(true),
+		Hotplug: "network,disk,usb",
+		Networks: pxapi.QemuNetworkInterfaces{
+			pxapi.QemuNetworkInterfaceID0: pxapi.QemuNetworkInterface{
+				Bridge:   util.Pointer("vmbr0"),
+				Firewall: util.Pointer(true),
+				Model:    util.Pointer(pxapi.QemuNetworkModelVirtIO),
+				MAC:      &mac}},
+		QemuIso: "none",
+		Boot:    "order=ide2;net0",
+		Scsihw:  "virtio-scsi-pci",
 	}
 
 	return config
