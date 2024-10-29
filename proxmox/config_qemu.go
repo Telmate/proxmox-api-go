@@ -60,7 +60,7 @@ type ConfigQemu struct {
 	QemuPCIDevices  QemuDevices           `json:"hostpci,omitempty"` // TODO should be a struct
 	QemuPxe         bool                  `json:"pxe,omitempty"`
 	QemuUnusedDisks QemuDevices           `json:"unused,omitempty"` // TODO should be a struct
-	QemuUsbs        QemuDevices           `json:"usb,omitempty"`    // TODO should be a struct
+	USBs            QemuUSBs              `json:"usbs,omitempty"`
 	QemuVga         QemuDevice            `json:"vga,omitempty"`    // TODO should be a struct
 	RNGDrive        QemuDevice            `json:"rng0,omitempty"`   // TODO should be a struct
 	Scsihw          string                `json:"scsihw,omitempty"` // TODO should be custom type with enum
@@ -125,9 +125,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.QemuUnusedDisks == nil {
 		config.QemuUnusedDisks = QemuDevices{}
-	}
-	if config.QemuUsbs == nil {
-		config.QemuUsbs = QemuDevices{}
 	}
 	if config.QemuVga == nil {
 		config.QemuVga = QemuDevice{}
@@ -268,8 +265,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		params["vga"] = strings.Join(vgaParam, ",")
 	}
 
-	// Create usb interfaces
-	config.CreateQemuUsbsParams(params)
+	if config.USBs != nil {
+		itemsToDelete += config.USBs.mapToAPI(currentConfig.USBs, params)
+	}
 
 	config.CreateQemuPCIsParams(params)
 
