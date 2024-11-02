@@ -6566,6 +6566,57 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `All`,
 					input:  map[string]interface{}{"tpmstate0": string("local-lvm:vm-101-disk-0,size=4M,version=v2.0")},
 					output: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "local-lvm", Version: util.Pointer(TpmVersion("v2.0"))}})}}},
+		{category: `USBs`,
+			tests: []test{
+				{name: `Device`,
+					input: map[string]interface{}{
+						"usb0": "host=1234:5678"},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{
+						QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+							ID:   util.Pointer(UsbDeviceID("1234:5678")),
+							USB3: util.Pointer(false)}}}})},
+				{name: `Device usb3`,
+					input: map[string]interface{}{
+						"usb1": "host=1234:5678,usb3=1"},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{
+						QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
+							ID:   util.Pointer(UsbDeviceID("1234:5678")),
+							USB3: util.Pointer(true)}}}})},
+				{name: `Port`,
+					input: map[string]interface{}{"usb2": "host=1-2"},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{
+						QemuUsbID2: QemuUSB{Port: &QemuUsbPort{
+							ID:   util.Pointer(UsbPortID("1-2")),
+							USB3: util.Pointer(false)}}}})},
+				{name: `Port usb3`,
+					input: map[string]interface{}{"usb3": "host=2-4,usb3=1"},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{
+						QemuUsbID3: QemuUSB{Port: &QemuUsbPort{
+							ID:   util.Pointer(UsbPortID("2-4")),
+							USB3: util.Pointer(true)}}}})},
+				{name: `mapping`,
+					input: map[string]interface{}{"usb4": "mapping=abcde"},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{
+						QemuUsbID4: QemuUSB{Mapping: &QemuUsbMapping{
+							ID:   util.Pointer(ResourceMappingUsbID("abcde")),
+							USB3: util.Pointer(false)}}}})},
+				{name: `mapping usb3`,
+					input: map[string]interface{}{"usb0": "mapping=testmapping,usb3=1"},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{
+						QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+							ID:   util.Pointer(ResourceMappingUsbID("testmapping")),
+							USB3: util.Pointer(true)}}}})},
+				{name: `spice`,
+					input: map[string]interface{}{"usb1": "spice"},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{
+						QemuUsbID1: QemuUSB{Spice: &QemuUsbSpice{USB3: false}}}})},
+				{name: `spice usb3`,
+					input: map[string]interface{}{"usb2": "spice,usb3=1"},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{
+						QemuUsbID2: QemuUSB{Spice: &QemuUsbSpice{USB3: true}}}})},
+				{name: `code coverage`,
+					input:  map[string]interface{}{"usb3": ""},
+					output: baseConfig(ConfigQemu{USBs: QemuUSBs{QemuUsbID3: QemuUSB{}}})}}},
 		{category: `VmID`,
 			tests: []test{
 				{name: `vmr nil`,

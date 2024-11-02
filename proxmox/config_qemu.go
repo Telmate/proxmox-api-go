@@ -429,40 +429,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	config.Networks = QemuNetworkInterfaces{}.mapToSDK(params)
 	config.Serials = SerialInterfaces{}.mapToSDK(params)
 
-	// Add usbs
-	usbNames := []string{}
-
-	for k := range params {
-		if usbName := rxUsbName.FindStringSubmatch(k); len(usbName) > 0 {
-			usbNames = append(usbNames, usbName[0])
-		}
-	}
-
-	if len(usbNames) > 0 {
-		config.QemuUsbs = QemuDevices{}
-		for _, usbName := range usbNames {
-			usbConfStr := params[usbName]
-			usbConfList := strings.Split(usbConfStr.(string), ",")
-			id := rxDeviceID.FindStringSubmatch(usbName)
-			usbID, _ := strconv.Atoi(id[0])
-			_, host := ParseSubConf(usbConfList[0], "=")
-
-			usbConfMap := QemuDevice{
-				"id":   usbID,
-				"host": host,
-			}
-
-			usbConfMap.readDeviceConfig(usbConfList[1:])
-			if usbConfMap["usb3"] == 1 {
-				usbConfMap["usb3"] = true
-			}
-
-			// And device config to usbs map.
-			if len(usbConfMap) > 0 {
-				config.QemuUsbs[usbID] = usbConfMap
-			}
-		}
-	}
+	config.USBs = QemuUSBs{}.mapToSDK(params)
 
 	// hostpci
 	hostPCInames := []string{}
@@ -1155,16 +1122,6 @@ func (c ConfigQemu) CreateQemuPCIsParams(params map[string]interface{}) {
 
 		// Add back to Qemu prams.
 		params[qemuPCIName] = strings.TrimSuffix(pcistring.String(), ",")
-	}
-}
-
-// Create parameters for usb interface
-func (c ConfigQemu) CreateQemuUsbsParams(params map[string]interface{}) {
-	for usbID, usbConfMap := range c.QemuUsbs {
-		qemuUsbName := "usb" + strconv.Itoa(usbID)
-
-		// Add back to Qemu prams.
-		params[qemuUsbName] = FormatUsbParam(usbConfMap)
 	}
 }
 

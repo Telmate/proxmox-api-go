@@ -3,6 +3,8 @@ package proxmox
 import (
 	"strconv"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 type qemuUSB struct {
@@ -40,6 +42,21 @@ const (
 
 type QemuUSBs map[QemuUsbID]QemuUSB
 
+const QemuUSBsAmount = uint8(QemuUsbIDMaximum) + 1
+
+func (QemuUSBs) mapToSDK(params map[string]interface{}) QemuUSBs {
+	usbList := make(QemuUSBs)
+	for i := QemuUsbID(0); i < 14; i++ {
+		if v, isSet := params["usb"+strconv.Itoa(int(i))]; isSet {
+			usbList[i] = QemuUSB{}.mapToSDK(v.(string))
+		}
+	}
+	if len(usbList) > 0 {
+		return usbList
+	}
+	return nil
+}
+
 func (config QemuUSBs) mapToAPI(current QemuUSBs, params map[string]interface{}) string {
 	var builder strings.Builder
 	for i, e := range config {
@@ -62,6 +79,8 @@ func (config QemuUSBs) mapToAPI(current QemuUSBs, params map[string]interface{})
 type QemuUsbID uint8
 
 const (
+	QemuUsbIDMaximum = QemuUsbID4
+
 	QemuUsbID0 QemuUsbID = 0
 	QemuUsbID1 QemuUsbID = 1
 	QemuUsbID2 QemuUsbID = 2
@@ -136,6 +155,27 @@ func (config QemuUSB) mapToAPI(current *QemuUSB) string {
 		}
 	}
 	return usb.String()
+}
+
+func (QemuUSB) mapToSDK(rawUSB string) QemuUSB {
+	var usb3 bool
+	splitUSB := strings.Split(rawUSB, ",")
+	if len(splitUSB) == 2 {
+		usb3 = splitUSB[1] == "usb3=1"
+	}
+	usbType := strings.Split(splitUSB[0], "=")
+	switch usbType[0] {
+	case "host":
+		if strings.Contains(usbType[1], ":") {
+			return QemuUSB{Device: &QemuUsbDevice{ID: util.Pointer(UsbDeviceID(usbType[1])), USB3: &usb3}}
+		}
+		return QemuUSB{Port: &QemuUsbPort{ID: util.Pointer(UsbPortID(usbType[1])), USB3: &usb3}}
+	case "mapping":
+		return QemuUSB{Mapping: &QemuUsbMapping{ID: util.Pointer(ResourceMappingUsbID(usbType[1])), USB3: &usb3}}
+	case "spice":
+		return QemuUSB{Spice: &QemuUsbSpice{USB3: usb3}}
+	}
+	return QemuUSB{}
 }
 
 type QemuUsbDevice struct {
