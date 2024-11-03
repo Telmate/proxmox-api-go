@@ -519,13 +519,13 @@ func (CloudInitNetworkConfig) mapToSDK(param string) (config CloudInitNetworkCon
 	}
 	if v, isSet := params["ip6"]; isSet {
 		ipv6Set = true
-		if v == "dhcp" {
+		switch v {
+		case "dhcp":
 			ipv6.DHCP = true
-		} else if v == "auto" {
+		case "auto":
 			ipv6.SLAAC = true
-		} else {
-			tmp := IPv6CIDR(v)
-			ipv6.Address = &tmp
+		default:
+			ipv6.Address = util.Pointer(IPv6CIDR(v))
 		}
 	}
 	if v, isSet := params["gw6"]; isSet {

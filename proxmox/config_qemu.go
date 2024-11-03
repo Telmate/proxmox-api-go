@@ -60,7 +60,7 @@ type ConfigQemu struct {
 	QemuPCIDevices  QemuDevices           `json:"hostpci,omitempty"` // TODO should be a struct
 	QemuPxe         bool                  `json:"pxe,omitempty"`
 	QemuUnusedDisks QemuDevices           `json:"unused,omitempty"` // TODO should be a struct
-	QemuUsbs        QemuDevices           `json:"usb,omitempty"`    // TODO should be a struct
+	USBs            QemuUSBs              `json:"usbs,omitempty"`
 	QemuVga         QemuDevice            `json:"vga,omitempty"`    // TODO should be a struct
 	RNGDrive        QemuDevice            `json:"rng0,omitempty"`   // TODO should be a struct
 	Scsihw          string                `json:"scsihw,omitempty"` // TODO should be custom type with enum
@@ -125,9 +125,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.QemuUnusedDisks == nil {
 		config.QemuUnusedDisks = QemuDevices{}
-	}
-	if config.QemuUsbs == nil {
-		config.QemuUsbs = QemuDevices{}
 	}
 	if config.QemuVga == nil {
 		config.QemuVga = QemuDevice{}
@@ -268,8 +265,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		params["vga"] = strings.Join(vgaParam, ",")
 	}
 
-	// Create usb interfaces
-	config.CreateQemuUsbsParams(params)
+	if config.USBs != nil {
+		itemsToDelete += config.USBs.mapToAPI(currentConfig.USBs, params)
+	}
 
 	config.CreateQemuPCIsParams(params)
 
@@ -431,40 +429,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	config.Networks = QemuNetworkInterfaces{}.mapToSDK(params)
 	config.Serials = SerialInterfaces{}.mapToSDK(params)
 
-	// Add usbs
-	usbNames := []string{}
-
-	for k := range params {
-		if usbName := rxUsbName.FindStringSubmatch(k); len(usbName) > 0 {
-			usbNames = append(usbNames, usbName[0])
-		}
-	}
-
-	if len(usbNames) > 0 {
-		config.QemuUsbs = QemuDevices{}
-		for _, usbName := range usbNames {
-			usbConfStr := params[usbName]
-			usbConfList := strings.Split(usbConfStr.(string), ",")
-			id := rxDeviceID.FindStringSubmatch(usbName)
-			usbID, _ := strconv.Atoi(id[0])
-			_, host := ParseSubConf(usbConfList[0], "=")
-
-			usbConfMap := QemuDevice{
-				"id":   usbID,
-				"host": host,
-			}
-
-			usbConfMap.readDeviceConfig(usbConfList[1:])
-			if usbConfMap["usb3"] == 1 {
-				usbConfMap["usb3"] = true
-			}
-
-			// And device config to usbs map.
-			if len(usbConfMap) > 0 {
-				config.QemuUsbs[usbID] = usbConfMap
-			}
-		}
-	}
+	config.USBs = QemuUSBs{}.mapToSDK(params)
 
 	// hostpci
 	hostPCInames := []string{}
@@ -714,6 +679,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
+		if config.USBs != nil {
+			if err = config.USBs.Validate(nil); err != nil {
+				return
+			}
+		}
 	} else { // Update
 		if config.CPU != nil {
 			if err = config.CPU.Validate(current.CPU, version); err != nil {
@@ -732,6 +702,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 		if config.TPM != nil {
 			if err = config.TPM.Validate(current.TPM); err != nil {
+				return
+			}
+		}
+		if config.USBs != nil {
+			if err = config.USBs.Validate(current.USBs); err != nil {
 				return
 			}
 		}
@@ -826,7 +801,6 @@ var (
 	rxUnusedDiskName = regexp.MustCompile(`^(unused)\d+`)
 	rxNicName        = regexp.MustCompile(`net\d+`)
 	rxMpName         = regexp.MustCompile(`mp\d+`)
-	rxUsbName        = regexp.MustCompile(`usb\d+`)
 	rxPCIName        = regexp.MustCompile(`hostpci\d+`)
 )
 
@@ -1157,16 +1131,6 @@ func (c ConfigQemu) CreateQemuPCIsParams(params map[string]interface{}) {
 
 		// Add back to Qemu prams.
 		params[qemuPCIName] = strings.TrimSuffix(pcistring.String(), ",")
-	}
-}
-
-// Create parameters for usb interface
-func (c ConfigQemu) CreateQemuUsbsParams(params map[string]interface{}) {
-	for usbID, usbConfMap := range c.QemuUsbs {
-		qemuUsbName := "usb" + strconv.Itoa(usbID)
-
-		// Add back to Qemu prams.
-		params[qemuUsbName] = FormatUsbParam(usbConfMap)
 	}
 }
 
