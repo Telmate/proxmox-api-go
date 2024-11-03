@@ -3,5 +3,5 @@ proxmox-api-go
 .vscode
 .env
 
-coverage.html
-coverage.out
+*coverage.html
+*coverage.out
