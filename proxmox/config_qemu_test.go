@@ -8352,6 +8352,154 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input:   baseConfig(ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion(""))}}),
 						current: &ConfigQemu{TPM: &TpmState{}},
 						err:     errors.New(TpmVersion_Error_Invalid)}}}},
+		{category: `USBs`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `delete`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Delete: true}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+								ID: util.Pointer(UsbDeviceID("1234:5678"))}}}}},
+					{name: `USBs.Device.ID set/update`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+								ID: util.Pointer(UsbDeviceID("5678:1234"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+								ID:   util.Pointer(UsbDeviceID("1234:5678")),
+								USB3: util.Pointer(true)}}}}},
+					{name: `USBs.Mapped.ID set/update`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+								ID: util.Pointer(ResourceMappingUsbID("valid"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+								ID:   util.Pointer(ResourceMappingUsbID("test")),
+								USB3: util.Pointer(true)}}}}},
+					{name: `USBs.Port.ID set/update`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{
+								ID: util.Pointer(UsbPortID("6-4"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{
+								ID:   util.Pointer(UsbPortID("1-5")),
+								USB3: util.Pointer(true)}}}}},
+					{name: `USBs.Spice.USB3 set/update`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Spice: &QemuUsbSpice{
+								USB3: true}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Spice: &QemuUsbSpice{
+								USB3: false}}}}}},
+				update: []test{
+					{name: `USBs.Device to USBs.Mapped`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+								ID: util.Pointer(UsbDeviceID("1234:5678"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+								ID: util.Pointer(ResourceMappingUsbID("test"))}}}}},
+					{name: `USBs.Device.USB3 update`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+								USB3: util.Pointer(true)}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+								ID:   util.Pointer(UsbDeviceID("1234:5678")),
+								USB3: util.Pointer(false)}}}}},
+					{name: `USBs.Mapped to USBs.Port`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+								ID: util.Pointer(ResourceMappingUsbID("test"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{
+								ID: util.Pointer(UsbPortID("3-5"))}}}}},
+					{name: `USBs.Mapped.USB3 update`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+								USB3: util.Pointer(true)}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+								ID:   util.Pointer(ResourceMappingUsbID("test")),
+								USB3: util.Pointer(false)}}}}},
+					{name: `USBs.Port to USBs.Spice`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{
+								ID: util.Pointer(UsbPortID("2-6"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Spice: &QemuUsbSpice{}}}}},
+					{name: `USBs.Port.USB3 update`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{
+								USB3: util.Pointer(true)}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{
+								ID:   util.Pointer(UsbPortID("2-6")),
+								USB3: util.Pointer(false)}}}}},
+					{name: `USBs.Spice to USBs.Device`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Spice: &QemuUsbSpice{}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+								ID: util.Pointer(UsbDeviceID("5678:1234"))}}}}}}},
+			invalid: testType{
+				create: []test{},
+				createUpdate: []test{
+					{name: `errors.New(QemuUsbID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							20: QemuUSB{}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{}}}},
+						err: errors.New(QemuUsbID_Error_Invalid)},
+					{name: `errors.New(QemuUSB_Error_MutualExclusive)`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{
+								Device:  &QemuUsbDevice{ID: util.Pointer(UsbDeviceID("1234:5678"))},
+								Mapping: &QemuUsbMapping{ID: util.Pointer(ResourceMappingUsbID("test"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{
+								Device: &QemuUsbDevice{ID: util.Pointer(UsbDeviceID("1234:5678"))}}}},
+						err: errors.New(QemuUSB_Error_MutualExclusive)},
+					{name: `errors.New(QemuUSB_Error_DeviceID)`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{}}}},
+						err: errors.New(QemuUSB_Error_DeviceID)},
+					{name: `errors.New(QemuUSB_Error_MappedID)`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{}}}},
+						err: errors.New(QemuUSB_Error_MappedID)},
+					{name: `errors.New(QemuUSB_Error_PortID)`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{}}}},
+						err: errors.New(QemuUSB_Error_PortID)},
+					{name: `errors.New(UsbDeviceID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+								ID: util.Pointer(UsbDeviceID("1234"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{}}}},
+						err: errors.New(UsbDeviceID_Error_Invalid)},
+					{name: `errors.New(ResourceMappingUsbID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+								ID: util.Pointer(ResourceMappingUsbID("Invalid%"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{}}}},
+						err: errors.New(ResourceMappingUsbID_Error_Invalid)},
+					{name: `errors.New(UsbPortID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{
+								ID: util.Pointer(UsbPortID("2-3-4"))}}}}),
+						current: &ConfigQemu{USBs: QemuUSBs{
+							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{}}}},
+						err: errors.New(UsbPortID_Error_Invalid)}}}},
 	}
 	for _, test := range tests {
 		for _, subTest := range append(test.valid.create, test.valid.createUpdate...) {

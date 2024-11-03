@@ -679,6 +679,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
+		if config.USBs != nil {
+			if err = config.USBs.Validate(nil); err != nil {
+				return
+			}
+		}
 	} else { // Update
 		if config.CPU != nil {
 			if err = config.CPU.Validate(current.CPU, version); err != nil {
@@ -697,6 +702,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 		if config.TPM != nil {
 			if err = config.TPM.Validate(current.TPM); err != nil {
+				return
+			}
+		}
+		if config.USBs != nil {
+			if err = config.USBs.Validate(current.USBs); err != nil {
 				return
 			}
 		}
