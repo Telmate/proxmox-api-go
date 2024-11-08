@@ -137,64 +137,45 @@ const (
 )
 
 func (config QemuUSB) mapToAPI(current *QemuUSB) string {
-	var usb qemuUSB
+	var usedConfig qemuUSB
 	if current != nil {
-		if current.Device != nil {
-			if current.Device.ID != nil {
-				usb.Host = (*current.Device.ID).String()
-			}
-			if current.Device.USB3 != nil {
-				usb.Usb3 = *current.Device.USB3
-			}
-		} else if current.Mapping != nil {
-			if current.Mapping.ID != nil {
-				usb.Mapping = *current.Mapping.ID
-			}
-			if current.Mapping.USB3 != nil {
-				usb.Usb3 = *current.Mapping.USB3
-			}
-		} else if current.Port != nil {
-			if current.Port.ID != nil {
-				usb.Host = string(*current.Port.ID)
-			}
-			if current.Port.USB3 != nil {
-				usb.Usb3 = *current.Port.USB3
-			}
-		} else if current.Spice != nil {
-			usb.Usb3 = current.Spice.USB3
-		}
+		usedConfig = current.mapToApiIntermediary(usedConfig)
 	}
+	return config.mapToApiIntermediary(usedConfig).String()
+}
+
+func (config QemuUSB) mapToApiIntermediary(usedConfig qemuUSB) qemuUSB {
 	if config.Device != nil {
-		usb.enum = qemuUsbEnumDevice
+		usedConfig.enum = qemuUsbEnumDevice
 		if config.Device.USB3 != nil {
-			usb.Usb3 = *config.Device.USB3
+			usedConfig.Usb3 = *config.Device.USB3
 		}
 		if config.Device.ID != nil {
-			usb.Host = (*config.Device.ID).String()
+			usedConfig.Host = (*config.Device.ID).String()
 		}
 	} else if config.Mapping != nil {
-		usb.enum = qemuUsbEnumMapping
+		usedConfig.enum = qemuUsbEnumMapping
 		if config.Mapping.USB3 != nil {
-			usb.Usb3 = *config.Mapping.USB3
+			usedConfig.Usb3 = *config.Mapping.USB3
 		}
 		if config.Mapping.ID != nil {
-			usb.Mapping = *config.Mapping.ID
+			usedConfig.Mapping = *config.Mapping.ID
 		}
 	} else if config.Port != nil {
-		usb.enum = qemuUsbEnumPort
+		usedConfig.enum = qemuUsbEnumPort
 		if config.Port.USB3 != nil {
-			usb.Usb3 = *config.Port.USB3
+			usedConfig.Usb3 = *config.Port.USB3
 		}
 		if config.Port.ID != nil {
-			usb.Host = (*config.Port.ID).String()
+			usedConfig.Host = (*config.Port.ID).String()
 		}
 	} else if config.Spice != nil {
-		usb.enum = qemuUsbEnumSpice
+		usedConfig.enum = qemuUsbEnumSpice
 		if config.Spice.USB3 {
-			usb.Usb3 = config.Spice.USB3
+			usedConfig.Usb3 = config.Spice.USB3
 		}
 	}
-	return usb.String()
+	return usedConfig
 }
 
 func (QemuUSB) mapToSDK(rawUSB string) QemuUSB {
