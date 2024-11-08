@@ -87,12 +87,12 @@ func (config QemuUSBs) Validate(current QemuUSBs) (err error) {
 		}
 		if current != nil {
 			if v, isSet := (current)[i]; isSet {
-				if err = e.Validate(&v); err != nil {
+				if err = e.validate(v); err != nil {
 					return
 				}
 			}
 		} else {
-			if err = e.Validate(nil); err != nil {
+			if err = e.validate(QemuUSB{}); err != nil {
 				return
 			}
 		}
@@ -218,107 +218,52 @@ func (QemuUSB) mapToSDK(rawUSB string) QemuUSB {
 	return QemuUSB{}
 }
 
-func (config QemuUSB) Validate(current *QemuUSB) error {
+func (config QemuUSB) Validate(current *QemuUSB) (err error) {
+	if current != nil {
+		err = config.validate(*current)
+	} else {
+		err = config.validate(QemuUSB{})
+	}
+	return err
+}
+
+func (config QemuUSB) validate(current QemuUSB) error {
 	if config.Delete {
 		return nil
 	}
-	var usb QemuUSB
-	if current != nil {
-		if current.Device != nil {
-			usb.Device = current.Device
-		}
-		if current.Mapping != nil {
-			usb.Mapping = current.Mapping
-		}
-		if current.Port != nil {
-			usb.Port = current.Port
-		}
-		if current.Spice != nil {
-			usb.Spice = current.Spice
-		}
-	}
 	var mutualExclusivity uint8
 	if config.Device != nil {
-		var tmpUSB QemuUsbDevice
 		if config.Device.ID != nil {
 			if err := config.Device.ID.Validate(); err != nil {
 				return err
 			}
-			tmpUSB.ID = config.Device.ID
-		}
-		if config.Device.USB3 != nil {
-			tmpUSB.USB3 = config.Device.USB3
-		}
-		if usb.Device != nil {
-			if tmpUSB.ID != nil {
-				usb.Device.ID = tmpUSB.ID
-			}
-			if tmpUSB.USB3 != nil {
-				usb.Device.USB3 = tmpUSB.USB3
-			}
-		} else {
-			usb.Device = config.Device
-		}
-		if usb.Device.ID == nil {
+		} else if current.Device == nil || current.Device.ID == nil {
 			return errors.New(QemuUSB_Error_DeviceID)
 		}
 		mutualExclusivity++
 	}
 	if config.Mapping != nil {
-		var tmpUSB QemuUsbMapping
 		if config.Mapping.ID != nil {
 			if err := config.Mapping.ID.Validate(); err != nil {
 				return err
 			}
-			tmpUSB.ID = config.Mapping.ID
-		}
-		if config.Mapping.USB3 != nil {
-			tmpUSB.USB3 = config.Mapping.USB3
-		}
-		if usb.Mapping != nil {
-			if tmpUSB.ID != nil {
-				usb.Mapping.ID = tmpUSB.ID
-			}
-			if tmpUSB.USB3 != nil {
-				usb.Mapping.USB3 = tmpUSB.USB3
-			}
-		} else {
-			usb.Mapping = config.Mapping
-		}
-		if usb.Mapping.ID == nil {
+		} else if current.Mapping == nil || current.Mapping.ID == nil {
 			return errors.New(QemuUSB_Error_MappedID)
 		}
 		mutualExclusivity++
 	}
 	if config.Port != nil {
-		var tmpUSB QemuUsbPort
 		if config.Port.ID != nil {
 			if err := config.Port.ID.Validate(); err != nil {
 				return err
 			}
-			tmpUSB.ID = config.Port.ID
-		}
-		if config.Port.USB3 != nil {
-			tmpUSB.USB3 = config.Port.USB3
-		}
-		if usb.Port != nil {
-			if tmpUSB.ID != nil {
-				usb.Port.ID = tmpUSB.ID
-			}
-			if tmpUSB.USB3 != nil {
-				usb.Port.USB3 = tmpUSB.USB3
-			}
-		} else {
-			usb.Port = config.Port
-		}
-		if usb.Port.ID == nil {
+		} else if current.Port == nil || current.Port.ID == nil {
 			return errors.New(QemuUSB_Error_PortID)
 		}
 		mutualExclusivity++
 	}
 	if config.Spice != nil {
 		mutualExclusivity++
-		usb.Spice = config.Spice
 	}
 	if mutualExclusivity > 1 {
 		return errors.New(QemuUSB_Error_MutualExclusive)
