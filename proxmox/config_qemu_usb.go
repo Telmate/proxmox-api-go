@@ -132,7 +132,7 @@ type QemuUSB struct {
 const (
 	QemuUSB_Error_MutualExclusive string = "usb device, usb mapped, usb port, and usb spice are mutually exclusive"
 	QemuUSB_Error_DeviceID        string = "usb device id is required during creation"
-	QemuUSB_Error_MappedID        string = "usb mapped id is required during creation"
+	QemuUSB_Error_MappingID       string = "usb mapping id is required during creation"
 	QemuUSB_Error_PortID          string = "usb port id is required during creation"
 )
 
@@ -229,7 +229,7 @@ func (config QemuUSB) validate(current QemuUSB) error {
 				return err
 			}
 		} else if current.Mapping == nil || current.Mapping.ID == nil {
-			return errors.New(QemuUSB_Error_MappedID)
+			return errors.New(QemuUSB_Error_MappingID)
 		}
 		mutualExclusivity++
 	}
