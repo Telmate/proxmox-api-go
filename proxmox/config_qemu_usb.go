@@ -9,21 +9,21 @@ import (
 )
 
 type qemuUSB struct {
-	Type    qemuUsbType
+	enum    qemuUsbEnum
 	Host    string
 	Usb3    bool
 	Mapping ResourceMappingUsbID
 }
 
 func (usb qemuUSB) String() (param string) {
-	switch usb.Type {
-	case qemuUsbTypeSpice:
+	switch usb.enum {
+	case qemuUsbEnumSpice:
 		param = "spice"
-	case qemuUsbTypeMapping:
+	case qemuUsbEnumMapping:
 		param = "mapping=" + usb.Mapping.String()
-	case qemuUsbTypeDevice:
+	case qemuUsbEnumDevice:
 		param = "host=" + usb.Host
-	case qemuUsbTypePort:
+	case qemuUsbEnumPort:
 		param = "host=" + usb.Host
 	}
 	if usb.Usb3 {
@@ -32,13 +32,13 @@ func (usb qemuUSB) String() (param string) {
 	return
 }
 
-type qemuUsbType uint8
+type qemuUsbEnum uint8
 
 const (
-	qemuUsbTypeSpice   qemuUsbType = 0
-	qemuUsbTypeMapping qemuUsbType = 1
-	qemuUsbTypeDevice  qemuUsbType = 2
-	qemuUsbTypePort    qemuUsbType = 3
+	qemuUsbEnumSpice   qemuUsbEnum = 0
+	qemuUsbEnumMapping qemuUsbEnum = 1
+	qemuUsbEnumDevice  qemuUsbEnum = 2
+	qemuUsbEnumPort    qemuUsbEnum = 3
 )
 
 type QemuUSBs map[QemuUsbID]QemuUSB
@@ -165,7 +165,7 @@ func (config QemuUSB) mapToAPI(current *QemuUSB) string {
 		}
 	}
 	if config.Device != nil {
-		usb.Type = qemuUsbTypeDevice
+		usb.enum = qemuUsbEnumDevice
 		if config.Device.USB3 != nil {
 			usb.Usb3 = *config.Device.USB3
 		}
@@ -173,7 +173,7 @@ func (config QemuUSB) mapToAPI(current *QemuUSB) string {
 			usb.Host = (*config.Device.ID).String()
 		}
 	} else if config.Mapping != nil {
-		usb.Type = qemuUsbTypeMapping
+		usb.enum = qemuUsbEnumMapping
 		if config.Mapping.USB3 != nil {
 			usb.Usb3 = *config.Mapping.USB3
 		}
@@ -181,7 +181,7 @@ func (config QemuUSB) mapToAPI(current *QemuUSB) string {
 			usb.Mapping = *config.Mapping.ID
 		}
 	} else if config.Port != nil {
-		usb.Type = qemuUsbTypePort
+		usb.enum = qemuUsbEnumPort
 		if config.Port.USB3 != nil {
 			usb.Usb3 = *config.Port.USB3
 		}
@@ -189,7 +189,7 @@ func (config QemuUSB) mapToAPI(current *QemuUSB) string {
 			usb.Host = (*config.Port.ID).String()
 		}
 	} else if config.Spice != nil {
-		usb.Type = qemuUsbTypeSpice
+		usb.enum = qemuUsbEnumSpice
 		if config.Spice.USB3 {
 			usb.Usb3 = config.Spice.USB3
 		}
