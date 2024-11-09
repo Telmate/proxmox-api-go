@@ -1,6 +1,6 @@
 package proxmox
 
-// inspired by https://github.com/openstack/golang-client/blob/master/openstack/session.go
+// inspired by https://github.com/openstack-archive/golang-client/blob/f8471e433432b26dd29aa1c1cd42317a9d79a551/openstack/session.go
 
 import (
 	"bytes"
