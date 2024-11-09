@@ -16,7 +16,7 @@ type ConfigGroup struct {
 }
 
 // Creates the specified group
-func (config *ConfigGroup) Create(client *Client) error {
+func (config ConfigGroup) Create(client *Client) error {
 	config.Validate(true)
 	params := config.mapToApiValues(true)
 	err := client.Post(params, "/access/groups")
@@ -31,7 +31,7 @@ func (config *ConfigGroup) Create(client *Client) error {
 }
 
 // Maps the struct to the API values proxmox understands
-func (config *ConfigGroup) mapToApiValues(create bool) (params map[string]interface{}) {
+func (config ConfigGroup) mapToApiValues(create bool) (params map[string]interface{}) {
 	params = map[string]interface{}{
 		"comment": config.Comment,
 	}
@@ -54,20 +54,8 @@ func (config ConfigGroup) mapToStruct(params map[string]interface{}) *ConfigGrou
 	return &config
 }
 
-// Custom error for when the *ConfigGroup is nil
-func (config *ConfigGroup) nilCheck() error {
-	if config == nil {
-		return errors.New("pointer for (ConfigGroup) is nil")
-	}
-	return nil
-}
-
 // Created or updates the specified group
-func (config *ConfigGroup) Set(client *Client) (err error) {
-	err = config.nilCheck()
-	if err != nil {
-		return
-	}
+func (config ConfigGroup) Set(client *Client) (err error) {
 	existence, err := config.Name.CheckExistence(client)
 	if err != nil {
 		return
@@ -79,7 +67,7 @@ func (config *ConfigGroup) Set(client *Client) (err error) {
 }
 
 // Updates the specified group
-func (config *ConfigGroup) Update(client *Client) error {
+func (config ConfigGroup) Update(client *Client) error {
 	config.Validate(false)
 	params := config.mapToApiValues(true)
 	err := client.Put(params, "/access/groups/"+string(config.Name))
@@ -94,11 +82,7 @@ func (config *ConfigGroup) Update(client *Client) error {
 }
 
 // Validates all items and sub items of the ConfigGroup
-func (config *ConfigGroup) Validate(create bool) (err error) {
-	err = config.nilCheck()
-	if err != nil {
-		return
-	}
+func (config ConfigGroup) Validate(create bool) (err error) {
 	if err = config.Name.Validate(); err != nil {
 		return
 	}

@@ -115,23 +115,6 @@ func Test_ConfigGroup_mapToStruct(t *testing.T) {
 	}
 }
 
-func Test_ConfigGroup_nilCheck(t *testing.T) {
-	testData := []struct {
-		input *ConfigGroup
-		err   bool
-	}{
-		{input: &ConfigGroup{}},
-		{err: true},
-	}
-	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.nilCheck())
-		} else {
-			require.NoError(t, e.input.nilCheck())
-		}
-	}
-}
-
 // TODO improve when Name and Realm have their own types
 func Test_ConfigGroup_Validate(t *testing.T) {
 	validGroupName := GroupName("groupName")
@@ -139,7 +122,7 @@ func Test_ConfigGroup_Validate(t *testing.T) {
 	TrueAndFalse := 1
 	True := 2
 	testData := []struct {
-		input    *ConfigGroup
+		input    ConfigGroup
 		hasError bool
 		err      error
 
@@ -147,23 +130,19 @@ func Test_ConfigGroup_Validate(t *testing.T) {
 	}{
 		// GroupName
 		{
-			hasError: true,
-			create:   TrueAndFalse,
-		},
-		{
-			input:  &ConfigGroup{},
+			input:  ConfigGroup{},
 			err:    errors.New(GroupName_Error_Empty),
 			create: TrueAndFalse},
 		{
-			input:  &ConfigGroup{Name: GroupName(test_data_group.GroupName_Max_Legal())},
+			input:  ConfigGroup{Name: GroupName(test_data_group.GroupName_Max_Legal())},
 			create: TrueAndFalse},
 		{
-			input:  &ConfigGroup{Name: GroupName(test_data_group.GroupName_Max_Illegal())},
+			input:  ConfigGroup{Name: GroupName(test_data_group.GroupName_Max_Illegal())},
 			err:    errors.New(GroupName_Error_MaxLength),
 			create: TrueAndFalse},
 		// GroupMembers
 		{
-			input: &ConfigGroup{
+			input: ConfigGroup{
 				Name: validGroupName,
 				Members: &[]UserID{
 					{Name: "user1"},
@@ -172,13 +151,13 @@ func Test_ConfigGroup_Validate(t *testing.T) {
 			create:   TrueAndFalse,
 		},
 		{
-			input: &ConfigGroup{
+			input: ConfigGroup{
 				Name:    validGroupName,
 				Members: &[]UserID{{Name: "user1", Realm: "pam"}}},
 			create: TrueAndFalse,
 		},
 		{
-			input: &ConfigGroup{
+			input: ConfigGroup{
 				Name: validGroupName,
 				Members: &[]UserID{
 					{Name: "user1", Realm: "pam"},
