@@ -99,8 +99,8 @@ func (config *ConfigGroup) Validate(create bool) (err error) {
 	if err != nil {
 		return
 	}
-	if create {
-		err = config.Name.Validate()
+	if err = config.Name.Validate(); err != nil {
+		return
 	}
 	if config.Members != nil {
 		for _, e := range *config.Members {
@@ -115,6 +115,12 @@ func (config *ConfigGroup) Validate(create bool) (err error) {
 
 // GroupName may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
 type GroupName string
+
+const (
+	GroupName_Error_Invalid   string = "variable of type (GroupName) may only contain the following characters: -_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	GroupName_Error_Empty     string = "variable of type (GroupName) may not be empty"
+	GroupName_Error_MaxLength string = "variable of type (GroupName) may not be more tha 1000 characters long"
+)
 
 // Add users to the specified group
 func (group GroupName) AddUsersToGroup(members *[]UserID, client *Client) error {
@@ -368,17 +374,17 @@ func (group GroupName) usersToRemoveFromGroup(allUsers []interface{}, members *[
 // Check if a groupname is valid.
 func (group GroupName) Validate() error {
 	if group == "" {
-		return errors.New("variable of type (GroupName) may not be empty")
+		return errors.New(GroupName_Error_Empty)
 	}
 	// proxmox does not seem to enforce any limit on the length of a group name. When going over thousands of charters the ui kinda breaks.
 	if len([]rune(group)) > 1000 {
-		return errors.New("variable of type (GroupName) may not be more tha 1000 characters long")
+		return errors.New(GroupName_Error_MaxLength)
 	}
 	regex, _ := regexp.Compile(`^([a-z]|[A-Z]|[0-9]|_|-)*$`)
-	if regex.Match([]byte(group)) {
-		return nil
+	if !regex.Match([]byte(group)) {
+		return errors.New(GroupName_Error_Invalid)
 	}
-	return errors.New("")
+	return nil
 }
 
 // Returns a list of all existing groups
