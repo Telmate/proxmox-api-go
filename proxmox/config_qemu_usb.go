@@ -48,7 +48,7 @@ const QemuUSBsAmount = uint8(QemuUsbIDMaximum) + 1
 func (QemuUSBs) mapToSDK(params map[string]interface{}) QemuUSBs {
 	usbList := make(QemuUSBs)
 	for i := QemuUsbID(0); i < 14; i++ {
-		if v, isSet := params["usb"+strconv.Itoa(int(i))]; isSet {
+		if v, isSet := params["usb"+i.String()]; isSet {
 			usbList[i] = QemuUSB{}.mapToSDK(v.(string))
 		}
 	}
@@ -63,15 +63,15 @@ func (config QemuUSBs) mapToAPI(current QemuUSBs, params map[string]interface{})
 	for i, e := range config {
 		if v, isSet := current[i]; isSet {
 			if e.Delete {
-				builder.WriteString(",usb" + strconv.Itoa(int(i)))
+				builder.WriteString(",usb" + i.String())
 				continue
 			}
-			params["usb"+strconv.Itoa(int(i))] = e.mapToAPI(&v)
+			params["usb"+i.String()] = e.mapToAPI(&v)
 		} else {
 			if e.Delete {
 				continue
 			}
-			params["usb"+strconv.Itoa(int(i))] = e.mapToAPI(nil)
+			params["usb"+i.String()] = e.mapToAPI(nil)
 		}
 	}
 	return builder.String()
@@ -113,6 +113,10 @@ const (
 	QemuUsbID3 QemuUsbID = 3
 	QemuUsbID4 QemuUsbID = 4
 )
+
+func (id QemuUsbID) String() string {
+	return strconv.Itoa(int(id))
+}
 
 func (id QemuUsbID) Validate() error {
 	if id > QemuUsbIDMaximum {
