@@ -17,13 +17,11 @@ import (
 // Currently ZFS local, LVM, Ceph RBD, CephFS, Directory and virtio-scsi-pci are considered.
 // Other formats are not verified, but could be added if they're needed.
 // const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
-const machineModels = `(pc|q35|pc-i440fx)`
 
 type (
 	QemuDevices     map[int]map[string]interface{}
 	QemuDevice      map[string]interface{}
 	QemuDeviceParam []string
-	IpconfigMap     map[int]interface{}
 )
 
 // ConfigQemu - Proxmox API QEMU options
@@ -1046,15 +1044,6 @@ func FormatDiskParam(disk QemuDevice) string {
 	return strings.Join(diskConfParam, ",")
 }
 
-// Given a QemuDevice (representing a usb), return a param string to give to ProxMox
-func FormatUsbParam(usb QemuDevice) string {
-	usbConfParam := QemuDeviceParam{}
-
-	usbConfParam = usbConfParam.createDeviceParam(usb, []string{})
-
-	return strings.Join(usbConfParam, ",")
-}
-
 // Create RNG parameter.
 func (c ConfigQemu) CreateQemuRngParams(params map[string]interface{}) {
 	rngParam := QemuDeviceParam{}
@@ -1098,24 +1087,6 @@ func (c ConfigQemu) CreateQemuEfiParams(params map[string]interface{}) {
 	}
 }
 
-// Create parameters for each disk.
-func (c ConfigQemu) CreateQemuDisksParams(params map[string]interface{}, cloned bool) {
-	// For new style with multi disk device.
-	for diskID, diskConfMap := range c.QemuDisks {
-		// skip the first disk for clones (may not always be right, but a template probably has at least 1 disk)
-		if diskID == 0 && cloned {
-			continue
-		}
-
-		// Device name.
-		deviceType := diskConfMap["type"].(string)
-		qemuDiskName := deviceType + strconv.Itoa(diskID)
-
-		// Add back to Qemu prams.
-		params[qemuDiskName] = FormatDiskParam(diskConfMap)
-	}
-}
-
 // Create parameters for each PCI Device
 func (c ConfigQemu) CreateQemuPCIsParams(params map[string]interface{}) {
 	// For new style with multi pci device.
@@ -1132,20 +1103,6 @@ func (c ConfigQemu) CreateQemuPCIsParams(params map[string]interface{}) {
 		// Add back to Qemu prams.
 		params[qemuPCIName] = strings.TrimSuffix(pcistring.String(), ",")
 	}
-}
-
-// Create parameters for serial interface
-func (c ConfigQemu) CreateQemuMachineParam(
-	params map[string]interface{},
-) error {
-	if c.Machine == "" {
-		return nil
-	}
-	if matched, _ := regexp.MatchString(machineModels, c.Machine); matched {
-		params["machine"] = c.Machine
-		return nil
-	}
-	return fmt.Errorf("unsupported machine type, fall back to default")
 }
 
 func (p QemuDeviceParam) createDeviceParam(

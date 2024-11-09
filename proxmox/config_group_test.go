@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_group"
@@ -114,23 +115,6 @@ func Test_ConfigGroup_mapToStruct(t *testing.T) {
 	}
 }
 
-func Test_ConfigGroup_nilCheck(t *testing.T) {
-	testData := []struct {
-		input *ConfigGroup
-		err   bool
-	}{
-		{input: &ConfigGroup{}},
-		{err: true},
-	}
-	for _, e := range testData {
-		if e.err {
-			require.Error(t, e.input.nilCheck())
-		} else {
-			require.NoError(t, e.input.nilCheck())
-		}
-	}
-}
-
 // TODO improve when Name and Realm have their own types
 func Test_ConfigGroup_Validate(t *testing.T) {
 	validGroupName := GroupName("groupName")
@@ -138,48 +122,42 @@ func Test_ConfigGroup_Validate(t *testing.T) {
 	TrueAndFalse := 1
 	True := 2
 	testData := []struct {
-		input  *ConfigGroup
-		err    bool
+		input    ConfigGroup
+		hasError bool
+		err      error
+
 		create int
 	}{
 		// GroupName
 		{
-			err:    true,
-			create: TrueAndFalse,
-		},
+			input:  ConfigGroup{},
+			err:    errors.New(GroupName_Error_Empty),
+			create: TrueAndFalse},
 		{
-			input:  &ConfigGroup{},
-			err:    true,
-			create: True,
-		},
-		{input: &ConfigGroup{}},
+			input:  ConfigGroup{Name: GroupName(test_data_group.GroupName_Max_Legal())},
+			create: TrueAndFalse},
 		{
-			input:  &ConfigGroup{Name: GroupName(test_data_group.GroupName_Max_Legal())},
-			create: True,
-		},
-		{
-			input:  &ConfigGroup{Name: GroupName(test_data_group.GroupName_Max_Illegal())},
-			err:    true,
-			create: True,
-		},
+			input:  ConfigGroup{Name: GroupName(test_data_group.GroupName_Max_Illegal())},
+			err:    errors.New(GroupName_Error_MaxLength),
+			create: TrueAndFalse},
 		// GroupMembers
 		{
-			input: &ConfigGroup{
+			input: ConfigGroup{
 				Name: validGroupName,
 				Members: &[]UserID{
 					{Name: "user1"},
 				}},
-			err:    true,
-			create: TrueAndFalse,
+			hasError: true,
+			create:   TrueAndFalse,
 		},
 		{
-			input: &ConfigGroup{
+			input: ConfigGroup{
 				Name:    validGroupName,
 				Members: &[]UserID{{Name: "user1", Realm: "pam"}}},
 			create: TrueAndFalse,
 		},
 		{
-			input: &ConfigGroup{
+			input: ConfigGroup{
 				Name: validGroupName,
 				Members: &[]UserID{
 					{Name: "user1", Realm: "pam"},
@@ -191,14 +169,18 @@ func Test_ConfigGroup_Validate(t *testing.T) {
 	}
 	for _, e := range testData {
 		if e.create < True {
-			if e.err {
+			if e.err != nil {
+				require.Equal(t, e.err, e.input.Validate(false))
+			} else if e.hasError {
 				require.Error(t, e.input.Validate(false))
 			} else {
 				require.NoError(t, e.input.Validate(false))
 			}
 		}
 		if e.create > False {
-			if e.err {
+			if e.err != nil {
+				require.Equal(t, e.err, e.input.Validate(false))
+			} else if e.hasError {
 				require.Error(t, e.input.Validate(true))
 			} else {
 				require.NoError(t, e.input.Validate(true))

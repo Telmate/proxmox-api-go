@@ -330,6 +330,22 @@ Public functions should follow this guide as much as possible, to realize a homo
 It is important to note that every public function becomes a critical point of reliance for some software.
 As such, it is imperative to uphold backward compatibility when making changes. See [Versioning](#versioning) for more information.
 
+## Types
+
+In the SDK, we use public and private types. This section will discuss the naming conventions for these types.
+
+### Public Types
+
+For now we don't have any specific naming conventions for public types. The only thing that is important that it conveys it's purpose, scope and usage.
+
+### Private Types
+
+For private types we use the following naming conventions:
+
+#### Enumerations
+
+For an internal enum type, the name must be suffixed with `Enum`.
+
 ## Standardized Interfaces
 
 Standardized interfaces are key in software development for consistent functionality exposure. They enhance code understanding, usage, and system interoperability.
@@ -414,11 +430,11 @@ func Test_UserID_Validate(t *testing.T) {
         input UserID
         output error
     }{
-        {name: "Valid ID",
+        {name: `Valid ID`,
             input: UserID(1),
             output: nil,
         },
-        {name: "Invalid ID",
+        {name: `Invalid ID`,
             input: UserID(0),
             output: errors.New(UserID_Error_Invalid),
         },

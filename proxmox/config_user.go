@@ -148,7 +148,7 @@ func (config *ConfigUser) SetUser(userId UserID, password UserPassword, client *
 	return
 }
 
-func (config *ConfigUser) UpdateUser(client *Client) (err error) {
+func (config ConfigUser) UpdateUser(client *Client) (err error) {
 	params := config.mapToApiValues(false)
 	err = client.Put(params, "/access/users/"+config.User.String())
 	if err != nil {
