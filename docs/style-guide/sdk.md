@@ -430,11 +430,11 @@ func Test_UserID_Validate(t *testing.T) {
         input UserID
         output error
     }{
-        {name: "Valid ID",
+        {name: `Valid ID`,
             input: UserID(1),
             output: nil,
         },
-        {name: "Invalid ID",
+        {name: `Invalid ID`,
             input: UserID(0),
             output: errors.New(UserID_Error_Invalid),
         },
