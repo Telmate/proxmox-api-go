@@ -17,7 +17,6 @@ import (
 // Currently ZFS local, LVM, Ceph RBD, CephFS, Directory and virtio-scsi-pci are considered.
 // Other formats are not verified, but could be added if they're needed.
 // const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
-const machineModels = `(pc|q35|pc-i440fx)`
 
 type (
 	QemuDevices     map[int]map[string]interface{}
