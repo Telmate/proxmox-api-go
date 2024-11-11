@@ -47,7 +47,7 @@ const QemuUSBsAmount = uint8(QemuUsbIDMaximum) + 1
 
 func (QemuUSBs) mapToSDK(params map[string]interface{}) QemuUSBs {
 	usbList := make(QemuUSBs)
-	for i := QemuUsbID(0); i < 14; i++ {
+	for i := QemuUsbID(0); i < QemuUsbID(QemuUSBsAmount); i++ {
 		if v, isSet := params["usb"+i.String()]; isSet {
 			usbList[i] = QemuUSB{}.mapToSDK(v.(string))
 		}
