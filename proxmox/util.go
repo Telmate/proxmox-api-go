@@ -29,6 +29,14 @@ func Btoi(b bool) int {
 	}
 }
 
+// ensures a string has a certain ensurePrefix
+func ensurePrefix(prefix, text string) string {
+	if strings.HasPrefix(text, prefix) {
+		return text
+	}
+	return prefix + text
+}
+
 func Itob(i int) bool {
 	return i == 1
 }

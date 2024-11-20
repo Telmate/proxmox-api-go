@@ -6,6 +6,45 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_ensurePrefix(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		prefix string
+		output string
+	}{
+		{name: "only prefix",
+			input:  "",
+			prefix: "prefix",
+			output: "prefix"},
+		{name: "prefix and text",
+			input:  "text",
+			prefix: "prefix",
+			output: "prefixtext"},
+		{name: "prefix already in text",
+			input:  "prefixtext",
+			prefix: "prefix",
+			output: "prefixtext"},
+		{name: "prefix is text",
+			input:  "prefix",
+			prefix: "prefix",
+			output: "prefix"},
+		{name: "no prefix",
+			input:  "text",
+			prefix: "",
+			output: "text"},
+		{name: "no text or prefix",
+			input:  "",
+			prefix: "",
+			output: ""},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, ensurePrefix(test.prefix, test.input), test.name)
+		})
+	}
+}
+
 func Test_keyExists(t *testing.T) {
 	tests := []struct {
 		name   string

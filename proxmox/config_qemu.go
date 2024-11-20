@@ -1,7 +1,6 @@
 package proxmox
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -57,7 +56,7 @@ type ConfigQemu struct {
 	QemuIso         string                `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
 	QemuKVM         *bool                 `json:"kvm,omitempty"`
 	QemuOs          string                `json:"ostype,omitempty"`
-	QemuPCIDevices  QemuDevices           `json:"hostpci,omitempty"` // TODO should be a struct
+	PciDevices      QemuPciDevices        `json:"pci_devices,omitempty"`
 	QemuPxe         bool                  `json:"pxe,omitempty"`
 	QemuUnusedDisks QemuDevices           `json:"unused,omitempty"` // TODO should be a struct
 	USBs            QemuUSBs              `json:"usbs,omitempty"`
@@ -119,9 +118,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.QemuOs == "" {
 		config.QemuOs = "other"
-	}
-	if config.QemuPCIDevices == nil {
-		config.QemuPCIDevices = QemuDevices{}
 	}
 	if config.QemuUnusedDisks == nil {
 		config.QemuUnusedDisks = QemuDevices{}
@@ -269,7 +265,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		itemsToDelete += config.USBs.mapToAPI(currentConfig.USBs, params)
 	}
 
-	config.CreateQemuPCIsParams(params)
+	if config.PciDevices != nil {
+		itemsToDelete += config.PciDevices.mapToAPI(currentConfig.PciDevices, params)
+	}
 
 	if itemsToDelete != "" {
 		params["delete"] = strings.TrimPrefix(itemsToDelete, ",")
@@ -427,36 +425,10 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 
 	config.Networks = QemuNetworkInterfaces{}.mapToSDK(params)
+	config.PciDevices = QemuPciDevices{}.mapToSDK(params)
 	config.Serials = SerialInterfaces{}.mapToSDK(params)
 
 	config.USBs = QemuUSBs{}.mapToSDK(params)
-
-	// hostpci
-	hostPCInames := []string{}
-
-	for k := range params {
-		if hostPCIname := rxPCIName.FindStringSubmatch(k); len(hostPCIname) > 0 {
-			hostPCInames = append(hostPCInames, hostPCIname[0])
-		}
-	}
-
-	if len(hostPCInames) > 0 {
-		config.QemuPCIDevices = QemuDevices{}
-		for _, hostPCIname := range hostPCInames {
-			hostPCIConfStr := params[hostPCIname]
-			hostPCIConfList := strings.Split(hostPCIConfStr.(string), ",")
-			id := rxPCIName.FindStringSubmatch(hostPCIname)
-			hostPCIID, _ := strconv.Atoi(id[0])
-			hostPCIConfMap := QemuDevice{
-				"id": hostPCIID,
-			}
-			hostPCIConfMap.readDeviceConfig(hostPCIConfList)
-			// And device config to usbs map.
-			if len(hostPCIConfMap) > 0 {
-				config.QemuPCIDevices[hostPCIID] = hostPCIConfMap
-			}
-		}
-	}
 
 	// efidisk
 	if efidisk, isSet := params["efidisk0"].(string); isSet {
@@ -674,6 +646,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
+		if config.PciDevices != nil {
+			if err = config.PciDevices.Validate(nil); err != nil {
+				return
+			}
+		}
 		if config.TPM != nil {
 			if err = config.TPM.Validate(nil); err != nil {
 				return
@@ -697,6 +674,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 		if config.Networks != nil {
 			if err = config.Networks.Validate(current.Networks); err != nil {
+				return
+			}
+		}
+		if config.PciDevices != nil {
+			if err = config.PciDevices.Validate(current.PciDevices); err != nil {
 				return
 			}
 		}
@@ -801,7 +783,6 @@ var (
 	rxUnusedDiskName = regexp.MustCompile(`^(unused)\d+`)
 	rxNicName        = regexp.MustCompile(`net\d+`)
 	rxMpName         = regexp.MustCompile(`mp\d+`)
-	rxPCIName        = regexp.MustCompile(`hostpci\d+`)
 )
 
 func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
@@ -1113,24 +1094,6 @@ func (c ConfigQemu) CreateQemuDisksParams(params map[string]interface{}, cloned 
 
 		// Add back to Qemu prams.
 		params[qemuDiskName] = FormatDiskParam(diskConfMap)
-	}
-}
-
-// Create parameters for each PCI Device
-func (c ConfigQemu) CreateQemuPCIsParams(params map[string]interface{}) {
-	// For new style with multi pci device.
-	for pciConfID, pciConfMap := range c.QemuPCIDevices {
-		qemuPCIName := "hostpci" + strconv.Itoa(pciConfID)
-		var pcistring bytes.Buffer
-		for elem := range pciConfMap {
-			pcistring.WriteString(elem)
-			pcistring.WriteString("=")
-			pcistring.WriteString(fmt.Sprintf("%v", pciConfMap[elem]))
-			pcistring.WriteString(",")
-		}
-
-		// Add back to Qemu prams.
-		params[qemuPCIName] = strings.TrimSuffix(pcistring.String(), ",")
 	}
 }
 

@@ -3673,6 +3673,149 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{Delete: true}}},
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{}}},
 					output:        map[string]interface{}{"delete": "net21"}}}},
+		{category: `PciDevices`,
+			create: []test{
+				{name: `Delete`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID5: QemuPci{Delete: true}}},
+					output: map[string]interface{}{}}},
+			createUpdate: []test{
+				{name: `Mapping.DeviceID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID15: QemuPci{Mapping: &QemuPciMapping{
+							DeviceID: util.Pointer(PciDeviceID("8086"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID15: QemuPci{Mapping: &QemuPciMapping{
+							DeviceID: util.Pointer(PciDeviceID("0x8000"))}}}},
+					output: map[string]interface{}{"hostpci15": "mapping=,rombar=0,device-id=0x8086"}},
+				{name: `Mapping.ID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
+							ID: util.Pointer(ResourceMappingPciID("aaaaa"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
+							ID: util.Pointer(ResourceMappingPciID("bbbbb"))}}}},
+					output: map[string]interface{}{"hostpci14": "mapping=aaaaa,rombar=0"}},
+				{name: `Mapping.Pci`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID13: QemuPci{Mapping: &QemuPciMapping{
+							PCIe: util.Pointer(true)}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID13: QemuPci{Mapping: &QemuPciMapping{
+							PCIe: util.Pointer(false)}}}},
+					output: map[string]interface{}{"hostpci13": "mapping=,pcie=1,rombar=0"}},
+				{name: `Mapping.PrimaryGPU`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID12: QemuPci{Mapping: &QemuPciMapping{
+							PrimaryGPU: util.Pointer(true)}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID12: QemuPci{Mapping: &QemuPciMapping{
+							PrimaryGPU: util.Pointer(false)}}}},
+					output: map[string]interface{}{"hostpci12": "mapping=,x-vga=1,rombar=0"}},
+				{name: `Mapping.ROMbar`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID11: QemuPci{Mapping: &QemuPciMapping{
+							ROMbar: util.Pointer(true)}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID11: QemuPci{Mapping: &QemuPciMapping{
+							ROMbar: util.Pointer(false)}}}},
+					output: map[string]interface{}{"hostpci11": "mapping="}},
+				{name: `Mapping.SubDeviceID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID10: QemuPci{Mapping: &QemuPciMapping{
+							SubDeviceID: util.Pointer(PciSubDeviceID("8086"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID10: QemuPci{Mapping: &QemuPciMapping{
+							SubDeviceID: util.Pointer(PciSubDeviceID("0x8000"))}}}},
+					output: map[string]interface{}{"hostpci10": "mapping=,rombar=0,sub-device-id=0x8086"}},
+				{name: `Mapping.SubVendorID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID9: QemuPci{Mapping: &QemuPciMapping{
+							SubVendorID: util.Pointer(PciSubVendorID("8086"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID9: QemuPci{Mapping: &QemuPciMapping{
+							SubVendorID: util.Pointer(PciSubVendorID("0x8000"))}}}},
+					output: map[string]interface{}{"hostpci9": "mapping=,rombar=0,sub-vendor-id=0x8086"}},
+				{name: `Mapping.VendorID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID8: QemuPci{Mapping: &QemuPciMapping{
+							VendorID: util.Pointer(PciVendorID("8086"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID8: QemuPci{Mapping: &QemuPciMapping{
+							VendorID: util.Pointer(PciVendorID("0x8000"))}}}},
+					output: map[string]interface{}{"hostpci8": "mapping=,rombar=0,vendor-id=0x8086"}},
+				{name: `Raw.DeviceID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID0: QemuPci{Raw: &QemuPciRaw{
+							DeviceID: util.Pointer(PciDeviceID("8086"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID0: QemuPci{Raw: &QemuPciRaw{
+							DeviceID: util.Pointer(PciDeviceID("0x8000"))}}}},
+					output: map[string]interface{}{"hostpci0": ",rombar=0,device-id=0x8086"}},
+				{name: `Raw.ID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID1: QemuPci{Raw: &QemuPciRaw{
+							ID: util.Pointer(PciID("0000:00:00.0"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID1: QemuPci{Raw: &QemuPciRaw{
+							ID: util.Pointer(PciID("0000:00:00.1"))}}}},
+					output: map[string]interface{}{"hostpci1": "0000:00:00.0,rombar=0"}},
+				{name: `Raw.Pci`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
+							PCIe: util.Pointer(true)}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
+							PCIe: util.Pointer(false)}}}},
+					output: map[string]interface{}{"hostpci2": ",pcie=1,rombar=0"}},
+				{name: `Raw.PrimaryGPU`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID3: QemuPci{Raw: &QemuPciRaw{
+							PrimaryGPU: util.Pointer(true)}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID3: QemuPci{Raw: &QemuPciRaw{
+							PrimaryGPU: util.Pointer(false)}}}},
+					output: map[string]interface{}{"hostpci3": ",x-vga=1,rombar=0"}},
+				{name: `Raw.ROMbar`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID4: QemuPci{Raw: &QemuPciRaw{
+							ROMbar: util.Pointer(true)}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID4: QemuPci{Raw: &QemuPciRaw{
+							ROMbar: util.Pointer(false)}}}},
+					output: map[string]interface{}{"hostpci4": ""}},
+				{name: `Raw.SubDeviceID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID5: QemuPci{Raw: &QemuPciRaw{
+							SubDeviceID: util.Pointer(PciSubDeviceID("8086"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID5: QemuPci{Raw: &QemuPciRaw{
+							SubDeviceID: util.Pointer(PciSubDeviceID("0x8000"))}}}},
+					output: map[string]interface{}{"hostpci5": ",rombar=0,sub-device-id=0x8086"}},
+				{name: `Raw.SubVendorID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID6: QemuPci{Raw: &QemuPciRaw{
+							SubVendorID: util.Pointer(PciSubVendorID("8086"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID6: QemuPci{Raw: &QemuPciRaw{
+							SubVendorID: util.Pointer(PciSubVendorID("0x8000"))}}}},
+					output: map[string]interface{}{"hostpci6": ",rombar=0,sub-vendor-id=0x8086"}},
+				{name: `Raw.VendorID`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID7: QemuPci{Raw: &QemuPciRaw{
+							VendorID: util.Pointer(PciVendorID("8086"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID7: QemuPci{Raw: &QemuPciRaw{
+							VendorID: util.Pointer(PciVendorID("0x8000"))}}}},
+					output: map[string]interface{}{"hostpci7": ",rombar=0,vendor-id=0x8086"}}},
+			update: []test{
+				{name: `Delete`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID5: QemuPci{Delete: true}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID5: QemuPci{}}},
+					output: map[string]interface{}{"delete": "hostpci5"}}},
+		},
 		{category: `Serials`,
 			createUpdate: []test{
 				{name: `delete non existing`,
@@ -6542,6 +6685,188 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `vmr populated`,
 					vmr:    &VmRef{pool: "test"},
 					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName("test"))})}}},
+		{category: `PciDevices`,
+			tests: []test{
+				{name: `Mapping all`,
+					input: map[string]interface{}{"hostpci0": "mapping=abc,device-id=0xa97f,pcie=1,x-vga=1,rombar=0,sub-device-id=0x61a4,sub-vendor-id=0x98f1,vendor-id=0x4003"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID0: QemuPci{
+							Mapping: &QemuPciMapping{
+								DeviceID:    util.Pointer(PciDeviceID("0xa97f")),
+								ID:          util.Pointer(ResourceMappingPciID("abc")),
+								PCIe:        util.Pointer(true),
+								PrimaryGPU:  util.Pointer(true),
+								ROMbar:      util.Pointer(false),
+								SubDeviceID: util.Pointer(PciSubDeviceID("0x61a4")),
+								SubVendorID: util.Pointer(PciSubVendorID("0x98f1")),
+								VendorID:    util.Pointer(PciVendorID("0x4003"))}}}})},
+				{name: `Mapping.DeviceID`,
+					input: map[string]interface{}{"hostpci1": "mapping=abc,device-id=0xa97f"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID1: QemuPci{
+							Mapping: &QemuPciMapping{
+								DeviceID:   util.Pointer(PciDeviceID("0xa97f")),
+								ID:         util.Pointer(ResourceMappingPciID("abc")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Mapping.ID`,
+					input: map[string]interface{}{"hostpci2": "mapping=xyz"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID2: QemuPci{
+							Mapping: &QemuPciMapping{
+								ID:         util.Pointer(ResourceMappingPciID("xyz")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Mapping.Pci`,
+					input: map[string]interface{}{"hostpci3": "mapping=abc,pcie=1"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID3: QemuPci{
+							Mapping: &QemuPciMapping{
+								ID:         util.Pointer(ResourceMappingPciID("abc")),
+								PCIe:       util.Pointer(true),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Mapping.PrimaryGPU`,
+					input: map[string]interface{}{"hostpci4": "mapping=abc,x-vga=1"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID4: QemuPci{
+							Mapping: &QemuPciMapping{
+								ID:         util.Pointer(ResourceMappingPciID("abc")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(true),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Mapping.ROMbar`,
+					input: map[string]interface{}{"hostpci5": "mapping=abc,rombar=0"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID5: QemuPci{
+							Mapping: &QemuPciMapping{
+								ID:         util.Pointer(ResourceMappingPciID("abc")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(false)}}}})},
+				{name: `Mapping.SubDeviceID`,
+					input: map[string]interface{}{"hostpci6": "mapping=abc,sub-device-id=0x61a4"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID6: QemuPci{
+							Mapping: &QemuPciMapping{
+								ID:          util.Pointer(ResourceMappingPciID("abc")),
+								PCIe:        util.Pointer(false),
+								PrimaryGPU:  util.Pointer(false),
+								ROMbar:      util.Pointer(true),
+								SubDeviceID: util.Pointer(PciSubDeviceID("0x61a4"))}}}})},
+				{name: `Mapping.SubVendorID`,
+					input: map[string]interface{}{"hostpci7": "mapping=abc,sub-vendor-id=0x98f1"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID7: QemuPci{
+							Mapping: &QemuPciMapping{
+								ID:          util.Pointer(ResourceMappingPciID("abc")),
+								PCIe:        util.Pointer(false),
+								PrimaryGPU:  util.Pointer(false),
+								ROMbar:      util.Pointer(true),
+								SubVendorID: util.Pointer(PciSubVendorID("0x98f1"))}}}})},
+				{name: `Mapping.VendorID`,
+					input: map[string]interface{}{"hostpci8": "vendor-id=0x4003,mapping=abc"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID8: QemuPci{
+							Mapping: &QemuPciMapping{
+								ID:         util.Pointer(ResourceMappingPciID("abc")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true),
+								VendorID:   util.Pointer(PciVendorID("0x4003"))}}}})},
+				{name: `Raw all`,
+					input: map[string]interface{}{"hostpci15": "0000:02:05.7,device-id=0xa97f,pcie=1,x-vga=1,rombar=0,sub-device-id=0x61a4,sub-vendor-id=0x98f1,vendor-id=0x4003"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID15: QemuPci{
+							Raw: &QemuPciRaw{
+								DeviceID:    util.Pointer(PciDeviceID("0xa97f")),
+								ID:          util.Pointer(PciID("0000:02:05.7")),
+								PCIe:        util.Pointer(true),
+								PrimaryGPU:  util.Pointer(true),
+								ROMbar:      util.Pointer(false),
+								SubDeviceID: util.Pointer(PciSubDeviceID("0x61a4")),
+								SubVendorID: util.Pointer(PciSubVendorID("0x98f1")),
+								VendorID:    util.Pointer(PciVendorID("0x4003"))}}}})},
+				{name: `Raw.DeviceID`,
+					input: map[string]interface{}{"hostpci14": "0000:02:05.7,device-id=0xa97f"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID14: QemuPci{
+							Raw: &QemuPciRaw{
+								DeviceID:   util.Pointer(PciDeviceID("0xa97f")),
+								ID:         util.Pointer(PciID("0000:02:05.7")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Raw.ID`,
+					input: map[string]interface{}{"hostpci13": "0001:43:86.5"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID13: QemuPci{
+							Raw: &QemuPciRaw{
+								ID:         util.Pointer(PciID("0001:43:86.5")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Raw.Pci`,
+					input: map[string]interface{}{"hostpci12": "0000:02:05.7,pcie=1"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID12: QemuPci{
+							Raw: &QemuPciRaw{
+								ID:         util.Pointer(PciID("0000:02:05.7")),
+								PCIe:       util.Pointer(true),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Raw.PrimaryGPU`,
+					input: map[string]interface{}{"hostpci11": "0000:02:05.7,x-vga=1"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID11: QemuPci{
+							Raw: &QemuPciRaw{
+								ID:         util.Pointer(PciID("0000:02:05.7")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(true),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Raw.ROMbar`,
+					input: map[string]interface{}{"hostpci10": "0000:02:05.7,rombar=0"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID10: QemuPci{
+							Raw: &QemuPciRaw{
+								ID:         util.Pointer(PciID("0000:02:05.7")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(false)}}}})},
+				{name: `Raw.SubDeviceID`,
+					input: map[string]interface{}{"hostpci9": "0000:02:05.7,sub-device-id=0x61a4"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID9: QemuPci{
+							Raw: &QemuPciRaw{
+								ID:          util.Pointer(PciID("0000:02:05.7")),
+								PCIe:        util.Pointer(false),
+								PrimaryGPU:  util.Pointer(false),
+								ROMbar:      util.Pointer(true),
+								SubDeviceID: util.Pointer(PciSubDeviceID("0x61a4"))}}}})},
+				{name: `Raw.SubVendorID`,
+					input: map[string]interface{}{"hostpci8": "0000:02:05.7,sub-vendor-id=0x98f1"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID8: QemuPci{
+							Raw: &QemuPciRaw{
+								ID:          util.Pointer(PciID("0000:02:05.7")),
+								PCIe:        util.Pointer(false),
+								PrimaryGPU:  util.Pointer(false),
+								ROMbar:      util.Pointer(true),
+								SubVendorID: util.Pointer(PciSubVendorID("0x98f1"))}}}})},
+				{name: `Raw.VendorID`,
+					input: map[string]interface{}{"hostpci7": "0000:02:05.7,vendor-id=0x4003"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID7: QemuPci{
+							Raw: &QemuPciRaw{
+								ID:         util.Pointer(PciID("0000:02:05.7")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true),
+								VendorID:   util.Pointer(PciVendorID("0x4003"))}}}})},
+			},
+		},
 		{category: `Serials`,
 			tests: []test{
 				{name: `All`,
@@ -8272,6 +8597,136 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input:   baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Error_Characters()[0]))}),
 						current: &ConfigQemu{Pool: util.Pointer(PoolName("test"))},
 						err:     errors.New(PoolName_Error_Characters)}}}},
+		{category: `PciDevices`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `Delete`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID15: QemuPci{Delete: true}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID0: QemuPci{}}}}},
+				update: []test{
+					{name: `Mapping`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID14: QemuPci{
+								Mapping: &QemuPciMapping{}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID14: QemuPci{
+								Mapping: &QemuPciMapping{
+									ID: util.Pointer(ResourceMappingPciID("aaa"))}}}}},
+					{name: `Raw`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID13: QemuPci{
+								Raw: &QemuPciRaw{}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID13: QemuPci{
+								Raw: &QemuPciRaw{
+									ID: util.Pointer(PciID("0000:00:00"))}}}}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `errors.New(QemuPciID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							20: QemuPci{}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID4: QemuPci{}}},
+						err: errors.New(QemuPciID_Error_Invalid)},
+					{name: `errors.New(QemuPci_Error_MutualExclusive)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID12: QemuPci{
+								Mapping: &QemuPciMapping{
+									ID: util.Pointer(ResourceMappingPciID("aaa"))},
+								Raw: &QemuPciRaw{
+									ID: util.Pointer(PciID("0000:00:00"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID12: QemuPci{}}},
+						err:     errors.New(QemuPci_Error_MutualExclusive)},
+					{name: `errors.New(QemuPci_Error_MappedID)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID11: QemuPci{
+								Mapping: &QemuPciMapping{}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID11: QemuPci{}}},
+						err:     errors.New(QemuPci_Error_MappedID)},
+					{name: `errors.New(QemuPci_Error_RawID)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID10: QemuPci{
+								Raw: &QemuPciRaw{}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID10: QemuPci{}}},
+						err:     errors.New(QemuPci_Error_RawID)},
+					{name: `errors.New(ResourceMappingPciID_Error_Invalid`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID9: QemuPci{
+								Mapping: &QemuPciMapping{
+									ID: util.Pointer(ResourceMappingPciID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID9: QemuPci{}}},
+						err:     errors.New(ResourceMappingPciID_Error_Invalid)},
+					{name: `errors.New(PciID_Error_MaximumFunction)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID8: QemuPci{
+								Raw: &QemuPciRaw{ID: util.Pointer(PciID("0000:00:00.8"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID8: QemuPci{}}},
+						err:     errors.New(PciID_Error_MaximumFunction)},
+					{name: `Mapping errors.New(PciDeviceID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID7: QemuPci{
+								Mapping: &QemuPciMapping{
+									ID:       util.Pointer(ResourceMappingPciID("aaa")),
+									DeviceID: util.Pointer(PciDeviceID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID7: QemuPci{}}},
+						err:     errors.New(PciDeviceID_Error_Invalid)},
+					{name: `Mapping errors.New(PciSubDeviceID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID6: QemuPci{
+								Mapping: &QemuPciMapping{
+									ID:          util.Pointer(ResourceMappingPciID("aaa")),
+									SubDeviceID: util.Pointer(PciSubDeviceID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID6: QemuPci{}}},
+						err:     errors.New(PciSubDeviceID_Error_Invalid)},
+					{name: `Mapping errors.New(PciSubVendorID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID5: QemuPci{
+								Mapping: &QemuPciMapping{
+									ID:          util.Pointer(ResourceMappingPciID("aaa")),
+									SubVendorID: util.Pointer(PciSubVendorID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID5: QemuPci{}}},
+						err:     errors.New(PciSubVendorID_Error_Invalid)},
+					{name: `Mapping errors.New(PciVendorID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID4: QemuPci{
+								Mapping: &QemuPciMapping{
+									ID:       util.Pointer(ResourceMappingPciID("aaa")),
+									VendorID: util.Pointer(PciVendorID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID4: QemuPci{}}},
+						err:     errors.New(PciVendorID_Error_Invalid)},
+					{name: `Raw errors.New(PciDeviceID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID3: QemuPci{
+								Raw: &QemuPciRaw{
+									ID:       util.Pointer(PciID("0000:00:00")),
+									DeviceID: util.Pointer(PciDeviceID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID3: QemuPci{}}},
+						err:     errors.New(PciDeviceID_Error_Invalid)},
+					{name: `Raw errors.New(PciSubDeviceID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID2: QemuPci{
+								Raw: &QemuPciRaw{
+									ID:          util.Pointer(PciID("0000:00:00")),
+									SubDeviceID: util.Pointer(PciSubDeviceID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID2: QemuPci{}}},
+						err:     errors.New(PciSubDeviceID_Error_Invalid)},
+					{name: `Raw errors.New(PciSubVendorID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID1: QemuPci{
+								Raw: &QemuPciRaw{
+									ID:          util.Pointer(PciID("0000:00:00")),
+									SubVendorID: util.Pointer(PciSubVendorID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID1: QemuPci{}}},
+						err:     errors.New(PciSubVendorID_Error_Invalid)},
+					{name: `Raw errors.New(PciVendorID_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+							QemuPciID0: QemuPci{
+								Raw: &QemuPciRaw{
+									ID:       util.Pointer(PciID("0000:00:00")),
+									VendorID: util.Pointer(PciVendorID("a0%^#"))}}}}),
+						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID0: QemuPci{}}},
+						err:     errors.New(PciVendorID_Error_Invalid)}}}},
 		{category: `Serials`,
 			valid: testType{
 				createUpdate: []test{
