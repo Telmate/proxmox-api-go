@@ -8927,7 +8927,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{}}}}),
 						current: &ConfigQemu{USBs: QemuUSBs{
 							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{}}}},
-						err: errors.New(QemuUSB_Error_MappedID)},
+						err: errors.New(QemuUSB_Error_MappingID)},
 					{name: `errors.New(QemuUSB_Error_PortID)`,
 						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
 							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{}}}}),
