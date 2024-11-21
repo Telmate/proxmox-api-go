@@ -10,6 +10,8 @@ import (
 
 var rxUserTokenExtract = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+!([a-z0-9]+)")
 
+const hexPrefix string = "0x"
+
 func inArray(arr []string, str string) bool {
 	for _, elem := range arr {
 		if elem == str {

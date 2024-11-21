@@ -271,6 +271,27 @@ func Test_QemuPci_Validate(t *testing.T) {
 	}
 }
 
+func Test_PciDeviceID_String(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  PciDeviceID
+		output string
+	}{
+		{name: `No prefix`,
+			input:  "ffff",
+			output: "0xffff"},
+		{name: `With prefix`,
+			input:  "0x0000",
+			output: "0x0000"},
+		{name: `Empty`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.String())
+		})
+	}
+}
+
 func Test_PciDeviceID_Validate(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -295,6 +316,27 @@ func Test_PciDeviceID_Validate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
+func Test_PciSubDeviceID_String(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  PciSubDeviceID
+		output string
+	}{
+		{name: `No prefix`,
+			input:  "ffff",
+			output: "0xffff"},
+		{name: `With prefix`,
+			input:  "0x0000",
+			output: "0x0000"},
+		{name: `Empty`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.String())
 		})
 	}
 }
@@ -327,6 +369,27 @@ func Test_PciSubDeviceID_Validate(t *testing.T) {
 	}
 }
 
+func Test_PciSubVendorID_String(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  PciSubVendorID
+		output string
+	}{
+		{name: `No prefix`,
+			input:  "ffff",
+			output: "0xffff"},
+		{name: `With prefix`,
+			input:  "0x0000",
+			output: "0x0000"},
+		{name: `Empty`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.String())
+		})
+	}
+}
+
 func Test_PciSubVendorID_Validate(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -351,6 +414,27 @@ func Test_PciSubVendorID_Validate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
+func Test_PciVendorID_String(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  PciVendorID
+		output string
+	}{
+		{name: `No prefix`,
+			input:  "ffff",
+			output: "0xffff"},
+		{name: `With prefix`,
+			input:  "0x0000",
+			output: "0x0000"},
+		{name: `Empty`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.String())
 		})
 	}
 }

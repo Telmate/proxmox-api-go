@@ -405,7 +405,10 @@ type PciDeviceID string
 const PciDeviceID_Error_Invalid string = "device id" + qemuPci_Error_Maximum
 
 func (id PciDeviceID) String() string {
-	return ensurePrefix("0x", strings.ToLower(string(id)))
+	if id == "" {
+		return ""
+	}
+	return ensurePrefix(hexPrefix, strings.ToLower(string(id)))
 }
 
 func (id PciDeviceID) Validate() error {
@@ -425,7 +428,10 @@ type PciSubDeviceID string
 const PciSubDeviceID_Error_Invalid string = "sub device id" + qemuPci_Error_Maximum
 
 func (id PciSubDeviceID) String() string {
-	return ensurePrefix("0x", strings.ToLower(string(id)))
+	if id == "" {
+		return ""
+	}
+	return ensurePrefix(hexPrefix, strings.ToLower(string(id)))
 }
 
 func (id PciSubDeviceID) Validate() error {
@@ -445,7 +451,10 @@ type PciSubVendorID string
 const PciSubVendorID_Error_Invalid string = "sub vendor id" + qemuPci_Error_Maximum
 
 func (id PciSubVendorID) String() string {
-	return ensurePrefix("0x", strings.ToLower(string(id)))
+	if id == "" {
+		return ""
+	}
+	return ensurePrefix(hexPrefix, strings.ToLower(string(id)))
 }
 
 func (id PciSubVendorID) Validate() error {
@@ -465,7 +474,10 @@ type PciVendorID string
 const PciVendorID_Error_Invalid string = "vendor id" + qemuPci_Error_Maximum
 
 func (id PciVendorID) String() string {
-	return ensurePrefix("0x", strings.ToLower(string(id)))
+	if id == "" {
+		return ""
+	}
+	return ensurePrefix(hexPrefix, strings.ToLower(string(id)))
 }
 
 func (id PciVendorID) Validate() error {
