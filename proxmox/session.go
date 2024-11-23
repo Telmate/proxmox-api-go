@@ -167,7 +167,7 @@ func (s *Session) SetAPIToken(userID, token string) {
 	s.AuthToken = auth
 }
 
-func (s *Session) SetTicket(ticket, csrfPreventionToken string) {
+func (s *Session) setTicket(ticket, csrfPreventionToken string) {
 	s.AuthTicket = ticket
 	s.CsrfToken = csrfPreventionToken
 }

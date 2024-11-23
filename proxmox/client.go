@@ -137,8 +137,10 @@ func (c *Client) SetAPIToken(userID, token string) {
 // Parameters:
 // - `ticket`
 // - `csrfPreventionToken`
+//
+// Docs: https://pve.proxmox.com/wiki/Proxmox_VE_API#Authentication
 func (c *Client) SetTicket(ticket, csrfPreventionToken string) {
-	c.session.SetTicket(ticket, csrfPreventionToken)
+	c.session.setTicket(ticket, csrfPreventionToken)
 }
 
 func (c *Client) Login(username string, password string, otp string) (err error) {
