@@ -131,6 +131,12 @@ func (c *Client) SetAPIToken(userID, token string) {
 	c.session.SetAPIToken(userID, token)
 }
 
+// SetTicket let's set directly ticket and csrfPreventionToken obtained in
+// a different way, for example using OIDC identity provider
+//
+// Parameters:
+// - `ticket`
+// - `csrfPreventionToken`
 func (c *Client) SetTicket(ticket, csrfPreventionToken string) {
 	c.session.SetTicket(ticket, csrfPreventionToken)
 }
