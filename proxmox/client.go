@@ -131,6 +131,18 @@ func (c *Client) SetAPIToken(userID, token string) {
 	c.session.SetAPIToken(userID, token)
 }
 
+// SetTicket let's set directly ticket and csrfPreventionToken obtained in
+// a different way, for example using OIDC identity provider
+//
+// Parameters:
+// - `ticket`
+// - `csrfPreventionToken`
+//
+// Docs: https://pve.proxmox.com/wiki/Proxmox_VE_API#Authentication
+func (c *Client) SetTicket(ticket, csrfPreventionToken string) {
+	c.session.setTicket(ticket, csrfPreventionToken)
+}
+
 func (c *Client) Login(username string, password string, otp string) (err error) {
 	c.Username = username
 	c.Password = password

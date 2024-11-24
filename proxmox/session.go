@@ -167,6 +167,11 @@ func (s *Session) SetAPIToken(userID, token string) {
 	s.AuthToken = auth
 }
 
+func (s *Session) setTicket(ticket, csrfPreventionToken string) {
+	s.AuthTicket = ticket
+	s.CsrfToken = csrfPreventionToken
+}
+
 func (s *Session) Login(username string, password string, otp string) (err error) {
 	reqUser := map[string]interface{}{"username": username, "password": password}
 	if otp != "" {
