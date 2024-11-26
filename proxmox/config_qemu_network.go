@@ -57,6 +57,7 @@ type QemuNetworkInterface struct {
 	RateLimitKBps *QemuNetworkRate  `json:"rate,omitempty"`
 	NativeVlan    *Vlan             `json:"native_vlan,omitempty"`
 	TaggedVlans   *Vlans            `json:"tagged_vlans,omitempty"`
+	mac           string
 }
 
 func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (settings string) {
@@ -70,12 +71,20 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 		}
 		builder.WriteString(model)
 		if config.MAC != nil {
-			mac = config.MAC.String()
+			mac = config.MAC.String() // Returns a lowercase MAC address
+			if mac == strings.ToLower(current.mac) {
+				mac = current.mac
+			} else {
+				mac = strings.ToUpper(mac)
+			}
+			builder.WriteString("=" + mac)
 		} else if current.MAC != nil {
-			mac = current.MAC.String()
-		}
-		if mac != "" {
-			builder.WriteString("=" + strings.ToUpper(mac))
+			if current.mac != "" {
+				mac = current.mac
+			} else {
+				mac = strings.ToUpper(current.MAC.String())
+			}
+			builder.WriteString("=" + mac)
 		}
 		if config.Bridge != nil {
 			builder.WriteString(",bridge=" + *config.Bridge)
@@ -186,6 +195,7 @@ func (QemuNetworkInterface) mapToSDK(rawParams string) (config QemuNetworkInterf
 		model = QemuNetworkModel(modelAndMac[0])
 		config.Model = &model
 		mac, _ := net.ParseMAC(modelAndMac[1])
+		config.mac = modelAndMac[1]
 		config.MAC = &mac
 	}
 	params := splitStringOfSettings(rawParams)
