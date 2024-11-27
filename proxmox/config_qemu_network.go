@@ -147,12 +147,10 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 	// Create
 	if config.Model != nil {
 		model = config.Model.String()
+		builder.WriteString(config.Model.String())
 	}
 	if config.MAC != nil {
 		mac = config.MAC.String()
-	}
-	if model != "" {
-		builder.WriteString(model)
 		if mac != "" {
 			builder.WriteString("=" + strings.ToUpper(mac))
 		}
