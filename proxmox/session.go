@@ -217,7 +217,7 @@ func (s *Session) NewRequest(method, url string, headers *http.Header, body io.R
 	if s.AuthToken != "" {
 		req.Header["Authorization"] = []string{"PVEAPIToken=" + s.AuthToken}
 	} else if s.AuthTicket != "" {
-		req.Header["Authorization"] = []string{"PVEAuthCookie=" + s.AuthTicket}
+		req.Header["Cookie"] = []string{"PVEAuthCookie=" + s.AuthTicket}
 		req.Header["CSRFPreventionToken"] = []string{s.CsrfToken}
 	}
 	return
