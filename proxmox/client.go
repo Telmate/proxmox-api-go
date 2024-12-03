@@ -1329,6 +1329,53 @@ func (c *Client) DeleteQemuIPSetNetwork(vmr *VmRef, IPSetName string, network st
 	return
 }
 
+func (c *Client) ListQemuFirewallRules(vmr *VmRef) (rules map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", vmr.node, vmr.vmId)
+	resp, err := c.session.Get(url, nil, nil)
+	if err == nil {
+		rules, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		return rules, nil
+	}
+	return
+}
+func (c *Client) CreateQemuFirewallRules(vmr *VmRef, params map[string]interface{}) (exitStatus *string, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := ParamsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", vmr.node, vmr.vmId)
+	resp, err := c.session.Post(url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err := c.WaitForCompletion(taskResponse)
+		if err != nil {
+			return &exitStatus, err
+		}
+	}
+	return
+}
+
+func (c *Client) DeleteQemuFirewallRules(vmr *VmRef, pos int) (err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", vmr.node, vmr.vmId, pos)
+	return c.Delete(url)
+}
+
 func (c *Client) Upload(node string, storage string, contentType string, filename string, file io.Reader) error {
 	var doStreamingIO bool
 	var fileSize int64
