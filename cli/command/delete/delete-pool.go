@@ -1,6 +1,7 @@
 package delete
 
 import (
+	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -9,7 +10,7 @@ var delete_poolCmd = &cobra.Command{
 	Short: "Deletes the Specified pool",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return deleteID(args, "Pool")
+		return deleteID(cli.Context(), args, "Pool")
 	},
 }
 

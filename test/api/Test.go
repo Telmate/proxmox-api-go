@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"crypto/tls"
 
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
@@ -48,7 +49,7 @@ func (test *Test) Login() (err error) {
 			return err
 		}
 	}
-	err = test._client.Login(test.UserID, test.Password, test.OTP)
+	err = test._client.Login(context.Background(), test.UserID, test.Password, test.OTP)
 	return err
 }
 

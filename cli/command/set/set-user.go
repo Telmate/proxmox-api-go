@@ -29,7 +29,7 @@ For config examples see "example user"`,
 			password = proxmox.UserPassword(args[1])
 		}
 		c := cli.NewClient()
-		err = config.SetUser(userId, password, c)
+		err = config.SetUser(cli.Context(), userId, password, c)
 		if err != nil {
 			return
 		}

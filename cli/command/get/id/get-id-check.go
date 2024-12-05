@@ -14,7 +14,7 @@ var id_checkCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		id := cli.ValidateIntIDset(args, "ID")
 		c := cli.NewClient()
-		exists, err := c.VMIdExists(id)
+		exists, err := c.VMIdExists(cli.Context(), id)
 		if err != nil {
 			return
 		}

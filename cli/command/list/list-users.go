@@ -16,7 +16,7 @@ var list_usersCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
 		groups, _ := cmd.Flags().GetBool("groups")
-		users, err := proxmox.ListUsers(c, groups)
+		users, err := proxmox.ListUsers(cli.Context(), c, groups)
 		if err != nil {
 			return
 		}

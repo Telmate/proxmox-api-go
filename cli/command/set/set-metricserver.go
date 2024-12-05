@@ -21,7 +21,7 @@ For config examples see "example metricserver"`,
 			return
 		}
 		c := cli.NewClient()
-		err = config.SetMetrics(id, c)
+		err = config.SetMetrics(cli.Context(), id, c)
 		if err != nil {
 			return
 		}

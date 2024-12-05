@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"testing"
@@ -45,7 +46,7 @@ func Test_Client_CheckPermissions(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, test.input.client.CheckPermissions(test.input.perms))
+			require.Equal(t, test.output, test.input.client.CheckPermissions(context.Background(), test.input.perms))
 		})
 	}
 }

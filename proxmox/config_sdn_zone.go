@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -46,32 +47,32 @@ func NewConfigSDNZoneFromJson(input []byte) (config *ConfigSDNZone, err error) {
 	return
 }
 
-func (config *ConfigSDNZone) CreateWithValidate(id string, client *Client) (err error) {
-	err = config.Validate(id, true, client)
+func (config *ConfigSDNZone) CreateWithValidate(ctx context.Context, id string, client *Client) (err error) {
+	err = config.Validate(ctx, id, true, client)
 	if err != nil {
 		return
 	}
-	return config.Create(id, client)
+	return config.Create(ctx, id, client)
 }
 
-func (config *ConfigSDNZone) Create(id string, client *Client) (err error) {
+func (config *ConfigSDNZone) Create(ctx context.Context, id string, client *Client) (err error) {
 	config.Zone = id
 	params := config.mapToApiValues()
-	return client.CreateSDNZone(params)
+	return client.CreateSDNZone(ctx, params)
 }
 
-func (config *ConfigSDNZone) UpdateWithValidate(id string, client *Client) (err error) {
-	err = config.Validate(id, false, client)
+func (config *ConfigSDNZone) UpdateWithValidate(ctx context.Context, id string, client *Client) (err error) {
+	err = config.Validate(ctx, id, false, client)
 	if err != nil {
 		return
 	}
-	return config.Update(id, client)
+	return config.Update(ctx, id, client)
 }
 
-func (config *ConfigSDNZone) Update(id string, client *Client) (err error) {
+func (config *ConfigSDNZone) Update(ctx context.Context, id string, client *Client) (err error) {
 	config.Zone = id
 	params := config.mapToApiValues()
-	err = client.UpdateSDNZone(id, params)
+	err = client.UpdateSDNZone(ctx, id, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating SDN Zone: %v, (params: %v)", err, string(params))
@@ -79,8 +80,8 @@ func (config *ConfigSDNZone) Update(id string, client *Client) (err error) {
 	return
 }
 
-func (c *ConfigSDNZone) Validate(id string, create bool, client *Client) (err error) {
-	exists, err := client.CheckSDNZoneExistance(id)
+func (c *ConfigSDNZone) Validate(ctx context.Context, id string, create bool, client *Client) (err error) {
+	exists, err := client.CheckSDNZoneExistance(ctx, id)
 	if err != nil {
 		return
 	}

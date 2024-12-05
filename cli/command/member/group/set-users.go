@@ -22,7 +22,7 @@ var group_setCmd = &cobra.Command{
 			}
 		}
 		c := cli.NewClient()
-		err = proxmox.GroupName(args[0]).SetMembers(users, c)
+		err = proxmox.GroupName(args[0]).SetMembers(cli.Context(), users, c)
 		if err != nil {
 			return
 		}

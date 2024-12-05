@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"strings"
 )
@@ -14,8 +15,8 @@ type HAGroup struct {
 	Type       string   // Group type
 }
 
-func (c *Client) GetHAGroupList() (haGroups []HAGroup, err error) {
-	list, err := c.GetItemList("/cluster/ha/groups")
+func (c *Client) GetHAGroupList(ctx context.Context) (haGroups []HAGroup, err error) {
+	list, err := c.GetItemList(ctx, "/cluster/ha/groups")
 
 	if err != nil {
 		return nil, err
@@ -39,8 +40,8 @@ func (c *Client) GetHAGroupList() (haGroups []HAGroup, err error) {
 	return haGroups, nil
 }
 
-func (c *Client) GetHAGroupByName(GroupName string) (*HAGroup, error) {
-	groups, err := c.GetHAGroupList()
+func (c *Client) GetHAGroupByName(ctx context.Context, GroupName string) (*HAGroup, error) {
+	groups, err := c.GetHAGroupList(ctx)
 
 	if err != nil {
 		return nil, err

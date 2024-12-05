@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -354,8 +355,8 @@ func (config *ConfigStorage) RemapFromAPI() {
 	}
 }
 
-func (newConfig *ConfigStorage) Validate(id string, create bool, client *Client) (err error) {
-	exists, err := client.CheckStorageExistance(id)
+func (newConfig *ConfigStorage) Validate(ctx context.Context, id string, create bool, client *Client) (err error) {
+	exists, err := client.CheckStorageExistance(ctx, id)
 	if err != nil {
 		return
 	}
@@ -374,7 +375,7 @@ func (newConfig *ConfigStorage) Validate(id string, create bool, client *Client)
 
 	var currentConfig *ConfigStorage
 	if exists {
-		currentConfig, err = NewConfigStorageFromApi(id, client)
+		currentConfig, err = NewConfigStorageFromApi(ctx, id, client)
 		if err != nil {
 			return
 		}
@@ -941,15 +942,15 @@ func (config *ConfigStorage) mapToApiValues(create bool) (params map[string]inte
 	return
 }
 
-func (config *ConfigStorage) CreateWithValidate(id string, client *Client) (err error) {
-	err = config.Validate(id, true, client)
+func (config *ConfigStorage) CreateWithValidate(ctx context.Context, id string, client *Client) (err error) {
+	err = config.Validate(ctx, id, true, client)
 	if err != nil {
 		return
 	}
-	return config.Create(id, true, client)
+	return config.Create(ctx, id, true, client)
 }
 
-func (config *ConfigStorage) Create(id string, errorSupression bool, client *Client) (err error) {
+func (config *ConfigStorage) Create(ctx context.Context, id string, errorSupression bool, client *Client) (err error) {
 	var enableStorage bool
 	if errorSupression && config.Enable {
 		config.Enable = false
@@ -957,30 +958,30 @@ func (config *ConfigStorage) Create(id string, errorSupression bool, client *Cli
 	}
 	config.ID = id
 	params := config.mapToApiValues(true)
-	err = client.CreateStorage(params)
+	err = client.CreateStorage(ctx, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Storage Backend: %v, (params: %v)", err, string(params))
 	}
 	// if it gets enabled after it has been configured proxmox wont give the error that it can't connect to the storage backend
 	if enableStorage {
-		err = client.EnableStorage(id)
+		err = client.EnableStorage(ctx, id)
 	}
 	return
 }
 
-func (config *ConfigStorage) UpdateWithValidate(id string, client *Client) (err error) {
-	err = config.Validate(id, false, client)
+func (config *ConfigStorage) UpdateWithValidate(ctx context.Context, id string, client *Client) (err error) {
+	err = config.Validate(ctx, id, false, client)
 	if err != nil {
 		return
 	}
-	return config.Update(id, client)
+	return config.Update(ctx, id, client)
 }
 
-func (config *ConfigStorage) Update(id string, client *Client) (err error) {
+func (config *ConfigStorage) Update(ctx context.Context, id string, client *Client) (err error) {
 	config.ID = id
 	params := config.mapToApiValues(false)
-	err = client.UpdateStorage(id, params)
+	err = client.UpdateStorage(ctx, id, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Storage Backend: %v, (params: %v)", err, string(params))
@@ -988,10 +989,10 @@ func (config *ConfigStorage) Update(id string, client *Client) (err error) {
 	return
 }
 
-func NewConfigStorageFromApi(storageid string, client *Client) (config *ConfigStorage, err error) {
+func NewConfigStorageFromApi(ctx context.Context, storageid string, client *Client) (config *ConfigStorage, err error) {
 	// prepare json map to receive the information from the api
 	var rawConfig map[string]interface{}
-	rawConfig, err = client.GetStorageConfig(storageid)
+	rawConfig, err = client.GetStorageConfig(ctx, storageid)
 	if err != nil {
 		return nil, err
 	}

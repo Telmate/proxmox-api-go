@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -128,22 +129,22 @@ func createFilesList(fileList []interface{}) *[]Content_FileProperties {
 }
 
 // Deletes te specified file from the specified storage.
-func DeleteFile(client *Client, node string, content Content_File) (err error) {
+func DeleteFile(ctx context.Context, client *Client, node string, content Content_File) (err error) {
 	content.ContentType, err = content.ContentType.toApiValueAndValidate()
 	if err != nil {
 		return
 	}
-	_, err = client.DeleteWithTask("/nodes/" + node + "/storage/" + content.Storage + "/content" + content.format())
+	_, err = client.DeleteWithTask(ctx, "/nodes/"+node+"/storage/"+content.Storage+"/content"+content.format())
 	return
 }
 
 // List all files of the given type in the the specified storage
-func ListFiles(client *Client, node, storage string, content ContentType) (files *[]Content_FileProperties, err error) {
+func ListFiles(ctx context.Context, client *Client, node, storage string, content ContentType) (files *[]Content_FileProperties, err error) {
 	content, err = content.toApiValueAndValidate()
 	if err != nil {
 		return
 	}
-	fileList, err := client.GetItemListInterfaceArray("/nodes/" + node + "/storage/" + storage + "/content?content=" + string(content))
+	fileList, err := client.GetItemListInterfaceArray(ctx, "/nodes/"+node+"/storage/"+storage+"/content?content="+string(content))
 	if err != nil {
 		return
 	}

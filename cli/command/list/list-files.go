@@ -12,7 +12,7 @@ var list_FileCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
-		templates, err := proxmox.ListFiles(c, args[0], args[1], proxmox.ContentType(args[2]))
+		templates, err := proxmox.ListFiles(cli.Context(), c, args[0], args[1], proxmox.ContentType(args[2]))
 		if err != nil {
 			return
 		}

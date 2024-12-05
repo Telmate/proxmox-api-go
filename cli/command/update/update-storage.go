@@ -20,7 +20,7 @@ For config examples see "example storage"`,
 			return
 		}
 		c := cli.NewClient()
-		err = config.UpdateWithValidate(id, c)
+		err = config.UpdateWithValidate(cli.Context(), id, c)
 		if err != nil {
 			return
 		}

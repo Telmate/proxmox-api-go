@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,7 @@ func Test_Create_Acme_Account(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
 	acmeAccount, _ := pxapi.NewConfigAcmeAccountFromJson([]byte(account))
-	err := acmeAccount.CreateAcmeAccount("test", Test.GetClient())
+	err := acmeAccount.CreateAcmeAccount(context.Background(), "test", Test.GetClient())
 	require.NoError(t, err)
 }
 
@@ -34,7 +35,7 @@ func Test_Acme_Account_Is_Added(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
 
-	_, err := pxapi.NewConfigAcmeAccountFromApi("test", Test.GetClient())
+	_, err := pxapi.NewConfigAcmeAccountFromApi(context.Background(), "test", Test.GetClient())
 
 	require.NoError(t, err)
 }
@@ -42,7 +43,7 @@ func Test_Acme_Account_Is_Added(t *testing.T) {
 func Test_Remove_Acme_Account(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	_, err := Test.GetClient().DeleteAcmeAccount("test")
+	_, err := Test.GetClient().DeleteAcmeAccount(context.Background(), "test")
 
 	require.NoError(t, err)
 }
@@ -51,7 +52,7 @@ func Test_Acme_Account_Is_Removed(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
 
-	_, err := pxapi.NewConfigAcmeAccountFromApi("test", Test.GetClient())
+	_, err := pxapi.NewConfigAcmeAccountFromApi(context.Background(), "test", Test.GetClient())
 
 	require.Error(t, err)
 }

@@ -12,7 +12,7 @@ var list_qemuguestsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		c := cli.NewClient()
-		guests, err := proxmox.ListGuests(c)
+		guests, err := proxmox.ListGuests(cli.Context(), c)
 		cli.LogFatalListing("Guests", err)
 		cli.PrintRawJson(listCmd.OutOrStdout(), guests)
 	},

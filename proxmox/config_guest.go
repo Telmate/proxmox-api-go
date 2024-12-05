@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"net/netip"
 	"strconv"
@@ -147,21 +148,21 @@ const (
 )
 
 // check if the guest has the specified feature.
-func GuestHasFeature(vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
+func GuestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
 	err := feature.Validate()
 	if err != nil {
 		return false, err
 	}
-	err = client.CheckVmRef(vmr)
+	err = client.CheckVmRef(ctx, vmr)
 	if err != nil {
 		return false, err
 	}
-	return guestHasFeature(vmr, client, feature)
+	return guestHasFeature(ctx, vmr, client, feature)
 }
 
-func guestHasFeature(vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
+func guestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
 	var params map[string]interface{}
-	params, err := client.GetItemConfigMapStringInterface("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/feature?feature=snapshot", "guest", "FEATURES")
+	params, err := client.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/feature?feature=snapshot", "guest", "FEATURES")
 	if err != nil {
 		return false, err
 	}
@@ -169,8 +170,8 @@ func guestHasFeature(vmr *VmRef, client *Client, feature GuestFeature) (bool, er
 }
 
 // Check if there are any pending changes that require a reboot to be applied.
-func GuestHasPendingChanges(vmr *VmRef, client *Client) (bool, error) {
-	params, err := pendingGuestConfigFromApi(vmr, client)
+func GuestHasPendingChanges(ctx context.Context, vmr *VmRef, client *Client) (bool, error) {
+	params, err := pendingGuestConfigFromApi(ctx, vmr, client)
 	if err != nil {
 		return false, err
 	}
@@ -178,37 +179,37 @@ func GuestHasPendingChanges(vmr *VmRef, client *Client) (bool, error) {
 }
 
 // Reboot the specified guest
-func GuestReboot(vmr *VmRef, client *Client) (err error) {
-	_, err = client.RebootVm(vmr)
+func GuestReboot(ctx context.Context, vmr *VmRef, client *Client) (err error) {
+	_, err = client.RebootVm(ctx, vmr)
 	return
 }
 
-func guestSetPool_Unsafe(c *Client, guestID uint, newPool PoolName, currentPool *PoolName, version Version) (err error) {
+func guestSetPool_Unsafe(ctx context.Context, c *Client, guestID uint, newPool PoolName, currentPool *PoolName, version Version) (err error) {
 	if newPool == "" {
 		if *currentPool != "" { // leave pool
-			if err = (*currentPool).removeGuests_Unsafe(c, []uint{guestID}, version); err != nil {
+			if err = (*currentPool).removeGuests_Unsafe(ctx, c, []uint{guestID}, version); err != nil {
 				return
 			}
 		}
 	} else {
 		if *currentPool == "" { // join pool
 			if version.Smaller(Version{8, 0, 0}) {
-				if err = newPool.addGuests_UnsafeV7(c, []uint{guestID}); err != nil {
+				if err = newPool.addGuests_UnsafeV7(ctx, c, []uint{guestID}); err != nil {
 					return
 				}
 			} else {
-				newPool.addGuests_UnsafeV8(c, []uint{guestID})
+				newPool.addGuests_UnsafeV8(ctx, c, []uint{guestID})
 			}
 		} else if newPool != *currentPool { // change pool
 			if version.Smaller(Version{8, 0, 0}) {
-				if err = (*currentPool).removeGuests_Unsafe(c, []uint{guestID}, version); err != nil {
+				if err = (*currentPool).removeGuests_Unsafe(ctx, c, []uint{guestID}, version); err != nil {
 					return
 				}
-				if err = newPool.addGuests_UnsafeV7(c, []uint{guestID}); err != nil {
+				if err = newPool.addGuests_UnsafeV7(ctx, c, []uint{guestID}); err != nil {
 					return
 				}
 			} else {
-				if err = newPool.addGuests_UnsafeV8(c, []uint{guestID}); err != nil {
+				if err = newPool.addGuests_UnsafeV8(ctx, c, []uint{guestID}); err != nil {
 					return
 				}
 			}
@@ -217,53 +218,53 @@ func guestSetPool_Unsafe(c *Client, guestID uint, newPool PoolName, currentPool 
 	return
 }
 
-func GuestShutdown(vmr *VmRef, client *Client, force bool) (err error) {
-	if err = client.CheckVmRef(vmr); err != nil {
+func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) (err error) {
+	if err = client.CheckVmRef(ctx, vmr); err != nil {
 		return
 	}
 	var params map[string]interface{}
 	if force {
 		params = map[string]interface{}{"forceStop": force}
 	}
-	_, err = client.PostWithTask(params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/shutdown")
+	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/shutdown")
 	return
 }
 
-func GuestStart(vmr *VmRef, client *Client) (err error) {
-	_, err = client.StartVm(vmr)
+func GuestStart(ctx context.Context, vmr *VmRef, client *Client) (err error) {
+	_, err = client.StartVm(ctx, vmr)
 	return
 }
 
 // List all features the guest has.
-func ListGuestFeatures(vmr *VmRef, client *Client) (features GuestFeatures, err error) {
-	err = client.CheckVmRef(vmr)
+func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (features GuestFeatures, err error) {
+	err = client.CheckVmRef(ctx, vmr)
 	if err != nil {
 		return
 	}
-	features.Clone, err = guestHasFeature(vmr, client, GuestFeature_Clone)
+	features.Clone, err = guestHasFeature(ctx, vmr, client, GuestFeature_Clone)
 	if err != nil {
 		return
 	}
-	features.Copy, err = guestHasFeature(vmr, client, GuestFeature_Copy)
+	features.Copy, err = guestHasFeature(ctx, vmr, client, GuestFeature_Copy)
 	if err != nil {
 		return
 	}
-	features.Snapshot, err = guestHasFeature(vmr, client, GuestFeature_Snapshot)
+	features.Snapshot, err = guestHasFeature(ctx, vmr, client, GuestFeature_Snapshot)
 	return
 }
 
 // List all guest the user has viewing rights for in the cluster
-func ListGuests(client *Client) ([]GuestResource, error) {
-	list, err := client.GetResourceList("vm")
+func ListGuests(ctx context.Context, client *Client) ([]GuestResource, error) {
+	list, err := client.GetResourceList(ctx, "vm")
 	if err != nil {
 		return nil, err
 	}
 	return GuestResource{}.mapToStruct(list), nil
 }
 
-func pendingGuestConfigFromApi(vmr *VmRef, client *Client) ([]interface{}, error) {
-	if err := client.CheckVmRef(vmr); err != nil {
+func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) ([]interface{}, error) {
+	if err := client.CheckVmRef(ctx, vmr); err != nil {
 		return nil, err
 	}
-	return client.GetItemConfigInterfaceArray("/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/pending", "Guest", "PENDING CONFIG")
+	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/pending", "Guest", "PENDING CONFIG")
 }

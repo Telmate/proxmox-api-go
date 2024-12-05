@@ -35,7 +35,7 @@ var (
 				Comment: comment,
 				Members: formattedMembers,
 			}
-			err = config.Set(cli.NewClient())
+			err = config.Set(cli.Context(), cli.NewClient())
 			if err != nil {
 				return
 			}

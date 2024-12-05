@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,13 +26,13 @@ type ConfigUser struct {
 	Password UserPassword `json:"-"`
 }
 
-func (config ConfigUser) CreateUser(client *Client) (err error) {
+func (config ConfigUser) CreateUser(ctx context.Context, client *Client) (err error) {
 	err = config.Validate()
 	if err != nil {
 		return
 	}
 	params := config.mapToApiValues(true)
-	err = client.Post(params, "/access/users")
+	err = client.Post(ctx, params, "/access/users")
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating User: %v, (params: %v)", err, string(params))
@@ -39,8 +40,8 @@ func (config ConfigUser) CreateUser(client *Client) (err error) {
 	return
 }
 
-func (config ConfigUser) DeleteUser(client *Client) (err error) {
-	existence, err := CheckUserExistence(config.User, client)
+func (config ConfigUser) DeleteUser(ctx context.Context, client *Client) (err error) {
+	existence, err := CheckUserExistence(ctx, config.User, client)
 	if err != nil {
 		return
 	}
@@ -48,7 +49,7 @@ func (config ConfigUser) DeleteUser(client *Client) (err error) {
 		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", config.User.String())
 	}
 	// Proxmox silently fails a user delete if the users does not exist
-	return client.Delete("/access/users/" + config.User.String())
+	return client.Delete(ctx, "/access/users/"+config.User.String())
 }
 
 // Maps the struct to the API values proxmox understands
@@ -112,25 +113,25 @@ func (config ConfigUser) mapToStruct(params map[string]interface{}) *ConfigUser 
 
 // Create or update the user depending on if the user already exists or not.
 // "userId" and "password" overwrite what is specified in "*ConfigUser".
-func (config *ConfigUser) SetUser(userId UserID, password UserPassword, client *Client) (err error) {
+func (config *ConfigUser) SetUser(ctx context.Context, userId UserID, password UserPassword, client *Client) (err error) {
 	if config != nil {
 		config.User = userId
 		config.Password = password
 	}
 
-	userExists, err := CheckUserExistence(userId, client)
+	userExists, err := CheckUserExistence(ctx, userId, client)
 	if err != nil {
 		return err
 	}
 
 	if config != nil {
 		if userExists {
-			err = config.UpdateUser(client)
+			err = config.UpdateUser(ctx, client)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = config.CreateUser(client)
+			err = config.CreateUser(ctx, client)
 		}
 	} else {
 		config = &ConfigUser{
@@ -139,34 +140,34 @@ func (config *ConfigUser) SetUser(userId UserID, password UserPassword, client *
 		}
 		if userExists {
 			if config.Password != "" {
-				err = config.UpdateUserPassword(client)
+				err = config.UpdateUserPassword(ctx, client)
 			}
 		} else {
-			err = config.CreateUser(client)
+			err = config.CreateUser(ctx, client)
 		}
 	}
 	return
 }
 
-func (config ConfigUser) UpdateUser(client *Client) (err error) {
+func (config ConfigUser) UpdateUser(ctx context.Context, client *Client) (err error) {
 	params := config.mapToApiValues(false)
-	err = client.Put(params, "/access/users/"+config.User.String())
+	err = client.Put(ctx, params, "/access/users/"+config.User.String())
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating User: %v, (params: %v)", err, string(params))
 	}
 	if config.Password != "" {
-		err = config.UpdateUserPassword(client)
+		err = config.UpdateUserPassword(ctx, client)
 	}
 	return
 }
 
-func (config ConfigUser) UpdateUserPassword(client *Client) (err error) {
+func (config ConfigUser) UpdateUserPassword(ctx context.Context, client *Client) (err error) {
 	err = config.Password.Validate()
 	if err != nil {
 		return err
 	}
-	return client.Put(map[string]interface{}{
+	return client.Put(ctx, map[string]interface{}{
 		"userid":   config.User.String(),
 		"password": config.Password,
 	}, "/access/password")
@@ -214,8 +215,8 @@ func (ApiToken) mapToArray(params []interface{}) *[]ApiToken {
 	return &tokens
 }
 
-func (config ConfigUser) CreateApiToken(client *Client, token ApiToken) (value string, err error) {
-	status, err := client.CreateItemReturnStatus(map[string]interface{}{
+func (config ConfigUser) CreateApiToken(ctx context.Context, client *Client, token ApiToken) (value string, err error) {
+	status, err := client.CreateItemReturnStatus(ctx, map[string]interface{}{
 		"comment": token.Comment,
 		"expire":  token.Expire,
 		"privsep": token.Privsep,
@@ -229,8 +230,8 @@ func (config ConfigUser) CreateApiToken(client *Client, token ApiToken) (value s
 	return
 }
 
-func (config ConfigUser) UpdateApiToken(client *Client, token ApiToken) (err error) {
-	err = client.Put(map[string]interface{}{
+func (config ConfigUser) UpdateApiToken(ctx context.Context, client *Client, token ApiToken) (err error) {
+	err = client.Put(ctx, map[string]interface{}{
 		"comment": token.Comment,
 		"expire":  token.Expire,
 		"privsep": token.Privsep,
@@ -238,8 +239,8 @@ func (config ConfigUser) UpdateApiToken(client *Client, token ApiToken) (err err
 	return
 }
 
-func (config ConfigUser) ListApiTokens(client *Client) (tokens *[]ApiToken, err error) {
-	status, err := client.GetItemListInterfaceArray("/access/users/" + config.User.String() + "/token")
+func (config ConfigUser) ListApiTokens(ctx context.Context, client *Client) (tokens *[]ApiToken, err error) {
+	status, err := client.GetItemListInterfaceArray(ctx, "/access/users/"+config.User.String()+"/token")
 	if err != nil {
 		return
 	}
@@ -247,8 +248,8 @@ func (config ConfigUser) ListApiTokens(client *Client) (tokens *[]ApiToken, err 
 	return
 }
 
-func (config ConfigUser) DeleteApiToken(client *Client, token ApiToken) (err error) {
-	err = client.Delete("/access/users/" + config.User.String() + "/token/" + token.TokenId)
+func (config ConfigUser) DeleteApiToken(ctx context.Context, client *Client, token ApiToken) (err error) {
+	err = client.Delete(ctx, "/access/users/"+config.User.String()+"/token/"+token.TokenId)
 	return
 }
 
@@ -283,20 +284,20 @@ func (config configUserShort) mapToApiValues() map[string]interface{} {
 	}
 }
 
-func (config configUserShort) updateUserMembership(client *Client) (err error) {
-	err = updateUser(config.User, config.mapToApiValues(), client)
+func (config configUserShort) updateUserMembership(ctx context.Context, client *Client) (err error) {
+	err = updateUser(ctx, config.User, config.mapToApiValues(), client)
 	if err != nil {
 		return fmt.Errorf("error updating User: %v", err)
 	}
 	return
 }
 
-func (configUserShort) updateUsersMembership(users *[]configUserShort, client *Client) (err error) {
+func (configUserShort) updateUsersMembership(ctx context.Context, users *[]configUserShort, client *Client) (err error) {
 	if users == nil {
 		return
 	}
 	for _, e := range *users {
-		err = e.updateUserMembership(client)
+		err = e.updateUserMembership(ctx, client)
 		if err != nil {
 			return
 		}
@@ -367,8 +368,8 @@ func (password UserPassword) Validate() error {
 }
 
 // Check if the user already exists in proxmox.
-func CheckUserExistence(userId UserID, client *Client) (existence bool, err error) {
-	list, err := listUsersFull(client)
+func CheckUserExistence(ctx context.Context, userId UserID, client *Client) (existence bool, err error) {
+	list, err := listUsersFull(ctx, client)
 	if err != nil {
 		return
 	}
@@ -383,13 +384,13 @@ func CheckUserExistence(userId UserID, client *Client) (existence bool, err erro
 // List all users that exist in proxmox
 // Setting full to TRUE the output wil include group information.
 // Depending on the number of existing groups it take substantially longer to parse
-func ListUsers(client *Client, full bool) (*[]ConfigUser, error) {
+func ListUsers(ctx context.Context, client *Client, full bool) (*[]ConfigUser, error) {
 	var err error
 	var userList []interface{}
 	if full {
-		userList, err = listUsersFull(client)
+		userList, err = listUsersFull(ctx, client)
 	} else {
-		userList, err = listUsersPartial(client)
+		userList, err = listUsersPartial(ctx, client)
 	}
 	if err != nil {
 		return nil, err
@@ -398,17 +399,18 @@ func ListUsers(client *Client, full bool) (*[]ConfigUser, error) {
 }
 
 // Returns users without group information
-func listUsersPartial(client *Client) ([]interface{}, error) {
-	return client.GetItemListInterfaceArray("/access/users")
+func listUsersPartial(ctx context.Context, client *Client) ([]interface{}, error) {
+	return client.GetItemListInterfaceArray(ctx, "/access/users")
 }
 
 // Returns users with group information
-func listUsersFull(client *Client) ([]interface{}, error) {
-	return client.GetItemListInterfaceArray("/access/users?full=1")
+func listUsersFull(ctx context.Context, client *Client) ([]interface{}, error) {
+	return client.GetItemListInterfaceArray(ctx, "/access/users?full=1")
 }
 
-func NewConfigUserFromApi(userId UserID, client *Client) (*ConfigUser, error) {
-	userConfig, err := client.GetItemConfigMapStringInterface("/access/users/"+userId.String(), "user", "CONFIG")
+func NewConfigUserFromApi(ctx context.Context,
+	userId UserID, client *Client) (*ConfigUser, error) {
+	userConfig, err := client.GetItemConfigMapStringInterface(ctx, "/access/users/"+userId.String(), "user", "CONFIG")
 	if err != nil {
 		return nil, err
 	}
@@ -455,6 +457,6 @@ func NewUserIDs(userIds string) (*[]UserID, error) {
 }
 
 // URL for updating users
-func updateUser(user UserID, params map[string]interface{}, client *Client) error {
-	return client.Put(params, "/access/users/"+user.String())
+func updateUser(ctx context.Context, user UserID, params map[string]interface{}, client *Client) error {
+	return client.Put(ctx, params, "/access/users/"+user.String())
 }

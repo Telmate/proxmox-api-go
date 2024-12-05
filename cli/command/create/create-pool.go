@@ -20,7 +20,7 @@ var create_poolCmd = &cobra.Command{
 		err = proxmox.ConfigPool{
 			Name:    proxmox.PoolName(id),
 			Comment: comment,
-		}.Create(c)
+		}.Create(cli.Context(), c)
 		if err != nil {
 			return
 		}

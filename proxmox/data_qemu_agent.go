@@ -1,16 +1,17 @@
 package proxmox
 
 import (
+	"context"
 	"net"
 	"strconv"
 )
 
-func (vmr *VmRef) GetAgentInformation(c *Client, statistics bool) ([]AgentNetworkInterface, error) {
-	if err := c.CheckVmRef(vmr); err != nil {
+func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client, statistics bool) ([]AgentNetworkInterface, error) {
+	if err := c.CheckVmRef(ctx, vmr); err != nil {
 		return nil, err
 	}
 	vmid := strconv.FormatInt(int64(vmr.vmId), 10)
-	params, err := c.GetItemConfigMapStringInterface(
+	params, err := c.GetItemConfigMapStringInterface(ctx,
 		"/nodes/"+vmr.node+"/qemu/"+vmid+"/agent/network-get-interfaces", "guest agent", "data",
 		"500 QEMU guest agent is not running",
 		"500 VM "+vmid+" is not running")

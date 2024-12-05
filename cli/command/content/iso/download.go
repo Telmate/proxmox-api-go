@@ -24,7 +24,7 @@ var iso_downloadCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		err = proxmox.DownloadIsoFromUrl(c, config)
+		err = proxmox.DownloadIsoFromUrl(cli.Context(), c, config)
 		if err != nil {
 			return
 		}

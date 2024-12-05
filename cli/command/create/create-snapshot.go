@@ -25,11 +25,11 @@ var (
 			memory = false
 			client := cli.NewClient()
 			vmr := proxmox.NewVmRef(id)
-			_, err = client.GetVmInfo(vmr)
+			_, err = client.GetVmInfo(cli.Context(), vmr)
 			if err != nil {
 				return
 			}
-			err = config.Create(client, vmr)
+			err = config.Create(cli.Context(), client, vmr)
 			if err != nil {
 				return
 			}

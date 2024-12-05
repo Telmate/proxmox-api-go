@@ -1,6 +1,7 @@
 package guest
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/Telmate/proxmox-api-go/cli"
@@ -19,7 +20,7 @@ func init() {
 	create.CreateCmd.AddCommand(guestCmd)
 }
 
-func createGuest(args []string, IDtype string) (err error) {
+func createGuest(ctx context.Context, args []string, IDtype string) (err error) {
 	id := cli.ValidateIntIDset(args, IDtype+"ID")
 	node := cli.RequiredIDset(args, 1, "NodeID")
 	vmr := proxmox.NewVmRef(id)
@@ -32,7 +33,7 @@ func createGuest(args []string, IDtype string) (err error) {
 		if err != nil {
 			return
 		}
-		err = config.CreateLxc(vmr, c)
+		err = config.CreateLxc(ctx, vmr, c)
 	case "QemuGuest":
 		// var config *proxmox.ConfigQemu
 		// config, err = proxmox.NewConfigQemuFromJson(cli.NewConfig())
@@ -54,7 +55,7 @@ func createGuest(args []string, IDtype string) (err error) {
 				Units:        util.Pointer(proxmox.CpuUnits(1024)),
 				VirtualCores: util.Pointer(proxmox.CpuVirtualCores(2)),
 			},
-		}.Update(true, vmr, c)
+		}.Update(ctx, true, vmr, c)
 		// err = config.Create(vmr, c)
 	}
 	if err != nil {

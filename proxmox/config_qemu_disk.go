@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -883,8 +884,8 @@ type qemuDiskResize struct {
 
 // Increase the disk size to the specified amount in gigabytes
 // Decrease of disk size is not permitted.
-func (disk qemuDiskResize) resize(vmr *VmRef, client *Client) (exitStatus string, err error) {
-	return client.PutWithTask(map[string]interface{}{"disk": disk.Id, "size": strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
+func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, client *Client) (exitStatus string, err error) {
+	return client.PutWithTask(ctx, map[string]interface{}{"disk": disk.Id, "size": strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
 }
 
 type qemuDiskMove struct {
@@ -904,8 +905,8 @@ func (disk qemuDiskMove) mapToApiValues(delete bool) (params map[string]interfac
 	return
 }
 
-func (disk qemuDiskMove) move(delete bool, vmr *VmRef, client *Client) (exitStatus interface{}, err error) {
-	return client.PostWithTask(disk.mapToApiValues(delete), fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId))
+func (disk qemuDiskMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) (exitStatus interface{}, err error) {
+	return client.PostWithTask(ctx, disk.mapToApiValues(delete), fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId))
 }
 
 func (disk qemuDiskMove) Validate() (err error) {
@@ -1212,7 +1213,7 @@ func diskSubtypeSet(set bool) error {
 	return nil
 }
 
-func MoveQemuDisk(format *QemuDiskFormat, diskId QemuDiskId, storage string, deleteAfterMove bool, vmr *VmRef, client *Client) (err error) {
+func MoveQemuDisk(ctx context.Context, format *QemuDiskFormat, diskId QemuDiskId, storage string, deleteAfterMove bool, vmr *VmRef, client *Client) (err error) {
 	disk := qemuDiskMove{
 		Format:  format,
 		Id:      diskId,
@@ -1222,14 +1223,14 @@ func MoveQemuDisk(format *QemuDiskFormat, diskId QemuDiskId, storage string, del
 	if err != nil {
 		return
 	}
-	_, err = disk.move(deleteAfterMove, vmr, client)
+	_, err = disk.move(ctx, deleteAfterMove, vmr, client)
 	return
 }
 
 // increase Disks in size
-func resizeDisks(vmr *VmRef, client *Client, disks []qemuDiskResize) (err error) {
+func resizeDisks(ctx context.Context, vmr *VmRef, client *Client, disks []qemuDiskResize) (err error) {
 	for _, e := range disks {
-		_, err = e.resize(vmr, client)
+		_, err = e.resize(ctx, vmr, client)
 		if err != nil {
 			return
 		}
@@ -1238,13 +1239,13 @@ func resizeDisks(vmr *VmRef, client *Client, disks []qemuDiskResize) (err error)
 }
 
 // Resize newly created disks
-func resizeNewDisks(vmr *VmRef, client *Client, newDisks, currentDisks *QemuStorages) (err error) {
+func resizeNewDisks(ctx context.Context, vmr *VmRef, client *Client, newDisks, currentDisks *QemuStorages) (err error) {
 	if newDisks == nil {
 		return
 	}
 	resize := newDisks.selectInitialResize(currentDisks)
 	if len(resize) > 0 {
-		if err = resizeDisks(vmr, client, resize); err != nil {
+		if err = resizeDisks(ctx, vmr, client, resize); err != nil {
 			return
 		}
 	}

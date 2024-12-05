@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"regexp"
+	"syscall"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
@@ -25,6 +28,24 @@ func init() {
 	RootCmd.PersistentFlags().StringP("proxyurl", "p", "", "proxy url to connect to")
 }
 
+func Context() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Channel to catch OS signals
+	signalChan := make(chan os.Signal, 1)
+
+	// Notify signalChan when SIGINT or SIGTERM is received
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
+	// Goroutine to handle signal
+	go func() {
+		defer signal.Stop(signalChan) // Cleanup when done
+		<-signalChan                  // Wait for a signal
+		cancel()                      // Cancel the context
+	}()
+	return ctx
+}
+
 func Execute() (err error) {
 	if err = RootCmd.Execute(); err != nil {
 		return
@@ -33,12 +54,12 @@ func Execute() (err error) {
 }
 
 func NewClient() (c *proxmox.Client) {
-	c, err := Client("", "", "", "", "")
+	c, err := Client(Context(), "", "", "", "", "")
 	LogFatalError(err)
 	return
 }
 
-func Client(apiUrl, userID, password, otp string, http_headers string) (c *proxmox.Client, err error) {
+func Client(ctx context.Context, apiUrl, userID, password, otp string, http_headers string) (c *proxmox.Client, err error) {
 	insecure, _ := RootCmd.Flags().GetBool("insecure")
 	timeout, _ := RootCmd.Flags().GetInt("timeout")
 	proxyUrl, _ := RootCmd.Flags().GetString("proxyurl")
@@ -67,12 +88,12 @@ func Client(apiUrl, userID, password, otp string, http_headers string) (c *proxm
 	if userRequiresAPIToken(userID) {
 		c.SetAPIToken(userID, password)
 		// As test, get the version of the server
-		_, err = c.GetVersion()
+		_, err = c.GetVersion(Context())
 		if err != nil {
 			err = fmt.Errorf("login error: %s", err)
 		}
 	} else {
-		err = c.Login(userID, password, otp)
+		err = c.Login(ctx, userID, password, otp)
 	}
 	return
 }

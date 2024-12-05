@@ -1,6 +1,7 @@
 package delete
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Telmate/proxmox-api-go/cli"
@@ -17,28 +18,28 @@ func init() {
 	cli.RootCmd.AddCommand(deleteCmd)
 }
 
-func deleteID(args []string, IDtype string) (err error) {
+func deleteID(ctx context.Context, args []string, IDtype string) (err error) {
 	var exitStatus string
 	id := cli.RequiredIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
 	switch IDtype {
 	case "AcmeAccount":
-		exitStatus, err = c.DeleteAcmeAccount(id)
+		exitStatus, err = c.DeleteAcmeAccount(ctx, id)
 	case "Group":
-		err = proxmox.GroupName(id).Delete(c)
+		err = proxmox.GroupName(id).Delete(ctx, c)
 	case "MetricServer":
-		err = c.DeleteMetricServer(id)
+		err = c.DeleteMetricServer(ctx, id)
 	case "Pool":
-		err = proxmox.PoolName(id).Delete(c)
+		err = proxmox.PoolName(id).Delete(ctx, c)
 	case "Storage":
-		err = c.DeleteStorage(id)
+		err = c.DeleteStorage(ctx, id)
 	case "User":
 		var userId proxmox.UserID
 		userId, err = proxmox.NewUserID(id)
 		if err != nil {
 			return
 		}
-		err = proxmox.ConfigUser{User: userId}.DeleteUser(c)
+		err = proxmox.ConfigUser{User: userId}.DeleteUser(ctx, c)
 	}
 	if err != nil {
 		if exitStatus != "" {

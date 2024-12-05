@@ -17,7 +17,7 @@ var group_addCmd = &cobra.Command{
 			return
 		}
 		c := cli.NewClient()
-		err = proxmox.GroupName(args[0]).AddUsersToGroup(users, c)
+		err = proxmox.GroupName(args[0]).AddUsersToGroup(cli.Context(), users, c)
 		if err != nil {
 			return
 		}

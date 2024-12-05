@@ -14,7 +14,7 @@ var id_maxCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
-		id, err := proxmox.MaxVmId(c)
+		id, err := proxmox.MaxVmId(cli.Context(), c)
 		if err != nil {
 			return
 		}

@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -28,7 +29,7 @@ func (config ConfigAcmePlugin) mapToApiValues() (params map[string]interface{}) 
 	return
 }
 
-func (config ConfigAcmePlugin) SetAcmePlugin(pluginId string, client *Client) (err error) {
+func (config ConfigAcmePlugin) SetAcmePlugin(ctx context.Context, pluginId string, client *Client) (err error) {
 	err = ValidateIntInRange(0, 172800, config.ValidationDelay, "validation-delay")
 	if err != nil {
 		return
@@ -36,24 +37,24 @@ func (config ConfigAcmePlugin) SetAcmePlugin(pluginId string, client *Client) (e
 
 	config.ID = pluginId
 
-	pluginExists, err := client.CheckAcmePluginExistence(pluginId)
+	pluginExists, err := client.CheckAcmePluginExistence(ctx, pluginId)
 	if err != nil {
 		return
 	}
 
 	if pluginExists {
-		err = config.UpdateAcmePlugin(client)
+		err = config.UpdateAcmePlugin(ctx, client)
 	} else {
-		err = config.CreateAcmePlugin(client)
+		err = config.CreateAcmePlugin(ctx, client)
 	}
 	return
 }
 
-func (config ConfigAcmePlugin) CreateAcmePlugin(client *Client) (err error) {
+func (config ConfigAcmePlugin) CreateAcmePlugin(ctx context.Context, client *Client) (err error) {
 	params := config.mapToApiValues()
 	params["id"] = config.ID
 	params["type"] = "dns"
-	err = client.CreateAcmePlugin(params)
+	err = client.CreateAcmePlugin(ctx, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Acme plugin: %v, (params: %v)", err, string(params))
@@ -61,9 +62,9 @@ func (config ConfigAcmePlugin) CreateAcmePlugin(client *Client) (err error) {
 	return
 }
 
-func (config ConfigAcmePlugin) UpdateAcmePlugin(client *Client) (err error) {
+func (config ConfigAcmePlugin) UpdateAcmePlugin(ctx context.Context, client *Client) (err error) {
 	params := config.mapToApiValues()
-	err = client.UpdateAcmePlugin(config.ID, params)
+	err = client.UpdateAcmePlugin(ctx, config.ID, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating Acme plugin: %v, (params: %v)", err, string(params))
@@ -71,10 +72,10 @@ func (config ConfigAcmePlugin) UpdateAcmePlugin(client *Client) (err error) {
 	return
 }
 
-func NewConfigAcmePluginFromApi(id string, client *Client) (config *ConfigAcmePlugin, err error) {
+func NewConfigAcmePluginFromApi(ctx context.Context, id string, client *Client) (config *ConfigAcmePlugin, err error) {
 	// prepare json map to receive the information from the api
 	var rawConfig map[string]interface{}
-	rawConfig, err = client.GetAcmePluginConfig(id)
+	rawConfig, err = client.GetAcmePluginConfig(ctx, id)
 	if err != nil {
 		return nil, err
 	}
