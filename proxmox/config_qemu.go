@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -78,8 +79,8 @@ const (
 )
 
 // Create - Tell Proxmox API to make the VM
-func (config ConfigQemu) Create(vmr *VmRef, client *Client) (err error) {
-	_, err = config.setAdvanced(nil, false, vmr, client)
+func (config ConfigQemu) Create(ctx context.Context, vmr *VmRef, client *Client) (err error) {
+	_, err = config.setAdvanced(ctx, nil, false, vmr, client)
 	return
 }
 
@@ -440,12 +441,12 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	return &config, nil
 }
 
-func (newConfig ConfigQemu) Update(rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
-	currentConfig, err := NewConfigQemuFromApi(vmr, client)
+func (newConfig ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
+	currentConfig, err := NewConfigQemuFromApi(ctx, vmr, client)
 	if err != nil {
 		return
 	}
-	return newConfig.setAdvanced(currentConfig, rebootIfNeeded, vmr, client)
+	return newConfig.setAdvanced(ctx, currentConfig, rebootIfNeeded, vmr, client)
 }
 
 func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
@@ -462,12 +463,12 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 }
 
 // currentConfig will be mutated
-func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
+func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
 	if err = newConfig.setVmr(vmr); err != nil {
 		return
 	}
 	var version Version
-	if version, err = client.Version(); err != nil {
+	if version, err = client.Version(ctx); err != nil {
 		return
 	}
 	if err = newConfig.Validate(currentConfig, version); err != nil {
@@ -487,12 +488,12 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		if newConfig.Disks != nil && currentConfig.Disks != nil {
 			markedDisks = *newConfig.Disks.markDiskChanges(*currentConfig.Disks)
 			for _, e := range markedDisks.Move { // move disk to different storage or change disk format
-				_, err = e.move(true, vmr, client)
+				_, err = e.move(ctx, true, vmr, client)
 				if err != nil {
 					return
 				}
 			}
-			if err = resizeDisks(vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
+			if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
 				return false, err
 			}
 			itemsToDeleteBeforeUpdate = newConfig.Disks.cloudInitRemove(*currentConfig.Disks)
@@ -504,25 +505,25 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 				itemsToDeleteBeforeUpdate = AddToList(itemsToDeleteBeforeUpdate, delete)
 				currentConfig.TPM = nil
 			} else if disk != nil { // move
-				if _, err := disk.move(true, vmr, client); err != nil {
+				if _, err := disk.move(ctx, true, vmr, client); err != nil {
 					return false, err
 				}
 			}
 		}
 
 		if itemsToDeleteBeforeUpdate != "" {
-			err = client.Put(map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, url)
+			err = client.Put(ctx, map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, url)
 			if err != nil {
 				return false, fmt.Errorf("error updating VM: %v", err)
 			}
 			// Deleteing these items can create pending changes
-			rebootRequired, err = GuestHasPendingChanges(vmr, client)
+			rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
 			if err != nil {
 				return
 			}
 			if rebootRequired { // shutdown vm if reboot is required
 				if rebootIfNeeded {
-					if err = GuestShutdown(vmr, client, true); err != nil {
+					if err = GuestShutdown(ctx, vmr, client, true); err != nil {
 						return
 					}
 					stopped = true
@@ -535,7 +536,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 
 		// TODO GuestHasPendingChanges() has the current vm config technically. We can use this to avoid an extra API call.
 		if len(markedDisks.Move) != 0 { // Moving disks changes the disk id. we need to get the config again if any disk was moved.
-			currentConfig, err = NewConfigQemuFromApi(vmr, client)
+			currentConfig, err = NewConfigQemuFromApi(ctx, vmr, client)
 			if err != nil {
 				return
 			}
@@ -543,7 +544,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 
 		if newConfig.Node != currentConfig.Node { // Migrate VM
 			vmr.SetNode(currentConfig.Node)
-			_, err = client.MigrateNode(vmr, newConfig.Node, true)
+			_, err = client.MigrateNode(ctx, vmr, newConfig.Node, true)
 			if err != nil {
 				return
 			}
@@ -555,29 +556,29 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		if err != nil {
 			return
 		}
-		exitStatus, err = client.PutWithTask(params, url)
+		exitStatus, err = client.PutWithTask(ctx, params, url)
 		if err != nil {
 			return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}
 
 		if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped
-			rebootRequired, err = GuestHasPendingChanges(vmr, client)
+			rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
 			if err != nil {
 				return
 			}
 		}
 
-		if err = resizeNewDisks(vmr, client, newConfig.Disks, currentConfig.Disks); err != nil {
+		if err = resizeNewDisks(ctx, vmr, client, newConfig.Disks, currentConfig.Disks); err != nil {
 			return
 		}
 
 		if newConfig.Pool != nil { // update pool membership
-			guestSetPool_Unsafe(client, uint(vmr.vmId), *newConfig.Pool, currentConfig.Pool, version)
+			guestSetPool_Unsafe(ctx, client, uint(vmr.vmId), *newConfig.Pool, currentConfig.Pool, version)
 		}
 
 		if stopped { // start vm if it was stopped
 			if rebootIfNeeded {
-				if err = GuestStart(vmr, client); err != nil {
+				if err = GuestStart(ctx, vmr, client); err != nil {
 					return
 				}
 				stopped = false
@@ -587,7 +588,7 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 			}
 		} else if rebootRequired { // reboot vm if it is running
 			if rebootIfNeeded {
-				if err = GuestReboot(vmr, client); err != nil {
+				if err = GuestReboot(ctx, vmr, client); err != nil {
 					return
 				}
 				rebootRequired = false
@@ -605,19 +606,19 @@ func (newConfig ConfigQemu) setAdvanced(currentConfig *ConfigQemu, rebootIfNeede
 		if newConfig.Pool != nil && *newConfig.Pool != "" {
 			params["pool"] = *newConfig.Pool
 		}
-		exitStatus, err = client.CreateQemuVm(vmr.node, params)
+		exitStatus, err = client.CreateQemuVm(ctx, vmr.node, params)
 		if err != nil {
 			return false, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}
-		if err = resizeNewDisks(vmr, client, newConfig.Disks, nil); err != nil {
+		if err = resizeNewDisks(ctx, vmr, client, newConfig.Disks, nil); err != nil {
 			return
 		}
-		if err = client.insertCachedPermission(permissionPath(permissionCategory_GuestPath) + "/" + permissionPath(strconv.Itoa(vmr.vmId))); err != nil {
+		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(strconv.Itoa(vmr.vmId))); err != nil {
 			return
 		}
 	}
 
-	_, err = client.UpdateVMHA(vmr, newConfig.HaState, newConfig.HaGroup)
+	_, err = client.UpdateVMHA(ctx, vmr, newConfig.HaState, newConfig.HaGroup)
 	return
 }
 
@@ -739,7 +740,7 @@ target:proxmox1-xx
 full:1
 storage:xxx
 */
-func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
+func (config ConfigQemu) CloneVm(ctx context.Context, sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
 	var storage string
 	fullClone := "1"
@@ -763,7 +764,7 @@ func (config ConfigQemu) CloneVm(sourceVmr *VmRef, vmr *VmRef, client *Client) (
 		params["storage"] = storage
 	}
 
-	_, err = client.CloneQemuVm(sourceVmr, params)
+	_, err = client.CloneQemuVm(ctx, sourceVmr, params)
 	return err
 }
 
@@ -783,17 +784,17 @@ var (
 	rxMpName         = regexp.MustCompile(`mp\d+`)
 )
 
-func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
+func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
 	var vmConfig map[string]interface{}
 	var vmInfo map[string]interface{}
 	for ii := 0; ii < 3; ii++ {
-		vmConfig, err = client.GetVmConfig(vmr)
+		vmConfig, err = client.GetVmConfig(ctx, vmr)
 		if err != nil {
 			log.Fatal(err)
 			return nil, err
 		}
 		// TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
-		vmInfo, err = client.GetVmInfo(vmr)
+		vmInfo, err = client.GetVmInfo(ctx, vmr)
 		if err != nil {
 			return nil, err
 		}
@@ -820,7 +821,7 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 	config.defaults()
 
 	// HAstate is return by the api for a vm resource type but not the HAgroup
-	err = client.ReadVMHA(vmr) // TODO: can be optimized, uses same API call as GetVmConfig and GetVmInfo
+	err = client.ReadVMHA(ctx, vmr) // TODO: can be optimized, uses same API call as GetVmConfig and GetVmInfo
 	if err == nil {
 		config.HaState = vmr.HaState()
 		config.HaGroup = vmr.HaGroup()
@@ -832,9 +833,9 @@ func NewConfigQemuFromApi(vmr *VmRef, client *Client) (config *ConfigQemu, err e
 }
 
 // Useful waiting for ISO install to complete
-func WaitForShutdown(vmr *VmRef, client *Client) (err error) {
+func WaitForShutdown(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	for ii := 0; ii < 100; ii++ {
-		vmState, err := client.GetVmState(vmr)
+		vmState, err := client.GetVmState(ctx, vmr)
 		if err != nil {
 			log.Print("Wait error:")
 			log.Println(err)
@@ -847,8 +848,8 @@ func WaitForShutdown(vmr *VmRef, client *Client) (err error) {
 }
 
 // This is because proxmox create/config API won't let us make usernet devices
-func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
-	vmState, err := client.GetVmState(vmr)
+func SshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (sshPort string, err error) {
+	vmState, err := client.GetVmState(ctx, vmr)
 	if err != nil {
 		return "", err
 	}
@@ -856,11 +857,11 @@ func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
 		return "", fmt.Errorf("VM must be running first")
 	}
 	sshPort = strconv.Itoa(vmr.VmId() + 22000)
-	_, err = client.MonitorCmd(vmr, "netdev_add user,id=net1,hostfwd=tcp::"+sshPort+"-:22")
+	_, err = client.MonitorCmd(ctx, vmr, "netdev_add user,id=net1,hostfwd=tcp::"+sshPort+"-:22")
 	if err != nil {
 		return "", err
 	}
-	_, err = client.MonitorCmd(vmr, "device_add virtio-net-pci,id=net1,netdev=net1,addr=0x13")
+	_, err = client.MonitorCmd(ctx, vmr, "device_add virtio-net-pci,id=net1,netdev=net1,addr=0x13")
 	if err != nil {
 		return "", err
 	}
@@ -869,27 +870,27 @@ func SshForwardUsernet(vmr *VmRef, client *Client) (sshPort string, err error) {
 
 // device_del net1
 // netdev_del net1
-func RemoveSshForwardUsernet(vmr *VmRef, client *Client) (err error) {
-	vmState, err := client.GetVmState(vmr)
+func RemoveSshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (err error) {
+	vmState, err := client.GetVmState(ctx, vmr)
 	if err != nil {
 		return err
 	}
 	if vmState["status"] == "stopped" {
 		return fmt.Errorf("VM must be running first")
 	}
-	_, err = client.MonitorCmd(vmr, "device_del net1")
+	_, err = client.MonitorCmd(ctx, vmr, "device_del net1")
 	if err != nil {
 		return err
 	}
-	_, err = client.MonitorCmd(vmr, "netdev_del net1")
+	_, err = client.MonitorCmd(ctx, vmr, "netdev_del net1")
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func MaxVmId(client *Client) (max int, err error) {
-	vms, err := client.GetResourceList(resourceListGuest)
+func MaxVmId(ctx context.Context, client *Client) (max int, err error) {
+	vms, err := client.GetResourceList(ctx, resourceListGuest)
 	max = 100
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
@@ -901,8 +902,8 @@ func MaxVmId(client *Client) (max int, err error) {
 	return
 }
 
-func SendKeysString(vmr *VmRef, client *Client, keys string) (err error) {
-	vmState, err := client.GetVmState(vmr)
+func SendKeysString(ctx context.Context, vmr *VmRef, client *Client, keys string) (err error) {
+	vmState, err := client.GetVmState(ctx, vmr)
 	if err != nil {
 		return err
 	}
@@ -958,7 +959,7 @@ func SendKeysString(vmr *VmRef, client *Client, keys string) (err error) {
 				c = "shift-slash"
 			}
 		}
-		_, err = client.MonitorCmd(vmr, "sendkey "+c)
+		_, err = client.MonitorCmd(ctx, vmr, "sendkey "+c)
 		if err != nil {
 			return err
 		}

@@ -14,11 +14,11 @@ var featureCmd = &cobra.Command{
 		id := cli.ValidateIntIDset(args, "GuestID")
 		vmr := proxmox.NewVmRef(id)
 		c := cli.NewClient()
-		err = c.CheckVmRef(vmr)
+		err = c.CheckVmRef(cli.Context(), vmr)
 		if err != nil {
 			return
 		}
-		features, err := proxmox.ListGuestFeatures(vmr, c)
+		features, err := proxmox.ListGuestFeatures(cli.Context(), vmr, c)
 		if err != nil {
 			return
 		}

@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -59,10 +60,10 @@ func (config ConfigNetwork) mapToApiValues() map[string]interface{} {
 // CreateNetwork creates a network on the Proxmox host with the stored
 // config.
 // It returns an error if the creation of the network fails.
-func (config ConfigNetwork) CreateNetwork(client *Client) (err error) {
+func (config ConfigNetwork) CreateNetwork(ctx context.Context, client *Client) (err error) {
 	paramMap := config.mapToApiValues()
 
-	exitStatus, err := client.CreateNetwork(config.Node, paramMap)
+	exitStatus, err := client.CreateNetwork(ctx, config.Node, paramMap)
 	if err != nil {
 		params, _ := json.Marshal(&paramMap)
 		return fmt.Errorf("error creating network: %v\n\t\t api response: %s\n\t\t params: %v", err, exitStatus, string(params))
@@ -73,10 +74,10 @@ func (config ConfigNetwork) CreateNetwork(client *Client) (err error) {
 // UpdateNetwork updates a network on the Proxmox host with the stored
 // config.
 // It returns an error if updating the network fails.
-func (config ConfigNetwork) UpdateNetwork(client *Client) (err error) {
+func (config ConfigNetwork) UpdateNetwork(ctx context.Context, client *Client) (err error) {
 	paramMap := config.mapToApiValues()
 
-	exitStatus, err := client.UpdateNetwork(config.Node, config.Iface, paramMap)
+	exitStatus, err := client.UpdateNetwork(ctx, config.Node, config.Iface, paramMap)
 	if err != nil {
 		params, _ := json.Marshal(paramMap)
 		return fmt.Errorf("error creating network: %v\n\t\t api response: %s\n\t\t params: %v", err, exitStatus, string(params))

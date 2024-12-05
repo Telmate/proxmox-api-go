@@ -17,7 +17,7 @@ var group_removeCmd = &cobra.Command{
 			return
 		}
 		c := cli.NewClient()
-		err = proxmox.GroupName(args[0]).RemoveUsersFromGroup(users, c)
+		err = proxmox.GroupName(args[0]).RemoveUsersFromGroup(cli.Context(), users, c)
 		if err != nil {
 			return
 		}

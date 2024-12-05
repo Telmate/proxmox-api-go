@@ -12,7 +12,7 @@ var reboot_nodeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		node := cli.RequiredIDset(args, 0, "node")
 		c := cli.NewClient()
-		_, err = c.RebootNode(node)
+		_, err = c.RebootNode(cli.Context(), node)
 		if err != nil {
 			return
 		}

@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -113,7 +114,7 @@ func (config *ConfigMetrics) ValidateMetrics() (err error) {
 	return
 }
 
-func (config *ConfigMetrics) SetMetrics(metricsId string, client *Client) (err error) {
+func (config *ConfigMetrics) SetMetrics(ctx context.Context, metricsId string, client *Client) (err error) {
 	err = config.ValidateMetrics()
 	if err != nil {
 		return
@@ -121,23 +122,23 @@ func (config *ConfigMetrics) SetMetrics(metricsId string, client *Client) (err e
 
 	config.Name = metricsId
 
-	metricsExists, err := client.CheckMetricServerExistence(metricsId)
+	metricsExists, err := client.CheckMetricServerExistence(ctx, metricsId)
 	if err != nil {
 		return err
 	}
 
 	if metricsExists {
-		err = config.UpdateMetrics(client)
+		err = config.UpdateMetrics(ctx, client)
 	} else {
-		err = config.CreateMetrics(client)
+		err = config.CreateMetrics(ctx, client)
 	}
 	return
 }
 
-func (config *ConfigMetrics) CreateMetrics(client *Client) (err error) {
+func (config *ConfigMetrics) CreateMetrics(ctx context.Context, client *Client) (err error) {
 	config.RemoveMetricsNestedStructs()
 	params := config.mapToApiValues(true)
-	err = client.CreateMetricServer(config.Name, params)
+	err = client.CreateMetricServer(ctx, config.Name, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error creating Metrics Server: %v, (params: %v)", err, string(params))
@@ -145,10 +146,10 @@ func (config *ConfigMetrics) CreateMetrics(client *Client) (err error) {
 	return
 }
 
-func (config *ConfigMetrics) UpdateMetrics(client *Client) (err error) {
+func (config *ConfigMetrics) UpdateMetrics(ctx context.Context, client *Client) (err error) {
 	config.RemoveMetricsNestedStructs()
 	params := config.mapToApiValues(false)
-	err = client.UpdateMetricServer(config.Name, params)
+	err = client.UpdateMetricServer(ctx, config.Name, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating Metrics Server: %v, (params: %v)", err, string(params))
@@ -177,10 +178,10 @@ func InstantiateConfigMetrics() *ConfigMetrics {
 	}
 }
 
-func NewConfigMetricsFromApi(metricsId string, client *Client) (config *ConfigMetrics, err error) {
+func NewConfigMetricsFromApi(ctx context.Context, metricsId string, client *Client) (config *ConfigMetrics, err error) {
 	// prepare json map to receive the information from the api
 	var rawConfig map[string]interface{}
-	rawConfig, err = client.GetMetricServerConfig(metricsId)
+	rawConfig, err = client.GetMetricServerConfig(ctx, metricsId)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -23,32 +24,32 @@ func NewConfigSDNVNetFromJson(input []byte) (config *ConfigSDNVNet, err error) {
 	return
 }
 
-func (config *ConfigSDNVNet) CreateWithValidate(id string, client *Client) (err error) {
-	err = config.Validate(id, true, client)
+func (config *ConfigSDNVNet) CreateWithValidate(ctx context.Context, id string, client *Client) (err error) {
+	err = config.Validate(ctx, id, true, client)
 	if err != nil {
 		return
 	}
-	return config.Create(id, client)
+	return config.Create(ctx, id, client)
 }
 
-func (config *ConfigSDNVNet) Create(id string, client *Client) (err error) {
+func (config *ConfigSDNVNet) Create(ctx context.Context, id string, client *Client) (err error) {
 	config.VNet = id
 	params := config.mapToApiValues()
-	return client.CreateSDNVNet(params)
+	return client.CreateSDNVNet(ctx, params)
 }
 
-func (config *ConfigSDNVNet) UpdateWithValidate(id string, client *Client) (err error) {
-	err = config.Validate(id, false, client)
+func (config *ConfigSDNVNet) UpdateWithValidate(ctx context.Context, id string, client *Client) (err error) {
+	err = config.Validate(ctx, id, false, client)
 	if err != nil {
 		return
 	}
-	return config.Update(id, client)
+	return config.Update(ctx, id, client)
 }
 
-func (config *ConfigSDNVNet) Update(id string, client *Client) (err error) {
+func (config *ConfigSDNVNet) Update(ctx context.Context, id string, client *Client) (err error) {
 	config.VNet = id
 	params := config.mapToApiValues()
-	err = client.UpdateSDNVNet(id, params)
+	err = client.UpdateSDNVNet(ctx, id, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating SDN VNet: %v, (params: %v)", err, string(params))
@@ -56,8 +57,8 @@ func (config *ConfigSDNVNet) Update(id string, client *Client) (err error) {
 	return
 }
 
-func (c *ConfigSDNVNet) Validate(id string, create bool, client *Client) (err error) {
-	exists, err := client.CheckSDNVNetExistance(id)
+func (c *ConfigSDNVNet) Validate(ctx context.Context, id string, create bool, client *Client) (err error) {
+	exists, err := client.CheckSDNVNetExistance(ctx, id)
 	if err != nil {
 		return
 	}
@@ -67,7 +68,7 @@ func (c *ConfigSDNVNet) Validate(id string, create bool, client *Client) (err er
 	if !exists && !create {
 		return ErrorItemNotExists(id, "vnet")
 	}
-	zoneExists, err := client.CheckSDNZoneExistance(c.Zone)
+	zoneExists, err := client.CheckSDNZoneExistance(ctx, c.Zone)
 	if err != nil {
 		return
 	}

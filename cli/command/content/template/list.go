@@ -11,7 +11,7 @@ var template_listCmd = &cobra.Command{
 	Short: "Prints a list of all LXC templates available for download in raw json format",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		templates, err := proxmox.ListTemplates(cli.NewClient(), args[0])
+		templates, err := proxmox.ListTemplates(cli.Context(), cli.NewClient(), args[0])
 		if err != nil {
 			return
 		}

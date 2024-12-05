@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/proxmox"
@@ -11,7 +12,7 @@ import (
 func Test_Pools_List(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	pools, err := proxmox.ListPools(Test.GetClient())
+	pools, err := proxmox.ListPools(context.Background(), Test.GetClient())
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pools))
 }

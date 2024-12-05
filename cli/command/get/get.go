@@ -21,22 +21,22 @@ func getConfig(args []string, IDtype string) (err error) {
 	var config interface{}
 	switch IDtype {
 	case "AcmeAccount":
-		config, err = proxmox.NewConfigAcmeAccountFromApi(id, c)
+		config, err = proxmox.NewConfigAcmeAccountFromApi(cli.Context(), id, c)
 	case "Group":
-		config, err = proxmox.NewConfigGroupFromApi(proxmox.GroupName(id), c)
+		config, err = proxmox.NewConfigGroupFromApi(cli.Context(), proxmox.GroupName(id), c)
 	case "MetricServer":
-		config, err = proxmox.NewConfigMetricsFromApi(id, c)
+		config, err = proxmox.NewConfigMetricsFromApi(cli.Context(), id, c)
 	case "Pool":
-		config, err = c.GetPoolInfo(id)
+		config, err = c.GetPoolInfo(cli.Context(), id)
 	case "Storage":
-		config, err = proxmox.NewConfigStorageFromApi(id, c)
+		config, err = proxmox.NewConfigStorageFromApi(cli.Context(), id, c)
 	case "User":
 		var userId proxmox.UserID
 		userId, err = proxmox.NewUserID(id)
 		if err != nil {
 			return
 		}
-		config, err = proxmox.NewConfigUserFromApi(userId, c)
+		config, err = proxmox.NewConfigUserFromApi(cli.Context(), userId, c)
 	}
 	if err != nil {
 		return

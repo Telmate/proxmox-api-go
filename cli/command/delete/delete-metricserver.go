@@ -1,6 +1,7 @@
 package delete
 
 import (
+	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -9,7 +10,7 @@ var delete_metricserverCmd = &cobra.Command{
 	Short: "Deletes the specified MetricServer",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return deleteID(args, "MetricServer")
+		return deleteID(cli.Context(), args, "MetricServer")
 	},
 }
 

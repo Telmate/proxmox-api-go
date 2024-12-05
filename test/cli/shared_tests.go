@@ -2,6 +2,7 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"strings"
@@ -117,7 +118,7 @@ type LoginTest struct {
 }
 
 func (test *LoginTest) Login(t *testing.T) {
-	_, err := cli.Client(test.APIurl, test.UserID, test.Password, test.OTP, test.HttpHeaders)
+	_, err := cli.Client(context.Background(), test.APIurl, test.UserID, test.Password, test.OTP, test.HttpHeaders)
 	if test.ReqErr {
 		require.Error(t, err)
 	} else {

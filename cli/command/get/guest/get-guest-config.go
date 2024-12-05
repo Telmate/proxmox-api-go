@@ -14,7 +14,7 @@ var configCmd = &cobra.Command{
 		id := cli.ValidateIntIDset(args, "GuestID")
 		vmr := proxmox.NewVmRef(id)
 		c := cli.NewClient()
-		err = c.CheckVmRef(vmr)
+		err = c.CheckVmRef(cli.Context(), vmr)
 		if err != nil {
 			return
 		}
@@ -22,9 +22,9 @@ var configCmd = &cobra.Command{
 		var config interface{}
 		switch vmType {
 		case "qemu":
-			config, err = proxmox.NewConfigQemuFromApi(vmr, c)
+			config, err = proxmox.NewConfigQemuFromApi(cli.Context(), vmr, c)
 		case "lxc":
-			config, err = proxmox.NewConfigLxcFromApi(vmr, c)
+			config, err = proxmox.NewConfigLxcFromApi(cli.Context(), vmr, c)
 		}
 		if err != nil {
 			return

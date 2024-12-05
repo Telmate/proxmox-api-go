@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -34,34 +35,34 @@ func NewConfigSDNSubnetFromJson(input []byte) (config *ConfigSDNSubnet, err erro
 	return
 }
 
-func (config *ConfigSDNSubnet) CreateWithValidate(vnet, id string, client *Client) (err error) {
-	err = config.Validate(vnet, id, true, client)
+func (config *ConfigSDNSubnet) CreateWithValidate(ctx context.Context, vnet, id string, client *Client) (err error) {
+	err = config.Validate(ctx, vnet, id, true, client)
 	if err != nil {
 		return
 	}
-	return config.Create(vnet, id, client)
+	return config.Create(ctx, vnet, id, client)
 }
 
-func (config *ConfigSDNSubnet) Create(vnet, id string, client *Client) (err error) {
+func (config *ConfigSDNSubnet) Create(ctx context.Context, vnet, id string, client *Client) (err error) {
 	config.Subnet = id
 	config.Type = "subnet"
 	params := config.mapToApiValues()
-	return client.CreateSDNSubnet(vnet, params)
+	return client.CreateSDNSubnet(ctx, vnet, params)
 }
 
-func (config *ConfigSDNSubnet) UpdateWithValidate(vnet, id string, client *Client) (err error) {
-	err = config.Validate(vnet, id, false, client)
+func (config *ConfigSDNSubnet) UpdateWithValidate(ctx context.Context, vnet, id string, client *Client) (err error) {
+	err = config.Validate(ctx, vnet, id, false, client)
 	if err != nil {
 		return
 	}
-	return config.Update(vnet, id, client)
+	return config.Update(ctx, vnet, id, client)
 }
 
-func (config *ConfigSDNSubnet) Update(vnet, id string, client *Client) (err error) {
+func (config *ConfigSDNSubnet) Update(ctx context.Context, vnet, id string, client *Client) (err error) {
 	config.Subnet = id
 	config.Type = "" // For some reason, this shouldn't be sent on update. Only on create.
 	params := config.mapToApiValues()
-	err = client.UpdateSDNSubnet(vnet, id, params)
+	err = client.UpdateSDNSubnet(ctx, vnet, id, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating SDN Subnet: %v, (params: %v)", err, string(params))
@@ -69,15 +70,15 @@ func (config *ConfigSDNSubnet) Update(vnet, id string, client *Client) (err erro
 	return
 }
 
-func (c *ConfigSDNSubnet) Validate(vnet, id string, create bool, client *Client) (err error) {
-	vnetExists, err := client.CheckSDNVNetExistance(vnet)
+func (c *ConfigSDNSubnet) Validate(ctx context.Context, vnet, id string, create bool, client *Client) (err error) {
+	vnetExists, err := client.CheckSDNVNetExistance(ctx, vnet)
 	if err != nil {
 		return
 	}
 	if !vnetExists {
 		return fmt.Errorf("subnet must be created in an existing vnet. vnet (%s) wasn't found", vnet)
 	}
-	exists, err := client.CheckSDNSubnetExistance(vnet, id)
+	exists, err := client.CheckSDNSubnetExistance(ctx, vnet, id)
 	if err != nil {
 		return
 	}

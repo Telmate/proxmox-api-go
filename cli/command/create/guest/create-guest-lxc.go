@@ -1,6 +1,7 @@
 package guest
 
 import (
+	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +13,7 @@ The config can be set with the --file flag or piped from stdin.
 For config examples see "example guest lxc"`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		return createGuest(args, "LxcGuest")
+		return createGuest(cli.Context(), args, "LxcGuest")
 	},
 }
 

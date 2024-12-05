@@ -12,7 +12,7 @@ var shutdown_nodeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		node := cli.RequiredIDset(args, 0, "node")
 		c := cli.NewClient()
-		_, err = c.ShutdownNode(node)
+		_, err = c.ShutdownNode(cli.Context(), node)
 		if err != nil {
 			return
 		}

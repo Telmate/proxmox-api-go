@@ -1,6 +1,7 @@
 package guest
 
 import (
+	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +13,7 @@ var guest_qemuCmd = &cobra.Command{
 	For config examples see "example guest qemu"`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		return createGuest(args, "QemuGuest")
+		return createGuest(cli.Context(), args, "QemuGuest")
 	},
 }
 

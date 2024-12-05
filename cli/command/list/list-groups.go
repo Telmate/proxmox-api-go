@@ -15,7 +15,7 @@ var list_groupsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
-		groups, err := proxmox.ListGroups(c)
+		groups, err := proxmox.ListGroups(cli.Context(), c)
 		if err != nil {
 			return
 		}

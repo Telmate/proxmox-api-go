@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"testing"
 
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
@@ -20,7 +21,7 @@ func Test_Clone_Qemu_VM(t *testing.T) {
 	_ = Test.CreateTest()
 	config := _create_vm_spec(false)
 
-	config.Create(_create_vmref(), Test.GetClient())
+	config.Create(context.Background(), _create_vmref(), Test.GetClient())
 
 	cloneConfig := _create_vm_spec(false)
 
@@ -29,7 +30,7 @@ func Test_Clone_Qemu_VM(t *testing.T) {
 	cloneConfig.Name = "test-qemu02"
 	cloneConfig.FullClone = &fullClone
 
-	err := cloneConfig.CloneVm(_create_vmref(), _create_clone_vmref(), Test.GetClient())
+	err := cloneConfig.CloneVm(context.Background(), _create_vmref(), _create_clone_vmref(), Test.GetClient())
 
 	require.NoError(t, err)
 
@@ -40,7 +41,7 @@ func Test_Clone_Qemu_VM_To_Different_Storage(t *testing.T) {
 	_ = Test.CreateTest()
 	config := _create_vm_spec(false)
 
-	config.Create(_create_vmref(), Test.GetClient())
+	config.Create(context.Background(), _create_vmref(), Test.GetClient())
 
 	cloneConfig := _create_vm_spec(false)
 
@@ -50,7 +51,7 @@ func Test_Clone_Qemu_VM_To_Different_Storage(t *testing.T) {
 	cloneConfig.FullClone = &fullClone
 	cloneConfig.Storage = "other-storage"
 
-	err := cloneConfig.CloneVm(_create_vmref(), _create_clone_vmref(), Test.GetClient())
+	err := cloneConfig.CloneVm(context.Background(), _create_vmref(), _create_clone_vmref(), Test.GetClient())
 
 	require.NoError(t, err)
 
@@ -60,7 +61,7 @@ func Test_Qemu_VM_Is_Cloned(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
 
-	config, _ := pxapi.NewConfigQemuFromApi(_create_clone_vmref(), Test.GetClient())
+	config, _ := pxapi.NewConfigQemuFromApi(context.Background(), _create_clone_vmref(), Test.GetClient())
 
 	require.Equal(t, "order=ide2;net0", config.Boot)
 }
@@ -68,6 +69,6 @@ func Test_Qemu_VM_Is_Cloned(t *testing.T) {
 func Test_Clone_Qemu_VM_Cleanup(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	Test.GetClient().DeleteVm(_create_clone_vmref())
-	Test.GetClient().DeleteVm(_create_vmref())
+	Test.GetClient().DeleteVm(context.Background(), _create_clone_vmref())
+	Test.GetClient().DeleteVm(context.Background(), _create_vmref())
 }

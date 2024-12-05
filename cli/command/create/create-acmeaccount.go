@@ -20,7 +20,7 @@ For config examples see "example acmeaccount"`,
 			return
 		}
 		c := cli.NewClient()
-		err = config.CreateAcmeAccount(id, c)
+		err = config.CreateAcmeAccount(cli.Context(), id, c)
 		if err != nil {
 			return
 		}

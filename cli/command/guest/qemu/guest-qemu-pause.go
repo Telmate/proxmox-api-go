@@ -13,7 +13,7 @@ var qemu_pauseCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))
 		c := cli.NewClient()
-		_, err = c.PauseVm(vmr)
+		_, err = c.PauseVm(cli.Context(), vmr)
 		if err == nil {
 			cli.PrintGuestStatus(qemuCmd.OutOrStdout(), vmr.VmId(), "paused")
 		}

@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -28,32 +29,32 @@ func NewConfigSDNDNSFromJson(input []byte) (config *ConfigSDNDNS, err error) {
 	return
 }
 
-func (config *ConfigSDNDNS) CreateWithValidate(id string, client *Client) (err error) {
-	err = config.Validate(id, true, client)
+func (config *ConfigSDNDNS) CreateWithValidate(ctx context.Context, id string, client *Client) (err error) {
+	err = config.Validate(ctx, id, true, client)
 	if err != nil {
 		return
 	}
-	return config.Create(id, client)
+	return config.Create(ctx, id, client)
 }
 
-func (config *ConfigSDNDNS) Create(id string, client *Client) (err error) {
+func (config *ConfigSDNDNS) Create(ctx context.Context, id string, client *Client) (err error) {
 	config.DNS = id
 	params := config.mapToApiValues()
-	return client.CreateSDNDNS(params)
+	return client.CreateSDNDNS(ctx, params)
 }
 
-func (config *ConfigSDNDNS) UpdateWithValidate(id string, client *Client) (err error) {
-	err = config.Validate(id, false, client)
+func (config *ConfigSDNDNS) UpdateWithValidate(ctx context.Context, id string, client *Client) (err error) {
+	err = config.Validate(ctx, id, false, client)
 	if err != nil {
 		return
 	}
-	return config.Update(id, client)
+	return config.Update(ctx, id, client)
 }
 
-func (config *ConfigSDNDNS) Update(id string, client *Client) (err error) {
+func (config *ConfigSDNDNS) Update(ctx context.Context, id string, client *Client) (err error) {
 	config.DNS = id
 	params := config.mapToApiValues()
-	err = client.UpdateSDNDNS(id, params)
+	err = client.UpdateSDNDNS(ctx, id, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
 		return fmt.Errorf("error updating SDN DNS: %v, (params: %v)", err, string(params))
@@ -61,8 +62,8 @@ func (config *ConfigSDNDNS) Update(id string, client *Client) (err error) {
 	return
 }
 
-func (c *ConfigSDNDNS) Validate(id string, create bool, client *Client) (err error) {
-	exists, err := client.CheckSDNDNSExistance(id)
+func (c *ConfigSDNDNS) Validate(ctx context.Context, id string, create bool, client *Client) (err error) {
+	exists, err := client.CheckSDNDNSExistance(ctx, id)
 	if err != nil {
 		return
 	}

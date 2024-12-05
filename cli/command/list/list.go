@@ -1,6 +1,8 @@
 package list
 
 import (
+	"context"
+
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/spf13/cobra"
 )
@@ -14,21 +16,21 @@ func init() {
 	cli.RootCmd.AddCommand(listCmd)
 }
 
-func listRaw(IDtype string) {
+func listRaw(ctx context.Context, IDtype string) {
 	c := cli.NewClient()
 	var list interface{}
 	var err error
 	switch IDtype {
 	case "AcmeAccounts":
-		list, err = c.GetAcmeAccountList()
+		list, err = c.GetAcmeAccountList(ctx)
 	case "AcmePlugins":
-		list, err = c.GetAcmePluginList()
+		list, err = c.GetAcmePluginList(ctx)
 	case "MetricServers":
-		list, err = c.GetMetricsServerList()
+		list, err = c.GetMetricsServerList(ctx)
 	case "Nodes":
-		list, err = c.GetNodeList()
+		list, err = c.GetNodeList(ctx)
 	case "Storages":
-		list, err = c.GetStorageList()
+		list, err = c.GetStorageList(ctx)
 	}
 	cli.LogFatalListing(IDtype, err)
 	cli.PrintRawJson(listCmd.OutOrStdout(), list)

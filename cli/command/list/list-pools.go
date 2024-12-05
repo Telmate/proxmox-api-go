@@ -12,7 +12,7 @@ var list_poolsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
-		pools, err := proxmox.ListPools(c)
+		pools, err := proxmox.ListPools(cli.Context(), c)
 		if err != nil {
 			return
 		}

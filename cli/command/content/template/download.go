@@ -21,7 +21,7 @@ var template_downloadCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		err = proxmox.DownloadLxcTemplate(c, config)
+		err = proxmox.DownloadLxcTemplate(cli.Context(), c, config)
 		if err != nil {
 			return
 		}

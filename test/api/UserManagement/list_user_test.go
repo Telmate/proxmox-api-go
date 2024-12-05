@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,7 +13,7 @@ import (
 func Test_List_Users(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	users, err := pxapi.ListUsers(Test.GetClient(), false)
+	users, err := pxapi.ListUsers(context.Background(), Test.GetClient(), false)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(*users))
 }

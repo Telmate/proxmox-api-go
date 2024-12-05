@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 )
 
@@ -106,14 +107,14 @@ func createTemplateList(templateList []interface{}) *[]TemplateItem {
 }
 
 // Download an LXC template.
-func DownloadLxcTemplate(client *Client, content ConfigContent_Template) (err error) {
-	_, err = client.PostWithTask(content.mapToApiValues(), "/nodes/"+content.Node+"/aplinfo")
+func DownloadLxcTemplate(ctx context.Context, client *Client, content ConfigContent_Template) (err error) {
+	_, err = client.PostWithTask(ctx, content.mapToApiValues(), "/nodes/"+content.Node+"/aplinfo")
 	return
 }
 
 // List all LXC templates available for download.
-func ListTemplates(client *Client, node string) (templateList *[]TemplateItem, err error) {
-	tmpList, err := client.GetItemListInterfaceArray("/nodes/" + node + "/aplinfo")
+func ListTemplates(ctx context.Context, client *Client, node string) (templateList *[]TemplateItem, err error) {
+	tmpList, err := client.GetItemListInterfaceArray(ctx, "/nodes/"+node+"/aplinfo")
 	if err != nil {
 		return
 	}
