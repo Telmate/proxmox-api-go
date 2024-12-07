@@ -2,6 +2,8 @@ package proxmox
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestParamsTo(t *testing.T) {
@@ -91,6 +93,43 @@ func TestParamsToWithEmpty(t *testing.T) {
 				t.Errorf("%s: expected `%+v`, got `%+v`",
 					test.name, test.output, output)
 			}
+		})
+	}
+}
+
+func Test_nodeFromUpID_Unsafe(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		output task
+	}{
+		{name: "1",
+			input: "UPID:pve-test:002860A9:051E01C1:67536165:qmmove:102:root@pam:",
+			output: task{
+				id:            "UPID:pve-test:002860A9:051E01C1:67536165:qmmove:102:root@pam:",
+				node:          "pve-test",
+				operationType: "qmmove",
+				user: UserID{
+					Name:  "root",
+					Realm: "pam"}}},
+		{name: "2",
+			input: "UPID:pve:002860A9:051E01C1:67536165:qmshutdown:102:test-user@realm:",
+			output: task{
+				id:            "UPID:pve:002860A9:051E01C1:67536165:qmshutdown:102:test-user@realm:",
+				node:          "pve",
+				operationType: "qmshutdown",
+				user: UserID{
+					Name:  "test-user",
+					Realm: "realm"}}},
+	}
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			tmpTask := &task{}
+			tmpTask.mapToSDK_Unsafe(tests[i].input)
+			require.Equal(t, tests[i].output.id, tmpTask.id)
+			require.Equal(t, tests[i].output.node, tmpTask.node)
+			require.Equal(t, tests[i].output.operationType, tmpTask.operationType)
+			require.Equal(t, tests[i].output.user, tmpTask.user)
 		})
 	}
 }
