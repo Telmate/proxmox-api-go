@@ -218,16 +218,15 @@ func guestSetPool_Unsafe(ctx context.Context, c *Client, guestID uint, newPool P
 	return
 }
 
-func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) (err error) {
-	if err = client.CheckVmRef(ctx, vmr); err != nil {
-		return
+func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) (Task, error) {
+	if err := client.CheckVmRef(ctx, vmr); err != nil {
+		return nil, err
 	}
 	var params map[string]interface{}
 	if force {
 		params = map[string]interface{}{"forceStop": force}
 	}
-	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/shutdown")
-	return
+	return client.postWithTask(ctx, params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/shutdown")
 }
 
 func GuestStart(ctx context.Context, vmr *VmRef, client *Client) (err error) {

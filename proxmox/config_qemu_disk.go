@@ -884,8 +884,8 @@ type qemuDiskResize struct {
 
 // Increase the disk size to the specified amount in gigabytes
 // Decrease of disk size is not permitted.
-func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, client *Client) (exitStatus string, err error) {
-	return client.PutWithTask(ctx, map[string]interface{}{"disk": disk.Id, "size": strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
+func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, client *Client) (Task, error) {
+	return client.putWithTask(ctx, map[string]interface{}{"disk": disk.Id, "size": strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
 }
 
 type qemuDiskMove struct {
@@ -905,8 +905,8 @@ func (disk qemuDiskMove) mapToApiValues(delete bool) (params map[string]interfac
 	return
 }
 
-func (disk qemuDiskMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) (exitStatus interface{}, err error) {
-	return client.PostWithTask(ctx, disk.mapToApiValues(delete), fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId))
+func (disk qemuDiskMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) (Task, error) {
+	return client.postWithTask(ctx, disk.mapToApiValues(delete), fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId))
 }
 
 func (disk qemuDiskMove) Validate() (err error) {
@@ -1213,25 +1213,27 @@ func diskSubtypeSet(set bool) error {
 	return nil
 }
 
-func MoveQemuDisk(ctx context.Context, format *QemuDiskFormat, diskId QemuDiskId, storage string, deleteAfterMove bool, vmr *VmRef, client *Client) (err error) {
+func MoveQemuDisk(ctx context.Context, format *QemuDiskFormat, diskId QemuDiskId, storage string, deleteAfterMove bool, vmr *VmRef, client *Client) (Task, error) {
 	disk := qemuDiskMove{
 		Format:  format,
 		Id:      diskId,
 		Storage: storage,
 	}
-	err = disk.Validate()
-	if err != nil {
-		return
+	if err := disk.Validate(); err != nil {
+		return nil, err
 	}
-	_, err = disk.move(ctx, deleteAfterMove, vmr, client)
-	return
+	return disk.move(ctx, deleteAfterMove, vmr, client)
 }
 
 // increase Disks in size
 func resizeDisks(ctx context.Context, vmr *VmRef, client *Client, disks []qemuDiskResize) (err error) {
+	var task Task
 	for _, e := range disks {
-		_, err = e.resize(ctx, vmr, client)
+		task, err = e.resize(ctx, vmr, client)
 		if err != nil {
+			return
+		}
+		if err = task.WaitForCompletion(ctx, client); err != nil {
 			return
 		}
 	}

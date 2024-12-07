@@ -19,12 +19,12 @@ func init() {
 }
 
 func deleteID(ctx context.Context, args []string, IDtype string) (err error) {
-	var exitStatus string
+	var task proxmox.Task
 	id := cli.RequiredIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
 	switch IDtype {
 	case "AcmeAccount":
-		exitStatus, err = c.DeleteAcmeAccount(ctx, id)
+		task, err = c.DeleteAcmeAccount(ctx, id)
 	case "Group":
 		err = proxmox.GroupName(id).Delete(ctx, c)
 	case "MetricServer":
@@ -42,11 +42,10 @@ func deleteID(ctx context.Context, args []string, IDtype string) (err error) {
 		err = proxmox.ConfigUser{User: userId}.DeleteUser(ctx, c)
 	}
 	if err != nil {
-		if exitStatus != "" {
-			err = fmt.Errorf("error deleting %s (%s): %v, error status: %s ", IDtype, id, err, exitStatus)
-		}
-		return
+		return fmt.Errorf("error deleting %s (%s): %v", IDtype, id, err)
 	}
+	task.WaitForCompletion(ctx, c)
+
 	cli.PrintItemDeleted(deleteCmd.OutOrStdout(), id, IDtype)
 	return
 }
