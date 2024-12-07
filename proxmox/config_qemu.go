@@ -477,6 +477,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 
 	var params map[string]interface{}
 	var exitStatus string
+	var task Task
 
 	if currentConfig != nil { // Update
 		// TODO implement tmp move and version change
@@ -488,8 +489,11 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 		if newConfig.Disks != nil && currentConfig.Disks != nil {
 			markedDisks = *newConfig.Disks.markDiskChanges(*currentConfig.Disks)
 			for _, e := range markedDisks.Move { // move disk to different storage or change disk format
-				_, err = e.move(ctx, true, vmr, client)
+				task, err = e.move(ctx, true, vmr, client)
 				if err != nil {
+					return
+				}
+				if err = task.WaitForCompletion(ctx, client); err != nil {
 					return
 				}
 			}
@@ -505,7 +509,10 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 				itemsToDeleteBeforeUpdate = AddToList(itemsToDeleteBeforeUpdate, delete)
 				currentConfig.TPM = nil
 			} else if disk != nil { // move
-				if _, err := disk.move(ctx, true, vmr, client); err != nil {
+				if task, err = disk.move(ctx, true, vmr, client); err != nil {
+					return false, err
+				}
+				if err = task.WaitForCompletion(ctx, client); err != nil {
 					return false, err
 				}
 			}
@@ -523,7 +530,11 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 			}
 			if rebootRequired { // shutdown vm if reboot is required
 				if rebootIfNeeded {
-					if err = GuestShutdown(ctx, vmr, client, true); err != nil {
+					task, err = GuestShutdown(ctx, vmr, client, true)
+					if err != nil {
+						return
+					}
+					if err = task.WaitForCompletion(ctx, client); err != nil {
 						return
 					}
 					stopped = true
@@ -556,9 +567,10 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 		if err != nil {
 			return
 		}
-		exitStatus, err = client.PutWithTask(ctx, params, url)
+		var task Task
+		task, err = client.putWithTask(ctx, params, url)
 		if err != nil {
-			return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+			return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, task.ExitStatus(), params)
 		}
 
 		if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped

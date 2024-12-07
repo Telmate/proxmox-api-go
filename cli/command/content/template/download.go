@@ -21,8 +21,13 @@ var template_downloadCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		err = proxmox.DownloadLxcTemplate(cli.Context(), c, config)
+		ctx := cli.Context()
+		var task proxmox.Task
+		task, err = proxmox.DownloadLxcTemplate(ctx, c, config)
 		if err != nil {
+			return
+		}
+		if err = task.WaitForCompletion(ctx, c); err != nil {
 			return
 		}
 		cli.PrintItemCreated(templateCmd.OutOrStdout(), config.Template, "LXC Template")

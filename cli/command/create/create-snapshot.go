@@ -24,13 +24,18 @@ var (
 			}
 			memory = false
 			client := cli.NewClient()
+			ctx := cli.Context()
 			vmr := proxmox.NewVmRef(id)
-			_, err = client.GetVmInfo(cli.Context(), vmr)
+			_, err = client.GetVmInfo(ctx, vmr)
 			if err != nil {
 				return
 			}
-			err = config.Create(cli.Context(), client, vmr)
+			var task proxmox.Task
+			task, err = config.Create(ctx, client, vmr)
 			if err != nil {
+				return
+			}
+			if err = task.WaitForCompletion(ctx, client); err != nil {
 				return
 			}
 			cli.PrintItemCreated(CreateCmd.OutOrStdout(), snapName, "Snapshot")

@@ -457,93 +457,51 @@ func (c *Client) WaitForCompletion(ctx context.Context, taskResponse map[string]
 	if taskResponse["data"] == nil {
 		return "", nil
 	}
-	waited := 0
-	taskUpid := taskResponse["data"].(string)
-	for waited < c.TaskTimeout {
-		exitStatus, statErr := c.GetTaskExitstatus(ctx, taskUpid)
-		if statErr != nil {
-			if statErr != io.ErrUnexpectedEOF { // don't give up on ErrUnexpectedEOF
-				return "", statErr
-			}
-		}
-		if exitStatus != nil {
-			waitExitStatus = exitStatus.(string)
-			return
-		}
-		time.Sleep(TaskStatusCheckInterval * time.Second)
-		waited = waited + TaskStatusCheckInterval
-	}
-	return "", fmt.Errorf("Wait timeout for:" + taskUpid)
+	task := &task{id: taskResponse["data"].(string)}
+	return task.ExitStatus(), task.WaitForCompletion(ctx, c)
 }
 
-var (
-	rxTaskNode          = regexp.MustCompile("UPID:(.*?):")
-	rxExitStatusSuccess = regexp.MustCompile(`^(OK|WARNINGS)`)
-)
-
-func (c *Client) GetTaskExitstatus(ctx context.Context, taskUpid string) (exitStatus interface{}, err error) {
-	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
-	url := fmt.Sprintf("/nodes/%s/tasks/%s/status", node, taskUpid)
-	var data map[string]interface{}
-	_, err = c.session.GetJSON(ctx, url, nil, nil, &data)
-	if err == nil {
-		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
-	}
-	if exitStatus != nil && rxExitStatusSuccess.FindString(exitStatus.(string)) == "" {
-		err = fmt.Errorf(exitStatus.(string))
-	}
-	return
-}
-
-func (c *Client) StatusChangeVm(ctx context.Context, vmr *VmRef, params map[string]interface{}, setStatus string) (exitStatus string, err error) {
-	err = c.CheckVmRef(ctx, vmr)
+func (c *Client) StatusChangeVm(ctx context.Context, vmr *VmRef, params map[string]interface{}, setStatus string) (Task, error) {
+	err := c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return
+		return nil, err
 	}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/status/%s", vmr.node, vmr.vmType, vmr.vmId, setStatus)
-	for i := 0; i < 3; i++ {
-		exitStatus, err = c.PostWithTask(ctx, params, url)
-		if err != nil {
-			time.Sleep(TaskStatusCheckInterval * time.Second)
-		} else {
-			return
-		}
-	}
-	return
+	return c.postWithTask(ctx, params, url)
 }
 
-func (c *Client) StartVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) StartVm(ctx context.Context, vmr *VmRef) (Task, error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "start")
 }
 
-func (c *Client) StopVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) StopVm(ctx context.Context, vmr *VmRef) (Task, error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "stop")
 }
 
-func (c *Client) ShutdownVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) ShutdownVm(ctx context.Context, vmr *VmRef) (Task, error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "shutdown")
 }
 
-func (c *Client) ResetVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) ResetVm(ctx context.Context, vmr *VmRef) (Task, error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "reset")
 }
 
-func (c *Client) RebootVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) RebootVm(ctx context.Context, vmr *VmRef) (Task, error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "reboot")
 }
 
-func (c *Client) PauseVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) PauseVm(ctx context.Context, vmr *VmRef) (Task, error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "suspend")
 }
 
-func (c *Client) HibernateVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) HibernateVm(ctx context.Context, vmr *VmRef) (Task, error) {
 	params := map[string]interface{}{
 		"todisk": true,
 	}
 	return c.StatusChangeVm(ctx, vmr, params, "suspend")
 }
 
-func (c *Client) ResumeVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) ResumeVm(ctx context.Context, vmr *VmRef) (Task, error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "resume")
 }
 
@@ -654,38 +612,24 @@ func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams m
 	return
 }
 
-func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (Task, error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc/%s/clone", vmr.node, vmParams["vmid"])
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
-	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
-		if err != nil {
-			return "", err
-		}
-		exitStatus, err = c.WaitForCompletion(ctx, taskResponse)
-		if err != nil {
-			return "", err
-		}
+	if err != nil {
+		return nil, err
 	}
-	return
+	return taskResponse(resp)
 }
 
-func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (Task, error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
-	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
-		if err != nil {
-			return "", err
-		}
-		exitStatus, err = c.WaitForCompletion(ctx, taskResponse)
-		if err != nil {
-			return "", err
-		}
+	if err != nil {
+		return nil, err
 	}
-	return
+	return taskResponse(resp)
 }
 
 // DEPRECATED superseded by CreateSnapshot()
@@ -716,7 +660,16 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 
 // DEPRECATED superseded by DeleteSnapshot()
 func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
-	return DeleteSnapshot(context.Background(), c, vmr, SnapshotName(snapshotName))
+	var task Task
+	ctx := context.Background()
+	task, err = DeleteSnapshot(ctx, c, vmr, SnapshotName(snapshotName))
+	if err != nil {
+		return "", err
+	}
+	if err = task.WaitForCompletion(ctx, c); err != nil {
+		return "", err
+	}
+	return exitStatusSuccess, nil
 }
 
 // DEPRECATED superseded by ListSnapshots()
@@ -740,12 +693,23 @@ func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface
 
 // DEPRECATED superseded by RollbackSnapshot()
 func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string, err error) {
-	return RollbackSnapshot(context.Background(), c, vmr, SnapshotName(snapshot))
+	var task Task
+	ctx := context.Background()
+	task, err = RollbackSnapshot(context.Background(), c, vmr, SnapshotName(snapshot))
+	if err != nil {
+		return "", err
+	}
+	if err = task.WaitForCompletion(ctx, c); err != nil {
+		return "", err
+	}
+	return exitStatusSuccess, nil
 }
 
 // DEPRECATED SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
-	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
+	var task Task
+	task, err = c.postWithTask(context.Background(), params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
+	return task.ExitStatus(), err
 }
 
 // SetLxcConfig - send config options
@@ -1728,19 +1692,19 @@ func (c *Client) GetAcmeAccountConfig(ctx context.Context, id string) (config ma
 	return c.GetItemConfigMapStringInterface(ctx, "/cluster/acme/account/"+id, "acme", "CONFIG")
 }
 
-func (c *Client) CreateAcmeAccount(ctx context.Context, params map[string]interface{}) (exitStatus string, err error) {
-	return c.PostWithTask(ctx, params, "/cluster/acme/account/")
+func (c *Client) CreateAcmeAccount(ctx context.Context, params map[string]interface{}) (Task, error) {
+	return c.postWithTask(ctx, params, "/cluster/acme/account/")
 }
 
-func (c *Client) UpdateAcmeAccountEmails(ctx context.Context, id, emails string) (exitStatus string, err error) {
+func (c *Client) UpdateAcmeAccountEmails(ctx context.Context, id, emails string) (Task, error) {
 	params := map[string]interface{}{
 		"contact": emails,
 	}
-	return c.PutWithTask(ctx, params, "/cluster/acme/account/"+id)
+	return c.putWithTask(ctx, params, "/cluster/acme/account/"+id)
 }
 
-func (c *Client) DeleteAcmeAccount(ctx context.Context, id string) (exitStatus string, err error) {
-	return c.DeleteWithTask(ctx, "/cluster/acme/account/"+id)
+func (c *Client) DeleteAcmeAccount(ctx context.Context, id string) (Task, error) {
+	return c.deleteWithTask(ctx, "/cluster/acme/account/"+id)
 }
 
 // ACME Plugin
@@ -1883,22 +1847,22 @@ func (c *Client) DeleteNetwork(ctx context.Context, node string, iface string) (
 
 // ApplyNetwork applies the pending network configuration on the passed in node.
 // It returns the body from the API response and any HTTP error the API returns.
-func (c Client) ApplyNetwork(ctx context.Context, node string) (exitStatus string, err error) {
+func (c Client) ApplyNetwork(ctx context.Context, node string) (Task, error) {
 	url := fmt.Sprintf("/nodes/%s/network", node)
-	return c.PutWithTask(ctx, nil, url)
+	return c.putWithTask(ctx, nil, url)
 }
 
 // RevertNetwork reverts the pending network configuration on the passed in node.
 // It returns the body from the API response and any HTTP error the API returns.
-func (c *Client) RevertNetwork(ctx context.Context, node string) (exitStatus string, err error) {
+func (c *Client) RevertNetwork(ctx context.Context, node string) (Task, error) {
 	url := fmt.Sprintf("/nodes/%s/network", node)
-	return c.DeleteWithTask(ctx, url)
+	return c.deleteWithTask(ctx, url)
 }
 
 // SDN
 
-func (c *Client) ApplySDN(ctx context.Context) (string, error) {
-	return c.PutWithTask(ctx, nil, "/cluster/sdn")
+func (c *Client) ApplySDN(ctx context.Context) (Task, error) {
+	return c.putWithTask(ctx, nil, "/cluster/sdn")
 }
 
 // GetSDNVNets returns a list of all VNet definitions in the "data" element of the returned
@@ -2115,16 +2079,15 @@ func (c *Client) CreateItemReturnStatus(ctx context.Context, params map[string]i
 	return
 }
 
-// Makes a POST request and waits on proxmox for the task to complete.
-// It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
-func (c *Client) PostWithTask(ctx context.Context, Params map[string]interface{}, url string) (exitStatus string, err error) {
+// Makes a POST request and returns a Task to await.
+func (c *Client) postWithTask(ctx context.Context, Params map[string]interface{}, url string) (Task, error) {
 	reqbody := ParamsToBody(Params)
-	var resp *http.Response
-	resp, err = c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
 	if err != nil {
-		return c.HandleTaskError(resp), err
+		c.HandleTaskError(resp)
+		return nil, err
 	}
-	return c.CheckTask(ctx, resp)
+	return taskResponse(resp)
 }
 
 // Makes a PUT request without waiting on proxmox for the task to complete.
@@ -2144,16 +2107,15 @@ func (c *Client) UpdateItemReturnStatus(ctx context.Context, params map[string]i
 	return
 }
 
-// Makes a PUT request and waits on proxmox for the task to complete.
-// It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
-func (c *Client) PutWithTask(ctx context.Context, Params map[string]interface{}, url string) (exitStatus string, err error) {
-	reqbody := ParamsToBodyWithAllEmpty(Params)
-	var resp *http.Response
-	resp, err = c.session.Put(ctx, url, nil, nil, &reqbody)
+// Makes a PUT request and returns a Task to await.
+func (c *Client) putWithTask(ctx context.Context, Params map[string]interface{}, url string) (Task, error) {
+	reqbody := ParamsToBody(Params)
+	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
 	if err != nil {
-		return c.HandleTaskError(resp), err
+		c.HandleTaskError(resp)
+		return nil, err
 	}
-	return c.CheckTask(ctx, resp)
+	return taskResponse(resp)
 }
 
 // Makes a DELETE request without waiting on proxmox for the task to complete.
@@ -2163,15 +2125,14 @@ func (c *Client) Delete(ctx context.Context, url string) (err error) {
 	return
 }
 
-// Makes a DELETE request and waits on proxmox for the task to complete.
-// It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
-func (c *Client) DeleteWithTask(ctx context.Context, url string) (exitStatus string, err error) {
-	var resp *http.Response
-	resp, err = c.session.Delete(ctx, url, nil, nil)
+// Makes a DELETE request and returns a Task to await.
+func (c *Client) deleteWithTask(ctx context.Context, url string) (Task, error) {
+	resp, err := c.session.Delete(ctx, url, nil, nil)
 	if err != nil {
-		return c.HandleTaskError(resp), err
+		c.HandleTaskError(resp)
+		return nil, err
 	}
-	return c.CheckTask(ctx, resp)
+	return taskResponse(resp)
 }
 
 func (c *Client) GetItemListInterfaceArray(ctx context.Context, url string) ([]interface{}, error) {

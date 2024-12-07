@@ -24,8 +24,13 @@ var iso_downloadCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		err = proxmox.DownloadIsoFromUrl(cli.Context(), c, config)
+		ctx := cli.Context()
+		var task proxmox.Task
+		task, err = proxmox.DownloadIsoFromUrl(ctx, c, config)
 		if err != nil {
+			return
+		}
+		if err = task.WaitForCompletion(ctx, c); err != nil {
 			return
 		}
 		cli.PrintItemCreated(isoCmd.OutOrStdout(), config.Filename, "ISO file")
