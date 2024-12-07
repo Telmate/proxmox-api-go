@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -617,7 +618,7 @@ func (t *task) getTaskStatus_Unsafe(ctx context.Context, session *Session) (err 
 	if v, isSet := status[taskApiKeyExitStatus]; isSet {
 		exitStatus := v.(string)
 		if !(strings.HasPrefix(exitStatus, "OK") || strings.HasPrefix(exitStatus, "WARNINGS")) {
-			return fmt.Errorf(exitStatus)
+			return errors.New(exitStatus)
 		}
 	}
 	return
