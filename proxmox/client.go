@@ -51,7 +51,7 @@ const (
 // map[type:qemu node:proxmox1-xx id:qemu/132 diskread:5.57424738e+08 disk:0 netin:5.9297450593e+10 mem:3.3235968e+09 uptime:1.4567097e+07 vmid:132 template:0 maxcpu:2 netout:6.053310416e+09 maxdisk:3.4359738368e+10 maxmem:8.592031744e+09 diskwrite:1.49663619584e+12 status:running cpu:0.00386980694947209 name:appt-app1-dev.xxx.xx]
 type VmRef struct {
 	vmId    int
-	node    string
+	node    NodeName
 	pool    string
 	vmType  string
 	haState string
@@ -59,7 +59,7 @@ type VmRef struct {
 }
 
 func (vmr *VmRef) SetNode(node string) {
-	vmr.node = node
+	vmr.node = NodeName(node)
 }
 
 func (vmr *VmRef) SetPool(pool string) {
@@ -78,7 +78,7 @@ func (vmr *VmRef) VmId() int {
 	return vmr.vmId
 }
 
-func (vmr *VmRef) Node() string {
+func (vmr *VmRef) Node() NodeName {
 	return vmr.node
 }
 
@@ -235,7 +235,7 @@ func (c *Client) GetVmInfo(ctx context.Context, vmr *VmRef) (vmInfo map[string]i
 		vm := vms[vmii].(map[string]interface{})
 		if int(vm["vmid"].(float64)) == vmr.vmId {
 			vmInfo = vm
-			vmr.node = vmInfo["node"].(string)
+			vmr.node = NodeName(vmInfo["node"].(string))
 			vmr.vmType = vmInfo["type"].(string)
 			vmr.pool = ""
 			if vmInfo["pool"] != nil {
@@ -268,7 +268,7 @@ func (c *Client) GetVmRefsByName(ctx context.Context, vmName string) (vmrs []*Vm
 		vm := vms[vmii].(map[string]interface{})
 		if vm["name"] != nil && vm["name"].(string) == vmName {
 			vmr := NewVmRef(int(vm["vmid"].(float64)))
-			vmr.node = vm["node"].(string)
+			vmr.node = NodeName(vm["node"].(string))
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
 			if vm["pool"] != nil {
@@ -297,7 +297,7 @@ func (c *Client) GetVmRefById(ctx context.Context, vmId int) (vmr *VmRef, err er
 		vm := vms[vmii].(map[string]interface{})
 		if int(vm["vmid"].(float64)) != 0 && int(vm["vmid"].(float64)) == vmId {
 			vmr = NewVmRef(int(vm["vmid"].(float64)))
-			vmr.node = vm["node"].(string)
+			vmr.node = NodeName(vm["node"].(string))
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
 			if vm["pool"] != nil {
@@ -321,7 +321,7 @@ func (c *Client) GetVmState(ctx context.Context, vmr *VmRef) (vmState map[string
 	if err != nil {
 		return nil, err
 	}
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/current", "vm", "STATE")
+	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/current", "vm", "STATE")
 }
 
 func (c *Client) GetVmConfig(ctx context.Context, vmr *VmRef) (vmConfig map[string]interface{}, err error) {
@@ -329,7 +329,7 @@ func (c *Client) GetVmConfig(ctx context.Context, vmr *VmRef) (vmConfig map[stri
 	if err != nil {
 		return nil, err
 	}
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config", "vm", "CONFIG")
+	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config", "vm", "CONFIG")
 }
 
 func (c *Client) GetStorageStatus(ctx context.Context, vmr *VmRef, storageName string) (storageStatus map[string]interface{}, err error) {
@@ -588,7 +588,7 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 	return
 }
 
-func (c *Client) CreateQemuVm(ctx context.Context, node string, vmParams map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[string]interface{}) (exitStatus string, err error) {
 	// Create VM disks first to ensure disks names.
 	createdDisks, createdDisksErr := c.createVMDisks(ctx, node, vmParams)
 	if createdDisksErr != nil {
@@ -745,7 +745,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 
 // DEPRECATED SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
-	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
+	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
 }
 
 // SetLxcConfig - send config options
@@ -767,9 +767,9 @@ func (c *Client) SetLxcConfig(ctx context.Context, vmr *VmRef, vmParams map[stri
 }
 
 // MigrateNode - Migrate a VM
-func (c *Client) MigrateNode(ctx context.Context, vmr *VmRef, newTargetNode string, online bool) (exitStatus interface{}, err error) {
+func (c *Client) MigrateNode(ctx context.Context, vmr *VmRef, newTargetNode NodeName, online bool) (exitStatus interface{}, err error) {
 	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online, "with-local-disks": true})
-	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node, vmr.vmType, vmr.vmId)
+	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node.String(), vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
@@ -938,7 +938,7 @@ func (c *Client) VMIdExists(ctx context.Context, vmID int) (exists bool, err err
 // CreateVMDisk - Create single disk for VM on host node.
 func (c *Client) CreateVMDisk(
 	ctx context.Context,
-	nodeName string,
+	nodeName NodeName,
 	storageName string,
 	fullDiskName string,
 	diskParams map[string]interface{},
@@ -966,7 +966,7 @@ var rxStorageModels = regexp.MustCompile(`(ide|sata|scsi|virtio)\d+`)
 // createVMDisks - Make disks parameters and create all VM disks on host node.
 func (c *Client) createVMDisks(
 	ctx context.Context,
-	node string,
+	node NodeName,
 	vmParams map[string]interface{},
 ) (disks []string, err error) {
 	var createdDisks []string
@@ -1020,7 +1020,7 @@ func (c *Client) CreateNewDisk(ctx context.Context, vmr *VmRef, disk string, vol
 // so mainly this is used to delete the disks in case VM creation didn't complete.
 func (c *Client) DeleteVMDisks(
 	ctx context.Context,
-	node string,
+	node NodeName,
 	disks []string,
 ) error {
 	for _, fullDiskName := range disks {

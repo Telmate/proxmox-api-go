@@ -12,7 +12,7 @@ func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client, statistics
 	}
 	vmid := strconv.FormatInt(int64(vmr.vmId), 10)
 	params, err := c.GetItemConfigMapStringInterface(ctx,
-		"/nodes/"+vmr.node+"/qemu/"+vmid+"/agent/network-get-interfaces", "guest agent", "data",
+		"/nodes/"+vmr.node.String()+"/qemu/"+vmid+"/agent/network-get-interfaces", "guest agent", "data",
 		"500 QEMU guest agent is not running",
 		"500 VM "+vmid+" is not running")
 	if err != nil {

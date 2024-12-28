@@ -47,7 +47,7 @@ type ConfigQemu struct {
 	Memory          *QemuMemory           `json:"memory,omitempty"`
 	Name            string                `json:"name,omitempty"` // TODO should be custom type as there are character and length limitations
 	Networks        QemuNetworkInterfaces `json:"networks,omitempty"`
-	Node            string                `json:"node,omitempty"` // Only returned setting it has no effect, set node in the VmRef instead
+	Node            NodeName              `json:"node,omitempty"` // Only returned setting it has no effect, set node in the VmRef instead
 	Onboot          *bool                 `json:"onboot,omitempty"`
 	Pool            *PoolName             `json:"pool,omitempty"`
 	Protection      *bool                 `json:"protection,omitempty"`
@@ -480,7 +480,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 
 	if currentConfig != nil { // Update
 		// TODO implement tmp move and version change
-		url := "/nodes/" + vmr.node + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/config"
+		url := "/nodes/" + vmr.node.String() + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/config"
 		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 		stopped := false
 
@@ -543,13 +543,13 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 		}
 
 		if newConfig.Node != currentConfig.Node { // Migrate VM
-			vmr.SetNode(currentConfig.Node)
+			vmr.node = newConfig.Node
 			_, err = client.MigrateNode(ctx, vmr, newConfig.Node, true)
 			if err != nil {
 				return
 			}
 			// Set node to the node the VM was migrated to
-			vmr.SetNode(newConfig.Node)
+			vmr.node = newConfig.Node
 		}
 
 		rebootRequired, params, err = newConfig.mapToAPI(*currentConfig, version)
