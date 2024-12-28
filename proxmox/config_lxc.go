@@ -339,7 +339,7 @@ func (config ConfigLxc) CreateLxc(ctx context.Context, vmr *VmRef, client *Clien
 	// amend vmid
 	paramMap["vmid"] = vmr.vmId
 
-	exitStatus, err := client.CreateLxcContainer(ctx, vmr.node, paramMap)
+	exitStatus, err := client.CreateLxcContainer(ctx, vmr.node.String(), paramMap)
 	if err != nil {
 		params, _ := json.Marshal(&paramMap)
 		return fmt.Errorf("error creating LXC container: %v, error status: %s (params: %v)", err, exitStatus, string(params))

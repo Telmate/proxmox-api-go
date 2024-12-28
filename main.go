@@ -393,7 +393,7 @@ func main() {
 			fmt.Printf("Missing target node\n")
 			os.Exit(1)
 		}
-		_, err := c.MigrateNode(ctx, vmr, args[2], true)
+		_, err := c.MigrateNode(ctx, vmr, proxmox.NodeName(args[2]), true)
 
 		if err != nil {
 			log.Printf("Error to move %+v\n", err)

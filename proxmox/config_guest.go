@@ -162,7 +162,7 @@ func GuestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature Gu
 
 func guestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
 	var params map[string]interface{}
-	params, err := client.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/feature?feature=snapshot", "guest", "FEATURES")
+	params, err := client.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/feature?feature=snapshot", "guest", "FEATURES")
 	if err != nil {
 		return false, err
 	}
@@ -226,7 +226,7 @@ func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) 
 	if force {
 		params = map[string]interface{}{"forceStop": force}
 	}
-	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/shutdown")
+	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/shutdown")
 	return
 }
 
@@ -266,5 +266,5 @@ func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) 
 	if err := client.CheckVmRef(ctx, vmr); err != nil {
 		return nil, err
 	}
-	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/pending", "Guest", "PENDING CONFIG")
+	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/pending", "Guest", "PENDING CONFIG")
 }
