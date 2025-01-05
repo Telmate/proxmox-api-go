@@ -184,32 +184,32 @@ func GuestReboot(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	return
 }
 
-func guestSetPool_Unsafe(ctx context.Context, c *Client, guestID uint, newPool PoolName, currentPool *PoolName, version Version) (err error) {
+func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID uint, newPool PoolName, currentPool *PoolName, version Version) (err error) {
 	if newPool == "" {
 		if *currentPool != "" { // leave pool
-			if err = (*currentPool).removeGuests_Unsafe(ctx, c, []uint{guestID}, version); err != nil {
+			if err = (*currentPool).removeGuestsNoCheck(ctx, c, []uint{guestID}, version); err != nil {
 				return
 			}
 		}
 	} else {
 		if *currentPool == "" { // join pool
 			if version.Smaller(Version{8, 0, 0}) {
-				if err = newPool.addGuests_UnsafeV7(ctx, c, []uint{guestID}); err != nil {
+				if err = newPool.addGuestsNoCheckV7(ctx, c, []uint{guestID}); err != nil {
 					return
 				}
 			} else {
-				newPool.addGuests_UnsafeV8(ctx, c, []uint{guestID})
+				newPool.addGuestsNoCheckV8(ctx, c, []uint{guestID})
 			}
 		} else if newPool != *currentPool { // change pool
 			if version.Smaller(Version{8, 0, 0}) {
-				if err = (*currentPool).removeGuests_Unsafe(ctx, c, []uint{guestID}, version); err != nil {
+				if err = (*currentPool).removeGuestsNoCheck(ctx, c, []uint{guestID}, version); err != nil {
 					return
 				}
-				if err = newPool.addGuests_UnsafeV7(ctx, c, []uint{guestID}); err != nil {
+				if err = newPool.addGuestsNoCheckV7(ctx, c, []uint{guestID}); err != nil {
 					return
 				}
 			} else {
-				if err = newPool.addGuests_UnsafeV8(ctx, c, []uint{guestID}); err != nil {
+				if err = newPool.addGuestsNoCheckV8(ctx, c, []uint{guestID}); err != nil {
 					return
 				}
 			}

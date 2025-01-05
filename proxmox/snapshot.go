@@ -33,11 +33,11 @@ func (config ConfigSnapshot) Create(ctx context.Context, c *Client, vmr *VmRef) 
 	if err = config.Validate(); err != nil {
 		return
 	}
-	return config.Create_Unsafe(ctx, c, vmr)
+	return config.CreateNoCheck(ctx, c, vmr)
 }
 
 // Create a snapshot without validating the input, use ConfigSnapshot.Create() to validate the input.
-func (config ConfigSnapshot) Create_Unsafe(ctx context.Context, c *Client, vmr *VmRef) error {
+func (config ConfigSnapshot) CreateNoCheck(ctx context.Context, c *Client, vmr *VmRef) error {
 	params := config.mapToApiValues()
 	_, err := c.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/")
 	if err != nil {
@@ -156,11 +156,11 @@ func (snap SnapshotName) Delete(ctx context.Context, c *Client, vmr *VmRef) (exi
 		return
 	}
 	// TODO check if snapshot exists
-	return snap.Delete_Unsafe(ctx, c, vmr)
+	return snap.DeleteNoCheck(ctx, c, vmr)
 }
 
 // Deletes the specified snapshot without validating the input, use SnapshotName.Delete() to validate the input.
-func (snap SnapshotName) Delete_Unsafe(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
+func (snap SnapshotName) DeleteNoCheck(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
 	return c.DeleteWithTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snap))
 }
 
@@ -173,11 +173,11 @@ func (snap SnapshotName) Rollback(ctx context.Context, c *Client, vmr *VmRef) (e
 		return
 	}
 	// TODO check if snapshot exists
-	return snap.Rollback_Unsafe(ctx, c, vmr)
+	return snap.RollbackNoCheck(ctx, c, vmr)
 }
 
 // Rollback to the specified snapshot without validating the input, use SnapshotName.Rollback() to validate the input.
-func (snap SnapshotName) Rollback_Unsafe(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
+func (snap SnapshotName) RollbackNoCheck(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
 	return c.PostWithTask(ctx, nil, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback")
 }
 
@@ -190,11 +190,11 @@ func (snap SnapshotName) UpdateDescription(ctx context.Context, c *Client, vmr *
 		return
 	}
 	// TODO check if snapshot exists
-	return snap.UpdateDescription_Unsafe(ctx, c, vmr, description)
+	return snap.UpdateDescriptionNoCheck(ctx, c, vmr, description)
 }
 
 // Updates the description of the specified snapshot without validating the input, use SnapshotName.UpdateDescription() to validate the input.
-func (snap SnapshotName) UpdateDescription_Unsafe(ctx context.Context, c *Client, vmr *VmRef, description string) error {
+func (snap SnapshotName) UpdateDescriptionNoCheck(ctx context.Context, c *Client, vmr *VmRef, description string) error {
 	return c.Put(ctx, map[string]interface{}{"description": description}, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/snapshot/"+string(snap)+"/config")
 }
 

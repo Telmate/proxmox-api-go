@@ -18,13 +18,16 @@ When this document refers to the SDK, it references the code in the [/proxmox](.
     - [Implementation of the Validator Pattern](#implementation-of-the-validator-pattern)
       - [Explicit Validator](#explicit-validator)
       - [Implicit Validator](#implicit-validator)
+    - [Validation](#validation)
     - [Validator Errors](#validator-errors)
       - [Error Constant](#error-constant)
       - [Error Function](#error-function)
-  - [Safe and Unsafe Functions](#safe-and-unsafe-functions)
-    - [Safe function](#safe-function)
-    - [Unsafe function](#unsafe-function)
   - [Public and Private](#public-and-private)
+  - [Types](#types)
+    - [Public Types](#public-types)
+    - [Private Types](#private-types)
+      - [Enumerations](#enumerations)
+  - [Safe and Unsafe functions](#safe-and-unsafe-functions)
   - [Standardized Interfaces](#standardized-interfaces)
   - [Pure and Impure Functions](#pure-and-impure-functions)
     - [Pure Functions](#pure-functions)
@@ -231,6 +234,34 @@ err := StringValidate(exampleString)
 }
 ```
 
+### Validation
+
+By default, all functions validate user input unless explicitly stated otherwise. Functions that bypass validation are suffixed with `NoCheck`. These `NoCheck` functions provide developers with the flexibility to skip validation when they are certain the input is already validated.
+
+In some scenarios, input validation might require multiple API calls, which can impact performance. By offering a choice between performance optimization and strict validation, the SDK ensures both efficiency and correctness, making it more developer-friendly.
+
+```go
+type User struct
+
+// Create validates input before proceeding.
+func (user *User) Create(password string) (err error) {
+    err = user.Validate()
+    if err != nil {
+        return
+    }
+    // Additional validation logic (omitted for brevity).
+    err = user.CreateNoCheck(password)
+    return
+}
+
+// CreateNoCheck skips validation entirely.
+func (user *User) CreateNoCheck(password string) (err error) {
+    // Implementation omitted for brevity.
+    return
+}
+
+```
+
 ### Validator Errors
 
 When dealing with validation errors, it is crucial for the SDK to respond with a clear and informative error message.
@@ -275,45 +306,6 @@ func (u UserName) Error_InvalidUsername() error {
 }
 ```
 
-## Safe and Unsafe Functions
-
-Safe and unsafe functions serve as key components for interacting with the API. The rationale behind their existence lies in the trade-off between validating input for correctness and maintaining performance efficiency. For instance, consider the validation of whether a given name adheres to the API's naming conventions. While this validation is essential, performing it with every API interaction can significantly impact performance.
-
-In certain scenarios, input validation may necessitate multiple API calls. Explicit unsafe functions are introduced to convey to developers that input validation is not carried out automatically, placing the responsibility for validation squarely on the developer. By offering both safe and unsafe functions, the SDK becomes more developer-friendly, as it allows developers to make informed choices between performance optimization and safety without the need to create their customized SDK version.
-
-### Safe function
-
-By default, all functions are considered safe functions, meaning that input validation occurs before the function execution. These functions are expected to provide developers with clear error messages when the input is invalid.
-
-```go
-type User struct
-
-func (user *User) Create(password string) (err error) {
-    err = user.Validate()
-    if err != nil {
-        return
-    }
-    // omitted for brevity.
-    // more validation logic.
-    err = user.Create_Unsafe(password)
-    return
-}
-```
-
-### Unsafe function
-
-Unsafe functions, on the other hand, do not validate the input. These functions directly transmit the provided data to the API. They should be employed when the input is already validated, either by the developer or by a safe function.
-
-```go
-type User struct
-
-// No validation is done here.
-func (user *User) Create_Unsafe(password string) (err error) {
-    // omitted for brevity.
-    return
-}
-```
-
 ## Public and Private
 
 In crafting our SDK, we prioritize developer-friendliness, aiming to make it as intuitive as possible.
@@ -345,6 +337,10 @@ For private types we use the following naming conventions:
 #### Enumerations
 
 For an internal enum type, the name must be suffixed with `Enum`.
+
+## Safe and Unsafe functions
+
+By default, all functions in the SDK are safe unless explicitly stated otherwise. Functions suffixed with `_Unsafe` are considered unsafe and should be used sparingly. These functions are intended for internal use only and should never be exposed publicly.
 
 ## Standardized Interfaces
 

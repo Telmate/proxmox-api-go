@@ -94,16 +94,16 @@ func (config ConfigPool) Create(ctx context.Context, c *Client) error {
 		return err
 	}
 	// TODO check permissions
-	if exists, err := config.Name.Exists_Unsafe(ctx, c); err != nil {
+	if exists, err := config.Name.ExistsNoCheck(ctx, c); err != nil {
 		return err
 	} else if exists {
 		return errors.New(PoolName_Error_Exists)
 	}
-	return config.Create_Unsafe(ctx, c)
+	return config.CreateNoCheck(ctx, c)
 }
 
-// Create_Unsafe creates a new pool without validating the input
-func (config ConfigPool) Create_Unsafe(ctx context.Context, c *Client) error {
+// CreateNoCheck creates a new pool without validating the input
+func (config ConfigPool) CreateNoCheck(ctx context.Context, c *Client) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func (config ConfigPool) Create_Unsafe(ctx context.Context, c *Client) error {
 		return err
 	}
 	if config.Guests != nil {
-		return config.Name.addGuests_Unsafe(ctx, c, *config.Guests, nil, version)
+		return config.Name.addGuestsNoCheck(ctx, c, *config.Guests, nil, version)
 	}
 	return nil
 }
@@ -132,18 +132,18 @@ func (config ConfigPool) Set(ctx context.Context, c *Client) error {
 		return err
 	}
 	// TODO check permissions
-	return config.Set_Unsafe(ctx, c)
+	return config.SetNoCheck(ctx, c)
 }
 
-func (config ConfigPool) Set_Unsafe(ctx context.Context, c *Client) error {
-	exists, err := config.Name.Exists_Unsafe(ctx, c)
+func (config ConfigPool) SetNoCheck(ctx context.Context, c *Client) error {
+	exists, err := config.Name.ExistsNoCheck(ctx, c)
 	if err != nil {
 		return err
 	}
 	if exists {
-		return config.Update_Unsafe(ctx, c)
+		return config.UpdateNoCheck(ctx, c)
 	}
-	return config.Create_Unsafe(ctx, c)
+	return config.CreateNoCheck(ctx, c)
 }
 
 func (config ConfigPool) Update(ctx context.Context, c *Client) error {
@@ -159,16 +159,16 @@ func (config ConfigPool) Update(ctx context.Context, c *Client) error {
 		return errors.New(PoolName_Error_NotExists)
 	}
 	// TODO check permissions
-	return config.Update_Unsafe(ctx, c)
+	return config.UpdateNoCheck(ctx, c)
 }
 
-// Update_Unsafe updates a pool without validating the input
-func (config ConfigPool) Update_Unsafe(ctx context.Context, c *Client) error {
+// UpdateNoCheck updates a pool without validating the input
+func (config ConfigPool) UpdateNoCheck(ctx context.Context, c *Client) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
 	}
-	current, err := config.Name.Get_Unsafe(ctx, c)
+	current, err := config.Name.GetNoCheck(ctx, c)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (config ConfigPool) Update_Unsafe(ctx context.Context, c *Client) error {
 		}
 	}
 	if config.Guests != nil {
-		return config.Name.SetGuests_Unsafe(ctx, c, *config.Guests)
+		return config.Name.SetGuestsNoChecks(ctx, c, *config.Guests)
 	}
 	return nil
 }
@@ -201,7 +201,7 @@ const (
 
 var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
 
-func (config PoolName) addGuests_Unsafe(ctx context.Context, c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
+func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
 	var guestsToAdd []uint
 	if currentGuests != nil && len(*currentGuests) > 0 {
 		guestsToAdd = subtractArray(guestIDs, *currentGuests)
@@ -212,26 +212,26 @@ func (config PoolName) addGuests_Unsafe(ctx context.Context, c *Client, guestIDs
 		return nil
 	}
 	if !version.Smaller(Version{8, 0, 0}) {
-		return config.addGuests_UnsafeV8(ctx, c, guestsToAdd)
+		return config.addGuestsNoCheckV8(ctx, c, guestsToAdd)
 	}
 	guests, err := ListGuests(ctx, c)
 	if err != nil {
 		return err
 	}
 	for i, e := range PoolName("").guestsToRemoveFromPools(guests, guestsToAdd) {
-		if err = i.removeGuests_Unsafe(ctx, c, e, version); err != nil {
+		if err = i.removeGuestsNoCheck(ctx, c, e, version); err != nil {
 			return err
 		}
 	}
-	return config.addGuests_UnsafeV7(ctx, c, guestsToAdd)
+	return config.addGuestsNoCheckV7(ctx, c, guestsToAdd)
 }
 
-func (pool PoolName) addGuests_UnsafeV7(ctx context.Context, c *Client, guestIDs []uint) error {
+func (pool PoolName) addGuestsNoCheckV7(ctx context.Context, c *Client, guestIDs []uint) error {
 	return pool.putV7(ctx, c, map[string]interface{}{"vms": PoolName("").mapToString(guestIDs)})
 }
 
 // from 8.0.0 on proxmox can move the guests to the pool while they are still in another pool
-func (pool PoolName) addGuests_UnsafeV8(ctx context.Context, c *Client, guestIDs []uint) error {
+func (pool PoolName) addGuestsNoCheckV8(ctx context.Context, c *Client, guestIDs []uint) error {
 	return pool.putV8(ctx, c, map[string]interface{}{
 		"vms":        PoolName("").mapToString(guestIDs),
 		"allow-move": "1"})
@@ -242,26 +242,26 @@ func (config PoolName) AddGuests(ctx context.Context, c *Client, guestIDs []uint
 		return err
 	}
 	// TODO: permission check
-	exists, err := config.Exists_Unsafe(ctx, c)
+	exists, err := config.ExistsNoCheck(ctx, c)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		return errors.New(PoolName_Error_NotExists)
 	}
-	return config.AddGuests_Unsafe(ctx, c, guestIDs)
+	return config.AddGuestsNoCheck(ctx, c, guestIDs)
 }
 
-func (pool PoolName) AddGuests_Unsafe(ctx context.Context, c *Client, guestIDs []uint) error {
+func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs []uint) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
 	}
-	config, err := pool.Get_Unsafe(ctx, c)
+	config, err := pool.GetNoCheck(ctx, c)
 	if err != nil {
 		return err
 	}
-	return pool.addGuests_Unsafe(ctx, c, guestIDs, config.Guests, version)
+	return pool.addGuestsNoCheck(ctx, c, guestIDs, config.Guests, version)
 }
 
 func (config PoolName) Delete(ctx context.Context, c *Client) error {
@@ -269,17 +269,17 @@ func (config PoolName) Delete(ctx context.Context, c *Client) error {
 		return err
 	}
 	// TODO: permission check
-	exists, err := config.Exists_Unsafe(ctx, c)
+	exists, err := config.ExistsNoCheck(ctx, c)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		return errors.New(PoolName_Error_NotExists)
 	}
-	return config.Delete_Unsafe(ctx, c)
+	return config.DeleteNoCheck(ctx, c)
 }
 
-func (config PoolName) Delete_Unsafe(ctx context.Context, c *Client) error {
+func (config PoolName) DeleteNoCheck(ctx context.Context, c *Client) error {
 	if c == nil {
 		return errors.New(Client_Error_Nil)
 	}
@@ -294,10 +294,10 @@ func (config PoolName) Exists(ctx context.Context, c *Client) (bool, error) {
 		return false, err
 	}
 	// TODO: permission check
-	return config.Exists_Unsafe(ctx, c)
+	return config.ExistsNoCheck(ctx, c)
 }
 
-func (config PoolName) Exists_Unsafe(ctx context.Context, c *Client) (bool, error) {
+func (config PoolName) ExistsNoCheck(ctx context.Context, c *Client) (bool, error) {
 	raw, err := listPools(ctx, c)
 	if err != nil {
 		return false, err
@@ -310,10 +310,10 @@ func (pool PoolName) Get(ctx context.Context, c *Client) (*ConfigPool, error) {
 		return nil, err
 	}
 	// TODO: permission check
-	return pool.Get_Unsafe(ctx, c)
+	return pool.GetNoCheck(ctx, c)
 }
 
-func (pool PoolName) Get_Unsafe(ctx context.Context, c *Client) (*ConfigPool, error) {
+func (pool PoolName) GetNoCheck(ctx context.Context, c *Client) (*ConfigPool, error) {
 	if c == nil {
 		return nil, errors.New(Client_Error_Nil)
 	}
@@ -385,23 +385,23 @@ func (pool PoolName) RemoveGuests(ctx context.Context, c *Client, guestID []uint
 		return errors.New(PoolName_Error_NoGuestsSpecified)
 	}
 	// TODO: permission check
-	if exists, err := pool.Exists_Unsafe(ctx, c); err != nil {
+	if exists, err := pool.ExistsNoCheck(ctx, c); err != nil {
 		return err
 	} else if !exists {
 		return errors.New(PoolName_Error_NotExists)
 	}
-	return pool.removeGuests_Unsafe(ctx, c, guestID, version)
+	return pool.removeGuestsNoCheck(ctx, c, guestID, version)
 }
 
-func (pool PoolName) RemoveGuests_Unsafe(ctx context.Context, c *Client, guestID []uint) error {
+func (pool PoolName) RemoveGuestsNoChecks(ctx context.Context, c *Client, guestID []uint) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
 	}
-	return pool.removeGuests_Unsafe(ctx, c, guestID, version)
+	return pool.removeGuestsNoCheck(ctx, c, guestID, version)
 }
 
-func (pool PoolName) removeGuests_Unsafe(ctx context.Context, c *Client, guestID []uint, version Version) error {
+func (pool PoolName) removeGuestsNoCheck(ctx context.Context, c *Client, guestID []uint, version Version) error {
 	return pool.put(ctx, c, map[string]interface{}{
 		"vms":    PoolName("").mapToString(guestID),
 		"delete": "1"},
@@ -421,10 +421,10 @@ func (pool PoolName) SetGuests(ctx context.Context, c *Client, guestID []uint) e
 		return errors.New(PoolName_Error_NotExists)
 	}
 	// TODO: permission check
-	return pool.SetGuests_Unsafe(ctx, c, guestID)
+	return pool.SetGuestsNoChecks(ctx, c, guestID)
 }
 
-func (pool PoolName) SetGuests_Unsafe(ctx context.Context, c *Client, guestID []uint) error {
+func (pool PoolName) SetGuestsNoChecks(ctx context.Context, c *Client, guestID []uint) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
@@ -433,16 +433,16 @@ func (pool PoolName) SetGuests_Unsafe(ctx context.Context, c *Client, guestID []
 	if err != nil {
 		return err
 	}
-	return pool.setGuests_Unsafe(ctx, c, guestID, config.Guests, version)
+	return pool.setGuestsNoCheck(ctx, c, guestID, config.Guests, version)
 }
 
-func (pool PoolName) setGuests_Unsafe(ctx context.Context, c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
+func (pool PoolName) setGuestsNoCheck(ctx context.Context, c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
 	if currentGuests != nil && len(*currentGuests) > 0 {
-		if err := pool.removeGuests_Unsafe(ctx, c, subtractArray(*currentGuests, guestIDs), version); err != nil {
+		if err := pool.removeGuestsNoCheck(ctx, c, subtractArray(*currentGuests, guestIDs), version); err != nil {
 			return err
 		}
 	}
-	return pool.addGuests_Unsafe(ctx, c, guestIDs, currentGuests, version)
+	return pool.addGuestsNoCheck(ctx, c, guestIDs, currentGuests, version)
 }
 
 func (config PoolName) Validate() error {
