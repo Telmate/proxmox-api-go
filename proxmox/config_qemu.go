@@ -573,7 +573,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 		}
 
 		if newConfig.Pool != nil { // update pool membership
-			guestSetPool_Unsafe(ctx, client, uint(vmr.vmId), *newConfig.Pool, currentConfig.Pool, version)
+			guestSetPoolNoCheck(ctx, client, uint(vmr.vmId), *newConfig.Pool, currentConfig.Pool, version)
 		}
 
 		if stopped { // start vm if it was stopped

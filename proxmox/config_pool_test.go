@@ -136,9 +136,9 @@ func Test_ConfigPool_Create(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_ConfigPool_Create_Unsafe(t *testing.T) {
+func Test_ConfigPool_CreateNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Create_Unsafe(context.Background(), nil) })
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.CreateNoCheck(context.Background(), nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
@@ -160,9 +160,9 @@ func Test_ConfigPool_Set(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_ConfigPool_Set_Unsafe(t *testing.T) {
+func Test_ConfigPool_SetNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Set_Unsafe(context.Background(), nil) })
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.SetNoCheck(context.Background(), nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
@@ -172,9 +172,9 @@ func Test_ConfigPool_Update(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_ConfigPool_Update_Unsafe(t *testing.T) {
+func Test_ConfigPool_UpdateNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.Update_Unsafe(context.Background(), nil) })
+	require.NotPanics(t, func() { err = ConfigPool{Name: "test"}.UpdateNoCheck(context.Background(), nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
@@ -209,9 +209,9 @@ func Test_PoolName_AddGuests(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_PoolName_AddGuests_Unsafe(t *testing.T) {
+func Test_PoolName_AddGuestsNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { err = PoolName("test").AddGuests_Unsafe(context.Background(), nil, nil) })
+	require.NotPanics(t, func() { err = PoolName("test").AddGuestsNoCheck(context.Background(), nil, nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
@@ -221,9 +221,9 @@ func Test_PoolName_Delete(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_PoolName_Delete_Unsafe(t *testing.T) {
+func Test_PoolName_DeleteNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { err = PoolName("test").Delete_Unsafe(context.Background(), nil) })
+	require.NotPanics(t, func() { err = PoolName("test").DeleteNoCheck(context.Background(), nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
@@ -233,9 +233,9 @@ func Test_PoolName_Exists(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_PoolName_Exists_Unsafe(t *testing.T) {
+func Test_PoolName_ExistsNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { _, err = PoolName("test").Exists_Unsafe(context.Background(), nil) })
+	require.NotPanics(t, func() { _, err = PoolName("test").ExistsNoCheck(context.Background(), nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
@@ -245,9 +245,9 @@ func Test_PoolName_Get(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_PoolName_Get_Unsafe(t *testing.T) {
+func Test_PoolName_GetNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { _, err = PoolName("test").Get_Unsafe(context.Background(), nil) })
+	require.NotPanics(t, func() { _, err = PoolName("test").GetNoCheck(context.Background(), nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
@@ -306,9 +306,9 @@ func Test_PoolName_RemoveGuests(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_PoolName_RemoveGuests_Unsafe(t *testing.T) {
+func Test_PoolName_RemoveGuestsNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { err = PoolName("test").RemoveGuests_Unsafe(context.Background(), nil, nil) })
+	require.NotPanics(t, func() { err = PoolName("test").RemoveGuestsNoChecks(context.Background(), nil, nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
@@ -318,9 +318,9 @@ func Test_PoolName_SetGuests(t *testing.T) {
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
-func Test_PoolName_SetGuests_Unsafe(t *testing.T) {
+func Test_PoolName_SetGuestsNoCheck(t *testing.T) {
 	var err error
-	require.NotPanics(t, func() { err = PoolName("test").SetGuests_Unsafe(context.Background(), nil, nil) })
+	require.NotPanics(t, func() { err = PoolName("test").SetGuestsNoChecks(context.Background(), nil, nil) })
 	require.Equal(t, errors.New(Client_Error_Nil), err)
 }
 
