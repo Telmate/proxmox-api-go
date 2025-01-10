@@ -325,7 +325,7 @@ func (id UsbDeviceID) String() string {
 type UsbPortID string // regex: \d+-\d+
 
 const (
-	UsbPortID_Error_Invalid string = "invalid usb port id. Expected expression of the form 'x-y[.z]' where x, y, and z are integers"
+	UsbPortID_Error_Invalid string = "invalid usb port id. Expected expression of the form '<bus>-<port>(.<port>)*' where bus and port are integers"
 )
 
 func (id UsbPortID) String() string {
