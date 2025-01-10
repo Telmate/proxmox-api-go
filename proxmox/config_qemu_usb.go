@@ -325,7 +325,7 @@ func (id UsbDeviceID) String() string {
 type UsbPortID string // regex: \d+-\d+
 
 const (
-	UsbPortID_Error_Invalid string = "invalid usb port id"
+	UsbPortID_Error_Invalid string = "invalid usb port id. Expected expression of the form 'x-y[.z]' where x, y, and z are integers"
 )
 
 func (id UsbPortID) String() string {
@@ -340,8 +340,11 @@ func (id UsbPortID) Validate() error {
 	if _, err := strconv.Atoi(idArray[0]); err != nil {
 		return errors.New(UsbPortID_Error_Invalid)
 	}
-	if _, err := strconv.Atoi(idArray[1]); err != nil {
-		return errors.New(UsbPortID_Error_Invalid)
+	parts := strings.Split(idArray[1], ".")
+	for _, part := range parts {
+		if _, err := strconv.Atoi(part); err != nil {
+			return errors.New(UsbPortID_Error_Invalid)
+		}
 	}
 	return nil
 }
