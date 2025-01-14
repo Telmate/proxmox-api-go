@@ -743,12 +743,16 @@ storage:xxx
 func (config ConfigQemu) CloneVm(ctx context.Context, sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
 	var storage string
+	var format string
 	fullClone := "1"
 	if config.FullClone != nil {
 		fullClone = strconv.Itoa(*config.FullClone)
 	}
 	if disk0Storage, ok := config.QemuDisks[0]["storage"].(string); ok && len(disk0Storage) > 0 {
 		storage = disk0Storage
+	}
+	if disk0Format, ok := config.QemuDisks[0]["format"].(string); ok && len(disk0Format) > 0 {
+		format = disk0Format
 	}
 	params := map[string]interface{}{
 		"newid":  vmr.vmId,
@@ -760,8 +764,13 @@ func (config ConfigQemu) CloneVm(ctx context.Context, sourceVmr *VmRef, vmr *VmR
 		params["pool"] = vmr.pool
 	}
 
-	if fullClone == "1" && storage != "" {
-		params["storage"] = storage
+	if fullClone == "1" {
+		if storage != "" {
+			params["storage"] = storage
+		}
+		if format != "" {
+			params["format"] = format
+		}
 	}
 
 	_, err = client.CloneQemuVm(ctx, sourceVmr, params)
