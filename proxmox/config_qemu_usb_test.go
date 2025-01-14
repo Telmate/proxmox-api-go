@@ -172,6 +172,10 @@ func Test_UsbPortID_Validate(t *testing.T) {
 	}{
 		{name: "Valid",
 			input: "2-4"},
+		{name: "Valid",
+			input: "2-4.1"},
+		{name: "Valid",
+			input: "3-1.2.3.4.5.6.7.8.9"},
 		// Invalid
 		{name: "UsbPortID_Error_Invalid",
 			input:  "2-4-5",
