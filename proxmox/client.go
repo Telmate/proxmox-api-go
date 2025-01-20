@@ -568,14 +568,14 @@ func (c *Client) ResumeVm(ctx context.Context, vmr *VmRef) (exitStatus string, e
 	return c.StatusChangeVm(ctx, vmr, nil, "resume")
 }
 
-func (c *Client) DeleteVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
+func (c *Client) DeleteVm(ctx context.Context, vmr *VmRef) (exitStatus string, taskUpid string, err error) {
 	return c.DeleteVmParams(ctx, vmr, nil)
 }
 
-func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[string]interface{}) (exitStatus string, taskUpid string, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// Remove HA if required
@@ -585,16 +585,21 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 		if err == nil {
 			taskResponse, err := ResponseJSON(resp)
 			if err != nil {
-				return "", err
+				return "", "", err
 			}
 			result, err := c.WaitForCompletion(ctx, taskResponse)
 			if err != nil {
-				return "", err
+				return "", "", err
+			}
+			if upid, ok := result["task_upid"].(string); ok {
+				taskUpid = upid
+			} else {
+				return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 			}
 			if exit, ok := result["exit_status"].(string); ok {
 				exitStatus = exit
 			} else {
-				return "", fmt.Errorf("unexpected response format: exit_status not found")
+				return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 			}
 		}
 	}
@@ -612,22 +617,28 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 	}
 	result, err := c.WaitForCompletion(ctx, taskResponse)
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+
+	if upid, ok := result["task_upid"].(string); ok {
+		taskUpid = upid
+	} else {
+		return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 	}
 	if exit, ok := result["exit_status"].(string); ok {
 		exitStatus = exit
 	} else {
-		return "", fmt.Errorf("unexpected response format: exit_status not found")
+		return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 	}
 
 	return
 }
 
-func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[string]interface{}) (exitStatus string, taskUpid string, err error) {
 	// Create VM disks first to ensure disks names.
 	createdDisks, createdDisksErr := c.createVMDisks(ctx, node, vmParams)
 	if createdDisksErr != nil {
-		return "", createdDisksErr
+		return "", "", createdDisksErr
 	}
 
 	// Then create the VM itself.
@@ -644,37 +655,42 @@ func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[s
 			b, _ := io.ReadAll(resp.Body)
 			exitStatus = string(b)
 
-			return exitStatus, err
+			return exitStatus, "", err
 		}
 
-		return "", err
+		return "", "", err
 	}
 
 	taskResponse, err := ResponseJSON(resp)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	result, err := c.WaitForCompletion(ctx, taskResponse)
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+	if upid, ok := result["task_upid"].(string); ok {
+		taskUpid = upid
+	} else {
+		return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 	}
 	if exit, ok := result["exit_status"].(string); ok {
 		exitStatus = exit
 	} else {
-		return "", fmt.Errorf("unexpected response format: exit_status not found")
+		return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 	}
 	// Delete VM disks if the VM didn't create.
 	if exitStatus != "OK" {
 		deleteDisksErr := c.DeleteVMDisks(ctx, node, createdDisks)
 		if deleteDisksErr != nil {
-			return "", deleteDisksErr
+			return "", "", deleteDisksErr
 		}
 	}
 
 	return
 }
 
-func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams map[string]interface{}) (exitStatus string, taskUpid string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc", node)
 	var resp *http.Response
@@ -685,75 +701,90 @@ func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams m
 		// but extract the body if possible to give any error information back in the exitStatus
 		b, _ := io.ReadAll(resp.Body)
 		exitStatus = string(b)
-		return exitStatus, err
+		return exitStatus, "", err
 	}
 
 	taskResponse, err := ResponseJSON(resp)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	result, err := c.WaitForCompletion(ctx, taskResponse)
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+	if upid, ok := result["task_upid"].(string); ok {
+		taskUpid = upid
+	} else {
+		return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 	}
 	if exit, ok := result["exit_status"].(string); ok {
 		exitStatus = exit
 	} else {
-		return "", fmt.Errorf("unexpected response format: exit_status not found")
+		return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 	}
 
 	return
 }
 
-func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, taskUpid string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc/%s/clone", vmr.node, vmParams["vmid"])
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
 }
 
-func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
+func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, taskUpid string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 	}
 	return
 }
 
 // DEPRECATED superseded by CreateSnapshot()
-func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
+func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, taskUpid string, err error) {
 	ctx := context.Background()
 	err = c.CheckVmRef(ctx, vmr)
 	snapshotParams := map[string]interface{}{
@@ -761,23 +792,28 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 	}
 	reqbody := ParamsToBody(snapshotParams)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 	}
 	return
@@ -836,32 +872,37 @@ func (c *Client) SetLxcConfig(ctx context.Context, vmr *VmRef, vmParams map[stri
 }
 
 // MigrateNode - Migrate a VM
-func (c *Client) MigrateNode(ctx context.Context, vmr *VmRef, newTargetNode NodeName, online bool) (exitStatus interface{}, err error) {
+func (c *Client) MigrateNode(ctx context.Context, vmr *VmRef, newTargetNode NodeName, online bool) (exitStatus interface{}, taskUpid interface{}, err error) {
 	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online, "with-local-disks": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node.String(), vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
-		return exitStatus, err
+		return exitStatus, taskUpid, err
 	}
-	return nil, err
+	return nil, nil, err
 }
 
 // ResizeQemuDisk allows the caller to increase the size of a disk by the indicated number of gigabytes
 // TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
-func (c *Client) ResizeQemuDisk(ctx context.Context, vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, err error) {
+func (c *Client) ResizeQemuDisk(ctx context.Context, vmr *VmRef, disk string, moreSizeGB int) (exitStatus interface{}, taskUpid interface{}, err error) {
 	size := fmt.Sprintf("+%dG", moreSizeGB)
 	return c.ResizeQemuDiskRaw(ctx, vmr, disk, size)
 }
@@ -872,7 +913,7 @@ func (c *Client) ResizeQemuDisk(ctx context.Context, vmr *VmRef, disk string, mo
 // itself it will do an absolute resizing to the specified size. Permitted suffixes are K, M, G, T
 // to indicate order of magnitude (kilobyte, megabyte, etc). Decrease of disk size is not permitted.
 // TODO Deprecate once LXC is able to resize disk by itself (qemu can already do this)
-func (c *Client) ResizeQemuDiskRaw(ctx context.Context, vmr *VmRef, disk string, size string) (exitStatus interface{}, err error) {
+func (c *Client) ResizeQemuDiskRaw(ctx context.Context, vmr *VmRef, disk string, size string) (exitStatus interface{}, taskUpid interface{}, err error) {
 	// PUT
 	//disk:virtio0
 	// size:+2G
@@ -885,44 +926,54 @@ func (c *Client) ResizeQemuDiskRaw(ctx context.Context, vmr *VmRef, disk string,
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
 }
 
-func (c *Client) MoveLxcDisk(ctx context.Context, vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
+func (c *Client) MoveLxcDisk(ctx context.Context, vmr *VmRef, disk string, storage string) (exitStatus interface{}, taskUpid interface{}, err error) {
 	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/move_volume", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
@@ -930,7 +981,7 @@ func (c *Client) MoveLxcDisk(ctx context.Context, vmr *VmRef, disk string, stora
 
 // DEPRECATED use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
-func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
+func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, taskUpid interface{}, err error) {
 	ctx := context.Background()
 	if disk == "" {
 		disk = "virtio0"
@@ -941,45 +992,55 @@ func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStat
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
 }
 
 // MoveQemuDiskToVM - Move a disk to a different VM, using the same storage
-func (c *Client) MoveQemuDiskToVM(ctx context.Context, vmrSource *VmRef, disk string, vmrTarget *VmRef) (exitStatus interface{}, err error) {
+func (c *Client) MoveQemuDiskToVM(ctx context.Context, vmrSource *VmRef, disk string, vmrTarget *VmRef) (exitStatus interface{}, taskUpid interface{}, err error) {
 	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "target-vmid": vmrTarget.vmId, "delete": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmrSource.node, vmrSource.vmType, vmrSource.vmId)
 	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
@@ -987,7 +1048,7 @@ func (c *Client) MoveQemuDiskToVM(ctx context.Context, vmrSource *VmRef, disk st
 
 // Unlink - Unlink (detach) a set of disks from a VM.
 // Reference: https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/unlink
-func (c *Client) Unlink(ctx context.Context, node string, vmId int, diskIds string, forceRemoval bool) (exitStatus string, err error) {
+func (c *Client) Unlink(ctx context.Context, node string, vmId int, diskIds string, forceRemoval bool) (exitStatus string, taskUpid string, err error) {
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/unlink", node, vmId)
 	data := ParamsToBody(map[string]interface{}{
 		"idlist": diskIds,
@@ -995,21 +1056,26 @@ func (c *Client) Unlink(ctx context.Context, node string, vmId int, diskIds stri
 	})
 	resp, err := c.session.Put(ctx, url, nil, nil, &data)
 	if err != nil {
-		return c.HandleTaskError(resp), err
+		return c.HandleTaskError(resp), "", err
 	}
 	json, err := ResponseJSON(resp)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	result, err := c.WaitForCompletion(ctx, json)
 	if err != nil {
-		return "", err
+		return "", "", err
+	}
+	if upid, ok := result["task_upid"].(string); ok {
+		taskUpid = upid
+	} else {
+		return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 	}
 	if exit, ok := result["exit_status"].(string); ok {
 		exitStatus = exit
 	} else {
-		return "", fmt.Errorf("unexpected response format: exit_status not found")
+		return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 	}
 	return
 }
@@ -1117,26 +1183,31 @@ func (c *Client) createVMDisks(
 
 // CreateNewDisk - This method allows simpler disk creation for direct client users
 // It should work for any existing container and virtual machine
-func (c *Client) CreateNewDisk(ctx context.Context, vmr *VmRef, disk string, volume string) (exitStatus interface{}, err error) {
+func (c *Client) CreateNewDisk(ctx context.Context, vmr *VmRef, disk string, volume string) (exitStatus interface{}, taskUpid interface{}, err error) {
 	reqbody := ParamsToBody(map[string]interface{}{disk: volume})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
 	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
@@ -1163,10 +1234,10 @@ func (c *Client) DeleteVMDisks(
 }
 
 // VzDump - Create backup
-func (c *Client) VzDump(ctx context.Context, vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+func (c *Client) VzDump(ctx context.Context, vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, taskUpid interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	reqbody := ParamsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/vzdump", vmr.node)
@@ -1174,48 +1245,58 @@ func (c *Client) VzDump(ctx context.Context, vmr *VmRef, params map[string]inter
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
 }
 
 // DeleteVolume - Delete volume
-func (c *Client) DeleteVolume(ctx context.Context, vmr *VmRef, storageName string, volumeName string) (exitStatus interface{}, err error) {
+func (c *Client) DeleteVolume(ctx context.Context, vmr *VmRef, storageName string, volumeName string) (exitStatus interface{}, taskUpid interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	url := fmt.Sprintf("/nodes/%s/storage/%s/content/%s", vmr.node, storageName, volumeName)
 	resp, err := c.session.Delete(ctx, url, nil, nil)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
@@ -1335,10 +1416,10 @@ func (c *Client) GetExecStatus(ctx context.Context, vmr *VmRef, pid string) (sta
 }
 
 // SetQemuFirewallOptions - Set Firewall options.
-func (c *Client) SetQemuFirewallOptions(ctx context.Context, vmr *VmRef, fwOptions map[string]interface{}) (exitStatus interface{}, err error) {
+func (c *Client) SetQemuFirewallOptions(ctx context.Context, vmr *VmRef, fwOptions map[string]interface{}) (exitStatus interface{}, taskUpid interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	reqbody := ParamsToBody(fwOptions)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", vmr.node, vmr.vmId)
@@ -1346,19 +1427,24 @@ func (c *Client) SetQemuFirewallOptions(ctx context.Context, vmr *VmRef, fwOptio
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
@@ -1383,10 +1469,10 @@ func (c *Client) GetQemuFirewallOptions(ctx context.Context, vmr *VmRef) (firewa
 }
 
 // CreateQemuIPSet - Create new IPSet
-func (c *Client) CreateQemuIPSet(ctx context.Context, vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
+func (c *Client) CreateQemuIPSet(ctx context.Context, vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, taskUpid interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	reqbody := ParamsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", vmr.node, vmr.vmId)
@@ -1394,29 +1480,34 @@ func (c *Client) CreateQemuIPSet(ctx context.Context, vmr *VmRef, params map[str
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
 }
 
 // AddQemuIPSet - Add IP or Network to IPSet.
-func (c *Client) AddQemuIPSet(ctx context.Context, vmr *VmRef, name string, params map[string]interface{}) (exitStatus interface{}, err error) {
+func (c *Client) AddQemuIPSet(ctx context.Context, vmr *VmRef, name string, params map[string]interface{}) (exitStatus interface{}, taskUpid interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	reqbody := ParamsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, name)
@@ -1424,19 +1515,24 @@ func (c *Client) AddQemuIPSet(ctx context.Context, vmr *VmRef, name string, para
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", nil, err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
@@ -1461,39 +1557,44 @@ func (c *Client) GetQemuIPSet(ctx context.Context, vmr *VmRef) (ipsets map[strin
 }
 
 // DeleteQemuIPSet - Delete IPSet
-func (c *Client) DeleteQemuIPSet(ctx context.Context, vmr *VmRef, IPSetName string) (exitStatus interface{}, err error) {
+func (c *Client) DeleteQemuIPSet(ctx context.Context, vmr *VmRef, IPSetName string) (exitStatus interface{}, taskUpid interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, IPSetName)
 	resp, err := c.session.Delete(ctx, url, nil, nil)
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
 }
 
 // DeleteQemuIPSetNetwork - Remove IP or Network from IPSet.
-func (c *Client) DeleteQemuIPSetNetwork(ctx context.Context, vmr *VmRef, IPSetName string, network string, params map[string]interface{}) (exitStatus interface{}, err error) {
+func (c *Client) DeleteQemuIPSetNetwork(ctx context.Context, vmr *VmRef, IPSetName string, network string, params map[string]interface{}) (exitStatus interface{}, taskUpid interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	values := ParamsToValues(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", vmr.node, vmr.vmId, IPSetName, network)
@@ -1501,19 +1602,24 @@ func (c *Client) DeleteQemuIPSetNetwork(ctx context.Context, vmr *VmRef, IPSetNa
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 	return
@@ -1711,7 +1817,7 @@ func getStorageAndVolumeName(
 }
 
 // Still used by Terraform. Deprecated: use ConfigQemu.Update() instead
-func (c *Client) UpdateVMPool(ctx context.Context, vmr *VmRef, pool string) (exitStatus interface{}, err error) {
+func (c *Client) UpdateVMPool(ctx context.Context, vmr *VmRef, pool string) (exitStatus interface{}, taskUpid interface{}, err error) {
 	// Same pool
 	if vmr.pool == pool {
 		return
@@ -1729,20 +1835,25 @@ func (c *Client) UpdateVMPool(ctx context.Context, vmr *VmRef, pool string) (exi
 		if err == nil {
 			taskResponse, err := ResponseJSON(resp)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			result, err := c.WaitForCompletion(ctx, taskResponse)
 			if err != nil {
-				return "", err
+				return "", "", err
+			}
+			if upid, ok := result["task_upid"].(string); ok {
+				taskUpid = upid
+			} else {
+				return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 			}
 			if exit, ok := result["exit_status"].(string); ok {
 				exitStatus = exit
 			} else {
-				return "", fmt.Errorf("unexpected response format: exit_status not found")
+				return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 			}
 
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
@@ -1757,22 +1868,27 @@ func (c *Client) UpdateVMPool(ctx context.Context, vmr *VmRef, pool string) (exi
 		if err == nil {
 			taskResponse, err := ResponseJSON(resp)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			result, err := c.WaitForCompletion(ctx, taskResponse)
 			if err != nil {
-				return "", err
+				return "", "", err
+			}
+			if upid, ok := result["task_upid"].(string); ok {
+				taskUpid = upid
+			} else {
+				return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 			}
 			if exit, ok := result["exit_status"].(string); ok {
 				exitStatus = exit
 			} else {
-				return "", fmt.Errorf("unexpected response format: exit_status not found")
+				return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 			}
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		} else {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	return
@@ -1796,7 +1912,7 @@ func (c *Client) ReadVMHA(ctx context.Context, vmr *VmRef) (err error) {
 	return
 }
 
-func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, err error) {
+func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, taskUpid interface{}, err error) {
 	// Same hastate & hagroup
 	if vmr.haState == haState && vmr.haGroup == haGroup {
 		return
@@ -1809,22 +1925,27 @@ func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haG
 		if err == nil {
 			taskResponse, err := ResponseJSON(resp)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			result, err := c.WaitForCompletion(ctx, taskResponse)
 			if err != nil {
-				return "", err
+				return "", "", err
+			}
+			if upid, ok := result["task_upid"].(string); ok {
+				taskUpid = upid
+			} else {
+				return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 			}
 			if exit, ok := result["exit_status"].(string); ok {
 				exitStatus = exit
 			} else {
-				return "", fmt.Errorf("unexpected response format: exit_status not found")
+				return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 			}
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Activate HA
@@ -1840,20 +1961,25 @@ func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haG
 		if err == nil {
 			taskResponse, err := ResponseJSON(resp)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			result, err := c.WaitForCompletion(ctx, taskResponse)
 			if err != nil {
-				return "", err
+				return "", "", err
+			}
+			if upid, ok := result["task_upid"].(string); ok {
+				taskUpid = upid
+			} else {
+				return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 			}
 			if exit, ok := result["exit_status"].(string); ok {
 				exitStatus = exit
 			} else {
-				return "", fmt.Errorf("unexpected response format: exit_status not found")
+				return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 			}
 
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
@@ -1869,19 +1995,24 @@ func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haG
 	if err == nil {
 		taskResponse, err := ResponseJSON(resp)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		result, err := c.WaitForCompletion(ctx, taskResponse)
 		if err != nil {
-			return "", err
+			return "", "", err
+		}
+		if upid, ok := result["task_upid"].(string); ok {
+			taskUpid = upid
+		} else {
+			return "", "", fmt.Errorf("unexpected response format: task_upid not found")
 		}
 		if exit, ok := result["exit_status"].(string); ok {
 			exitStatus = exit
 		} else {
-			return "", fmt.Errorf("unexpected response format: exit_status not found")
+			return "", "", fmt.Errorf("unexpected response format: exit_status not found")
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
