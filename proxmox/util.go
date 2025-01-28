@@ -287,3 +287,11 @@ func uninitializedArray[T any]() []T {
 	var x []T
 	return x
 }
+
+// To be used during testing
+// panics if err is not nil
+func failPanic(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
