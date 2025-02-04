@@ -69,7 +69,7 @@ type ConfigQemu struct {
 	TPM             *TpmState             `json:"tpm,omitempty"`
 	Tablet          *bool                 `json:"tablet,omitempty"`
 	Tags            *[]Tag                `json:"tags,omitempty"`
-	VmID            GuestID               `json:"vmid,omitempty"`
+	ID              GuestID               `json:"id,omitempty"`
 }
 
 const (
@@ -138,8 +138,8 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 
 	params = map[string]interface{}{}
 
-	if config.VmID != 0 {
-		params["vmid"] = config.VmID
+	if config.ID != 0 {
+		params["vmid"] = config.ID
 	}
 	if config.Args != "" {
 		params["args"] = config.Args
@@ -219,7 +219,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
 			// Create,Update,Delete
-			delete := config.Disks.mapToApiValues(*currentConfig.Disks, uint(config.VmID), currentConfig.LinkedVmId, params)
+			delete := config.Disks.mapToApiValues(*currentConfig.Disks, uint(config.ID), currentConfig.LinkedVmId, params)
 			if delete != "" {
 				itemsToDelete = AddToList(itemsToDelete, delete)
 			}
@@ -227,7 +227,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	} else {
 		if config.Disks != nil {
 			// Create
-			config.Disks.mapToApiValues(QemuStorages{}, uint(config.VmID), 0, params)
+			config.Disks.mapToApiValues(QemuStorages{}, uint(config.ID), 0, params)
 		}
 	}
 
@@ -294,7 +294,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Node = vmr.node
 		poolCopy := PoolName(vmr.pool)
 		config.Pool = &poolCopy
-		config.VmID = vmr.vmId
+		config.ID = vmr.vmId
 	}
 
 	if v, isSet := params["agent"]; isSet {
@@ -457,7 +457,7 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 		return
 	}
 	vmr.SetVmType("qemu")
-	config.VmID = vmr.vmId
+	config.ID = vmr.vmId
 	config.Node = vmr.node
 	return
 }

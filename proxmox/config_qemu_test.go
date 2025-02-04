@@ -7008,7 +7008,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})},
 				{name: `vmr populated`,
 					vmr:    &VmRef{vmId: 100},
-					output: baseConfig(ConfigQemu{VmID: 100, Pool: util.Pointer(PoolName(""))})}}},
+					output: baseConfig(ConfigQemu{ID: 100, Pool: util.Pointer(PoolName(""))})}}},
 	}
 	for _, test := range tests {
 		for _, subTest := range test.tests {
