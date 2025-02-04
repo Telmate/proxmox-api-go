@@ -69,7 +69,7 @@ type ConfigQemu struct {
 	TPM             *TpmState             `json:"tpm,omitempty"`
 	Tablet          *bool                 `json:"tablet,omitempty"`
 	Tags            *[]Tag                `json:"tags,omitempty"`
-	VmID            int                   `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
+	VmID            GuestID               `json:"vmid,omitempty"`
 }
 
 const (
@@ -480,7 +480,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 
 	if currentConfig != nil { // Update
 		// TODO implement tmp move and version change
-		url := "/nodes/" + vmr.node.String() + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/config"
+		url := "/nodes/" + vmr.node.String() + "/" + vmr.vmType + "/" + vmr.vmId.String() + "/config"
 		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 		stopped := false
 
@@ -613,7 +613,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 		if err = resizeNewDisks(ctx, vmr, client, newConfig.Disks, nil); err != nil {
 			return
 		}
-		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(strconv.Itoa(vmr.vmId))); err != nil {
+		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
 			return
 		}
 	}
@@ -865,7 +865,7 @@ func SshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (sshPort
 	if vmState["status"] == "stopped" {
 		return "", fmt.Errorf("VM must be running first")
 	}
-	sshPort = strconv.Itoa(vmr.VmId() + 22000)
+	sshPort = strconv.Itoa(int(vmr.VmId()) + 22000)
 	_, err = client.MonitorCmd(ctx, vmr, "netdev_add user,id=net1,hostfwd=tcp::"+sshPort+"-:22")
 	if err != nil {
 		return "", err

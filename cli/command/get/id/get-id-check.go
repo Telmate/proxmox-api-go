@@ -8,11 +8,11 @@ import (
 )
 
 var id_checkCmd = &cobra.Command{
-	Use:   "check ID",
-	Short: "Checks if a ID is available",
+	Use:   "check GuestID",
+	Short: "Checks if a GuestID is available",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		id := cli.ValidateIntIDset(args, "ID")
+		id := cli.ValidateGuestIDset(args, "GUESTID")
 		c := cli.NewClient()
 		exists, err := c.VMIdExists(cli.Context(), id)
 		if err != nil {

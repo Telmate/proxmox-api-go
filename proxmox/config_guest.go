@@ -140,6 +140,30 @@ type GuestFeatures struct {
 	Snapshot bool `json:"snapshot"`
 }
 
+// Positive number between 100 and 1000000000
+type GuestID uint32
+
+const (
+	GuestID_Error_Maximum string = "guestID should be less than 1000000000"
+	GuestID_Error_Minimum string = "guestID should be greater than 99"
+	GuestID_Maximum       int    = 999999999
+	GuestID_Minimum       int    = 100
+)
+
+func (id GuestID) String() string {
+	return strconv.Itoa(int(id))
+}
+
+func (id GuestID) Validate() error {
+	if id < GuestID(GuestID_Minimum) {
+		return errors.New(GuestID_Error_Minimum)
+	}
+	if id > GuestID(GuestID_Maximum) {
+		return errors.New(GuestID_Error_Maximum)
+	}
+	return nil
+}
+
 type GuestType string
 
 const (
@@ -162,7 +186,7 @@ func GuestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature Gu
 
 func guestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
 	var params map[string]interface{}
-	params, err := client.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/feature?feature=snapshot", "guest", "FEATURES")
+	params, err := client.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/feature?feature=snapshot", "guest", "FEATURES")
 	if err != nil {
 		return false, err
 	}
@@ -226,7 +250,7 @@ func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) 
 	if force {
 		params = map[string]interface{}{"forceStop": force}
 	}
-	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/shutdown")
+	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/shutdown")
 	return
 }
 
@@ -266,5 +290,5 @@ func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) 
 	if err := client.CheckVmRef(ctx, vmr); err != nil {
 		return nil, err
 	}
-	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/pending", "Guest", "PENDING CONFIG")
+	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/pending", "Guest", "PENDING CONFIG")
 }

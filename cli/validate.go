@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
+
+	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
 // Should be used for Required IDs.
@@ -24,18 +27,17 @@ func OptionalIDset(args []string, indexPos uint) (out string) {
 	return
 }
 
-func ValidateIntIDset(args []string, text string) int {
+func ValidateGuestIDset(args []string, text string) proxmox.GuestID {
 	id, err := strconv.Atoi(RequiredIDset(args, 0, text))
 	if err != nil && id <= 0 {
 		log.Fatal(fmt.Errorf("error: %s must be a positive integer", text))
 	}
-	return id
-}
-
-func ValidateExistingGuestID(args []string, indexPos uint) int {
-	id, err := strconv.Atoi(RequiredIDset(args, indexPos, "GuestID"))
-	if err != nil || id < 100 {
-		log.Fatal(fmt.Errorf("error: GuestID must be a positive integer of 100 or greater"))
+	if id > 2^32 {
+		log.Fatal(errors.New(proxmox.GuestID_Error_Maximum))
 	}
-	return id
+	guestID := proxmox.GuestID(id)
+	if err := guestID.Validate(); err != nil {
+		log.Fatal(err)
+	}
+	return guestID
 }

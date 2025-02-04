@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -279,6 +280,32 @@ func Test_GuestFeature_Validate(t *testing.T) {
 		{name: "Valid GuestFeature_Snapshot",
 			input: GuestFeature_Snapshot,
 		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.err, test.input.Validate(), test.name)
+		})
+	}
+}
+
+func Test_GuestID_Validate(t *testing.T) {
+	tests := []struct {
+		name  string
+		input GuestID
+		err   error
+	}{
+		// Invalid
+		{name: "Invalid to big (Maximum)",
+			input: GuestID(GuestID_Maximum + 1),
+			err:   errors.New(GuestID_Error_Maximum)},
+		{name: "Invalid to small (Minimum)",
+			input: GuestID(GuestID_Minimum - 1),
+			err:   errors.New(GuestID_Error_Minimum)},
+		// Valid
+		{name: "Valid Maximum",
+			input: GuestID(GuestID_Maximum)},
+		{name: "Valid Minimum",
+			input: GuestID(GuestID_Minimum)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
