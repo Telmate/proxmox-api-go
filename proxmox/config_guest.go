@@ -144,10 +144,10 @@ type GuestFeatures struct {
 type GuestID uint32
 
 const (
-	GuestID_Error_Maximum string = "guestID should be less than 1000000000"
-	GuestID_Error_Minimum string = "guestID should be greater than 99"
-	GuestID_Maximum       int    = 999999999
-	GuestID_Minimum       int    = 100
+	GuestID_Error_Maximum string  = "guestID should be less than 1000000000"
+	GuestID_Error_Minimum string  = "guestID should be greater than 99"
+	GuestID_Maximum       GuestID = 999999999
+	GuestID_Minimum       GuestID = 100
 )
 
 func (id GuestID) String() string {
@@ -155,10 +155,10 @@ func (id GuestID) String() string {
 }
 
 func (id GuestID) Validate() error {
-	if id < GuestID(GuestID_Minimum) {
+	if id < GuestID_Minimum {
 		return errors.New(GuestID_Error_Minimum)
 	}
-	if id > GuestID(GuestID_Maximum) {
+	if id > GuestID_Maximum {
 		return errors.New(GuestID_Error_Maximum)
 	}
 	return nil

@@ -14,7 +14,7 @@ type QemuIdeDisk struct {
 	EmulateSSD      bool              `json:"emulatessd"`
 	Format          QemuDiskFormat    `json:"format"`
 	Id              uint              `json:"id"`     //Id is only returned and setting it has no effect
-	LinkedDiskId    *uint             `json:"linked"` //LinkedClone is only returned and setting it has no effect
+	LinkedDiskId    *GuestID          `json:"linked"` //LinkedClone is only returned and setting it has no effect
 	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
 	SizeInKibibytes QemuDiskSize      `json:"size"`
@@ -66,7 +66,7 @@ func (q QemuIdeDisks) listCloudInitDisk() string {
 	return ""
 }
 
-func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID, LinkedVmId uint, params map[string]interface{}, delete string) string {
+func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID, LinkedVmId GuestID, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuIdeDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -88,7 +88,7 @@ func (disks QemuIdeDisks) mapToIntMap() map[uint8]*QemuIdeStorage {
 	}
 }
 
-func (QemuIdeDisks) mapToStruct(params map[string]interface{}, linkedVmId *uint) *QemuIdeDisks {
+func (QemuIdeDisks) mapToStruct(params map[string]interface{}, linkedVmId *GuestID) *QemuIdeDisks {
 	disks := QemuIdeDisks{}
 	var structPopulated bool
 	if _, isSet := params["ide0"]; isSet {
@@ -243,7 +243,7 @@ func (storage *QemuIdeStorage) convertDataStructureMark() *qemuDiskMark {
 	return nil
 }
 
-func (QemuIdeStorage) mapToStruct(param string, LinkedVmId *uint) *QemuIdeStorage {
+func (QemuIdeStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuIdeStorage {
 	diskData, _, _ := strings.Cut(param, ",")
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(diskData, settings)

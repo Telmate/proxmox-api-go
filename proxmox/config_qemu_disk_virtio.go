@@ -14,7 +14,7 @@ type QemuVirtIODisk struct {
 	Format          QemuDiskFormat    `json:"format"`
 	Id              uint              `json:"id"` //Id is only returned and setting it has no effect
 	IOThread        bool              `json:"iothread"`
-	LinkedDiskId    *uint             `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
+	LinkedDiskId    *GuestID          `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
 	ReadOnly        bool              `json:"readonly"`
 	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
@@ -80,7 +80,7 @@ func (q QemuVirtIODisks) listCloudInitDisk() string {
 	return ""
 }
 
-func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, vmID, linkedVmId uint, params map[string]interface{}, delete string) string {
+func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, vmID, linkedVmId GuestID, params map[string]interface{}, delete string) string {
 	tmpCurrentDisks := QemuVirtIODisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -114,7 +114,7 @@ func (disks QemuVirtIODisks) mapToIntMap() map[uint8]*QemuVirtIOStorage {
 	}
 }
 
-func (QemuVirtIODisks) mapToStruct(params map[string]interface{}, linkedVmId *uint) *QemuVirtIODisks {
+func (QemuVirtIODisks) mapToStruct(params map[string]interface{}, linkedVmId *GuestID) *QemuVirtIODisks {
 	disks := QemuVirtIODisks{}
 	var structPopulated bool
 	if _, isSet := params["virtio0"]; isSet {
@@ -317,7 +317,7 @@ func (storage *QemuVirtIOStorage) convertDataStructureMark() *qemuDiskMark {
 	return nil
 }
 
-func (QemuVirtIOStorage) mapToStruct(param string, LinkedVmId *uint) *QemuVirtIOStorage {
+func (QemuVirtIOStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuVirtIOStorage {
 	diskData, _, _ := strings.Cut(param, ",")
 	settings := splitStringOfSettings(param)
 	tmpCdRom := qemuCdRom{}.mapToStruct(diskData, settings)

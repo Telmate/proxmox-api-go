@@ -42,7 +42,7 @@ type ConfigQemu struct {
 	Hookscript      string                `json:"hookscript,omitempty"`
 	Hotplug         string                `json:"hotplug,omitempty"`   // TODO should be a struct
 	Iso             *IsoFile              `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
-	LinkedVmId      uint                  `json:"linked_id,omitempty"` // Only returned setting it has no effect
+	LinkedVmId      GuestID               `json:"linked_id,omitempty"` // Only returned setting it has no effect
 	Machine         string                `json:"machine,omitempty"`   // TODO should be custom type with enum
 	Memory          *QemuMemory           `json:"memory,omitempty"`
 	Name            string                `json:"name,omitempty"` // TODO should be custom type as there are character and length limitations
@@ -219,7 +219,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
 			// Create,Update,Delete
-			delete := config.Disks.mapToApiValues(*currentConfig.Disks, uint(config.ID), currentConfig.LinkedVmId, params)
+			delete := config.Disks.mapToApiValues(*currentConfig.Disks, config.ID, currentConfig.LinkedVmId, params)
 			if delete != "" {
 				itemsToDelete = AddToList(itemsToDelete, delete)
 			}
@@ -227,7 +227,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	} else {
 		if config.Disks != nil {
 			// Create
-			config.Disks.mapToApiValues(QemuStorages{}, uint(config.ID), 0, params)
+			config.Disks.mapToApiValues(QemuStorages{}, config.ID, 0, params)
 		}
 	}
 
@@ -294,7 +294,9 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Node = vmr.node
 		poolCopy := PoolName(vmr.pool)
 		config.Pool = &poolCopy
-		config.ID = vmr.vmId
+		if vmr.vmId != 0 {
+			config.ID = vmr.vmId
+		}
 	}
 
 	if v, isSet := params["agent"]; isSet {
@@ -362,7 +364,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Smbios1 = params["smbios1"].(string)
 	}
 
-	linkedVmId := uint(0)
+	var linkedVmId GuestID
 	config.Disks = QemuStorages{}.mapToStruct(params, &linkedVmId)
 	if linkedVmId != 0 {
 		config.LinkedVmId = linkedVmId
@@ -709,6 +711,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 			return
 		}
 	}
+	if config.ID != 0 {
+		if err = config.ID.Validate(); err != nil {
+			return
+		}
+	}
 	if config.Pool != nil && *config.Pool != "" {
 		if err = config.Pool.Validate(); err != nil {
 			return
@@ -724,7 +731,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 			return err
 		}
 	}
-
 	return
 }
 
