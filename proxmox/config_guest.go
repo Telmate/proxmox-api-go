@@ -146,8 +146,8 @@ type GuestID uint32
 const (
 	GuestID_Error_Maximum string  = "guestID should be less than 1000000000"
 	GuestID_Error_Minimum string  = "guestID should be greater than 99"
-	GuestID_Maximum       GuestID = 999999999
-	GuestID_Minimum       GuestID = 100
+	GuestIdMaximum        GuestID = 999999999
+	GuestIdMinimum        GuestID = 100
 )
 
 func (id GuestID) String() string {
@@ -155,10 +155,10 @@ func (id GuestID) String() string {
 }
 
 func (id GuestID) Validate() error {
-	if id < GuestID_Minimum {
+	if id < GuestIdMinimum {
 		return errors.New(GuestID_Error_Minimum)
 	}
-	if id > GuestID_Maximum {
+	if id > GuestIdMaximum {
 		return errors.New(GuestID_Error_Maximum)
 	}
 	return nil

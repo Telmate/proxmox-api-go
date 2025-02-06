@@ -296,16 +296,16 @@ func Test_GuestID_Validate(t *testing.T) {
 	}{
 		// Invalid
 		{name: "Invalid to big (Maximum)",
-			input: GuestID(GuestID_Maximum + 1),
+			input: GuestID(GuestIdMaximum + 1),
 			err:   errors.New(GuestID_Error_Maximum)},
 		{name: "Invalid to small (Minimum)",
-			input: GuestID(GuestID_Minimum - 1),
+			input: GuestID(GuestIdMinimum - 1),
 			err:   errors.New(GuestID_Error_Minimum)},
 		// Valid
 		{name: "Valid Maximum",
-			input: GuestID(GuestID_Maximum)},
+			input: GuestID(GuestIdMaximum)},
 		{name: "Valid Minimum",
-			input: GuestID(GuestID_Minimum)},
+			input: GuestID(GuestIdMinimum)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
