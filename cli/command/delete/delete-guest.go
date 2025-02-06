@@ -1,8 +1,6 @@
 package delete
 
 import (
-	"strconv"
-
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
@@ -13,7 +11,7 @@ var delete_guestCmd = &cobra.Command{
 	Short: "Deletes the Specified Guest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		id := cli.ValidateIntIDset(args, "GuestID")
+		id := cli.ValidateGuestIDset(args, "GuestID")
 		vmr := proxmox.NewVmRef(id)
 		c := cli.NewClient()
 		_, err = c.StopVm(cli.Context(), vmr)
@@ -24,7 +22,7 @@ var delete_guestCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		cli.PrintItemDeleted(deleteCmd.OutOrStdout(), strconv.Itoa(id), "GuestID")
+		cli.PrintItemDeleted(deleteCmd.OutOrStdout(), id.String(), "GuestID")
 		return
 	},
 }

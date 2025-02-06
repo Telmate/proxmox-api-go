@@ -102,16 +102,20 @@ func main() {
 		log.Fatalf("Failed to initialize Proxmox client: %v", err)
 	}
 
-	vmid := *fvmid
-	if vmid < 0 {
+	tmpID := *fvmid
+	var vmid proxmox.GuestID
+	if tmpID < 0 {
 		if len(flag.Args()) > 1 {
-			vmid, err = strconv.Atoi(flag.Args()[1])
+			tmpID, err = strconv.Atoi(flag.Args()[1])
 			if err != nil {
 				vmid = 0
 			}
+			vmid = proxmox.GuestID(tmpID)
 		} else if len(flag.Args()) == 0 || (flag.Args()[0] == "idstatus") {
 			vmid = 0
 		}
+	} else {
+		vmid = proxmox.GuestID(tmpID)
 	}
 
 	var jbody interface{}
@@ -377,7 +381,7 @@ func main() {
 		}
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
-		exists, err := c.VMIdExists(ctx, i)
+		exists, err := c.VMIdExists(ctx, proxmox.GuestID(i))
 		failError(err)
 		if exists {
 			log.Printf("Selected ID is in use: %d\n", i)
@@ -440,7 +444,7 @@ func main() {
 		}
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
-		vmr := proxmox.NewVmRef(i)
+		vmr := proxmox.NewVmRef(proxmox.GuestID(i))
 		config, err := proxmox.NewConfigQemuFromApi(ctx, vmr, c)
 		failError(err)
 		fmt.Println(config)
@@ -1000,7 +1004,7 @@ func main() {
 			}
 		}
 
-		exitStatus, err := c.Unlink(ctx, node, vmId, disks, forceRemoval)
+		exitStatus, err := c.Unlink(ctx, node, proxmox.GuestID(vmId), disks, forceRemoval)
 		if err != nil {
 			failError(fmt.Errorf("error: %+v\n api error: %s", err, exitStatus))
 		}

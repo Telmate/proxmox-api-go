@@ -42,7 +42,7 @@ type ConfigQemu struct {
 	Hookscript      string                `json:"hookscript,omitempty"`
 	Hotplug         string                `json:"hotplug,omitempty"`   // TODO should be a struct
 	Iso             *IsoFile              `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
-	LinkedVmId      uint                  `json:"linked_id,omitempty"` // Only returned setting it has no effect
+	LinkedVmId      GuestID               `json:"linked_id,omitempty"` // Only returned setting it has no effect
 	Machine         string                `json:"machine,omitempty"`   // TODO should be custom type with enum
 	Memory          *QemuMemory           `json:"memory,omitempty"`
 	Name            string                `json:"name,omitempty"` // TODO should be custom type as there are character and length limitations
@@ -69,7 +69,7 @@ type ConfigQemu struct {
 	TPM             *TpmState             `json:"tpm,omitempty"`
 	Tablet          *bool                 `json:"tablet,omitempty"`
 	Tags            *[]Tag                `json:"tags,omitempty"`
-	VmID            int                   `json:"vmid,omitempty"` // TODO should be a custom type as there are limitations
+	ID              GuestID               `json:"id,omitempty"`
 }
 
 const (
@@ -138,8 +138,8 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 
 	params = map[string]interface{}{}
 
-	if config.VmID != 0 {
-		params["vmid"] = config.VmID
+	if config.ID != 0 {
+		params["vmid"] = config.ID
 	}
 	if config.Args != "" {
 		params["args"] = config.Args
@@ -219,7 +219,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
 			// Create,Update,Delete
-			delete := config.Disks.mapToApiValues(*currentConfig.Disks, uint(config.VmID), currentConfig.LinkedVmId, params)
+			delete := config.Disks.mapToApiValues(*currentConfig.Disks, config.ID, currentConfig.LinkedVmId, params)
 			if delete != "" {
 				itemsToDelete = AddToList(itemsToDelete, delete)
 			}
@@ -227,7 +227,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	} else {
 		if config.Disks != nil {
 			// Create
-			config.Disks.mapToApiValues(QemuStorages{}, uint(config.VmID), 0, params)
+			config.Disks.mapToApiValues(QemuStorages{}, config.ID, 0, params)
 		}
 	}
 
@@ -294,7 +294,9 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Node = vmr.node
 		poolCopy := PoolName(vmr.pool)
 		config.Pool = &poolCopy
-		config.VmID = vmr.vmId
+		if vmr.vmId != 0 {
+			config.ID = vmr.vmId
+		}
 	}
 
 	if v, isSet := params["agent"]; isSet {
@@ -362,7 +364,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Smbios1 = params["smbios1"].(string)
 	}
 
-	linkedVmId := uint(0)
+	var linkedVmId GuestID
 	config.Disks = QemuStorages{}.mapToStruct(params, &linkedVmId)
 	if linkedVmId != 0 {
 		config.LinkedVmId = linkedVmId
@@ -457,7 +459,7 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 		return
 	}
 	vmr.SetVmType("qemu")
-	config.VmID = vmr.vmId
+	config.ID = vmr.vmId
 	config.Node = vmr.node
 	return
 }
@@ -480,7 +482,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 
 	if currentConfig != nil { // Update
 		// TODO implement tmp move and version change
-		url := "/nodes/" + vmr.node.String() + "/" + vmr.vmType + "/" + strconv.Itoa(vmr.vmId) + "/config"
+		url := "/nodes/" + vmr.node.String() + "/" + vmr.vmType + "/" + vmr.vmId.String() + "/config"
 		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 		stopped := false
 
@@ -613,7 +615,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 		if err = resizeNewDisks(ctx, vmr, client, newConfig.Disks, nil); err != nil {
 			return
 		}
-		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(strconv.Itoa(vmr.vmId))); err != nil {
+		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
 			return
 		}
 	}
@@ -709,6 +711,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 			return
 		}
 	}
+	if config.ID != 0 {
+		if err = config.ID.Validate(); err != nil {
+			return
+		}
+	}
 	if config.Pool != nil && *config.Pool != "" {
 		if err = config.Pool.Validate(); err != nil {
 			return
@@ -724,7 +731,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 			return err
 		}
 	}
-
 	return
 }
 
@@ -865,7 +871,7 @@ func SshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (sshPort
 	if vmState["status"] == "stopped" {
 		return "", fmt.Errorf("VM must be running first")
 	}
-	sshPort = strconv.Itoa(vmr.VmId() + 22000)
+	sshPort = strconv.Itoa(int(vmr.VmId()) + 22000)
 	_, err = client.MonitorCmd(ctx, vmr, "netdev_add user,id=net1,hostfwd=tcp::"+sshPort+"-:22")
 	if err != nil {
 		return "", err

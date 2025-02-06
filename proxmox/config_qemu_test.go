@@ -79,7 +79,6 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 	float45 := QemuDiskBandwidthMBpsLimitConcurrent(45.23)
 	float79 := QemuDiskBandwidthMBpsLimitBurst(79.23)
 	float99 := QemuDiskBandwidthMBpsLimitBurst(99.20)
-	uint1 := uint(1)
 	uint23 := QemuDiskBandwidthIopsLimitConcurrent(23)
 	uint34 := QemuDiskBandwidthIopsLimitConcurrent(34)
 	uint78 := QemuDiskBandwidthIopsLimitBurst(78)
@@ -1136,7 +1135,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -1163,7 +1162,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							syntax:          diskSyntaxVolume,
 							Storage:         "test"}}}}},
@@ -1193,7 +1192,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test1"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -1216,7 +1215,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test1",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1241,7 +1240,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437185,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -1265,7 +1264,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437185,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1291,7 +1290,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437186,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -1315,7 +1314,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437186,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1341,7 +1340,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -1364,7 +1363,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 110,
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1396,7 +1395,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -1422,7 +1421,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1762,7 +1761,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -1789,7 +1788,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1819,7 +1818,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test1"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -1844,7 +1843,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test1",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1869,7 +1868,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437185,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -1892,7 +1891,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437185,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1917,7 +1916,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437186,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -1940,7 +1939,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437186,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -1965,7 +1964,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -1987,7 +1986,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -2018,7 +2017,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -2044,7 +2043,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -2392,7 +2391,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -2419,7 +2418,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -2449,7 +2448,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test1"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -2472,7 +2471,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test1",
 							syntax:          diskSyntaxVolume}}}}},
@@ -2497,7 +2496,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437185,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -2521,7 +2520,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437185,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -2547,7 +2546,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437186,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -2571,7 +2570,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437186,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -2597,7 +2596,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -2623,7 +2622,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -2656,7 +2655,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -2682,7 +2681,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -3040,7 +3039,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
@@ -3067,7 +3066,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -3097,7 +3096,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test1"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
@@ -3120,7 +3119,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test1",
 							syntax:          diskSyntaxVolume}}}}},
@@ -3145,7 +3144,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437185,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
@@ -3169,7 +3168,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437185,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -3195,7 +3194,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437186,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
@@ -3219,7 +3218,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 9437186,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -3245,7 +3244,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
@@ -3268,7 +3267,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						LinkedVmId: 100,
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -3300,7 +3299,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
@@ -3326,7 +3325,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
 							Id:              23,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							SizeInKibibytes: 10,
 							Storage:         "test",
 							syntax:          diskSyntaxVolume}}}}},
@@ -4135,7 +4134,6 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		}
 		return &output
 	}
-	uint1 := uint(1)
 	uint2 := uint(2)
 	uint31 := uint(31)
 	uint47 := uint(47)
@@ -4533,7 +4531,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							EmulateSSD:      true,
 							Format:          QemuDiskFormat_Qcow2,
 							Id:              uint53,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							Replicate:       false,
 							Serial:          "disk-9763",
 							SizeInKibibytes: 1082130432,
@@ -4743,7 +4741,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Backup:       true,
 							Format:       QemuDiskFormat_Raw,
 							Id:           uint2,
-							LinkedDiskId: &uint1,
+							LinkedDiskId: util.Pointer(GuestID(1)),
 							Replicate:    true,
 							Storage:      "test",
 							syntax:       diskSyntaxVolume}}}}})},
@@ -5013,7 +5011,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							EmulateSSD:      true,
 							Format:          QemuDiskFormat_Qcow2,
 							Id:              uint47,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							Replicate:       false,
 							Serial:          "disk-9763",
 							SizeInKibibytes: 33554432,
@@ -5225,7 +5223,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Backup:       true,
 							Format:       QemuDiskFormat_Raw,
 							Id:           uint2,
-							LinkedDiskId: &uint1,
+							LinkedDiskId: util.Pointer(GuestID(1)),
 							Replicate:    true,
 							Storage:      "test",
 							syntax:       diskSyntaxVolume}}}}})},
@@ -5498,7 +5496,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Format:          QemuDiskFormat_Qcow2,
 							Id:              uint2,
 							IOThread:        true,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							ReadOnly:        true,
 							Replicate:       false,
 							Serial:          "disk-9763",
@@ -5727,7 +5725,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Backup:       true,
 							Format:       QemuDiskFormat_Raw,
 							Id:           uint2,
-							LinkedDiskId: &uint1,
+							LinkedDiskId: util.Pointer(GuestID(1)),
 							Replicate:    true,
 							Storage:      "test",
 							syntax:       diskSyntaxVolume}}}}})},
@@ -6014,7 +6012,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Format:          QemuDiskFormat_Qcow2,
 							Id:              uint31,
 							IOThread:        true,
-							LinkedDiskId:    &uint1,
+							LinkedDiskId:    util.Pointer(GuestID(1)),
 							ReadOnly:        true,
 							Replicate:       false,
 							Serial:          "disk-9763",
@@ -6236,7 +6234,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							Backup:       true,
 							Format:       QemuDiskFormat_Raw,
 							Id:           uint2,
-							LinkedDiskId: &uint1,
+							LinkedDiskId: util.Pointer(GuestID(1)),
 							Replicate:    true,
 							Storage:      "test",
 							syntax:       diskSyntaxVolume}}}}})},
@@ -7008,7 +7006,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})},
 				{name: `vmr populated`,
 					vmr:    &VmRef{vmId: 100},
-					output: baseConfig(ConfigQemu{VmID: 100, Pool: util.Pointer(PoolName(""))})}}},
+					output: baseConfig(ConfigQemu{ID: 100, Pool: util.Pointer(PoolName(""))})}}},
 	}
 	for _, test := range tests {
 		for _, subTest := range test.tests {
@@ -8415,6 +8413,25 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `VirtIO errors.New(Error_QemuWorldWideName_Invalid)`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}}),
 						err:   errors.New(Error_QemuWorldWideName_Invalid)}}}},
+		{category: `ID`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `minimum`,
+						input:   baseConfig(ConfigQemu{ID: 100}),
+						current: util.Pointer(baseConfig(ConfigQemu{}))},
+					{name: `maximum`,
+						input:   baseConfig(ConfigQemu{ID: 1000000}),
+						current: util.Pointer(baseConfig(ConfigQemu{}))}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `minimum`,
+						input:   baseConfig(ConfigQemu{ID: 99}),
+						current: util.Pointer(baseConfig(ConfigQemu{})),
+						err:     errors.New(GuestID_Error_Minimum)},
+					{name: `maximum`,
+						input:   baseConfig(ConfigQemu{ID: 1000000000}),
+						current: util.Pointer(baseConfig(ConfigQemu{})),
+						err:     errors.New(GuestID_Error_Maximum)}}}},
 		{category: `Memory`,
 			valid: testType{
 				create: []test{

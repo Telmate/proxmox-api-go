@@ -12,7 +12,7 @@ var (
 		Short: "Deletes the Specified snapshot",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			id := cli.ValidateIntIDset(args, "GuestID")
+			id := cli.ValidateGuestIDset(args, "GuestID")
 			snapName := cli.RequiredIDset(args, 1, "SnapshotName")
 			_, err = proxmox.SnapshotName(snapName).Delete(cli.Context(), cli.NewClient(), proxmox.NewVmRef(id))
 			if err != nil {

@@ -15,7 +15,7 @@ var (
 		TraverseChildren: true,
 		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			id := cli.ValidateExistingGuestID(args, 0)
+			id := cli.ValidateGuestIDset(args, "GuestID")
 			rawSnapshots, err := proxmox.ListSnapshots(cli.Context(), cli.NewClient(), proxmox.NewVmRef(id))
 			if err != nil {
 				noTree = false

@@ -50,7 +50,7 @@ const (
 // VmRef - virtual machine ref parts
 // map[type:qemu node:proxmox1-xx id:qemu/132 diskread:5.57424738e+08 disk:0 netin:5.9297450593e+10 mem:3.3235968e+09 uptime:1.4567097e+07 vmid:132 template:0 maxcpu:2 netout:6.053310416e+09 maxdisk:3.4359738368e+10 maxmem:8.592031744e+09 diskwrite:1.49663619584e+12 status:running cpu:0.00386980694947209 name:appt-app1-dev.xxx.xx]
 type VmRef struct {
-	vmId    int
+	vmId    GuestID
 	node    NodeName
 	pool    string
 	vmType  string
@@ -74,7 +74,7 @@ func (vmr *VmRef) GetVmType() string {
 	return vmr.vmType
 }
 
-func (vmr *VmRef) VmId() int {
+func (vmr *VmRef) VmId() GuestID {
 	return vmr.vmId
 }
 
@@ -101,7 +101,7 @@ func (vmr *VmRef) nilCheck() error {
 	return nil
 }
 
-func NewVmRef(vmId int) (vmr *VmRef) {
+func NewVmRef(vmId GuestID) (vmr *VmRef) {
 	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
 	return
 }
@@ -233,7 +233,7 @@ func (c *Client) GetVmInfo(ctx context.Context, vmr *VmRef) (vmInfo map[string]i
 	}
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
-		if int(vm["vmid"].(float64)) == vmr.vmId {
+		if GuestID(vm["vmid"].(float64)) == vmr.vmId {
 			vmInfo = vm
 			vmr.node = NodeName(vmInfo["node"].(string))
 			vmr.vmType = vmInfo["type"].(string)
@@ -267,7 +267,7 @@ func (c *Client) GetVmRefsByName(ctx context.Context, vmName string) (vmrs []*Vm
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
 		if vm["name"] != nil && vm["name"].(string) == vmName {
-			vmr := NewVmRef(int(vm["vmid"].(float64)))
+			vmr := NewVmRef(GuestID(vm["vmid"].(float64)))
 			vmr.node = NodeName(vm["node"].(string))
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
@@ -287,7 +287,7 @@ func (c *Client) GetVmRefsByName(ctx context.Context, vmName string) (vmrs []*Vm
 	}
 }
 
-func (c *Client) GetVmRefById(ctx context.Context, vmId int) (vmr *VmRef, err error) {
+func (c *Client) GetVmRefById(ctx context.Context, ID GuestID) (vmr *VmRef, err error) {
 	var exist bool = false
 	vms, err := c.GetResourceList(ctx, resourceListGuest)
 	if err != nil {
@@ -295,8 +295,8 @@ func (c *Client) GetVmRefById(ctx context.Context, vmId int) (vmr *VmRef, err er
 	}
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
-		if int(vm["vmid"].(float64)) != 0 && int(vm["vmid"].(float64)) == vmId {
-			vmr = NewVmRef(int(vm["vmid"].(float64)))
+		if int(vm["vmid"].(float64)) != 0 && GuestID(vm["vmid"].(float64)) == ID {
+			vmr = NewVmRef(GuestID(vm["vmid"].(float64)))
 			vmr.node = NodeName(vm["node"].(string))
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
@@ -310,7 +310,7 @@ func (c *Client) GetVmRefById(ctx context.Context, vmId int) (vmr *VmRef, err er
 		}
 	}
 	if !exist {
-		return nil, fmt.Errorf("vm 'id-%d' not found", vmId)
+		return nil, fmt.Errorf("vm 'id-%d' not found", ID)
 	} else {
 		return
 	}
@@ -321,7 +321,7 @@ func (c *Client) GetVmState(ctx context.Context, vmr *VmRef) (vmState map[string
 	if err != nil {
 		return nil, err
 	}
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/status/current", "vm", "STATE")
+	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
 }
 
 func (c *Client) GetVmConfig(ctx context.Context, vmr *VmRef) (vmConfig map[string]interface{}, err error) {
@@ -329,7 +329,7 @@ func (c *Client) GetVmConfig(ctx context.Context, vmr *VmRef) (vmConfig map[stri
 	if err != nil {
 		return nil, err
 	}
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config", "vm", "CONFIG")
+	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/config", "vm", "CONFIG")
 }
 
 func (c *Client) GetStorageStatus(ctx context.Context, vmr *VmRef, storageName string) (storageStatus map[string]interface{}, err error) {
@@ -745,7 +745,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 
 // DEPRECATED SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
-	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.Itoa(vmr.vmId)+"/config")
+	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/config")
 }
 
 // SetLxcConfig - send config options
@@ -878,8 +878,8 @@ func (c *Client) MoveQemuDiskToVM(ctx context.Context, vmrSource *VmRef, disk st
 
 // Unlink - Unlink (detach) a set of disks from a VM.
 // Reference: https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/unlink
-func (c *Client) Unlink(ctx context.Context, node string, vmId int, diskIds string, forceRemoval bool) (exitStatus string, err error) {
-	url := fmt.Sprintf("/nodes/%s/qemu/%d/unlink", node, vmId)
+func (c *Client) Unlink(ctx context.Context, node string, ID GuestID, diskIds string, forceRemoval bool) (exitStatus string, err error) {
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/unlink", node, ID)
 	data := ParamsToBody(map[string]interface{}{
 		"idlist": diskIds,
 		"force":  forceRemoval,
@@ -896,7 +896,7 @@ func (c *Client) Unlink(ctx context.Context, node string, vmId int, diskIds stri
 }
 
 // GetNextID - Get next free VMID
-func (c *Client) GetNextID(ctx context.Context, currentID int) (nextID int, err error) {
+func (c *Client) GetNextID(ctx context.Context, currentID GuestID) (nextID GuestID, err error) {
 	var data map[string]interface{}
 	var url string
 	if currentID >= 100 {
@@ -910,10 +910,12 @@ func (c *Client) GetNextID(ctx context.Context, currentID int) (nextID int, err 
 			if currentID >= 100 {
 				return c.GetNextID(ctx, currentID+1)
 			} else {
-				return -1, fmt.Errorf("error using /cluster/nextid")
+				return 0, errors.New("error using /cluster/nextid")
 			}
 		}
-		nextID, err = strconv.Atoi(data["data"].(string))
+		var tmpID int
+		tmpID, err = strconv.Atoi(data["data"].(string))
+		nextID = GuestID(tmpID)
 	} else if strings.HasPrefix(err.Error(), "400 ") {
 		return c.GetNextID(ctx, currentID+1)
 	}
@@ -921,14 +923,14 @@ func (c *Client) GetNextID(ctx context.Context, currentID int) (nextID int, err 
 }
 
 // VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false
-func (c *Client) VMIdExists(ctx context.Context, vmID int) (exists bool, err error) {
+func (c *Client) VMIdExists(ctx context.Context, guestID GuestID) (exists bool, err error) {
 	vms, err := c.GetResourceList(ctx, resourceListGuest)
 	if err != nil {
 		return
 	}
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
-		if vmID == int(vm["vmid"].(float64)) {
+		if guestID == GuestID(vm["vmid"].(float64)) {
 			return true, err
 		}
 	}

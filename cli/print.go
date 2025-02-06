@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+
+	"github.com/Telmate/proxmox-api-go/proxmox"
 )
 
-func PrintGuestStatus(out io.Writer, id int, text string) {
+func PrintGuestStatus(out io.Writer, id proxmox.GuestID, text string) {
 	fmt.Fprintf(out, "Guest with id (%d) has been %s\n", id, text)
 }
 

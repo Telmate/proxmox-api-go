@@ -2,7 +2,6 @@ package guest
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/Telmate/proxmox-api-go/cli/command/create"
@@ -21,7 +20,7 @@ func init() {
 }
 
 func createGuest(ctx context.Context, args []string, IDtype string) (err error) {
-	id := cli.ValidateIntIDset(args, IDtype+"ID")
+	id := cli.ValidateGuestIDset(args, IDtype+"ID")
 	node := cli.RequiredIDset(args, 1, "NodeID")
 	vmr := proxmox.NewVmRef(id)
 	vmr.SetNode(node)
@@ -61,6 +60,6 @@ func createGuest(ctx context.Context, args []string, IDtype string) (err error) 
 	if err != nil {
 		return
 	}
-	cli.PrintItemCreated(guestCmd.OutOrStdout(), strconv.Itoa(id), IDtype)
+	cli.PrintItemCreated(guestCmd.OutOrStdout(), id.String(), IDtype)
 	return
 }

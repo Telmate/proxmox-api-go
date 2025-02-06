@@ -15,7 +15,7 @@ var (
 		TraverseChildren: true,
 		Args:             cobra.RangeArgs(2, 3),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			id := cli.ValidateIntIDset(args, "GuestID")
+			id := cli.ValidateGuestIDset(args, "GuestID")
 			snapName := cli.RequiredIDset(args, 1, "SnapshotName")
 			config := proxmox.ConfigSnapshot{
 				Name:        proxmox.SnapshotName(snapName),

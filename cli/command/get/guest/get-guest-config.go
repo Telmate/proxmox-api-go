@@ -11,7 +11,7 @@ var configCmd = &cobra.Command{
 	Short: "Gets the configuration of the specified guest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		id := cli.ValidateIntIDset(args, "GuestID")
+		id := cli.ValidateGuestIDset(args, "GuestID")
 		vmr := proxmox.NewVmRef(id)
 		c := cli.NewClient()
 		err = c.CheckVmRef(cli.Context(), vmr)

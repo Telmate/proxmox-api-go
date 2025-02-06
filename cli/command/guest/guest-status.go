@@ -13,7 +13,7 @@ var guest_startCmd = &cobra.Command{
 	Short: "Gets the status of the specified guest",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		vmr := proxmox.NewVmRef(cli.ValidateIntIDset(args, "GuestID"))
+		vmr := proxmox.NewVmRef(cli.ValidateGuestIDset(args, "GuestID"))
 		c := cli.NewClient()
 		vmState, err := c.GetVmState(cli.Context(), vmr)
 		if err == nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
 	"github.com/stretchr/testify/require"
 )
@@ -88,10 +89,9 @@ func Test_QemuCloudInitDisk_Validate(t *testing.T) {
 }
 
 func Test_qemuDisk_formatDisk(t *testing.T) {
-	uintPtr := func(i uint) *uint { return &i }
 	type localInput struct {
-		vmID           uint
-		linkedVmId     uint
+		vmID           GuestID
+		linkedVmId     GuestID
 		currentStorage string
 		currentFormat  QemuDiskFormat
 		syntax         diskSyntaxEnum
@@ -113,7 +113,7 @@ func Test_qemuDisk_formatDisk(t *testing.T) {
 					Id:           6,
 					Storage:      "storage",
 					Format:       QemuDiskFormat_Qcow2,
-					LinkedDiskId: uintPtr(1),
+					LinkedDiskId: util.Pointer(GuestID(1)),
 				},
 			},
 			output: "storage:110/base-110-disk-1.qcow2/100/vm-100-disk-6.qcow2",
@@ -129,7 +129,7 @@ func Test_qemuDisk_formatDisk(t *testing.T) {
 					Id:           12,
 					Storage:      "storage",
 					Format:       QemuDiskFormat_Qcow,
-					LinkedDiskId: uintPtr(8),
+					LinkedDiskId: util.Pointer(GuestID(8)),
 				},
 			},
 			output: "storage:base-110-disk-8/vm-100-disk-12",
@@ -175,8 +175,8 @@ func Test_qemuDisk_mapToStruct(t *testing.T) {
 	tests := []struct {
 		name       string
 		input      string
-		linkedVmId uint
-		output     uint
+		linkedVmId GuestID
+		output     GuestID
 	}{
 		{name: "Don't Update LinkedVmId file",
 			input:      "storage:100/vm-100-disk-0.qcow2",
@@ -199,15 +199,13 @@ func Test_qemuDisk_mapToStruct(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			linkedVmId := uint(test.linkedVmId)
-			qemuDisk{}.mapToStruct(test.input, nil, &linkedVmId)
-			require.Equal(t, test.output, linkedVmId, test.name)
+			qemuDisk{}.mapToStruct(test.input, nil, &test.linkedVmId)
+			require.Equal(t, test.output, test.linkedVmId, test.name)
 		})
 	}
 }
 
 func Test_qemuDisk_parseDisk(t *testing.T) {
-	uintPtr := func(i uint) *uint { return &i }
 	tests := []struct {
 		name   string
 		input  string
@@ -219,7 +217,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 				Id:           6,
 				Storage:      "storage",
 				Format:       QemuDiskFormat_Qcow2,
-				LinkedDiskId: uintPtr(1),
+				LinkedDiskId: util.Pointer(GuestID(1)),
 				fileSyntax:   diskSyntaxFile,
 			},
 		},
@@ -229,7 +227,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 				Id:           12,
 				Storage:      "storage",
 				Format:       QemuDiskFormat_Raw,
-				LinkedDiskId: uintPtr(8),
+				LinkedDiskId: util.Pointer(GuestID(8)),
 				fileSyntax:   diskSyntaxVolume,
 			},
 		},
@@ -254,7 +252,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			linkedVmId := uint(0)
+			var linkedVmId GuestID
 			disk := qemuDisk{}
 			disk.Id, disk.Storage, disk.Format, disk.LinkedDiskId, disk.fileSyntax = qemuDisk{}.parseDisk(test.input, &linkedVmId)
 			require.Equal(t, test.output, disk, test.name)
