@@ -1295,6 +1295,24 @@ func (c *Client) GetQemuIPSet(ctx context.Context, vmr *VmRef) (ipsets map[strin
 	return
 }
 
+// GetQemuIPSetContent - Get IPSet Content
+func (c *Client) GetQemuIPSetContent(vmr *VmRef, IPSetName string) (ipsets map[string]interface{}, err error) {
+	err = c.CheckVmRef(vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, IPSetName)
+	resp, err := c.session.Get(url, nil, nil)
+	if err == nil {
+		ipsets, err := ResponseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		return ipsets, nil
+	}
+	return
+}
+
 // DeleteQemuIPSet - Delete IPSet
 func (c *Client) DeleteQemuIPSet(ctx context.Context, vmr *VmRef, IPSetName string) (exitStatus interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
