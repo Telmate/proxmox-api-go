@@ -445,6 +445,10 @@ func (pool PoolName) setGuestsNoCheck(ctx context.Context, c *Client, guestIDs [
 	return pool.addGuestsNoCheck(ctx, c, guestIDs, currentGuests, version)
 }
 
+func (pool PoolName) String() string {
+	return string(pool)
+}
+
 func (config PoolName) Validate() error {
 	if config == "" {
 		return errors.New(PoolName_Error_Empty)

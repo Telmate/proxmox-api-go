@@ -52,7 +52,7 @@ const (
 type VmRef struct {
 	vmId    GuestID
 	node    NodeName
-	pool    string
+	pool    PoolName
 	vmType  string
 	haState string
 	haGroup string
@@ -63,7 +63,7 @@ func (vmr *VmRef) SetNode(node string) {
 }
 
 func (vmr *VmRef) SetPool(pool string) {
-	vmr.pool = pool
+	vmr.pool = PoolName(pool)
 }
 
 func (vmr *VmRef) SetVmType(vmType string) {
@@ -82,7 +82,7 @@ func (vmr *VmRef) Node() NodeName {
 	return vmr.node
 }
 
-func (vmr *VmRef) Pool() string {
+func (vmr *VmRef) Pool() PoolName {
 	return vmr.pool
 }
 
@@ -239,7 +239,7 @@ func (c *Client) GetVmInfo(ctx context.Context, vmr *VmRef) (vmInfo map[string]i
 			vmr.vmType = vmInfo["type"].(string)
 			vmr.pool = ""
 			if vmInfo["pool"] != nil {
-				vmr.pool = vmInfo["pool"].(string)
+				vmr.pool = PoolName(vmInfo["pool"].(string))
 			}
 			if vmInfo["hastate"] != nil {
 				vmr.haState = vmInfo["hastate"].(string)
@@ -272,7 +272,7 @@ func (c *Client) GetVmRefsByName(ctx context.Context, vmName string) (vmrs []*Vm
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
 			if vm["pool"] != nil {
-				vmr.pool = vm["pool"].(string)
+				vmr.pool = PoolName(vm["pool"].(string))
 			}
 			if vm["hastate"] != nil {
 				vmr.haState = vm["hastate"].(string)
@@ -301,7 +301,7 @@ func (c *Client) GetVmRefById(ctx context.Context, ID GuestID) (vmr *VmRef, err 
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
 			if vm["pool"] != nil {
-				vmr.pool = vm["pool"].(string)
+				vmr.pool = PoolName(vm["pool"].(string))
 			}
 			if vm["hastate"] != nil {
 				vmr.haState = vm["hastate"].(string)
@@ -1518,7 +1518,7 @@ func getStorageAndVolumeName(
 // Still used by Terraform. Deprecated: use ConfigQemu.Update() instead
 func (c *Client) UpdateVMPool(ctx context.Context, vmr *VmRef, pool string) (exitStatus interface{}, err error) {
 	// Same pool
-	if vmr.pool == pool {
+	if vmr.pool == PoolName(pool) {
 		return
 	}
 
