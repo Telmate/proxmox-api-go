@@ -224,7 +224,7 @@ func main() {
 		if vmid > 0 {
 			vmr = proxmox.NewVmRef(vmid)
 		} else {
-			nextid, err := c.GetNextID(ctx, 0)
+			nextid, err := c.GetNextID(ctx, nil)
 			failError(err)
 			vmr = proxmox.NewVmRef(nextid)
 		}

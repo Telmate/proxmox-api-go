@@ -895,31 +895,31 @@ func (c *Client) Unlink(ctx context.Context, node string, ID GuestID, diskIds st
 	return c.WaitForCompletion(ctx, json)
 }
 
-// GetNextID - Get next free VMID
-func (c *Client) GetNextID(ctx context.Context, currentID GuestID) (nextID GuestID, err error) {
-	var data map[string]interface{}
+// GetNextID - Get next free GuestID
+func (c *Client) GetNextID(ctx context.Context, currentID *GuestID) (GuestID, error) {
+	if currentID != nil {
+		if err := currentID.Validate(); err != nil {
+			return 0, err
+		}
+	}
+	return c.GetNextIdNoCheck(ctx, currentID)
+}
+
+// GetNextIdNoCheck - Get next free GuestID without validating the input
+func (c *Client) GetNextIdNoCheck(ctx context.Context, startID *GuestID) (GuestID, error) {
 	var url string
-	if currentID >= 100 {
-		url = fmt.Sprintf("/cluster/nextid?vmid=%d", currentID)
+	if startID != nil {
+		url = "/cluster/nextid?vmid=" + startID.String()
 	} else {
 		url = "/cluster/nextid"
 	}
-	_, err = c.session.GetJSON(ctx, url, nil, nil, &data)
-	if err == nil {
-		if data["errors"] != nil {
-			if currentID >= 100 {
-				return c.GetNextID(ctx, currentID+1)
-			} else {
-				return 0, errors.New("error using /cluster/nextid")
-			}
-		}
-		var tmpID int
-		tmpID, err = strconv.Atoi(data["data"].(string))
-		nextID = GuestID(tmpID)
-	} else if strings.HasPrefix(err.Error(), "400 ") {
-		return c.GetNextID(ctx, currentID+1)
+	tmpID, err := c.GetItemConfigString(ctx, url, "API", "cluster/nextid")
+	if err != nil {
+		return 0, err
 	}
-	return
+	var id int
+	id, err = strconv.Atoi(tmpID)
+	return GuestID(id), err
 }
 
 // VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false
