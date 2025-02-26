@@ -21,7 +21,7 @@ func Test_Clone_Qemu_VM(t *testing.T) {
 	_ = Test.CreateTest()
 	config := _create_vm_spec(false)
 
-	config.Create(context.Background(), _create_vmref(), Test.GetClient())
+	config.Create(context.Background(), Test.GetClient())
 
 	cloneConfig := _create_vm_spec(false)
 
@@ -41,7 +41,7 @@ func Test_Clone_Qemu_VM_To_Different_Storage(t *testing.T) {
 	_ = Test.CreateTest()
 	config := _create_vm_spec(false)
 
-	config.Create(context.Background(), _create_vmref(), Test.GetClient())
+	config.Create(context.Background(), Test.GetClient())
 
 	cloneConfig := _create_vm_spec(false)
 

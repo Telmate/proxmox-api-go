@@ -27,16 +27,17 @@ const exitStatusSuccess = "OK"
 
 // Client - URL, user and password to specific Proxmox node
 type Client struct {
-	session         *Session
-	ApiUrl          string
-	Username        string
-	Password        string
-	Otp             string
-	TaskTimeout     int
-	permissionMutex *sync.Mutex
-	permissions     map[permissionPath]privileges
-	version         *Version
-	versionMutex    *sync.Mutex
+	session            *Session
+	ApiUrl             string
+	Username           string
+	Password           string
+	Otp                string
+	TaskTimeout        int
+	permissionMutex    *sync.Mutex
+	permissions        map[permissionPath]privileges
+	version            *Version
+	versionMutex       *sync.Mutex
+	guestCreationMutex sync.Mutex
 }
 
 const (
@@ -588,6 +589,7 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 	return
 }
 
+// Deprecated use ConfigQemu.Create() instead
 func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[string]interface{}) (exitStatus string, err error) {
 	// Create VM disks first to ensure disks names.
 	createdDisks, createdDisksErr := c.createVMDisks(ctx, node, vmParams)
@@ -654,6 +656,7 @@ func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams m
 	return
 }
 
+// Deprecated: use VmRef.CloneLxc() instead
 func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc/%s/clone", vmr.node, vmParams["vmid"])
@@ -671,6 +674,7 @@ func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map
 	return
 }
 
+// Deprecated: use VmRef.CloneQemu() instead
 func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)

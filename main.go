@@ -15,6 +15,7 @@ import (
 
 	"github.com/Telmate/proxmox-api-go/cli"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 
 	"github.com/joho/godotenv"
@@ -199,9 +200,10 @@ func main() {
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		failError(err)
-		vmr = proxmox.NewVmRef(vmid)
-		vmr.SetNode(flag.Args()[2])
-		failError(config.Create(ctx, vmr, c))
+		config.ID = &vmid
+		config.Node = util.Pointer(proxmox.NodeName(flag.Args()[2]))
+		_, err = config.Create(ctx, c)
+		failError(err)
 		log.Println("Complete")
 
 	case "createLxc":
@@ -229,10 +231,13 @@ func main() {
 			vmr = proxmox.NewVmRef(nextid)
 		}
 		vmr.SetNode(flag.Args()[1])
+		config.ID = &vmid
+		config.Node = util.Pointer(vmr.Node())
 		log.Printf("Creating node %s: \n", mode)
 		log.Println(vmr)
 
-		failError(config.Create(ctx, vmr, c))
+		vmr, err = config.Create(ctx, c)
+		failError(err)
 		_, err = c.StartVm(ctx, vmr)
 		failError(err)
 
@@ -256,7 +261,7 @@ func main() {
 	case "idstatus":
 		maxid, err := proxmox.MaxVmId(ctx, c)
 		failError(err)
-		nextid, err := c.GetNextID(ctx, vmid)
+		nextid, err := c.GetNextID(ctx, &vmid)
 		failError(err)
 		log.Println("---")
 		log.Printf("MaxID: %d\n", maxid)
@@ -275,7 +280,7 @@ func main() {
 			return
 		}
 		if vmid == 0 {
-			vmid, err = c.GetNextID(ctx, 0)
+			vmid, err = c.GetNextID(ctx, nil)
 			failError(err)
 		}
 		vmr = proxmox.NewVmRef(vmid)
@@ -370,7 +375,7 @@ func main() {
 		log.Println("Keys sent")
 
 	case "nextid":
-		id, err := c.GetNextID(ctx, 0)
+		id, err := c.GetNextID(ctx, nil)
 		failError(err)
 		log.Printf("Getting Next Free ID: %d\n", id)
 

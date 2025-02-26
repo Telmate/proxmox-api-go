@@ -3,8 +3,10 @@ package proxmox
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/netip"
 	"strconv"
+	"strings"
 )
 
 // All code LXC and Qemu have in common should be placed here.
@@ -291,4 +293,28 @@ func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) 
 		return nil, err
 	}
 	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/pending", "Guest", "PENDING CONFIG")
+}
+
+const guest_ApiError_AlreadyExists string = "config file already exists"
+
+// Keep trying to create/clone a VM until we get a unique ID
+func guestCreateLoop(ctx context.Context, idKey, url string, params map[string]interface{}, c *Client) (GuestID, error) {
+	c.guestCreationMutex.Lock()
+	defer c.guestCreationMutex.Unlock()
+	for {
+		guestID, err := c.GetNextIdNoCheck(ctx, nil)
+		if err != nil {
+			return 0, err
+		}
+		params[idKey] = int(guestID)
+		var exitStatus string
+		exitStatus, err = c.PostWithTask(ctx, params, url)
+		if err != nil {
+			if !strings.Contains(err.Error(), guest_ApiError_AlreadyExists) {
+				return 0, fmt.Errorf("error creating Guest: %v, error status: %s (params: %v)", err, exitStatus, params)
+			}
+		} else {
+			return guestID, nil
+		}
+	}
 }

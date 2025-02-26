@@ -353,6 +353,7 @@ func (config ConfigLxc) CreateLxc(ctx context.Context, vmr *VmRef, client *Clien
 	return
 }
 
+// Deprecated: use VmRef.CloneLxc() instead
 func (config ConfigLxc) CloneLxc(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("lxc")
 
