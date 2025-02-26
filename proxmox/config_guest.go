@@ -212,13 +212,13 @@ func GuestReboot(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 
 func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID uint, newPool PoolName, currentPool *PoolName, version Version) (err error) {
 	if newPool == "" {
-		if *currentPool != "" { // leave pool
+		if currentPool != nil && *currentPool != "" { // leave pool
 			if err = (*currentPool).removeGuestsNoCheck(ctx, c, []uint{guestID}, version); err != nil {
 				return
 			}
 		}
 	} else {
-		if *currentPool == "" { // join pool
+		if currentPool == nil || *currentPool == "" { // join pool
 			if version.Smaller(Version{8, 0, 0}) {
 				if err = newPool.addGuestsNoCheckV7(ctx, c, []uint{guestID}); err != nil {
 					return
