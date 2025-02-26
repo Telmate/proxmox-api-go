@@ -52,8 +52,8 @@ type ConfigQemu struct {
 	Onboot          *bool                 `json:"onboot,omitempty"`
 	Pool            *PoolName             `json:"pool,omitempty"`
 	Protection      *bool                 `json:"protection,omitempty"`
-	QemuDisks       QemuDevices           `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
-	QemuIso         string                `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
+	QemuDisks       QemuDevices           `json:"disk,omitempty"`    // Deprecated use Disks *QemuStorages instead
+	QemuIso         string                `json:"qemuiso,omitempty"` // Deprecated use Iso *IsoFile instead
 	QemuKVM         *bool                 `json:"kvm,omitempty"`
 	QemuOs          string                `json:"ostype,omitempty"`
 	PciDevices      QemuPciDevices        `json:"pci_devices,omitempty"`
