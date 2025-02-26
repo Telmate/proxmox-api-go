@@ -298,8 +298,8 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 			config.Node = &nodeCopy
 		}
 		if vmr.pool != "" {
-		poolCopy := PoolName(vmr.pool)
-		config.Pool = &poolCopy
+			poolCopy := PoolName(vmr.pool)
+			config.Pool = &poolCopy
 		}
 		if vmr.vmId != 0 {
 			idCopy := vmr.vmId
@@ -634,7 +634,7 @@ func (newConfig ConfigQemu) setAdvanced(
 		url := "/nodes/" + newConfig.Node.String() + "/qemu"
 		if newConfig.ID == nil {
 			id, err = guestCreateLoop(ctx, "vmid", url, params, client)
-		if err != nil {
+			if err != nil {
 				return
 			}
 		} else {
