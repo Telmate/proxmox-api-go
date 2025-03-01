@@ -15,6 +15,7 @@ import (
 
 	"github.com/Telmate/proxmox-api-go/cli"
 	_ "github.com/Telmate/proxmox-api-go/cli/command/commands"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 
 	"github.com/joho/godotenv"
@@ -199,9 +200,10 @@ func main() {
 	case "createQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		failError(err)
-		vmr = proxmox.NewVmRef(vmid)
-		vmr.SetNode(flag.Args()[2])
-		failError(config.Create(ctx, vmr, c))
+		config.ID = &vmid
+		config.Node = util.Pointer(proxmox.NodeName(flag.Args()[2]))
+		_, err = config.Create(ctx, c)
+		failError(err)
 		log.Println("Complete")
 
 	case "createLxc":
@@ -224,15 +226,18 @@ func main() {
 		if vmid > 0 {
 			vmr = proxmox.NewVmRef(vmid)
 		} else {
-			nextid, err := c.GetNextID(ctx, 0)
+			nextid, err := c.GetNextID(ctx, nil)
 			failError(err)
 			vmr = proxmox.NewVmRef(nextid)
 		}
 		vmr.SetNode(flag.Args()[1])
+		config.ID = &vmid
+		config.Node = util.Pointer(vmr.Node())
 		log.Printf("Creating node %s: \n", mode)
 		log.Println(vmr)
 
-		failError(config.Create(ctx, vmr, c))
+		vmr, err = config.Create(ctx, c)
+		failError(err)
 		_, err = c.StartVm(ctx, vmr)
 		failError(err)
 
@@ -256,7 +261,7 @@ func main() {
 	case "idstatus":
 		maxid, err := proxmox.MaxVmId(ctx, c)
 		failError(err)
-		nextid, err := c.GetNextID(ctx, vmid)
+		nextid, err := c.GetNextID(ctx, &vmid)
 		failError(err)
 		log.Println("---")
 		log.Printf("MaxID: %d\n", maxid)
@@ -264,8 +269,8 @@ func main() {
 		log.Println("---")
 		// TODO make cloneQemu in new cli
 	case "cloneQemu":
-		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
-		failError(err)
+		var config *proxmox.CloneQemuTarget
+		failError(json.Unmarshal(GetConfig(*fConfigFile), &config))
 		fmt.Println("Parsed conf: ", config)
 		log.Println("Looking for template: " + flag.Args()[1])
 		sourceVmrs, err := c.GetVmRefsByName(ctx, flag.Args()[1])
@@ -273,10 +278,6 @@ func main() {
 		if sourceVmrs == nil {
 			log.Fatal("Can't find template")
 			return
-		}
-		if vmid == 0 {
-			vmid, err = c.GetNextID(ctx, 0)
-			failError(err)
 		}
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
@@ -290,10 +291,17 @@ func main() {
 			}
 		}
 
-		failError(config.CloneVm(ctx, sourceVmr, vmr, c))
-		_, err = config.Update(ctx, true, vmr, c)
+		if vmid != 0 {
+			if config.Full != nil {
+				config.Full.ID = &vmid
+			} else if config.Linked != nil {
+				config.Linked.ID = &vmid
+			}
+		}
+
+		vmr, err := sourceVmr.CloneQemu(ctx, *config, c)
 		failError(err)
-		log.Println("Complete")
+		log.Println("Created guest with ID: " + vmr.VmId().String())
 
 	case "createQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(ctx, flag.Args()[1])
@@ -370,7 +378,7 @@ func main() {
 		log.Println("Keys sent")
 
 	case "nextid":
-		id, err := c.GetNextID(ctx, 0)
+		id, err := c.GetNextID(ctx, nil)
 		failError(err)
 		log.Printf("Getting Next Free ID: %d\n", id)
 

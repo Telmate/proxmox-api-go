@@ -13,7 +13,7 @@ var id_nextCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
-		id, err := c.GetNextID(cli.Context(), 0)
+		id, err := c.GetNextID(cli.Context(), nil)
 		if err != nil {
 			return
 		}

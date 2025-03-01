@@ -27,16 +27,17 @@ const exitStatusSuccess = "OK"
 
 // Client - URL, user and password to specific Proxmox node
 type Client struct {
-	session         *Session
-	ApiUrl          string
-	Username        string
-	Password        string
-	Otp             string
-	TaskTimeout     int
-	permissionMutex *sync.Mutex
-	permissions     map[permissionPath]privileges
-	version         *Version
-	versionMutex    *sync.Mutex
+	session            *Session
+	ApiUrl             string
+	Username           string
+	Password           string
+	Otp                string
+	TaskTimeout        int
+	permissionMutex    sync.Mutex
+	permissions        map[permissionPath]privileges
+	version            *Version
+	versionMutex       sync.Mutex
+	guestCreationMutex sync.Mutex
 }
 
 const (
@@ -52,7 +53,7 @@ const (
 type VmRef struct {
 	vmId    GuestID
 	node    NodeName
-	pool    string
+	pool    PoolName
 	vmType  string
 	haState string
 	haGroup string
@@ -63,7 +64,7 @@ func (vmr *VmRef) SetNode(node string) {
 }
 
 func (vmr *VmRef) SetPool(pool string) {
-	vmr.pool = pool
+	vmr.pool = PoolName(pool)
 }
 
 func (vmr *VmRef) SetVmType(vmType string) {
@@ -82,7 +83,7 @@ func (vmr *VmRef) Node() NodeName {
 	return vmr.node
 }
 
-func (vmr *VmRef) Pool() string {
+func (vmr *VmRef) Pool() PoolName {
 	return vmr.pool
 }
 
@@ -114,7 +115,7 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 		return nil, err
 	}
 	if err_s == nil {
-		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout, versionMutex: &sync.Mutex{}, permissionMutex: &sync.Mutex{}, permissions: make(map[permissionPath]privileges)}
+		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout, permissions: make(map[permissionPath]privileges)}
 	}
 
 	return client, err_s
@@ -239,7 +240,7 @@ func (c *Client) GetVmInfo(ctx context.Context, vmr *VmRef) (vmInfo map[string]i
 			vmr.vmType = vmInfo["type"].(string)
 			vmr.pool = ""
 			if vmInfo["pool"] != nil {
-				vmr.pool = vmInfo["pool"].(string)
+				vmr.pool = PoolName(vmInfo["pool"].(string))
 			}
 			if vmInfo["hastate"] != nil {
 				vmr.haState = vmInfo["hastate"].(string)
@@ -272,7 +273,7 @@ func (c *Client) GetVmRefsByName(ctx context.Context, vmName string) (vmrs []*Vm
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
 			if vm["pool"] != nil {
-				vmr.pool = vm["pool"].(string)
+				vmr.pool = PoolName(vm["pool"].(string))
 			}
 			if vm["hastate"] != nil {
 				vmr.haState = vm["hastate"].(string)
@@ -301,7 +302,7 @@ func (c *Client) GetVmRefById(ctx context.Context, ID GuestID) (vmr *VmRef, err 
 			vmr.vmType = vm["type"].(string)
 			vmr.pool = ""
 			if vm["pool"] != nil {
-				vmr.pool = vm["pool"].(string)
+				vmr.pool = PoolName(vm["pool"].(string))
 			}
 			if vm["hastate"] != nil {
 				vmr.haState = vm["hastate"].(string)
@@ -588,6 +589,7 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 	return
 }
 
+// Deprecated use ConfigQemu.Create() instead
 func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[string]interface{}) (exitStatus string, err error) {
 	// Create VM disks first to ensure disks names.
 	createdDisks, createdDisksErr := c.createVMDisks(ctx, node, vmParams)
@@ -654,6 +656,7 @@ func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams m
 	return
 }
 
+// Deprecated: use VmRef.CloneLxc() instead
 func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc/%s/clone", vmr.node, vmParams["vmid"])
@@ -671,6 +674,7 @@ func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map
 	return
 }
 
+// Deprecated: use VmRef.CloneQemu() instead
 func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
 	reqbody := ParamsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
@@ -895,31 +899,31 @@ func (c *Client) Unlink(ctx context.Context, node string, ID GuestID, diskIds st
 	return c.WaitForCompletion(ctx, json)
 }
 
-// GetNextID - Get next free VMID
-func (c *Client) GetNextID(ctx context.Context, currentID GuestID) (nextID GuestID, err error) {
-	var data map[string]interface{}
+// GetNextID - Get next free GuestID
+func (c *Client) GetNextID(ctx context.Context, currentID *GuestID) (GuestID, error) {
+	if currentID != nil {
+		if err := currentID.Validate(); err != nil {
+			return 0, err
+		}
+	}
+	return c.GetNextIdNoCheck(ctx, currentID)
+}
+
+// GetNextIdNoCheck - Get next free GuestID without validating the input
+func (c *Client) GetNextIdNoCheck(ctx context.Context, startID *GuestID) (GuestID, error) {
 	var url string
-	if currentID >= 100 {
-		url = fmt.Sprintf("/cluster/nextid?vmid=%d", currentID)
+	if startID != nil {
+		url = "/cluster/nextid?vmid=" + startID.String()
 	} else {
 		url = "/cluster/nextid"
 	}
-	_, err = c.session.GetJSON(ctx, url, nil, nil, &data)
-	if err == nil {
-		if data["errors"] != nil {
-			if currentID >= 100 {
-				return c.GetNextID(ctx, currentID+1)
-			} else {
-				return 0, errors.New("error using /cluster/nextid")
-			}
-		}
-		var tmpID int
-		tmpID, err = strconv.Atoi(data["data"].(string))
-		nextID = GuestID(tmpID)
-	} else if strings.HasPrefix(err.Error(), "400 ") {
-		return c.GetNextID(ctx, currentID+1)
+	tmpID, err := c.GetItemConfigString(ctx, url, "API", "cluster/nextid")
+	if err != nil {
+		return 0, err
 	}
-	return
+	var id int
+	id, err = strconv.Atoi(tmpID)
+	return GuestID(id), err
 }
 
 // VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false
@@ -1518,7 +1522,7 @@ func getStorageAndVolumeName(
 // Still used by Terraform. Deprecated: use ConfigQemu.Update() instead
 func (c *Client) UpdateVMPool(ctx context.Context, vmr *VmRef, pool string) (exitStatus interface{}, err error) {
 	// Same pool
-	if vmr.pool == pool {
+	if vmr.pool == PoolName(pool) {
 		return
 	}
 
@@ -1885,7 +1889,7 @@ func (c *Client) DeleteNetwork(ctx context.Context, node string, iface string) (
 
 // ApplyNetwork applies the pending network configuration on the passed in node.
 // It returns the body from the API response and any HTTP error the API returns.
-func (c Client) ApplyNetwork(ctx context.Context, node string) (exitStatus string, err error) {
+func (c *Client) ApplyNetwork(ctx context.Context, node string) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/network", node)
 	return c.PutWithTask(ctx, nil, url)
 }

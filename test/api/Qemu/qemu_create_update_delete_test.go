@@ -14,7 +14,7 @@ func Test_Create_Qemu_VM(t *testing.T) {
 	_ = Test.CreateTest()
 	config := _create_vm_spec(true)
 
-	err := config.Create(context.Background(), _create_vmref(), Test.GetClient())
+	_, err := config.Create(context.Background(), Test.GetClient())
 	require.NoError(t, err)
 }
 

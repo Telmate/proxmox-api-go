@@ -6726,17 +6726,17 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 					output: baseConfig(ConfigQemu{})},
 				{name: `vmr empty`,
 					vmr:    &VmRef{node: ""},
-					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})},
+					output: baseConfig(ConfigQemu{})},
 				{name: `vmr populated`,
 					vmr:    &VmRef{node: "test"},
-					output: baseConfig(ConfigQemu{Node: "test", Pool: util.Pointer(PoolName(""))})}}},
+					output: baseConfig(ConfigQemu{Node: util.Pointer(NodeName("test"))})}}},
 		{category: `Pool`,
 			tests: []test{
 				{name: `vmr nil`,
 					output: baseConfig(ConfigQemu{})},
 				{name: `vmr empty`,
 					vmr:    &VmRef{pool: ""},
-					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})},
+					output: baseConfig(ConfigQemu{})},
 				{name: `vmr populated`,
 					vmr:    &VmRef{pool: "test"},
 					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName("test"))})}}},
@@ -6997,16 +6997,16 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `code coverage`,
 					input:  map[string]interface{}{"usb3": ""},
 					output: baseConfig(ConfigQemu{USBs: QemuUSBs{QemuUsbID3: QemuUSB{}}})}}},
-		{category: `VmID`,
+		{category: `ID`,
 			tests: []test{
 				{name: `vmr nil`,
 					output: baseConfig(ConfigQemu{})},
 				{name: `vmr empty`,
 					vmr:    &VmRef{vmId: 0},
-					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))})},
+					output: baseConfig(ConfigQemu{})},
 				{name: `vmr populated`,
 					vmr:    &VmRef{vmId: 100},
-					output: baseConfig(ConfigQemu{ID: 100, Pool: util.Pointer(PoolName(""))})}}},
+					output: baseConfig(ConfigQemu{ID: util.Pointer(GuestID(100))})}}},
 	}
 	for _, test := range tests {
 		for _, subTest := range test.tests {
@@ -7100,6 +7100,9 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			config.CPU = &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}
 		} else if config.CPU.Cores == nil {
 			config.CPU.Cores = util.Pointer(QemuCpuCores(1))
+		}
+		if config.Node == nil {
+			config.Node = util.Pointer(NodeName("testnode"))
 		}
 		if config.Memory == nil {
 			config.Memory = &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}
@@ -7431,10 +7434,16 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			invalid: testType{
 				create: []test{
 					{name: `erross.New(ConfigQemu_Error_CpuRequired)`,
+						input: ConfigQemu{
+							ID:   util.Pointer(GuestID(111)),
+							Node: util.Pointer(NodeName("test"))},
 						err: errors.New(ConfigQemu_Error_CpuRequired)},
 					{name: `errors.New(QemuCPU_Error_CoresRequired)`,
-						input: ConfigQemu{CPU: &QemuCPU{}},
-						err:   errors.New(QemuCPU_Error_CoresRequired)}},
+						input: ConfigQemu{
+							CPU:  &QemuCPU{},
+							ID:   util.Pointer(GuestID(111)),
+							Node: util.Pointer(NodeName("test"))},
+						err: errors.New(QemuCPU_Error_CoresRequired)}},
 				createUpdate: []test{
 					{name: `errors.New(CpuLimit_Error_Maximum)`,
 						input:   baseConfig(ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(129))}}),
@@ -7445,7 +7454,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{CPU: &QemuCPU{}},
 						err:     errors.New(CpuUnits_Error_Maximum)},
 					{name: `errors.New(QemuCpuCores_Error_LowerBound)`,
-						input:   ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(0))}},
+						input:   baseConfig(ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(0))}}),
 						current: &ConfigQemu{CPU: &QemuCPU{}},
 						err:     errors.New(QemuCpuCores_Error_LowerBound)},
 					{name: `errors.New(QemuCpuSockets_Error_LowerBound)`,
@@ -7455,10 +7464,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{CPU: &QemuCPU{}},
 						err:     errors.New(QemuCpuSockets_Error_LowerBound)},
 					{name: `CpuVirtualCores(1).Error() 1 1`,
-						input: ConfigQemu{CPU: &QemuCPU{
+						input: baseConfig(ConfigQemu{CPU: &QemuCPU{
 							Cores:        util.Pointer(QemuCpuCores(1)),
 							Sockets:      util.Pointer(QemuCpuSockets(1)),
-							VirtualCores: util.Pointer(CpuVirtualCores(2))}},
+							VirtualCores: util.Pointer(CpuVirtualCores(2))}}),
 						current: &ConfigQemu{CPU: &QemuCPU{}},
 						err:     CpuVirtualCores(1).Error()},
 					{name: `Invalid AES`,
@@ -8416,20 +8425,28 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		{category: `ID`,
 			valid: testType{
 				createUpdate: []test{
+					{name: `nil`,
+						input: ConfigQemu{
+							ID:     nil,
+							Node:   util.Pointer(NodeName("test")),
+							CPU:    &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))},
+							Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))},
+						},
+						current: util.Pointer(baseConfig(ConfigQemu{}))},
 					{name: `minimum`,
-						input:   baseConfig(ConfigQemu{ID: 100}),
+						input:   baseConfig(ConfigQemu{ID: util.Pointer(GuestID(100))}),
 						current: util.Pointer(baseConfig(ConfigQemu{}))},
 					{name: `maximum`,
-						input:   baseConfig(ConfigQemu{ID: 1000000}),
+						input:   baseConfig(ConfigQemu{ID: util.Pointer(GuestID(1000000))}),
 						current: util.Pointer(baseConfig(ConfigQemu{}))}}},
 			invalid: testType{
-				createUpdate: []test{
+				create: []test{
 					{name: `minimum`,
-						input:   baseConfig(ConfigQemu{ID: 99}),
+						input:   baseConfig(ConfigQemu{ID: util.Pointer(GuestID(99))}),
 						current: util.Pointer(baseConfig(ConfigQemu{})),
 						err:     errors.New(GuestID_Error_Minimum)},
 					{name: `maximum`,
-						input:   baseConfig(ConfigQemu{ID: 1000000000}),
+						input:   baseConfig(ConfigQemu{ID: util.Pointer(GuestID(1000000000))}),
 						current: util.Pointer(baseConfig(ConfigQemu{})),
 						err:     errors.New(GuestID_Error_Maximum)}}}},
 		{category: `Memory`,
@@ -8652,6 +8669,23 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							TaggedVlans: util.Pointer(Vlans{4096})})}),
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{}}},
 						err:     errors.New(Vlan_Error_Invalid)}}}},
+		{category: `Node`,
+			valid: testType{
+				createUpdate: []test{
+					{input: baseConfig(ConfigQemu{Node: util.Pointer(NodeName("test"))}),
+						current: &ConfigQemu{Node: util.Pointer(NodeName("aaa"))}}}},
+			invalid: testType{
+				create: []test{
+					{name: `nil`,
+						input: ConfigQemu{ID: util.Pointer(GuestID(100))},
+						err:   errors.New(ConfigQemu_Error_NodeRequired)}},
+				createUpdate: []test{
+					{name: `empty`,
+						input: baseConfig(ConfigQemu{
+							ID:   util.Pointer(GuestID(100)),
+							Node: util.Pointer(NodeName(""))}),
+						current: &ConfigQemu{Node: util.Pointer(NodeName("test"))},
+						err:     errors.New(NodeName_Error_Empty)}}}},
 		{category: `PoolName`,
 			valid: testType{
 				createUpdate: []test{

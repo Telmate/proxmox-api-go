@@ -3,17 +3,12 @@ package proxmox
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func Test_Client_CheckPermissions(t *testing.T) {
-	pointerClient := func(c Client) *Client {
-		c.permissionMutex = &sync.Mutex{}
-		return &c
-	}
 	type input struct {
 		client *Client
 		perms  []Permission
@@ -24,25 +19,26 @@ func Test_Client_CheckPermissions(t *testing.T) {
 		output error
 	}{
 		{"nil client", input{nil, []Permission{}}, errors.New(Client_Error_Nil)},
-		{"user root@pam", input{pointerClient(Client{Username: "root@pam"}), []Permission{}}, nil},
+		{"user root@pam", input{&Client{Username: "root@pam"}, []Permission{}}, nil},
 		{name: "direct permissions",
-			input: input{pointerClient(Client{permissions: map[permissionPath]privileges{
-				"/access/pve": {UserModify: privilegeTrue},
-			}}), []Permission{
-				{Category: PermissionCategory_Access, Item: "pve", Privileges: Privileges{UserModify: true}}}}},
+			input: input{
+				client: &Client{permissions: map[permissionPath]privileges{
+					"/access/pve": {UserModify: privilegeTrue}}},
+				perms: []Permission{
+					{Category: PermissionCategory_Access, Item: "pve", Privileges: Privileges{UserModify: true}}}}},
 		{name: "propagate permissions",
-			input: input{pointerClient(Client{permissions: map[permissionPath]privileges{
-				"/access": {UserModify: privilegePropagate},
-			}}), []Permission{
-				{Category: PermissionCategory_Access, Item: "pve", Privileges: Privileges{UserModify: true}}}}},
+			input: input{
+				client: &Client{permissions: map[permissionPath]privileges{
+					"/access": {UserModify: privilegePropagate}}},
+				perms: []Permission{
+					{Category: PermissionCategory_Access, Item: "pve", Privileges: Privileges{UserModify: true}}}}},
 		{name: "missing permissions",
-			input: input{pointerClient(Client{permissions: map[permissionPath]privileges{
-				"/": {UserModify: privilegeTrue},
-			}}), []Permission{
-				{Category: PermissionCategory_Root, Privileges: Privileges{PoolAllocate: true}},
-			}},
-			output: Permission{Category: PermissionCategory_Root, Privileges: Privileges{PoolAllocate: true}}.error(),
-		},
+			input: input{
+				client: &Client{permissions: map[permissionPath]privileges{
+					"/": {UserModify: privilegeTrue}}},
+				perms: []Permission{
+					{Category: PermissionCategory_Root, Privileges: Privileges{PoolAllocate: true}}}},
+			output: Permission{Category: PermissionCategory_Root, Privileges: Privileges{PoolAllocate: true}}.error()},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

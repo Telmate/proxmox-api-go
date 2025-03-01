@@ -26,6 +26,8 @@ type (
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
+	ID              *GuestID              `json:"id,omitempty"`   // Required for creation, cannot be changed
+	Node            *NodeName             `json:"node,omitempty"` // Required for creation
 	Agent           *QemuGuestAgent       `json:"agent,omitempty"`
 	Args            string                `json:"args,omitempty"`
 	Bios            string                `json:"bios,omitempty"`
@@ -36,7 +38,7 @@ type ConfigQemu struct {
 	Description     *string               `json:"description,omitempty"`
 	Disks           *QemuStorages         `json:"disks,omitempty"`
 	EFIDisk         QemuDevice            `json:"efidisk,omitempty"`   // TODO should be a struct
-	FullClone       *int                  `json:"fullclone,omitempty"` // TODO should probably be a bool
+	FullClone       *int                  `json:"fullclone,omitempty"` // Deprecated
 	HaGroup         string                `json:"hagroup,omitempty"`
 	HaState         string                `json:"hastate,omitempty"` // TODO should be custom type with enum
 	Hookscript      string                `json:"hookscript,omitempty"`
@@ -47,12 +49,11 @@ type ConfigQemu struct {
 	Memory          *QemuMemory           `json:"memory,omitempty"`
 	Name            string                `json:"name,omitempty"` // TODO should be custom type as there are character and length limitations
 	Networks        QemuNetworkInterfaces `json:"networks,omitempty"`
-	Node            NodeName              `json:"node,omitempty"` // Only returned setting it has no effect, set node in the VmRef instead
 	Onboot          *bool                 `json:"onboot,omitempty"`
 	Pool            *PoolName             `json:"pool,omitempty"`
 	Protection      *bool                 `json:"protection,omitempty"`
-	QemuDisks       QemuDevices           `json:"disk,omitempty"`    // DEPRECATED use Disks *QemuStorages instead
-	QemuIso         string                `json:"qemuiso,omitempty"` // DEPRECATED use Iso *IsoFile instead
+	QemuDisks       QemuDevices           `json:"disk,omitempty"`    // Deprecated use Disks *QemuStorages instead
+	QemuIso         string                `json:"qemuiso,omitempty"` // Deprecated use Iso *IsoFile instead
 	QemuKVM         *bool                 `json:"kvm,omitempty"`
 	QemuOs          string                `json:"ostype,omitempty"`
 	PciDevices      QemuPciDevices        `json:"pci_devices,omitempty"`
@@ -69,19 +70,19 @@ type ConfigQemu struct {
 	TPM             *TpmState             `json:"tpm,omitempty"`
 	Tablet          *bool                 `json:"tablet,omitempty"`
 	Tags            *[]Tag                `json:"tags,omitempty"`
-	ID              GuestID               `json:"id,omitempty"`
 }
 
 const (
 	ConfigQemu_Error_UnableToUpdateWithoutReboot string = "unable to update vm without rebooting"
 	ConfigQemu_Error_CpuRequired                 string = "cpu is required during creation"
 	ConfigQemu_Error_MemoryRequired              string = "memory is required during creation"
+	ConfigQemu_Error_NodeRequired                string = "node is required during creation"
 )
 
 // Create - Tell Proxmox API to make the VM
-func (config ConfigQemu) Create(ctx context.Context, vmr *VmRef, client *Client) (err error) {
-	_, err = config.setAdvanced(ctx, nil, false, vmr, client)
-	return
+func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, error) {
+	_, vmr, err := config.setAdvanced(ctx, nil, false, nil, client)
+	return vmr, err
 }
 
 func (config *ConfigQemu) defaults() {
@@ -138,8 +139,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 
 	params = map[string]interface{}{}
 
-	if config.ID != 0 {
-		params["vmid"] = config.ID
+	var guestID GuestID
+	if config.ID != nil {
+		guestID = *config.ID
 	}
 	if config.Args != "" {
 		params["args"] = config.Args
@@ -219,7 +221,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
 			// Create,Update,Delete
-			delete := config.Disks.mapToApiValues(*currentConfig.Disks, config.ID, currentConfig.LinkedVmId, params)
+			delete := config.Disks.mapToApiValues(*currentConfig.Disks, guestID, currentConfig.LinkedVmId, params)
 			if delete != "" {
 				itemsToDelete = AddToList(itemsToDelete, delete)
 			}
@@ -227,7 +229,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	} else {
 		if config.Disks != nil {
 			// Create
-			config.Disks.mapToApiValues(QemuStorages{}, config.ID, 0, params)
+			config.Disks.mapToApiValues(QemuStorages{}, guestID, 0, params)
 		}
 	}
 
@@ -291,11 +293,17 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 
 	if vmr != nil {
-		config.Node = vmr.node
-		poolCopy := PoolName(vmr.pool)
-		config.Pool = &poolCopy
+		if vmr.node != "" {
+			nodeCopy := vmr.node
+			config.Node = &nodeCopy
+		}
+		if vmr.pool != "" {
+			poolCopy := PoolName(vmr.pool)
+			config.Pool = &poolCopy
+		}
 		if vmr.vmId != 0 {
-			config.ID = vmr.vmId
+			idCopy := vmr.vmId
+			config.ID = &idCopy
 		}
 	}
 
@@ -448,7 +456,8 @@ func (newConfig ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr
 	if err != nil {
 		return
 	}
-	return newConfig.setAdvanced(ctx, currentConfig, rebootIfNeeded, vmr, client)
+	rebootRequired, _, err = newConfig.setAdvanced(ctx, currentConfig, rebootIfNeeded, vmr, client)
+	return
 }
 
 func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
@@ -459,28 +468,33 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 		return
 	}
 	vmr.SetVmType("qemu")
-	config.ID = vmr.vmId
-	config.Node = vmr.node
+	idCopy := vmr.vmId
+	config.ID = &idCopy
+	config.Node = &vmr.node
 	return
 }
 
 // currentConfig will be mutated
-func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
-	if err = newConfig.setVmr(vmr); err != nil {
-		return
-	}
+func (newConfig ConfigQemu) setAdvanced(
+	ctx context.Context, currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client,
+) (rebootRequired bool, newVMR *VmRef, err error,
+) {
 	var version Version
 	if version, err = client.Version(ctx); err != nil {
 		return
 	}
-	if err = newConfig.Validate(currentConfig, version); err != nil {
-		return
-	}
-
 	var params map[string]interface{}
 	var exitStatus string
 
 	if currentConfig != nil { // Update
+		if vmr != nil {
+			if err = newConfig.setVmr(vmr); err != nil {
+				return
+			}
+		}
+		if err = newConfig.Validate(currentConfig, version); err != nil {
+			return
+		}
 		// TODO implement tmp move and version change
 		url := "/nodes/" + vmr.node.String() + "/" + vmr.vmType + "/" + vmr.vmId.String() + "/config"
 		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
@@ -496,7 +510,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 				}
 			}
 			if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
-				return false, err
+				return false, nil, err
 			}
 			itemsToDeleteBeforeUpdate = newConfig.Disks.cloudInitRemove(*currentConfig.Disks)
 		}
@@ -508,7 +522,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 				currentConfig.TPM = nil
 			} else if disk != nil { // move
 				if _, err := disk.move(ctx, true, vmr, client); err != nil {
-					return false, err
+					return false, nil, err
 				}
 			}
 		}
@@ -516,7 +530,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 		if itemsToDeleteBeforeUpdate != "" {
 			err = client.Put(ctx, map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, url)
 			if err != nil {
-				return false, fmt.Errorf("error updating VM: %v", err)
+				return false, nil, fmt.Errorf("error updating VM: %v", err)
 			}
 			// Deleteing these items can create pending changes
 			rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
@@ -531,7 +545,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 					stopped = true
 					rebootRequired = false
 				} else {
-					return rebootRequired, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
+					return rebootRequired, nil, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
 				}
 			}
 		}
@@ -544,14 +558,14 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 			}
 		}
 
-		if newConfig.Node != currentConfig.Node { // Migrate VM
-			vmr.node = newConfig.Node
-			_, err = client.MigrateNode(ctx, vmr, newConfig.Node, true)
+		if newConfig.Node != nil && currentConfig.Node != nil && *newConfig.Node != *currentConfig.Node { // Migrate VM
+			vmr.node = *newConfig.Node
+			_, err = client.MigrateNode(ctx, vmr, *newConfig.Node, true)
 			if err != nil {
 				return
 			}
 			// Set node to the node the VM was migrated to
-			vmr.node = newConfig.Node
+			vmr.node = *newConfig.Node
 		}
 
 		rebootRequired, params, err = newConfig.mapToAPI(*currentConfig, version)
@@ -560,7 +574,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 		}
 		exitStatus, err = client.PutWithTask(ctx, params, url)
 		if err != nil {
-			return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+			return false, nil, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}
 
 		if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped
@@ -586,7 +600,7 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 				stopped = false
 				rebootRequired = false
 			} else {
-				return true, nil
+				return true, nil, nil
 			}
 		} else if rebootRequired { // reboot vm if it is running
 			if rebootIfNeeded {
@@ -595,28 +609,52 @@ func (newConfig ConfigQemu) setAdvanced(ctx context.Context, currentConfig *Conf
 				}
 				rebootRequired = false
 			} else {
-				return rebootRequired, nil
+				return rebootRequired, nil, nil
 			}
 		}
 	} else { // Create
+		if err = newConfig.Validate(nil, version); err != nil {
+			return
+		}
 		_, params, err = newConfig.mapToAPI(ConfigQemu{}, version)
 		if err != nil {
 			return
 		}
 		// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
 		// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
+		var pool PoolName
 		if newConfig.Pool != nil && *newConfig.Pool != "" {
 			params["pool"] = *newConfig.Pool
 		}
-		exitStatus, err = client.CreateQemuVm(ctx, vmr.node, params)
-		if err != nil {
-			return false, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		var id GuestID
+		var node NodeName
+		if newConfig.Node != nil {
+			node = *newConfig.Node
+		}
+		url := "/nodes/" + newConfig.Node.String() + "/qemu"
+		if newConfig.ID == nil {
+			id, err = guestCreateLoop(ctx, "vmid", url, params, client)
+			if err != nil {
+				return
+			}
+		} else {
+			params["vmid"] = int(*newConfig.ID)
+			exitStatus, err = client.PostWithTask(ctx, params, url)
+			if err != nil {
+				return false, nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+			}
 		}
 		if err = resizeNewDisks(ctx, vmr, client, newConfig.Disks, nil); err != nil {
 			return
 		}
 		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
 			return
+		}
+		vmr = &VmRef{
+			node:   node,
+			vmId:   id,
+			pool:   pool,
+			vmType: vmRefQemu,
 		}
 	}
 
@@ -628,6 +666,17 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
 	if current == nil { // Create
+		if config.ID != nil {
+			if err = config.ID.Validate(); err != nil {
+				return
+			}
+		}
+		if config.Node == nil {
+			return errors.New(ConfigQemu_Error_NodeRequired)
+		}
+		if err = config.Node.Validate(); err != nil {
+			return
+		}
 		if config.CPU == nil {
 			return errors.New(ConfigQemu_Error_CpuRequired)
 		} else {
@@ -663,6 +712,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 			}
 		}
 	} else { // Update
+		if config.Node != nil {
+			if err = config.Node.Validate(); err != nil {
+				return
+			}
+		}
 		if config.CPU != nil {
 			if err = config.CPU.Validate(current.CPU, version); err != nil {
 				return
@@ -711,11 +765,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 			return
 		}
 	}
-	if config.ID != 0 {
-		if err = config.ID.Validate(); err != nil {
-			return
-		}
-	}
 	if config.Pool != nil && *config.Pool != "" {
 		if err = config.Pool.Validate(); err != nil {
 			return
@@ -746,6 +795,7 @@ target:proxmox1-xx
 full:1
 storage:xxx
 */
+// Deprecated: use VmRef.CloneQemu() instead
 func (config ConfigQemu) CloneVm(ctx context.Context, sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
 	vmr.SetVmType("qemu")
 	var storage string
@@ -826,7 +876,7 @@ func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (conf
 		return nil, fmt.Errorf("vm locked, could not obtain config")
 	}
 	if v, isSet := vmInfo["pool"]; isSet { // TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
-		vmr.pool = v.(string)
+		vmr.pool = PoolName(v.(string))
 	}
 	config, err = ConfigQemu{}.mapToStruct(vmr, vmConfig)
 	if err != nil {

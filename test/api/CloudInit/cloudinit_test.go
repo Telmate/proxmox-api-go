@@ -32,7 +32,7 @@ func Test_Cloud_Init_VM(t *testing.T) {
 	config.QemuDisks[0] = disk
 	config.Name = "Base-Image"
 
-	err = config.Create(context.Background(), vmref, Test.GetClient())
+	_, err = config.Create(context.Background(), Test.GetClient())
 	require.NoError(t, err)
 
 	config.Boot = "order=virtio0;ide2;net0"
