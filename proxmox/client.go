@@ -1889,7 +1889,7 @@ func (c *Client) DeleteNetwork(ctx context.Context, node string, iface string) (
 
 // ApplyNetwork applies the pending network configuration on the passed in node.
 // It returns the body from the API response and any HTTP error the API returns.
-func (c Client) ApplyNetwork(ctx context.Context, node string) (exitStatus string, err error) {
+func (c *Client) ApplyNetwork(ctx context.Context, node string) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/network", node)
 	return c.PutWithTask(ctx, nil, url)
 }
