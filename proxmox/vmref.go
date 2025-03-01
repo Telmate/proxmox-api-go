@@ -129,8 +129,8 @@ func (target CloneLxcTarget) mapToAPI() (GuestID, NodeName, PoolName, map[string
 }
 
 type CloneQemuTarget struct {
-	Full   *CloneQemuFull
-	Linked *CloneLinked
+	Full   *CloneQemuFull `json:"full,omitempty"`
+	Linked *CloneLinked   `json:"linked,omitempty"`
 }
 
 const (
@@ -163,10 +163,10 @@ func (target CloneQemuTarget) mapToAPI() (GuestID, NodeName, PoolName, map[strin
 
 // Linked Clone in the same for both LXC and QEMU
 type CloneLinked struct {
-	Node NodeName
-	ID   *GuestID  // Optional
-	Name *string   // Optional // TODO replace one we have a type for it
-	Pool *PoolName // Optional
+	Node NodeName  `json:"node"`
+	ID   *GuestID  `json:"id,omitempty"`   // Optional
+	Name *string   `json:"name,omitempty"` // Optional // TODO replace one we have a type for it
+	Pool *PoolName `json:"pool,omitempty"` // Optional
 }
 
 func (linked CloneLinked) Validate() (err error) {
@@ -194,11 +194,11 @@ func (linked CloneLinked) mapToAPI(nameFlag string) (GuestID, NodeName, PoolName
 }
 
 type CloneLxcFull struct {
-	Node    NodeName
-	ID      *GuestID  // Optional
-	Name    *string   // Optional // TODO replace one we have a type for it
-	Pool    *PoolName // Optional
-	Storage *string   // Optional // TODO replace one we have a type for it
+	Node    NodeName  `json:"node"`
+	ID      *GuestID  `json:"id,omitempty"`      // Optional
+	Name    *string   `json:"name,omitempty"`    // Optional // TODO replace one we have a type for it
+	Pool    *PoolName `json:"pool,omitempty"`    // Optional
+	Storage *string   `json:"storage,omitempty"` // Optional // TODO replace one we have a type for it
 }
 
 func (full CloneLxcFull) Validate() (err error) {
@@ -227,12 +227,12 @@ func (full CloneLxcFull) mapToAPI() (GuestID, NodeName, PoolName, map[string]int
 }
 
 type CloneQemuFull struct {
-	Node          NodeName
-	ID            *GuestID        // Optional
-	Name          *string         // Optional // TODO replace one we have a type for it
-	Pool          *PoolName       // Optional
-	Storage       *string         // Optional // TODO replace one we have a type for it
-	StorageFormat *QemuDiskFormat // Optional
+	Node          NodeName        `json:"node"`
+	ID            *GuestID        `json:"id,omitempty"`      // Optional
+	Name          *string         `json:"name,omitempty"`    // Optional // TODO replace one we have a type for it
+	Pool          *PoolName       `json:"pool,omitempty"`    // Optional
+	Storage       *string         `json:"storage,omitempty"` // Optional // TODO replace one we have a type for it
+	StorageFormat *QemuDiskFormat `json:"format,omitempty"`  // Optional
 }
 
 func (full CloneQemuFull) Validate() (err error) {
