@@ -35,9 +35,9 @@ func Test_CloneLxcTarget_mapToAPI(t *testing.T) {
 				Name: util.Pointer("test")}},
 			output: testOutput{
 				api: map[string]interface{}{
-					"full":   true,
-					"target": "",
-					"name":   "test"}}},
+					"full":     true,
+					"target":   "",
+					"hostname": "test"}}},
 		{name: `Full Node`,
 			input: CloneLxcTarget{Full: &CloneLxcFull{
 				Node: "test"}},
@@ -77,9 +77,9 @@ func Test_CloneLxcTarget_mapToAPI(t *testing.T) {
 				Name: util.Pointer("test")}},
 			output: testOutput{
 				api: map[string]interface{}{
-					"full":   false,
-					"target": "",
-					"name":   "test"}}},
+					"full":     false,
+					"target":   "",
+					"hostname": "test"}}},
 		{name: `Linked Node`,
 			input: CloneLxcTarget{Linked: &CloneLinked{
 				Node: "test"}},

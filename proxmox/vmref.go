@@ -90,6 +90,11 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 		vmType: vmRefQemu}, nil
 }
 
+const (
+	cloneLxcFlagName  string = "hostname"
+	cloneQemuFlagName string = "name"
+)
+
 type CloneLxcTarget struct {
 	Full   *CloneLxcFull
 	Linked *CloneLinked
@@ -115,7 +120,7 @@ func (target CloneLxcTarget) Validate() error {
 
 func (target CloneLxcTarget) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
 	if target.Linked != nil {
-		return target.Linked.mapToAPI()
+		return target.Linked.mapToAPI(cloneLxcFlagName)
 	}
 	if target.Full != nil {
 		return target.Full.mapToAPI()
@@ -148,7 +153,7 @@ func (target CloneQemuTarget) Validate() error {
 
 func (target CloneQemuTarget) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
 	if target.Linked != nil {
-		return target.Linked.mapToAPI()
+		return target.Linked.mapToAPI(cloneQemuFlagName)
 	}
 	if target.Full != nil {
 		return target.Full.mapToAPI()
@@ -178,10 +183,11 @@ func (linked CloneLinked) Validate() (err error) {
 	return linked.Node.Validate()
 }
 
-func (linked CloneLinked) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
+func (linked CloneLinked) mapToAPI(nameFlag string) (GuestID, NodeName, PoolName, map[string]interface{}) {
 	return cloneSettings{
 		FullClone: false,
 		ID:        linked.ID,
+		nameFlag:  nameFlag,
 		Name:      linked.Name,
 		Node:      linked.Node,
 		Pool:      linked.Pool}.mapToAPI()
@@ -213,6 +219,7 @@ func (full CloneLxcFull) mapToAPI() (GuestID, NodeName, PoolName, map[string]int
 	return cloneSettings{
 		FullClone: true,
 		ID:        full.ID,
+		nameFlag:  cloneLxcFlagName,
 		Name:      full.Name,
 		Node:      full.Node,
 		Pool:      full.Pool,
@@ -251,6 +258,7 @@ func (full CloneQemuFull) mapToAPI() (GuestID, NodeName, PoolName, map[string]in
 	return cloneSettings{
 		FullClone:     true,
 		ID:            full.ID,
+		nameFlag:      cloneQemuFlagName,
 		Name:          full.Name,
 		Node:          full.Node,
 		Pool:          full.Pool,
@@ -260,12 +268,13 @@ func (full CloneQemuFull) mapToAPI() (GuestID, NodeName, PoolName, map[string]in
 
 type cloneSettings struct {
 	FullClone     bool
-	ID            *GuestID // Optional
-	Name          *string  // Optional // TODO replace one we have a type for it
+	ID            *GuestID
+	nameFlag      string
+	Name          *string // TODO replace one we have a type for it
 	Node          NodeName
-	Pool          *PoolName       // Optional
-	Storage       *string         // Optional // TODO replace one we have a type for it
-	StorageFormat *QemuDiskFormat // Optional
+	Pool          *PoolName
+	Storage       *string // TODO replace one we have a type for it
+	StorageFormat *QemuDiskFormat
 }
 
 func (clone cloneSettings) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
@@ -279,7 +288,7 @@ func (clone cloneSettings) mapToAPI() (GuestID, NodeName, PoolName, map[string]i
 		params["newid"] = int(id)
 	}
 	if clone.Name != nil {
-		params["name"] = *clone.Name
+		params[clone.nameFlag] = *clone.Name
 	}
 	var pool PoolName
 	if clone.Pool != nil {
