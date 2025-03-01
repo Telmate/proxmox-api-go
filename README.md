@@ -203,47 +203,12 @@ cloneQemu JSON Sample:
 
 ```json
 {
-  "name": "golang2.test.com",
-  "description": "Test proxmox-api-go clone",
-  "storage": "local",
-  "memory": {
-    "capacity": 2048
-  },
-  "cores": 2,
-  "sockets": 1,
-  "fullclone": 1
-}
-```
-
-cloneQemu cloud-init JSON Sample:
-
-```json
-{
-  "name": "cloudinit.test.com",
-  "description": "Test proxmox-api-go clone",
-  "storage": "local",
-  "memory": {
-    "capacity": 2048
-  },
-  "cores": 2,
-  "sockets": 1,
-  "cloudinit": {
-    "ipconfig": {
-      "0": {
-        "ip4": {
-          "address": "10.0.2.17/24",
-          "gateway": "10.0.2.2"
-        }
-      }
-    },
-    "sshkeys": [
-      "..."
-    ],
-    "dns": {
-      "nameservers": [
-        "8.8.8.8"
-      ]
-    }
+  "full": {
+    "node": "pve-latest",
+    "name": "golang2.test.com",
+    "pool": "my-pool",
+    "storage": "local-zfs",
+    "format": "raw"
   }
 }
 ```

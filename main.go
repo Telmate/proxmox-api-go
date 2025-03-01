@@ -269,8 +269,8 @@ func main() {
 		log.Println("---")
 		// TODO make cloneQemu in new cli
 	case "cloneQemu":
-		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
-		failError(err)
+		var config *proxmox.CloneQemuTarget
+		failError(json.Unmarshal(GetConfig(*fConfigFile), &config))
 		fmt.Println("Parsed conf: ", config)
 		log.Println("Looking for template: " + flag.Args()[1])
 		sourceVmrs, err := c.GetVmRefsByName(ctx, flag.Args()[1])
@@ -278,10 +278,6 @@ func main() {
 		if sourceVmrs == nil {
 			log.Fatal("Can't find template")
 			return
-		}
-		if vmid == 0 {
-			vmid, err = c.GetNextID(ctx, nil)
-			failError(err)
 		}
 		vmr = proxmox.NewVmRef(vmid)
 		vmr.SetNode(flag.Args()[2])
@@ -295,10 +291,17 @@ func main() {
 			}
 		}
 
-		failError(config.CloneVm(ctx, sourceVmr, vmr, c))
-		_, err = config.Update(ctx, true, vmr, c)
+		if vmid != 0 {
+			if config.Full != nil {
+				config.Full.ID = &vmid
+			} else if config.Linked != nil {
+				config.Linked.ID = &vmid
+			}
+		}
+
+		vmr, err := sourceVmr.CloneQemu(ctx, *config, c)
 		failError(err)
-		log.Println("Complete")
+		log.Println("Created guest with ID: " + vmr.VmId().String())
 
 	case "createQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(ctx, flag.Args()[1])
