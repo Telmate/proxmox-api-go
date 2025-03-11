@@ -60,12 +60,12 @@ func Test_QemuPciDevices_Validate(t *testing.T) {
 					Raw: &QemuPciRaw{
 						ID: util.Pointer(PciID("0000:00:00"))}}}},
 			output: errors.New(QemuPci_Error_MutualExclusive)},
-		{name: `Invalid errors.New(QemuPci_Error_MappedID)`,
+		{name: `Invalid errors.New(QemuPciMapping_Error_RequiredID)`,
 			input: testInput{config: QemuPciDevices{
 				QemuPciID5: QemuPci{
 					Mapping: &QemuPciMapping{}}}},
 			output: errors.New(QemuPciMapping_Error_RequiredID)},
-		{name: `Invalid errors.New(QemuPci_Error_RawID)`,
+		{name: `Invalid errors.New(QemuPciRaw_Error_RequiredID)`,
 			input: testInput{config: QemuPciDevices{
 				QemuPciID6: QemuPci{
 					Raw: &QemuPciRaw{}}}},
