@@ -21,7 +21,6 @@ func Tag_Character_Illegal() []string {
 		`Tag'Name`,
 		`Tag~Name`,
 		`Name<Tag`,
-		`tag.with.dot`,
 		`tag,with,comma`,
 		`tag:name`,
 		`Tag?`,
@@ -29,6 +28,7 @@ func Tag_Character_Illegal() []string {
 		`Tag{Name}`,
 		`!InvalidTag`,
 		`-StartWithDashTag`,
+		`.StartWithDotTag`,
 	}, Tag_Illegal())
 }
 
@@ -65,5 +65,6 @@ func Tag_Legal() []string {
 		`72d1109e_97f6_41e7_96cc_18a8b7dc19dc`,
 		`dash-tag`,
 		`TagName`,
+		`tag.with.dot.`,
 	}, Tag_Max_Legal())
 }
