@@ -9,11 +9,11 @@ import (
 type Tag string
 
 var (
-	regexTag = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9_-]*$`)
+	regexTag = regexp.MustCompile(`^[a-zA-Z0-9_][a-zA-Z0-9-._]*$`)
 )
 
 const (
-	Tag_Error_Invalid   string = "tag may not start with - and may only include the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+	Tag_Error_Invalid   string = "tag may not start with -. and may only include the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._"
 	Tag_Error_Duplicate string = "duplicate tag found"
 	Tag_Error_MaxLength string = "tag may only be 124 characters"
 	Tag_Error_Empty     string = "tag may not be empty"
