@@ -83,6 +83,13 @@ func Test_QemuPciDevices_Validate(t *testing.T) {
 						ID:       util.Pointer(ResourceMappingPciID("aaa")),
 						DeviceID: util.Pointer(PciDeviceID("a0%^#"))}}}},
 			output: errors.New(PciDeviceID_Error_Invalid)},
+		{name: `Invalid Mapping errors.New(PciMediatedDevice_Error_Invalid)`,
+			input: testInput{config: QemuPciDevices{
+				QemuPciID8: QemuPci{
+					Mapping: &QemuPciMapping{
+						ID:   util.Pointer(ResourceMappingPciID("aaa")),
+						MDev: util.Pointer(PciMediatedDevice("vendor,-643"))}}}},
+			output: errors.New(PciMediatedDevice_Error_Invalid)},
 		{name: `Invalid Mapping errors.New(PciSubDeviceID_Error_Invalid)`,
 			input: testInput{config: QemuPciDevices{
 				QemuPciID9: QemuPci{
@@ -116,6 +123,13 @@ func Test_QemuPciDevices_Validate(t *testing.T) {
 						ID:       util.Pointer(PciID("0000:00:00")),
 						DeviceID: util.Pointer(PciDeviceID("a0%^#"))}}}},
 			output: errors.New(PciDeviceID_Error_Invalid)},
+		{name: `Invalid Raw errors.New(PciMediatedDevice_Error_Invalid)`,
+			input: testInput{config: QemuPciDevices{
+				QemuPciID13: QemuPci{
+					Raw: &QemuPciRaw{
+						ID:   util.Pointer(PciID("0000:00:00")),
+						MDev: util.Pointer(PciMediatedDevice("vendor,-643"))}}}},
+			output: errors.New(PciMediatedDevice_Error_Invalid)},
 		{name: `Invalid Raw errors.New(PciSubDeviceID_Error_Invalid)`,
 			input: testInput{config: QemuPciDevices{
 				QemuPciID14: QemuPci{
@@ -312,6 +326,25 @@ func Test_PciDeviceID_Validate(t *testing.T) {
 		{name: `Invalid Maximum`,
 			input:  "0x1ffff",
 			output: errors.New(PciDeviceID_Error_Invalid)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
+func Test_PciMediatedDevice_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  PciMediatedDevice
+		output error
+	}{
+		{name: `Valid`,
+			input: "vendor-643"},
+		{name: `Invalid`,
+			input:  "vendor,-643",
+			output: errors.New(PciMediatedDevice_Error_Invalid)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

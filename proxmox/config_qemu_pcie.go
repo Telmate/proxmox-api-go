@@ -138,6 +138,7 @@ func (QemuPci) mapToSDK(raw string) QemuPci {
 	var deviceID *PciDeviceID
 	var subVendorID *PciSubVendorID
 	var subDeviceID *PciSubDeviceID
+	var mDev *PciMediatedDevice
 	if v, isSet := settings["pcie"]; isSet {
 		pcie = v == "1"
 	}
@@ -159,6 +160,9 @@ func (QemuPci) mapToSDK(raw string) QemuPci {
 	if v, isSet := settings["sub-device-id"]; isSet {
 		subDeviceID = util.Pointer(PciSubDeviceID(v))
 	}
+	if v, isSet := settings["mdev"]; isSet {
+		mDev = util.Pointer(PciMediatedDevice(v))
+	}
 	if mappingID != nil {
 		return QemuPci{Mapping: &QemuPciMapping{
 			ID:          mappingID,
@@ -169,6 +173,7 @@ func (QemuPci) mapToSDK(raw string) QemuPci {
 			DeviceID:    deviceID,
 			SubVendorID: subVendorID,
 			SubDeviceID: subDeviceID,
+			MDev:        mDev,
 		}}
 	}
 	return QemuPci{Raw: &QemuPciRaw{
@@ -180,6 +185,7 @@ func (QemuPci) mapToSDK(raw string) QemuPci {
 		DeviceID:    deviceID,
 		SubVendorID: subVendorID,
 		SubDeviceID: subDeviceID,
+		MDev:        mDev,
 	}}
 }
 
@@ -210,6 +216,9 @@ func (config QemuPci) mapToApiIntermediary(usedConfig qemuPci) qemuPci {
 		if config.Mapping.SubDeviceID != nil {
 			usedConfig.subDeviceID = *config.Mapping.SubDeviceID
 		}
+		if config.Mapping.MDev != nil {
+			usedConfig.mDev = *config.Mapping.MDev
+		}
 		return usedConfig
 	}
 	if config.Raw != nil {
@@ -238,6 +247,9 @@ func (config QemuPci) mapToApiIntermediary(usedConfig qemuPci) qemuPci {
 		if config.Raw.SubDeviceID != nil {
 			usedConfig.subDeviceID = *config.Raw.SubDeviceID
 		}
+		if config.Raw.MDev != nil {
+			usedConfig.mDev = *config.Raw.MDev
+		}
 	}
 	return usedConfig
 }
@@ -265,7 +277,6 @@ func (config QemuPci) Validate(current QemuPci) error {
 }
 
 // TODO add [,legacy-igd=<1|0>]
-// TODO add [,mdev=<string>]
 // TODO add [,romfile=<string>]
 type qemuPci struct {
 	enum        qemuPciEnum
@@ -278,6 +289,7 @@ type qemuPci struct {
 	deviceID    PciDeviceID          // [,device-id=<hex id>]
 	subVendorID PciSubVendorID       // [,sub-vendor-id=<hex id>]
 	subDeviceID PciSubDeviceID       // [,sub-device-id=<hex id>]
+	mDev        PciMediatedDevice    // [,mdev=<string>]
 }
 
 const (
@@ -311,6 +323,9 @@ func (config qemuPci) String() string {
 	if config.subDeviceID != "" {
 		builder.WriteString(",sub-device-id=" + config.subDeviceID.String())
 	}
+	if config.mDev != "" {
+		builder.WriteString(",mdev=" + config.mDev.String())
+	}
 	var settings string
 	switch config.enum {
 	case qemuPCciEnumMapping:
@@ -326,6 +341,7 @@ type qemuPciEnum bool
 type QemuPciMapping struct {
 	DeviceID    *PciDeviceID          `json:"device_id,omitempty"`
 	ID          *ResourceMappingPciID `json:"id,omitempty"`
+	MDev        *PciMediatedDevice    `json:"mdev,omitempty"`
 	PCIe        *bool                 `json:"pcie,omitempty"`
 	PrimaryGPU  *bool                 `json:"gpu,omitempty"`
 	ROMbar      *bool                 `json:"rombar,omitempty"`
@@ -343,6 +359,11 @@ func (config QemuPciMapping) Validate(current *QemuPciMapping) error {
 		}
 	} else if current == nil || current.ID == nil {
 		return errors.New(QemuPciMapping_Error_RequiredID)
+	}
+	if config.MDev != nil {
+		if err := config.MDev.Validate(); err != nil {
+			return err
+		}
 	}
 	if config.DeviceID != nil {
 		if err := config.DeviceID.Validate(); err != nil {
@@ -368,14 +389,15 @@ func (config QemuPciMapping) Validate(current *QemuPciMapping) error {
 }
 
 type QemuPciRaw struct {
-	DeviceID    *PciDeviceID    `json:"device_id,omitempty"`
-	ID          *PciID          `json:"id,omitempty"`
-	PCIe        *bool           `json:"pcie,omitempty"`
-	PrimaryGPU  *bool           `json:"gpu,omitempty"`
-	ROMbar      *bool           `json:"rombar,omitempty"`
-	SubDeviceID *PciSubDeviceID `json:"sub_device_id,omitempty"`
-	SubVendorID *PciSubVendorID `json:"sub_vendor_id,omitempty"`
-	VendorID    *PciVendorID    `json:"vendor_id,omitempty"`
+	DeviceID    *PciDeviceID       `json:"device_id,omitempty"`
+	ID          *PciID             `json:"id,omitempty"`
+	MDev        *PciMediatedDevice `json:"mdev,omitempty"`
+	PCIe        *bool              `json:"pcie,omitempty"`
+	PrimaryGPU  *bool              `json:"gpu,omitempty"`
+	ROMbar      *bool              `json:"rombar,omitempty"`
+	SubDeviceID *PciSubDeviceID    `json:"sub_device_id,omitempty"`
+	SubVendorID *PciSubVendorID    `json:"sub_vendor_id,omitempty"`
+	VendorID    *PciVendorID       `json:"vendor_id,omitempty"`
 }
 
 const QemuPciRaw_Error_RequiredID string = "raw id is required during creation"
@@ -387,6 +409,11 @@ func (config QemuPciRaw) Validate(current *QemuPciRaw) error {
 		}
 	} else if current == nil || current.ID == nil {
 		return errors.New(QemuPciRaw_Error_RequiredID)
+	}
+	if config.MDev != nil {
+		if err := config.MDev.Validate(); err != nil {
+			return err
+		}
 	}
 	if config.DeviceID != nil {
 		if err := config.DeviceID.Validate(); err != nil {
@@ -430,6 +457,26 @@ func (id PciDeviceID) Validate() error {
 	}
 	if _, err := strconv.ParseUint(strings.TrimPrefix(string(id), "0x"), 16, 16); err != nil {
 		return errors.New(PciDeviceID_Error_Invalid)
+	}
+	return nil
+}
+
+// May not include `,`
+// There are probably more restrictions, but they are not documented.
+type PciMediatedDevice string
+
+const (
+	pciMediatedDevice_Filter        string = ","
+	PciMediatedDevice_Error_Invalid string = "mediated device may not include " + pciMediatedDevice_Filter
+)
+
+func (mDev PciMediatedDevice) String() string {
+	return string(mDev)
+}
+
+func (mDev PciMediatedDevice) Validate() error {
+	if strings.ContainsAny(string(mDev), pciMediatedDevice_Filter) {
+		return errors.New(PciMediatedDevice_Error_Invalid)
 	}
 	return nil
 }

@@ -3721,6 +3721,14 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
 							ID: util.Pointer(ResourceMappingPciID("bbbbb"))}}}},
 					output: map[string]interface{}{"hostpci14": "mapping=aaaaa,rombar=0"}},
+				{name: `MApping.MDev`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
+							MDev: util.Pointer(PciMediatedDevice("vendor-665"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
+							MDev: util.Pointer(PciMediatedDevice(PciMediatedDevice("vendor-000")))}}}},
+					output: map[string]interface{}{"hostpci14": "mapping=,rombar=0,mdev=vendor-665"}},
 				{name: `Mapping.Pci`,
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID13: QemuPci{Mapping: &QemuPciMapping{
@@ -3785,6 +3793,14 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						QemuPciID1: QemuPci{Raw: &QemuPciRaw{
 							ID: util.Pointer(PciID("0000:00:00.1"))}}}},
 					output: map[string]interface{}{"hostpci1": "0000:00:00.0,rombar=0"}},
+				{name: `Raw.MDev`,
+					config: &ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
+							MDev: util.Pointer(PciMediatedDevice("vendor-665"))}}}},
+					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
+							MDev: util.Pointer(PciMediatedDevice("vendor-000"))}}}},
+					output: map[string]interface{}{"hostpci2": ",rombar=0,mdev=vendor-665"}},
 				{name: `Raw.Pci`,
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
@@ -6743,12 +6759,13 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		{category: `PciDevices`,
 			tests: []test{
 				{name: `Mapping all`,
-					input: map[string]interface{}{"hostpci0": "mapping=abc,device-id=0xa97f,pcie=1,x-vga=1,rombar=0,sub-device-id=0x61a4,sub-vendor-id=0x98f1,vendor-id=0x4003"},
+					input: map[string]interface{}{"hostpci0": "mapping=abc,device-id=0xa97f,pcie=1,x-vga=1,rombar=0,sub-device-id=0x61a4,sub-vendor-id=0x98f1,vendor-id=0x4003,mdev=vendor-test"},
 					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID0: QemuPci{
 							Mapping: &QemuPciMapping{
 								DeviceID:    util.Pointer(PciDeviceID("0xa97f")),
 								ID:          util.Pointer(ResourceMappingPciID("abc")),
+								MDev:        util.Pointer(PciMediatedDevice("vendor-test")),
 								PCIe:        util.Pointer(true),
 								PrimaryGPU:  util.Pointer(true),
 								ROMbar:      util.Pointer(false),
@@ -6771,6 +6788,16 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						QemuPciID2: QemuPci{
 							Mapping: &QemuPciMapping{
 								ID:         util.Pointer(ResourceMappingPciID("xyz")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Mapping.MDev`,
+					input: map[string]interface{}{"hostpci3": "mapping=abc,mdev=test"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID3: QemuPci{
+							Mapping: &QemuPciMapping{
+								ID:         util.Pointer(ResourceMappingPciID("abc")),
+								MDev:       util.Pointer(PciMediatedDevice("test")),
 								PCIe:       util.Pointer(false),
 								PrimaryGPU: util.Pointer(false),
 								ROMbar:     util.Pointer(true)}}}})},
@@ -6832,12 +6859,13 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 								ROMbar:     util.Pointer(true),
 								VendorID:   util.Pointer(PciVendorID("0x4003"))}}}})},
 				{name: `Raw all`,
-					input: map[string]interface{}{"hostpci15": "0000:02:05.7,device-id=0xa97f,pcie=1,x-vga=1,rombar=0,sub-device-id=0x61a4,sub-vendor-id=0x98f1,vendor-id=0x4003"},
+					input: map[string]interface{}{"hostpci15": "0000:02:05.7,device-id=0xa97f,pcie=1,x-vga=1,rombar=0,sub-device-id=0x61a4,sub-vendor-id=0x98f1,vendor-id=0x4003,mdev=vendor-test"},
 					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID15: QemuPci{
 							Raw: &QemuPciRaw{
 								DeviceID:    util.Pointer(PciDeviceID("0xa97f")),
 								ID:          util.Pointer(PciID("0000:02:05.7")),
+								MDev:        util.Pointer(PciMediatedDevice("vendor-test")),
 								PCIe:        util.Pointer(true),
 								PrimaryGPU:  util.Pointer(true),
 								ROMbar:      util.Pointer(false),
@@ -6860,6 +6888,16 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						QemuPciID13: QemuPci{
 							Raw: &QemuPciRaw{
 								ID:         util.Pointer(PciID("0001:43:86.5")),
+								PCIe:       util.Pointer(false),
+								PrimaryGPU: util.Pointer(false),
+								ROMbar:     util.Pointer(true)}}}})},
+				{name: `Raw.MDev`,
+					input: map[string]interface{}{"hostpci12": "0000:02:05.7,mdev=test"},
+					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
+						QemuPciID12: QemuPci{
+							Raw: &QemuPciRaw{
+								ID:         util.Pointer(PciID("0000:02:05.7")),
+								MDev:       util.Pointer(PciMediatedDevice("test")),
 								PCIe:       util.Pointer(false),
 								PrimaryGPU: util.Pointer(false),
 								ROMbar:     util.Pointer(true)}}}})},
