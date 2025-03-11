@@ -64,12 +64,12 @@ func Test_QemuPciDevices_Validate(t *testing.T) {
 			input: testInput{config: QemuPciDevices{
 				QemuPciID5: QemuPci{
 					Mapping: &QemuPciMapping{}}}},
-			output: errors.New(QemuPci_Error_MappedID)},
+			output: errors.New(QemuPciMapping_Error_RequiredID)},
 		{name: `Invalid errors.New(QemuPci_Error_RawID)`,
 			input: testInput{config: QemuPciDevices{
 				QemuPciID6: QemuPci{
 					Raw: &QemuPciRaw{}}}},
-			output: errors.New(QemuPci_Error_RawID)},
+			output: errors.New(QemuPciRaw_Error_RequiredID)},
 		{name: `Invalid errors.New(ResourceMappingPciID_Error_Invalid)`,
 			input: testInput{config: QemuPciDevices{
 				QemuPciID7: QemuPci{
@@ -201,11 +201,11 @@ func Test_QemuPci_Validate(t *testing.T) {
 		{name: `Invalid errors.New(QemuPci_Error_MappedID)`,
 			input: testInput{config: QemuPci{
 				Mapping: &QemuPciMapping{}}},
-			output: errors.New(QemuPci_Error_MappedID)},
+			output: errors.New(QemuPciMapping_Error_RequiredID)},
 		{name: `Invalid errors.New(QemuPci_Error_RawID)`,
 			input: testInput{config: QemuPci{
 				Raw: &QemuPciRaw{}}},
-			output: errors.New(QemuPci_Error_RawID)},
+			output: errors.New(QemuPciRaw_Error_RequiredID)},
 		{name: `Invalid errors.New(ResourceMappingPciID_Error_Invalid)`,
 			input: testInput{config: QemuPci{
 				Mapping: &QemuPciMapping{

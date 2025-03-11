@@ -109,11 +109,7 @@ type QemuPci struct {
 	Raw     *QemuPciRaw     `json:"raw,omitempty"`
 }
 
-const (
-	QemuPci_Error_MutualExclusive string = "mapping and raw are mutually exclusive"
-	QemuPci_Error_MappedID        string = "mapped id is required during creation"
-	QemuPci_Error_RawID           string = "raw id is required during creation"
-)
+const QemuPci_Error_MutualExclusive string = "mapping and raw are mutually exclusive"
 
 func (config QemuPci) mapToAPI(current *QemuPci) string {
 	var usedConfig qemuPci
@@ -250,69 +246,20 @@ func (config QemuPci) Validate(current QemuPci) error {
 	if config.Delete {
 		return nil
 	}
-	var mutualExclusivity uint8
+	var mutualExclusivity bool
 	if config.Mapping != nil {
-		if config.Mapping.ID != nil {
-			if err := config.Mapping.ID.Validate(); err != nil {
-				return err
-			}
-		} else if current.Mapping == nil || current.Mapping.ID == nil {
-			return errors.New(QemuPci_Error_MappedID)
+		if err := config.Mapping.Validate(current.Mapping); err != nil {
+			return err
 		}
-		if config.Mapping.DeviceID != nil {
-			if err := config.Mapping.DeviceID.Validate(); err != nil {
-				return err
-			}
-		}
-		if config.Mapping.SubDeviceID != nil {
-			if err := config.Mapping.SubDeviceID.Validate(); err != nil {
-				return err
-			}
-		}
-		if config.Mapping.SubVendorID != nil {
-			if err := config.Mapping.SubVendorID.Validate(); err != nil {
-				return err
-			}
-		}
-		if config.Mapping.VendorID != nil {
-			if err := config.Mapping.VendorID.Validate(); err != nil {
-				return err
-			}
-		}
-		mutualExclusivity++
+		mutualExclusivity = true
 	}
 	if config.Raw != nil {
-		if config.Raw.ID != nil {
-			if err := config.Raw.ID.Validate(); err != nil {
-				return err
-			}
-		} else if current.Raw == nil || current.Raw.ID == nil {
-			return errors.New(QemuPci_Error_RawID)
+		if err := config.Raw.Validate(current.Raw); err != nil {
+			return err
 		}
-		if config.Raw.DeviceID != nil {
-			if err := config.Raw.DeviceID.Validate(); err != nil {
-				return err
-			}
+		if mutualExclusivity {
+			return errors.New(QemuPci_Error_MutualExclusive)
 		}
-		if config.Raw.SubDeviceID != nil {
-			if err := config.Raw.SubDeviceID.Validate(); err != nil {
-				return err
-			}
-		}
-		if config.Raw.SubVendorID != nil {
-			if err := config.Raw.SubVendorID.Validate(); err != nil {
-				return err
-			}
-		}
-		if config.Raw.VendorID != nil {
-			if err := config.Raw.VendorID.Validate(); err != nil {
-				return err
-			}
-		}
-		mutualExclusivity++
-	}
-	if mutualExclusivity > 1 {
-		return errors.New(QemuPci_Error_MutualExclusive)
 	}
 	return nil
 }
@@ -387,6 +334,39 @@ type QemuPciMapping struct {
 	VendorID    *PciVendorID          `json:"vendor_id,omitempty"`
 }
 
+const QemuPciMapping_Error_RequiredID string = "mapped id is required during creation"
+
+func (config QemuPciMapping) Validate(current *QemuPciMapping) error {
+	if config.ID != nil {
+		if err := config.ID.Validate(); err != nil {
+			return err
+		}
+	} else if current == nil || current.ID == nil {
+		return errors.New(QemuPciMapping_Error_RequiredID)
+	}
+	if config.DeviceID != nil {
+		if err := config.DeviceID.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.SubDeviceID != nil {
+		if err := config.SubDeviceID.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.SubVendorID != nil {
+		if err := config.SubVendorID.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.VendorID != nil {
+		if err := config.VendorID.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type QemuPciRaw struct {
 	DeviceID    *PciDeviceID    `json:"device_id,omitempty"`
 	ID          *PciID          `json:"id,omitempty"`
@@ -396,6 +376,39 @@ type QemuPciRaw struct {
 	SubDeviceID *PciSubDeviceID `json:"sub_device_id,omitempty"`
 	SubVendorID *PciSubVendorID `json:"sub_vendor_id,omitempty"`
 	VendorID    *PciVendorID    `json:"vendor_id,omitempty"`
+}
+
+const QemuPciRaw_Error_RequiredID string = "raw id is required during creation"
+
+func (config QemuPciRaw) Validate(current *QemuPciRaw) error {
+	if config.ID != nil {
+		if err := config.ID.Validate(); err != nil {
+			return err
+		}
+	} else if current == nil || current.ID == nil {
+		return errors.New(QemuPciRaw_Error_RequiredID)
+	}
+	if config.DeviceID != nil {
+		if err := config.DeviceID.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.SubDeviceID != nil {
+		if err := config.SubDeviceID.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.SubVendorID != nil {
+		if err := config.SubVendorID.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.VendorID != nil {
+		if err := config.VendorID.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Hexadecimal, range 0x0000-0xFFFF, prefixed is optional

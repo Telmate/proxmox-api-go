@@ -8751,13 +8751,13 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							QemuPciID11: QemuPci{
 								Mapping: &QemuPciMapping{}}}}),
 						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID11: QemuPci{}}},
-						err:     errors.New(QemuPci_Error_MappedID)},
+						err:     errors.New(QemuPciMapping_Error_RequiredID)},
 					{name: `errors.New(QemuPci_Error_RawID)`,
 						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
 							QemuPciID10: QemuPci{
 								Raw: &QemuPciRaw{}}}}),
 						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID10: QemuPci{}}},
-						err:     errors.New(QemuPci_Error_RawID)},
+						err:     errors.New(QemuPciRaw_Error_RequiredID)},
 					{name: `errors.New(ResourceMappingPciID_Error_Invalid`,
 						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
 							QemuPciID9: QemuPci{
