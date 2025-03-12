@@ -90,6 +90,35 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 		vmType: vmRefQemu}, nil
 }
 
+func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
+	if vmr == nil {
+		return errors.New(VmRef_Error_Nil)
+	}
+	if err := newNode.Validate(); err != nil {
+		return err
+	}
+	return vmr.migrate_Unsafe(ctx, c, newNode, LiveMigrate)
+}
+
+func (vmr *VmRef) MigrateNoCheck(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
+	if vmr == nil {
+		return errors.New(VmRef_Error_Nil)
+	}
+	return vmr.migrate_Unsafe(ctx, c, newNode, LiveMigrate)
+}
+
+func (vmr *VmRef) migrate_Unsafe(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
+	params := map[string]interface{}{
+		"target":           newNode.String(),
+		"with-local-disks": 1,
+	}
+	if LiveMigrate {
+		params["online"] = 1
+	}
+	_, err := c.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/migrate")
+	return err
+}
+
 const (
 	cloneLxcFlagName  string = "hostname"
 	cloneQemuFlagName string = "name"

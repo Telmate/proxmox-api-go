@@ -771,6 +771,7 @@ func (c *Client) SetLxcConfig(ctx context.Context, vmr *VmRef, vmParams map[stri
 }
 
 // MigrateNode - Migrate a VM
+// Deprecated: use VmRef.Migrate() instead
 func (c *Client) MigrateNode(ctx context.Context, vmr *VmRef, newTargetNode NodeName, online bool) (exitStatus interface{}, err error) {
 	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online, "with-local-disks": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node.String(), vmr.vmType, vmr.vmId)
