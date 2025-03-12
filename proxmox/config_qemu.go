@@ -470,7 +470,6 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 	vmr.SetVmType("qemu")
 	idCopy := vmr.vmId
 	config.ID = &idCopy
-	config.Node = &vmr.node
 	return
 }
 
@@ -496,7 +495,7 @@ func (newConfig ConfigQemu) setAdvanced(
 			return
 		}
 		// TODO implement tmp move and version change
-		url := "/nodes/" + vmr.node.String() + "/" + vmr.vmType + "/" + vmr.vmId.String() + "/config"
+		urlPart := "/" + vmr.vmType + "/" + vmr.vmId.String() + "/config"
 		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 		stopped := false
 
@@ -528,7 +527,7 @@ func (newConfig ConfigQemu) setAdvanced(
 		}
 
 		if itemsToDeleteBeforeUpdate != "" {
-			err = client.Put(ctx, map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, url)
+			err = client.Put(ctx, map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, "/nodes/"+vmr.node.String()+urlPart)
 			if err != nil {
 				return false, nil, fmt.Errorf("error updating VM: %v", err)
 			}
@@ -559,9 +558,7 @@ func (newConfig ConfigQemu) setAdvanced(
 		}
 
 		if newConfig.Node != nil && currentConfig.Node != nil && *newConfig.Node != *currentConfig.Node { // Migrate VM
-			vmr.node = *newConfig.Node
-			_, err = client.MigrateNode(ctx, vmr, *newConfig.Node, true)
-			if err != nil {
+			if err = vmr.migrate_Unsafe(ctx, client, *newConfig.Node, true); err != nil {
 				return
 			}
 			// Set node to the node the VM was migrated to
@@ -572,7 +569,7 @@ func (newConfig ConfigQemu) setAdvanced(
 		if err != nil {
 			return
 		}
-		exitStatus, err = client.PutWithTask(ctx, params, url)
+		exitStatus, err = client.PutWithTask(ctx, params, "/nodes/"+vmr.node.String()+urlPart)
 		if err != nil {
 			return false, nil, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}

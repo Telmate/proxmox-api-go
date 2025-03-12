@@ -41,8 +41,25 @@ type Client struct {
 }
 
 const (
-	Client_Error_Nil string = "client may not be nil"
+	Client_Error_Nil            string = "client may not be nil"
+	Client_Error_NotInitialized string = "client not initialized"
 )
+
+// Checks if the client is initialized and returns an error if not
+func (c *Client) checkInitialized() error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if c.session == nil {
+		return errors.New(Client_Error_NotInitialized)
+	}
+	return nil
+}
+
+// provides a fake client to bypass *Client.checkInitialized() during testing
+func fakeClient() *Client {
+	return &Client{session: &Session{}}
+}
 
 const (
 	VmRef_Error_Nil string = "vm reference may not be nil"
@@ -771,6 +788,7 @@ func (c *Client) SetLxcConfig(ctx context.Context, vmr *VmRef, vmParams map[stri
 }
 
 // MigrateNode - Migrate a VM
+// Deprecated: use VmRef.Migrate() instead
 func (c *Client) MigrateNode(ctx context.Context, vmr *VmRef, newTargetNode NodeName, online bool) (exitStatus interface{}, err error) {
 	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online, "with-local-disks": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node.String(), vmr.vmType, vmr.vmId)

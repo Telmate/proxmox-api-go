@@ -8,6 +8,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_Client_checkInitialized(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  *Client
+		output error
+	}{
+		{name: `nil`,
+			output: errors.New(Client_Error_Nil)},
+		{name: `session nil`,
+			input:  &Client{},
+			output: errors.New(Client_Error_NotInitialized)},
+		{name: `Bypass checkInitialized`,
+			input: fakeClient()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.checkInitialized())
+		})
+	}
+}
+
 func Test_Client_CheckPermissions(t *testing.T) {
 	type input struct {
 		client *Client

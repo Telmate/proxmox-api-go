@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -348,6 +349,68 @@ func Test_CloneQemuTarget_Validate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
+func Test_VmRef_Migrate(t *testing.T) {
+	type testInput struct {
+		c   *Client
+		ctx context.Context
+		vmr *VmRef
+	}
+	tests := []struct {
+		name  string
+		input testInput
+	}{
+		{name: `Client nil`,
+			input: testInput{
+				ctx: context.Background(),
+				vmr: &VmRef{}}},
+		{name: `Context nil`,
+			input: testInput{
+				c:   fakeClient(),
+				vmr: &VmRef{}}},
+		{name: `VmRef nil`,
+			input: testInput{
+				c:   fakeClient(),
+				ctx: context.Background()}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.NotPanics(t, func() { test.input.vmr.Migrate(test.input.ctx, test.input.c, "valid", false) })
+			require.Error(t, test.input.vmr.Migrate(test.input.ctx, test.input.c, "valid", false))
+		})
+	}
+}
+
+func Test_VmRef_MigrateNoCheck(t *testing.T) {
+	type testInput struct {
+		c   *Client
+		ctx context.Context
+		vmr *VmRef
+	}
+	tests := []struct {
+		name  string
+		input testInput
+	}{
+		{name: `Client nil`,
+			input: testInput{
+				ctx: context.Background(),
+				vmr: &VmRef{}}},
+		{name: `Context nil`,
+			input: testInput{
+				c:   fakeClient(),
+				vmr: &VmRef{}}},
+		{name: `VmRef nil`,
+			input: testInput{
+				c:   fakeClient(),
+				ctx: context.Background()}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.NotPanics(t, func() { test.input.vmr.MigrateNoCheck(test.input.ctx, test.input.c, "valid", false) })
+			require.Error(t, test.input.vmr.MigrateNoCheck(test.input.ctx, test.input.c, "valid", false))
 		})
 	}
 }
