@@ -41,8 +41,25 @@ type Client struct {
 }
 
 const (
-	Client_Error_Nil string = "client may not be nil"
+	Client_Error_Nil            string = "client may not be nil"
+	Client_Error_NotInitialized string = "client not initialized"
 )
+
+// Checks if the client is initialized and returns an error if not
+func (c *Client) checkInitialized() error {
+	if c == nil {
+		return errors.New(Client_Error_Nil)
+	}
+	if c.session == nil {
+		return errors.New(Client_Error_NotInitialized)
+	}
+	return nil
+}
+
+// provides a fake client to bypass *Client.checkInitialized() during testing
+func fakeClient() *Client {
+	return &Client{session: &Session{}}
+}
 
 const (
 	VmRef_Error_Nil string = "vm reference may not be nil"

@@ -94,6 +94,9 @@ func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, Live
 	if vmr == nil {
 		return errors.New(VmRef_Error_Nil)
 	}
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
 	if err := newNode.Validate(); err != nil {
 		return err
 	}
@@ -103,6 +106,9 @@ func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, Live
 func (vmr *VmRef) MigrateNoCheck(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
 	if vmr == nil {
 		return errors.New(VmRef_Error_Nil)
+	}
+	if err := c.checkInitialized(); err != nil {
+		return err
 	}
 	return vmr.migrate_Unsafe(ctx, c, newNode, LiveMigrate)
 }
