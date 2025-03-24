@@ -81,7 +81,58 @@ const (
 
 // Create - Tell Proxmox API to make the VM
 func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, error) {
-	_, vmr, err := config.setAdvanced(ctx, nil, false, nil, client)
+	version, err := client.Version(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = config.Validate(nil, version); err != nil {
+		return nil, err
+	}
+
+	var params map[string]interface{}
+	_, params, err = config.mapToAPI(ConfigQemu{}, version)
+	if err != nil {
+		return nil, err
+	}
+	// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
+	// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
+	var pool PoolName
+	if config.Pool != nil && *config.Pool != "" {
+		params["pool"] = *config.Pool
+	}
+	var id GuestID
+	var node NodeName
+	if config.Node != nil {
+		node = *config.Node
+	}
+	url := "/nodes/" + config.Node.String() + "/qemu"
+	if config.ID == nil {
+		id, err = guestCreateLoop(ctx, "vmid", url, params, client)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		params["vmid"] = int(*config.ID)
+		var exitStatus string
+		exitStatus, err = client.PostWithTask(ctx, params, url)
+		if err != nil {
+			return nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		}
+	}
+
+	vmr := &VmRef{
+		node:   node,
+		vmId:   id,
+		pool:   pool,
+		vmType: vmRefQemu,
+	}
+	if err = resizeNewDisks(ctx, vmr, client, config.Disks, nil); err != nil {
+		return nil, err
+	}
+	if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
+		return nil, err
+	}
+	_, err = client.UpdateVMHA(ctx, vmr, config.HaState, config.HaGroup)
 	return vmr, err
 }
 
@@ -609,51 +660,6 @@ func (newConfig ConfigQemu) setAdvanced(
 				return rebootRequired, nil, nil
 			}
 		}
-	} else { // Create
-		if err = newConfig.Validate(nil, version); err != nil {
-			return
-		}
-		_, params, err = newConfig.mapToAPI(ConfigQemu{}, version)
-		if err != nil {
-			return
-		}
-		// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
-		// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
-		var pool PoolName
-		if newConfig.Pool != nil && *newConfig.Pool != "" {
-			params["pool"] = *newConfig.Pool
-		}
-		var id GuestID
-		var node NodeName
-		if newConfig.Node != nil {
-			node = *newConfig.Node
-		}
-		url := "/nodes/" + newConfig.Node.String() + "/qemu"
-		if newConfig.ID == nil {
-			id, err = guestCreateLoop(ctx, "vmid", url, params, client)
-			if err != nil {
-				return
-			}
-		} else {
-			params["vmid"] = int(*newConfig.ID)
-			exitStatus, err = client.PostWithTask(ctx, params, url)
-			if err != nil {
-				return false, nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
-			}
-		}
-		newVMR = &VmRef{
-			node:   node,
-			vmId:   id,
-			pool:   pool,
-			vmType: vmRefQemu,
-		}
-		if err = resizeNewDisks(ctx, newVMR, client, newConfig.Disks, nil); err != nil {
-			return
-		}
-		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
-			return
-		}
-		vmr = newVMR
 	}
 
 	_, err = client.UpdateVMHA(ctx, vmr, newConfig.HaState, newConfig.HaGroup)
