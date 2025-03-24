@@ -666,6 +666,19 @@ func (newConfig ConfigQemu) setAdvanced(
 	return
 }
 
+func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
+	if config == nil {
+		return errors.New("config may not be nil")
+	}
+	if err = vmr.nilCheck(); err != nil {
+		return
+	}
+	vmr.SetVmType("qemu")
+	idCopy := vmr.vmId
+	config.ID = &idCopy
+	return
+}
+
 func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err error) {
 	// TODO test all other use cases
 	// TODO has no context about changes caused by updating the vm
