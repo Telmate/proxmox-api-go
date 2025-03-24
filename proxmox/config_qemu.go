@@ -641,18 +641,19 @@ func (newConfig ConfigQemu) setAdvanced(
 				return false, nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
 			}
 		}
-		if err = resizeNewDisks(ctx, vmr, client, newConfig.Disks, nil); err != nil {
-			return
-		}
-		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
-			return
-		}
-		vmr = &VmRef{
+		newVMR = &VmRef{
 			node:   node,
 			vmId:   id,
 			pool:   pool,
 			vmType: vmRefQemu,
 		}
+		if err = resizeNewDisks(ctx, newVMR, client, newConfig.Disks, nil); err != nil {
+			return
+		}
+		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
+			return
+		}
+		vmr = newVMR
 	}
 
 	_, err = client.UpdateVMHA(ctx, vmr, newConfig.HaState, newConfig.HaGroup)
