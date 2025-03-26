@@ -72,12 +72,14 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 		builder.WriteString(model)
 		if config.MAC != nil {
 			mac = config.MAC.String() // Returns a lowercase MAC address
-			if mac == strings.ToLower(current.mac) {
-				mac = current.mac
-			} else {
-				mac = strings.ToUpper(mac)
+			if mac != "" {
+				if mac == strings.ToLower(current.mac) { // Preserve the original case, changing causes network interface reconnect
+					mac = current.mac
+				} else {
+					mac = strings.ToUpper(mac)
+				}
+				builder.WriteString("=" + mac)
 			}
-			builder.WriteString("=" + mac)
 		} else if current.MAC != nil {
 			if current.mac != "" {
 				mac = current.mac
