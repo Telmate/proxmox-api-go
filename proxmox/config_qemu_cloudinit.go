@@ -62,7 +62,12 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 		delete += config.NetworkInterfaces.mapToAPI(current.NetworkInterfaces, params)
 		if config.PublicSSHkeys != nil {
 			if len(*config.PublicSSHkeys) > 0 {
-				params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
+				tmpKey := sshKeyUrlEncode(*config.PublicSSHkeys)
+				if tmpKey != "" {
+					params["sshkeys"] = tmpKey
+				} else {
+					delete += ",sshkeys"
+				}
 			} else {
 				delete += ",sshkeys"
 			}
@@ -88,7 +93,9 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 		}
 		config.NetworkInterfaces.mapToAPI(nil, params)
 		if config.PublicSSHkeys != nil && len(*config.PublicSSHkeys) > 0 {
-			params["sshkeys"] = sshKeyUrlEncode(*config.PublicSSHkeys)
+			if tmpKey := sshKeyUrlEncode(*config.PublicSSHkeys); tmpKey != "" {
+				params["sshkeys"] = tmpKey
+			}
 		}
 	}
 	// Shared
