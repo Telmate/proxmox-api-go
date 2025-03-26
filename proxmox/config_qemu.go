@@ -105,7 +105,7 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	if config.Node != nil {
 		node = *config.Node
 	}
-	url := "/nodes/" + config.Node.String() + "/qemu"
+	url := "/nodes/" + node.String() + "/qemu"
 	if config.ID == nil {
 		id, err = guestCreateLoop(ctx, "vmid", url, params, client)
 		if err != nil {
