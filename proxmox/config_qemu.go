@@ -81,7 +81,58 @@ const (
 
 // Create - Tell Proxmox API to make the VM
 func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, error) {
-	_, vmr, err := config.setAdvanced(ctx, nil, false, nil, client)
+	version, err := client.Version(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = config.Validate(nil, version); err != nil {
+		return nil, err
+	}
+
+	var params map[string]interface{}
+	_, params, err = config.mapToAPI(ConfigQemu{}, version)
+	if err != nil {
+		return nil, err
+	}
+	// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
+	// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
+	var pool PoolName
+	if config.Pool != nil && *config.Pool != "" {
+		params["pool"] = *config.Pool
+	}
+	var id GuestID
+	var node NodeName
+	if config.Node != nil {
+		node = *config.Node
+	}
+	url := "/nodes/" + node.String() + "/qemu"
+	if config.ID == nil {
+		id, err = guestCreateLoop(ctx, "vmid", url, params, client)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		params["vmid"] = int(*config.ID)
+		var exitStatus string
+		exitStatus, err = client.PostWithTask(ctx, params, url)
+		if err != nil {
+			return nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		}
+	}
+
+	vmr := &VmRef{
+		node:   node,
+		vmId:   id,
+		pool:   pool,
+		vmType: vmRefQemu,
+	}
+	if err = resizeNewDisks(ctx, vmr, client, config.Disks, nil); err != nil {
+		return nil, err
+	}
+	if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
+		return nil, err
+	}
+	_, err = client.UpdateVMHA(ctx, vmr, config.HaState, config.HaGroup)
 	return vmr, err
 }
 
@@ -451,12 +502,145 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	return &config, nil
 }
 
-func (newConfig ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
+func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
+	// currentConfig will be mutated
 	currentConfig, err := NewConfigQemuFromApi(ctx, vmr, client)
 	if err != nil {
 		return
 	}
-	rebootRequired, _, err = newConfig.setAdvanced(ctx, currentConfig, rebootIfNeeded, vmr, client)
+
+	if vmr != nil {
+		if err = config.setVmr(vmr); err != nil {
+			return
+		}
+	}
+
+	var version Version
+	if version, err = client.Version(ctx); err != nil {
+		return
+	}
+	if err = config.Validate(currentConfig, version); err != nil {
+		return
+	}
+	// TODO implement tmp move and version change
+	urlPart := "/" + vmr.vmType + "/" + vmr.vmId.String() + "/config"
+	var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
+	stopped := false
+
+	var markedDisks qemuUpdateChanges
+	if config.Disks != nil && currentConfig.Disks != nil {
+		markedDisks = *config.Disks.markDiskChanges(*currentConfig.Disks)
+		for _, e := range markedDisks.Move { // move disk to different storage or change disk format
+			_, err = e.move(ctx, true, vmr, client)
+			if err != nil {
+				return
+			}
+		}
+		if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
+			return false, err
+		}
+		itemsToDeleteBeforeUpdate = config.Disks.cloudInitRemove(*currentConfig.Disks)
+	}
+
+	if config.TPM != nil && currentConfig.TPM != nil { // delete or move TPM
+		delete, disk := config.TPM.markChanges(*currentConfig.TPM)
+		if delete != "" { // delete
+			itemsToDeleteBeforeUpdate = AddToList(itemsToDeleteBeforeUpdate, delete)
+			currentConfig.TPM = nil
+		} else if disk != nil { // move
+			if _, err := disk.move(ctx, true, vmr, client); err != nil {
+				return false, err
+			}
+		}
+	}
+
+	if itemsToDeleteBeforeUpdate != "" {
+		err = client.Put(ctx, map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, "/nodes/"+vmr.node.String()+urlPart)
+		if err != nil {
+			return false, fmt.Errorf("error updating VM: %v", err)
+		}
+		// Deleting these items can create pending changes
+		rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
+		if err != nil {
+			return
+		}
+		if rebootRequired { // shutdown vm if reboot is required
+			if rebootIfNeeded {
+				if err = GuestShutdown(ctx, vmr, client, true); err != nil {
+					return
+				}
+				stopped = true
+				rebootRequired = false
+			} else {
+				return rebootRequired, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
+			}
+		}
+	}
+
+	// TODO GuestHasPendingChanges() has the current vm config technically. We can use this to avoid an extra API call.
+	if len(markedDisks.Move) != 0 { // Moving disks changes the disk id. we need to get the config again if any disk was moved.
+		currentConfig, err = NewConfigQemuFromApi(ctx, vmr, client)
+		if err != nil {
+			return
+		}
+	}
+
+	if config.Node != nil && currentConfig.Node != nil && *config.Node != *currentConfig.Node { // Migrate VM
+		if err = vmr.migrate_Unsafe(ctx, client, *config.Node, true); err != nil {
+			return
+		}
+		// Set node to the node the VM was migrated to
+		vmr.node = *config.Node
+	}
+
+	var params map[string]interface{}
+	rebootRequired, params, err = config.mapToAPI(*currentConfig, version)
+	if err != nil {
+		return
+	}
+	var exitStatus string
+	exitStatus, err = client.PutWithTask(ctx, params, "/nodes/"+vmr.node.String()+urlPart)
+	if err != nil {
+		return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+	}
+
+	if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped
+		rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
+		if err != nil {
+			return
+		}
+	}
+
+	if err = resizeNewDisks(ctx, vmr, client, config.Disks, currentConfig.Disks); err != nil {
+		return
+	}
+
+	if config.Pool != nil { // update pool membership
+		guestSetPoolNoCheck(ctx, client, uint(vmr.vmId), *config.Pool, currentConfig.Pool, version)
+	}
+
+	if stopped { // start vm if it was stopped
+		if rebootIfNeeded {
+			if err = GuestStart(ctx, vmr, client); err != nil {
+				return
+			}
+			stopped = false
+			rebootRequired = false
+		} else {
+			return true, nil
+		}
+	} else if rebootRequired { // reboot vm if it is running
+		if rebootIfNeeded {
+			if err = GuestReboot(ctx, vmr, client); err != nil {
+				return
+			}
+			rebootRequired = false
+		} else {
+			return rebootRequired, nil
+		}
+	}
+
+	_, err = client.UpdateVMHA(ctx, vmr, config.HaState, config.HaGroup)
 	return
 }
 
@@ -470,192 +654,6 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 	vmr.SetVmType("qemu")
 	idCopy := vmr.vmId
 	config.ID = &idCopy
-	return
-}
-
-// currentConfig will be mutated
-func (newConfig ConfigQemu) setAdvanced(
-	ctx context.Context, currentConfig *ConfigQemu, rebootIfNeeded bool, vmr *VmRef, client *Client,
-) (rebootRequired bool, newVMR *VmRef, err error,
-) {
-	var version Version
-	if version, err = client.Version(ctx); err != nil {
-		return
-	}
-	var params map[string]interface{}
-	var exitStatus string
-
-	if currentConfig != nil { // Update
-		if vmr != nil {
-			if err = newConfig.setVmr(vmr); err != nil {
-				return
-			}
-		}
-		if err = newConfig.Validate(currentConfig, version); err != nil {
-			return
-		}
-		// TODO implement tmp move and version change
-		urlPart := "/" + vmr.vmType + "/" + vmr.vmId.String() + "/config"
-		var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
-		stopped := false
-
-		var markedDisks qemuUpdateChanges
-		if newConfig.Disks != nil && currentConfig.Disks != nil {
-			markedDisks = *newConfig.Disks.markDiskChanges(*currentConfig.Disks)
-			for _, e := range markedDisks.Move { // move disk to different storage or change disk format
-				_, err = e.move(ctx, true, vmr, client)
-				if err != nil {
-					return
-				}
-			}
-			if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
-				return false, nil, err
-			}
-			itemsToDeleteBeforeUpdate = newConfig.Disks.cloudInitRemove(*currentConfig.Disks)
-		}
-
-		if newConfig.TPM != nil && currentConfig.TPM != nil { // delete or move TPM
-			delete, disk := newConfig.TPM.markChanges(*currentConfig.TPM)
-			if delete != "" { // delete
-				itemsToDeleteBeforeUpdate = AddToList(itemsToDeleteBeforeUpdate, delete)
-				currentConfig.TPM = nil
-			} else if disk != nil { // move
-				if _, err := disk.move(ctx, true, vmr, client); err != nil {
-					return false, nil, err
-				}
-			}
-		}
-
-		if itemsToDeleteBeforeUpdate != "" {
-			err = client.Put(ctx, map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, "/nodes/"+vmr.node.String()+urlPart)
-			if err != nil {
-				return false, nil, fmt.Errorf("error updating VM: %v", err)
-			}
-			// Deleteing these items can create pending changes
-			rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
-			if err != nil {
-				return
-			}
-			if rebootRequired { // shutdown vm if reboot is required
-				if rebootIfNeeded {
-					if err = GuestShutdown(ctx, vmr, client, true); err != nil {
-						return
-					}
-					stopped = true
-					rebootRequired = false
-				} else {
-					return rebootRequired, nil, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
-				}
-			}
-		}
-
-		// TODO GuestHasPendingChanges() has the current vm config technically. We can use this to avoid an extra API call.
-		if len(markedDisks.Move) != 0 { // Moving disks changes the disk id. we need to get the config again if any disk was moved.
-			currentConfig, err = NewConfigQemuFromApi(ctx, vmr, client)
-			if err != nil {
-				return
-			}
-		}
-
-		if newConfig.Node != nil && currentConfig.Node != nil && *newConfig.Node != *currentConfig.Node { // Migrate VM
-			if err = vmr.migrate_Unsafe(ctx, client, *newConfig.Node, true); err != nil {
-				return
-			}
-			// Set node to the node the VM was migrated to
-			vmr.node = *newConfig.Node
-		}
-
-		rebootRequired, params, err = newConfig.mapToAPI(*currentConfig, version)
-		if err != nil {
-			return
-		}
-		exitStatus, err = client.PutWithTask(ctx, params, "/nodes/"+vmr.node.String()+urlPart)
-		if err != nil {
-			return false, nil, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
-		}
-
-		if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped
-			rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
-			if err != nil {
-				return
-			}
-		}
-
-		if err = resizeNewDisks(ctx, vmr, client, newConfig.Disks, currentConfig.Disks); err != nil {
-			return
-		}
-
-		if newConfig.Pool != nil { // update pool membership
-			guestSetPoolNoCheck(ctx, client, uint(vmr.vmId), *newConfig.Pool, currentConfig.Pool, version)
-		}
-
-		if stopped { // start vm if it was stopped
-			if rebootIfNeeded {
-				if err = GuestStart(ctx, vmr, client); err != nil {
-					return
-				}
-				stopped = false
-				rebootRequired = false
-			} else {
-				return true, nil, nil
-			}
-		} else if rebootRequired { // reboot vm if it is running
-			if rebootIfNeeded {
-				if err = GuestReboot(ctx, vmr, client); err != nil {
-					return
-				}
-				rebootRequired = false
-			} else {
-				return rebootRequired, nil, nil
-			}
-		}
-	} else { // Create
-		if err = newConfig.Validate(nil, version); err != nil {
-			return
-		}
-		_, params, err = newConfig.mapToAPI(ConfigQemu{}, version)
-		if err != nil {
-			return
-		}
-		// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
-		// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
-		var pool PoolName
-		if newConfig.Pool != nil && *newConfig.Pool != "" {
-			params["pool"] = *newConfig.Pool
-		}
-		var id GuestID
-		var node NodeName
-		if newConfig.Node != nil {
-			node = *newConfig.Node
-		}
-		url := "/nodes/" + newConfig.Node.String() + "/qemu"
-		if newConfig.ID == nil {
-			id, err = guestCreateLoop(ctx, "vmid", url, params, client)
-			if err != nil {
-				return
-			}
-		} else {
-			params["vmid"] = int(*newConfig.ID)
-			exitStatus, err = client.PostWithTask(ctx, params, url)
-			if err != nil {
-				return false, nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
-			}
-		}
-		if err = resizeNewDisks(ctx, vmr, client, newConfig.Disks, nil); err != nil {
-			return
-		}
-		if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
-			return
-		}
-		vmr = &VmRef{
-			node:   node,
-			vmId:   id,
-			pool:   pool,
-			vmType: vmRefQemu,
-		}
-	}
-
-	_, err = client.UpdateVMHA(ctx, vmr, newConfig.HaState, newConfig.HaGroup)
 	return
 }
 
