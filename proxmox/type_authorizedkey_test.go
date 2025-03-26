@@ -224,11 +224,27 @@ func Test_sshKeyUrlDecode(t *testing.T) {
 func Test_sshKeyUrlEncode(t *testing.T) {
 	rawInput := test_data_qemu.PublicKey_Decoded_Input()
 	input := make([]AuthorizedKey, len(rawInput))
-	output := test_data_qemu.PublicKey_Encoded_Output()
 	for i := range rawInput {
 		input[i] = AuthorizedKey{Options: rawInput[i].Options, PublicKey: rawInput[i].PublicKey, Comment: rawInput[i].Comment}
 	}
-	require.Equal(t, output, sshKeyUrlEncode(input))
+
+	tests := []struct {
+		name   string
+		input  []AuthorizedKey
+		output string
+	}{
+		{name: `multiple keys`,
+			input:  input,
+			output: test_data_qemu.PublicKey_Encoded_Output()},
+		{name: `empty key`,
+			input:  []AuthorizedKey{{}},
+			output: ""},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, sshKeyUrlEncode(test.input))
+		})
+	}
 }
 
 func Benchmark_sshKeyUrlDecode(b *testing.B) {

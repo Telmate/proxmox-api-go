@@ -104,7 +104,11 @@ func sshKeyUrlDecode(encodedKeys string) (keys []AuthorizedKey) {
 func sshKeyUrlEncode(keys []AuthorizedKey) string {
 	encodedKeys := make([]string, len(keys))
 	for i := range keys {
-		tmpKey := url.PathEscape(keys[i].String())
+		tmpKey := keys[i].String()
+		if tmpKey == "" {
+			continue
+		}
+		tmpKey = url.PathEscape(tmpKey)
 		tmpKey = strings.ReplaceAll(tmpKey, "+", "%2B")
 		tmpKey = strings.ReplaceAll(tmpKey, "@", "%40")
 		tmpKey = strings.ReplaceAll(tmpKey, "=", "%3D")
