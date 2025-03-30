@@ -40,6 +40,47 @@ type Client struct {
 	guestCreationMutex sync.Mutex
 }
 
+type clientInterface interface {
+	delete(ctx context.Context, url string) error
+	getItemConfig(ctx context.Context, url, text, message string, errorStrings []string) (map[string]interface{}, error)
+	getItemList(ctx context.Context, url string) (map[string]interface{}, error)
+}
+
+type client struct {
+	c *Client
+}
+
+func (c *client) delete(ctx context.Context, url string) (err error) {
+	_, err = c.c.session.Delete(ctx, url, nil, nil)
+	return
+}
+
+func (c *client) getItemConfig(ctx context.Context, url, text, message string, errorStrings []string) (map[string]interface{}, error) {
+	return c.c.GetItemConfig(ctx, url, text, message, errorStrings...)
+}
+
+func (c *client) getItemList(ctx context.Context, url string) (map[string]interface{}, error) {
+	return c.c.GetItemList(ctx, url)
+}
+
+type mocClient struct {
+	deleteFunc        func(ctx context.Context, url string) error
+	getItemConfigFunc func(ctx context.Context, url, text, message string, errorStrings []string) (map[string]interface{}, error)
+	getItemListFunc   func(ctx context.Context, url string) (map[string]interface{}, error)
+}
+
+func (c *mocClient) delete(ctx context.Context, url string) (err error) {
+	return c.deleteFunc(ctx, url)
+}
+
+func (c *mocClient) getItemConfig(ctx context.Context, url, text, message string, errorStrings []string) (map[string]interface{}, error) {
+	return c.getItemConfigFunc(ctx, url, text, message, errorStrings)
+}
+
+func (c *mocClient) getItemList(ctx context.Context, url string) (map[string]interface{}, error) {
+	return c.getItemListFunc(ctx, url)
+}
+
 const (
 	Client_Error_Nil            string = "client may not be nil"
 	Client_Error_NotInitialized string = "client not initialized"
@@ -2151,6 +2192,17 @@ func (c *Client) PostWithTask(ctx context.Context, Params map[string]interface{}
 	return c.CheckTask(ctx, resp)
 }
 
+// Makes a POST request and returns a Task to await.
+func (c *Client) postWithTask(ctx context.Context, Params map[string]interface{}, url string) (Task, error) {
+	reqbody := ParamsToBody(Params)
+	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	if err != nil {
+		c.HandleTaskError(resp)
+		return nil, err
+	}
+	return c.taskResponse(ctx, resp)
+}
+
 // Makes a PUT request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
 func (c *Client) Put(ctx context.Context, Params map[string]interface{}, url string) (err error) {
@@ -2180,6 +2232,17 @@ func (c *Client) PutWithTask(ctx context.Context, Params map[string]interface{},
 	return c.CheckTask(ctx, resp)
 }
 
+// Makes a PUT request and returns a Task to await.
+func (c *Client) putWithTask(ctx context.Context, Params map[string]interface{}, url string) (Task, error) {
+	reqbody := ParamsToBody(Params)
+	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+	if err != nil {
+		c.HandleTaskError(resp)
+		return nil, err
+	}
+	return c.taskResponse(ctx, resp)
+}
+
 // Makes a DELETE request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
 func (c *Client) Delete(ctx context.Context, url string) (err error) {
@@ -2196,6 +2259,16 @@ func (c *Client) DeleteWithTask(ctx context.Context, url string) (exitStatus str
 		return c.HandleTaskError(resp), err
 	}
 	return c.CheckTask(ctx, resp)
+}
+
+// Makes a DELETE request and returns a Task to await.
+func (c *Client) deleteWithTask(ctx context.Context, url string) (Task, error) {
+	resp, err := c.session.Delete(ctx, url, nil, nil)
+	if err != nil {
+		c.HandleTaskError(resp)
+		return nil, err
+	}
+	return c.taskResponse(ctx, resp)
 }
 
 func (c *Client) GetItemListInterfaceArray(ctx context.Context, url string) ([]interface{}, error) {
