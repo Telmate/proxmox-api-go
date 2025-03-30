@@ -2,9 +2,7 @@ package proxmox
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"regexp"
 	"strconv"
 	"unicode"
@@ -26,29 +24,24 @@ func (config ConfigSnapshot) mapToApiValues() map[string]interface{} {
 }
 
 // Creates a snapshot and validates the input
-func (config ConfigSnapshot) Create(ctx context.Context, c *Client, vmr *VmRef) (err error) {
+func (config ConfigSnapshot) Create(ctx context.Context, c *Client, vmr *VmRef) (Task, error) {
+	var err error
 	if err = c.CheckVmRef(ctx, vmr); err != nil {
-		return
+		return nil, err
 	}
 	if err = config.Validate(); err != nil {
-		return
+		return nil, err
 	}
 	return config.CreateNoCheck(ctx, c, vmr)
 }
 
 // Create a snapshot without validating the input, use ConfigSnapshot.Create() to validate the input.
-func (config ConfigSnapshot) CreateNoCheck(ctx context.Context, c *Client, vmr *VmRef) error {
-	params := config.mapToApiValues()
-	_, err := c.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/snapshot/")
-	if err != nil {
-		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error creating Snapshot: %v, (params: %v)", err, string(params))
-	}
-	return nil
+func (config ConfigSnapshot) CreateNoCheck(ctx context.Context, c *Client, vmr *VmRef) (Task, error) {
+	return c.postWithTask(ctx, config.mapToApiValues(), "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/snapshot/")
 }
 
 // deprecated use ConfigSnapshot.Create() instead
-func (config ConfigSnapshot) CreateSnapshot(ctx context.Context, c *Client, vmr *VmRef) error {
+func (config ConfigSnapshot) CreateSnapshot(ctx context.Context, c *Client, vmr *VmRef) (Task, error) {
 	return config.Create(ctx, c, vmr)
 }
 
@@ -71,12 +64,12 @@ func UpdateSnapshotDescription(ctx context.Context, c *Client, vmr *VmRef, snaps
 }
 
 // Deletes a snapshot, same as SnapshotName.Delete()
-func DeleteSnapshot(ctx context.Context, c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
+func DeleteSnapshot(ctx context.Context, c *Client, vmr *VmRef, snapshot SnapshotName) (Task, error) {
 	return snapshot.Delete(ctx, c, vmr)
 }
 
 // Rollback to a snapshot, same as SnapshotName.Rollback()
-func RollbackSnapshot(ctx context.Context, c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
+func RollbackSnapshot(ctx context.Context, c *Client, vmr *VmRef, snapshot SnapshotName) (Task, error) {
 	return snapshot.Rollback(ctx, c, vmr)
 }
 
@@ -148,37 +141,39 @@ const (
 )
 
 // Deletes the specified snapshot, validates the input
-func (snap SnapshotName) Delete(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
+func (snap SnapshotName) Delete(ctx context.Context, c *Client, vmr *VmRef) (Task, error) {
+	var err error
 	if err = c.CheckVmRef(ctx, vmr); err != nil {
-		return
+		return nil, err
 	}
 	if err = snap.Validate(); err != nil {
-		return
+		return nil, err
 	}
 	// TODO check if snapshot exists
 	return snap.DeleteNoCheck(ctx, c, vmr)
 }
 
 // Deletes the specified snapshot without validating the input, use SnapshotName.Delete() to validate the input.
-func (snap SnapshotName) DeleteNoCheck(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
-	return c.DeleteWithTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/snapshot/"+string(snap))
+func (snap SnapshotName) DeleteNoCheck(ctx context.Context, c *Client, vmr *VmRef) (Task, error) {
+	return c.deleteWithTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/snapshot/"+string(snap))
 }
 
 // Rollback to the specified snapshot, validates the input
-func (snap SnapshotName) Rollback(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
+func (snap SnapshotName) Rollback(ctx context.Context, c *Client, vmr *VmRef) (Task, error) {
+	var err error
 	if err = c.CheckVmRef(ctx, vmr); err != nil {
-		return
+		return nil, err
 	}
 	if err = snap.Validate(); err != nil {
-		return
+		return nil, err
 	}
 	// TODO check if snapshot exists
 	return snap.RollbackNoCheck(ctx, c, vmr)
 }
 
 // Rollback to the specified snapshot without validating the input, use SnapshotName.Rollback() to validate the input.
-func (snap SnapshotName) RollbackNoCheck(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
-	return c.PostWithTask(ctx, nil, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback")
+func (snap SnapshotName) RollbackNoCheck(ctx context.Context, c *Client, vmr *VmRef) (Task, error) {
+	return c.postWithTask(ctx, nil, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback")
 }
 
 // Updates the description of the specified snapshot, validates the input

@@ -16,12 +16,15 @@ var delete_fileCmd = &cobra.Command{
 		if Type.Validate() != nil {
 			return
 		}
-		err = proxmox.DeleteFile(cli.Context(), c, args[0], proxmox.Content_File{
+		task, err := proxmox.DeleteFile(cli.Context(), c, args[0], proxmox.Content_File{
 			Storage:     args[1],
 			ContentType: Type,
 			FilePath:    args[3],
 		})
 		if err != nil {
+			return
+		}
+		if err = task.WaitForCompletion(); err != nil {
 			return
 		}
 		cli.PrintItemDeleted(deleteCmd.OutOrStdout(), args[3], "File")

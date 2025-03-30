@@ -129,13 +129,13 @@ func createFilesList(fileList []interface{}) *[]Content_FileProperties {
 }
 
 // Deletes te specified file from the specified storage.
-func DeleteFile(ctx context.Context, client *Client, node string, content Content_File) (err error) {
+func DeleteFile(ctx context.Context, client *Client, node string, content Content_File) (Task, error) {
+	var err error
 	content.ContentType, err = content.ContentType.toApiValueAndValidate()
 	if err != nil {
-		return
+		return nil, err
 	}
-	_, err = client.DeleteWithTask(ctx, "/nodes/"+node+"/storage/"+content.Storage+"/content"+content.format())
-	return
+	return client.deleteWithTask(ctx, "/nodes/"+node+"/storage/"+content.Storage+"/content"+content.format())
 }
 
 // List all files of the given type in the the specified storage

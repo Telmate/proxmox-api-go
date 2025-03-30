@@ -107,16 +107,23 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	}
 	url := "/nodes/" + node.String() + "/qemu"
 	if config.ID == nil {
-		id, err = guestCreateLoop(ctx, "vmid", url, params, client)
+		var task Task
+		id, task, err = guestCreateLoop(ctx, "vmid", url, params, client)
 		if err != nil {
+			return nil, err
+		}
+		if err = task.WaitForCompletion(); err != nil {
 			return nil, err
 		}
 	} else {
 		params["vmid"] = int(*config.ID)
-		var exitStatus string
-		exitStatus, err = client.PostWithTask(ctx, params, url)
+		var task Task
+		task, err = client.postWithTask(ctx, params, url)
 		if err != nil {
-			return nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+			return nil, err
+		}
+		if err = task.WaitForCompletion(); err != nil {
+			return nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, task.Status(), params)
 		}
 	}
 
@@ -566,7 +573,12 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		}
 		if rebootRequired { // shutdown vm if reboot is required
 			if rebootIfNeeded {
-				if err = GuestShutdown(ctx, vmr, client, true); err != nil {
+				var task Task
+				task, err = GuestShutdown(ctx, vmr, client, true)
+				if err != nil {
+					return
+				}
+				if err = task.WaitForCompletion(); err != nil {
 					return
 				}
 				stopped = true
@@ -586,7 +598,12 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	}
 
 	if config.Node != nil && currentConfig.Node != nil && *config.Node != *currentConfig.Node { // Migrate VM
-		if err = vmr.migrate_Unsafe(ctx, client, *config.Node, true); err != nil {
+		var task Task
+		task, err = vmr.migrate_Unsafe(ctx, client, *config.Node, true)
+		if err != nil {
+			return
+		}
+		if err = task.WaitForCompletion(); err != nil {
 			return
 		}
 		// Set node to the node the VM was migrated to
@@ -598,10 +615,13 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	if err != nil {
 		return
 	}
-	var exitStatus string
-	exitStatus, err = client.PutWithTask(ctx, params, "/nodes/"+vmr.node.String()+urlPart)
+	var task Task
+	task, err = client.putWithTask(ctx, params, "/nodes/"+vmr.node.String()+urlPart)
 	if err != nil {
-		return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		return false, fmt.Errorf("error updating VM: %v", err)
+	}
+	if err = task.WaitForCompletion(); err != nil {
+		return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, task.Status(), params)
 	}
 
 	if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped

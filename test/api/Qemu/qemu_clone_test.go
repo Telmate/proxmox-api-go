@@ -27,7 +27,7 @@ func Test_Clone_Qemu_VM(t *testing.T) {
 	newGuest := _create_clone_vmref()
 
 	sourceVmRef := _create_vmref()
-	_, err := sourceVmRef.CloneQemu(context.Background(), pxapi.CloneQemuTarget{
+	_, task, err := sourceVmRef.CloneQemu(context.Background(), pxapi.CloneQemuTarget{
 		Full: &pxapi.CloneQemuFull{
 			Node: newGuest.Node(),
 			Name: util.Pointer("test-qemu02"),
@@ -35,6 +35,7 @@ func Test_Clone_Qemu_VM(t *testing.T) {
 		},
 	}, Test.GetClient())
 	require.NoError(t, err)
+	require.NoError(t, task.WaitForCompletion())
 }
 
 func Test_Clone_Qemu_VM_To_Different_Storage(t *testing.T) {
@@ -47,7 +48,7 @@ func Test_Clone_Qemu_VM_To_Different_Storage(t *testing.T) {
 	newGuest := _create_clone_vmref()
 
 	sourceVmRef := _create_vmref()
-	_, err := sourceVmRef.CloneQemu(context.Background(), pxapi.CloneQemuTarget{
+	_, task, err := sourceVmRef.CloneQemu(context.Background(), pxapi.CloneQemuTarget{
 		Full: &pxapi.CloneQemuFull{
 			Node:    newGuest.Node(),
 			Name:    util.Pointer("test-qemu02"),
@@ -56,6 +57,7 @@ func Test_Clone_Qemu_VM_To_Different_Storage(t *testing.T) {
 		},
 	}, Test.GetClient())
 	require.NoError(t, err)
+	require.NoError(t, task.WaitForCompletion())
 }
 
 func Test_Qemu_VM_Is_Cloned(t *testing.T) {

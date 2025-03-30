@@ -13,107 +13,109 @@ const (
 )
 
 // CloneLxc clones a new LXC container by cloning current container
-func (vmr *VmRef) CloneLxc(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, error) {
+func (vmr *VmRef) CloneLxc(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, Task, error) {
 	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
+		return nil, nil, errors.New(VmRef_Error_Nil)
 	}
 	err := settings.Validate()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return vmr.cloneLxc_Unsafe(ctx, settings, c)
 }
 
 // CloneLxcNoCheck creates a new LXC container by cloning the current container, without input validation.
-func (vmr *VmRef) CloneLxcNoCheck(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, error) {
+func (vmr *VmRef) CloneLxcNoCheck(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, Task, error) {
 	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
+		return nil, nil, errors.New(VmRef_Error_Nil)
 	}
 	return vmr.cloneLxc_Unsafe(ctx, settings, c)
 }
 
-func (vmr *VmRef) cloneLxc_Unsafe(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, error) {
+func (vmr *VmRef) cloneLxc_Unsafe(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, Task, error) {
 	id, node, pool, params := settings.mapToAPI()
 	var err error
 	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String() + "/clone"
+	var task Task
 	if id == 0 {
-		id, err = guestCreateLoop(ctx, "newid", url, params, c)
+		id, task, err = guestCreateLoop(ctx, "newid", url, params, c)
 	} else {
-		_, err = c.PostWithTask(ctx, params, url)
+		task, err = c.postWithTask(ctx, params, url)
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return &VmRef{
 		vmId:   id,
 		node:   node,
 		pool:   pool,
-		vmType: vmRefLXC}, nil
+		vmType: vmRefLXC}, task, nil
 }
 
 // CloneQemu creates a new Qemu VM by cloning the current VM.
-func (vmr *VmRef) CloneQemu(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, error) {
+func (vmr *VmRef) CloneQemu(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, Task, error) {
 	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
+		return nil, nil, errors.New(VmRef_Error_Nil)
 	}
 	err := settings.Validate()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return vmr.cloneQemu_Unsafe(ctx, settings, c)
 }
 
 // CloneQemuNoCheck creates a new VM by cloning the current VM, without input validation.
-func (vmr *VmRef) CloneQemuNoCheck(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, error) {
+func (vmr *VmRef) CloneQemuNoCheck(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, Task, error) {
 	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
+		return nil, nil, errors.New(VmRef_Error_Nil)
 	}
 	return vmr.cloneQemu_Unsafe(ctx, settings, c)
 }
 
-func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, error) {
+func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, Task, error) {
 	id, node, pool, params := settings.mapToAPI()
 	var err error
 	url := "/nodes/" + vmr.node.String() + "/qemu/" + vmr.vmId.String() + "/clone"
+	var task Task
 	if id == 0 {
-		id, err = guestCreateLoop(ctx, "newid", url, params, c)
+		id, task, err = guestCreateLoop(ctx, "newid", url, params, c)
 	} else {
-		_, err = c.PostWithTask(ctx, params, url)
+		task, err = c.postWithTask(ctx, params, url)
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return &VmRef{
 		vmId:   id,
 		node:   node,
 		pool:   pool,
-		vmType: vmRefQemu}, nil
+		vmType: vmRefQemu}, task, nil
 }
 
-func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
+func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) (Task, error) {
 	if vmr == nil {
-		return errors.New(VmRef_Error_Nil)
+		return nil, errors.New(VmRef_Error_Nil)
 	}
 	if err := c.checkInitialized(); err != nil {
-		return err
+		return nil, err
 	}
 	if err := newNode.Validate(); err != nil {
-		return err
+		return nil, err
 	}
 	return vmr.migrate_Unsafe(ctx, c, newNode, LiveMigrate)
 }
 
-func (vmr *VmRef) MigrateNoCheck(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
+func (vmr *VmRef) MigrateNoCheck(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) (Task, error) {
 	if vmr == nil {
-		return errors.New(VmRef_Error_Nil)
+		return nil, errors.New(VmRef_Error_Nil)
 	}
 	if err := c.checkInitialized(); err != nil {
-		return err
+		return nil, err
 	}
 	return vmr.migrate_Unsafe(ctx, c, newNode, LiveMigrate)
 }
 
-func (vmr *VmRef) migrate_Unsafe(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
+func (vmr *VmRef) migrate_Unsafe(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) (Task, error) {
 	params := map[string]interface{}{
 		"target":           newNode.String(),
 		"with-local-disks": 1,
@@ -121,8 +123,7 @@ func (vmr *VmRef) migrate_Unsafe(ctx context.Context, c *Client, newNode NodeNam
 	if LiveMigrate {
 		params["online"] = 1
 	}
-	_, err := c.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/migrate")
-	return err
+	return c.postWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/migrate")
 }
 
 const (

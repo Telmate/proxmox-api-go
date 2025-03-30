@@ -379,7 +379,8 @@ func Test_VmRef_Migrate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require.NotPanics(t, func() { test.input.vmr.Migrate(test.input.ctx, test.input.c, "valid", false) })
-			require.Error(t, test.input.vmr.Migrate(test.input.ctx, test.input.c, "valid", false))
+			_, err := test.input.vmr.Migrate(test.input.ctx, test.input.c, "valid", false)
+			require.Error(t, err)
 		})
 	}
 }
@@ -410,7 +411,8 @@ func Test_VmRef_MigrateNoCheck(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require.NotPanics(t, func() { test.input.vmr.MigrateNoCheck(test.input.ctx, test.input.c, "valid", false) })
-			require.Error(t, test.input.vmr.MigrateNoCheck(test.input.ctx, test.input.c, "valid", false))
+			_, err := test.input.vmr.MigrateNoCheck(test.input.ctx, test.input.c, "valid", false)
+			require.Error(t, err)
 		})
 	}
 }

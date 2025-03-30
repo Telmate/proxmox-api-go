@@ -3,7 +3,6 @@ package proxmox
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/netip"
 	"strconv"
 	"strings"
@@ -244,16 +243,16 @@ func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID uint, newPool P
 	return
 }
 
-func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) (err error) {
+func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) (Task, error) {
+	var err error
 	if err = client.CheckVmRef(ctx, vmr); err != nil {
-		return
+		return nil, err
 	}
 	var params map[string]interface{}
 	if force {
 		params = map[string]interface{}{"forceStop": force}
 	}
-	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/shutdown")
-	return
+	return client.postWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/shutdown")
 }
 
 func GuestStart(ctx context.Context, vmr *VmRef, client *Client) (err error) {
@@ -298,23 +297,23 @@ func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) 
 const guest_ApiError_AlreadyExists string = "config file already exists"
 
 // Keep trying to create/clone a VM until we get a unique ID
-func guestCreateLoop(ctx context.Context, idKey, url string, params map[string]interface{}, c *Client) (GuestID, error) {
+func guestCreateLoop(ctx context.Context, idKey, url string, params map[string]interface{}, c *Client) (GuestID, Task, error) {
 	c.guestCreationMutex.Lock()
 	defer c.guestCreationMutex.Unlock()
 	for {
 		guestID, err := c.GetNextIdNoCheck(ctx, nil)
 		if err != nil {
-			return 0, err
+			return 0, nil, err
 		}
 		params[idKey] = int(guestID)
-		var exitStatus string
-		exitStatus, err = c.PostWithTask(ctx, params, url)
+		var task Task
+		task, err = c.postWithTask(ctx, params, url)
 		if err != nil {
 			if !strings.Contains(err.Error(), guest_ApiError_AlreadyExists) {
-				return 0, fmt.Errorf("error creating Guest: %v, error status: %s (params: %v)", err, exitStatus, params)
+				return 0, nil, errors.New("error creating Guest: " + err.Error())
 			}
 		} else {
-			return guestID, nil
+			return guestID, task, nil
 		}
 	}
 }

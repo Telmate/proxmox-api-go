@@ -299,8 +299,9 @@ func main() {
 			}
 		}
 
-		vmr, err := sourceVmr.CloneQemu(ctx, *config, c)
+		vmr, task, err := sourceVmr.CloneQemu(ctx, *config, c)
 		failError(err)
+		failError(task.WaitForCompletion())
 		log.Println("Created guest with ID: " + vmr.VmId().String())
 
 	case "createQemuSnapshot":
