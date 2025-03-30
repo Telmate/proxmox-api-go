@@ -38,6 +38,11 @@ type Client struct {
 	version            *Version
 	versionMutex       sync.Mutex
 	guestCreationMutex sync.Mutex
+	Features           *FeatureFlags
+}
+
+type FeatureFlags struct {
+	AsyncTask bool
 }
 
 type clientInterface interface {

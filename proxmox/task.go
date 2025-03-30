@@ -16,6 +16,10 @@ import (
 )
 
 func (c *Client) taskResponse(ctx context.Context, resp *http.Response) (Task, error) {
+	if c.Features == nil || !c.Features.AsyncTask {
+		exit, err := c.CheckTask(ctx, resp)
+		return newDummyTask(exit, err), nil
+	}
 	var jbody map[string]interface{}
 	var err error
 	if err = decodeResponse(resp, &jbody); err != nil {
@@ -458,4 +462,61 @@ func (t *task) mapToSDK_Unsafe(upID string) {
 	t.operationType = upID[indexA+28 : indexB]
 	indexA = strings.Index(upID[indexB+1:], ":") + indexB + 1 + 1 // +1 because we are skipping a field
 	t.user = UserID{}.mapToStruct(upID[indexA : strings.Index(upID[indexA:], ":")+indexA])
+}
+
+type dummyTask struct {
+	err    error
+	status string
+}
+
+func (d *dummyTask) Cancel() error {
+	return nil
+}
+
+func (d *dummyTask) Ended() (bool, error) {
+	return true, d.err
+}
+
+func (d *dummyTask) EndTime() time.Time {
+	return time.Time{}
+}
+
+func (d *dummyTask) ExitStatus() string {
+	return d.status
+}
+func (d *dummyTask) ID() string {
+	return ""
+}
+func (d *dummyTask) Log() []string {
+	return []string{}
+}
+func (d *dummyTask) LogStream(log chan<- string) error {
+	return nil
+}
+func (d *dummyTask) Node() string {
+	return ""
+}
+func (d *dummyTask) OperationType() string {
+	return ""
+}
+func (d *dummyTask) ProcessID() uint {
+	return 0
+}
+func (d *dummyTask) StartTime() time.Time {
+	return time.Time{}
+}
+func (d *dummyTask) Status() string {
+	return ""
+}
+func (d *dummyTask) User() UserID {
+	return UserID{}
+}
+func (d *dummyTask) WaitForCompletion() error {
+	return d.err
+}
+
+func newDummyTask(exitStatus string, err error) *dummyTask {
+	return &dummyTask{
+		err:    err,
+		status: exitStatus}
 }
