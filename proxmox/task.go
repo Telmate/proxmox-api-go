@@ -41,10 +41,12 @@ const (
 	taskPollingInterval        = 1 * time.Second
 )
 
+// Only `WaitForCompletion()` is required to be used.
+// For now all other functionality is opt-in with feature flag with exception of `WaitForCompletion()`.
+// The context that was inherited from the original API call.
+// To cancel the task, cancel the context.
+// You can also cancel the task by calling the Cancel() method.
 type Task interface {
-	// The context that was inherited from the original API call.
-	// To cancel the task, cancel the context.
-	// You can also cancel the task by calling the Cancel() method.
 
 	// Cancels the task.
 	Cancel() error
