@@ -66,7 +66,8 @@ type Task interface {
 	Log() []string
 
 	// Inputs the log into the provided channel.
-	LogStream(log chan<- string) error
+	// TODO add more tests for this functionality.
+	_LogStream(log chan<- string) error
 
 	// Returns the node the task was executed on.
 	Node() string
@@ -197,7 +198,7 @@ func (t *task) Log() []string {
 	return logArray
 }
 
-func (t *task) LogStream(out chan<- string) error {
+func (t *task) _LogStream(out chan<- string) error {
 	if t.id == "" {
 		return nil
 	}
@@ -488,7 +489,7 @@ func (d *dummyTask) ID() string {
 func (d *dummyTask) Log() []string {
 	return []string{}
 }
-func (d *dummyTask) LogStream(log chan<- string) error {
+func (d *dummyTask) _LogStream(log chan<- string) error {
 	return nil
 }
 func (d *dummyTask) Node() string {
