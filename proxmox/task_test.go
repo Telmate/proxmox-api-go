@@ -11,13 +11,13 @@ import (
 
 func Test_task_Status(t *testing.T) {
 	initialGoroutines := runtime.NumGoroutine()
-	funcChannel := make(chan func() (map[string]interface{}, error))
+	statusChannel := make(chan func() (map[string]interface{}, error))
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &mocClient{
 		getItemConfigFunc: func(ctx context.Context, url, text, message string, errorStrings []string) (map[string]interface{}, error) {
 			// Block until data is sent into the channel
 			select {
-			case f := <-funcChannel:
+			case f := <-statusChannel:
 				return f()
 			case <-ctx.Done():
 				return nil, ctx.Err()
@@ -26,21 +26,23 @@ func Test_task_Status(t *testing.T) {
 	task := newTask(ctx, c, "UPID:pve-test:002860A9:051E01C1:67536165:qmmove:102:root@pam:", 10*time.Millisecond)
 
 	go func() {
-		require.Equal(t, "running", task.Status())
+		statusChannel <- func() (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"data": map[string]interface{}{
+					"status": "running"}}, nil
+		}
 	}()
-	funcChannel <- func() (map[string]interface{}, error) {
-		return map[string]interface{}{
-			"data": map[string]interface{}{
-				"status": "running"}}, nil
-	}
+	require.Equal(t, "running", task.Status())
 
 	time.Sleep(50 * time.Millisecond)
-	funcChannel <- func() (map[string]interface{}, error) {
-		return map[string]interface{}{
-			"data": map[string]interface{}{
-				"status":             "done",
-				taskApiKeyExitStatus: "OK"}}, nil
-	}
+	go func() {
+		statusChannel <- func() (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"data": map[string]interface{}{
+					"status":             "done",
+					taskApiKeyExitStatus: "OK"}}, nil
+		}
+	}()
 
 	time.Sleep(50 * time.Millisecond)
 
@@ -85,66 +87,62 @@ func Test_task_Logs(t *testing.T) {
 	task := newTask(ctx, c, "UPID:pve-test:002860A9:051E01C1:67536165:qmmove:102:root@pam:", 10*time.Millisecond)
 
 	go func() {
-		require.Equal(t, "running", task.Status())
-		require.Equal(t, []string{
-			"1",
-			"2",
-			"3",
-			"4",
-		}, task.Log())
+		statusChannel <- func() (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"data": map[string]interface{}{
+					"status": "running"}}, nil
+		}
+		logChannel <- func() (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"total": float64(4),
+				"data": []interface{}{
+					map[string]interface{}{"t": "1"},
+					map[string]interface{}{"t": "2"},
+					map[string]interface{}{"t": "3"},
+					map[string]interface{}{"t": "4"},
+				}}, nil
+		}
 	}()
-
-	statusChannel <- func() (map[string]interface{}, error) {
-		return map[string]interface{}{
-			"data": map[string]interface{}{
-				"status": "running"}}, nil
-	}
-	logChannel <- func() (map[string]interface{}, error) {
-		return map[string]interface{}{
-			"total": float64(4),
-			"data": []interface{}{
-				map[string]interface{}{"t": "1"},
-				map[string]interface{}{"t": "2"},
-				map[string]interface{}{"t": "3"},
-				map[string]interface{}{"t": "4"},
-			}}, nil
-	}
 	time.Sleep(50 * time.Millisecond)
+	require.Equal(t, "running", task.Status())
+	require.Equal(t, []string{
+		"1",
+		"2",
+		"3",
+		"4",
+	}, task.Log())
 
 	go func() {
-		require.Equal(t, "done", task.Status())
-		require.Equal(t, []string{
-			"5",
-			"6",
-		}, task.Log())
+		statusChannel <- func() (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"data": map[string]interface{}{
+					"status":             "done",
+					taskApiKeyExitStatus: "OK"}}, nil
+		}
+		logChannel <- func() (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"total": float64(7),
+				"data": []interface{}{
+					map[string]interface{}{"t": "5"},
+					map[string]interface{}{"t": "6"},
+					map[string]interface{}{"t": "TASK OK"},
+				}}, nil
+		}
 	}()
-
-	statusChannel <- func() (map[string]interface{}, error) {
-		return map[string]interface{}{
-			"data": map[string]interface{}{
-				"status":             "done",
-				taskApiKeyExitStatus: "OK"}}, nil
-	}
-	logChannel <- func() (map[string]interface{}, error) {
-		return map[string]interface{}{
-			"total": float64(6),
-			"data": []interface{}{
-				map[string]interface{}{"t": "5"},
-				map[string]interface{}{"t": "6"},
-			}}, nil
-	}
 	time.Sleep(50 * time.Millisecond)
-
-	logChannel <- func() (map[string]interface{}, error) {
-		return map[string]interface{}{
-			"total": float64(6),
-			"data":  []interface{}{}}, nil
-	}
-	time.Sleep(50 * time.Millisecond)
-
 	require.Equal(t, "done", task.Status())
-	ended, _ := task.Ended()
+	require.Equal(t, []string{
+		"1",
+		"2",
+		"3",
+		"4",
+		"5",
+		"6",
+		"TASK OK",
+	}, task.Log())
+	ended, err := task.Ended()
 	require.True(t, ended)
+	require.NoError(t, err)
 
 	finalGoroutines := runtime.NumGoroutine()
 	if finalGoroutines > initialGoroutines {

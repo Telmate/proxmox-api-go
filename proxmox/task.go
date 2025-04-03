@@ -50,6 +50,7 @@ type Task interface {
 	Cancel() error
 
 	// Returns true if the task has ended, and an error if an error occurred.
+	// That the task has ended does not mean the log is fully fetched.
 	Ended() (bool, error)
 
 	// Returns the time the task ended. If the task has not ended, the zero time is returned.
@@ -112,8 +113,11 @@ type task struct {
 	// While statusCh is open, the status ha not been fetched yet.
 	statusCh *notify.Channel
 
-	// While logCh is open, the log has not been fetched yet.
-	logCh *notify.Channel
+	// While logClosedCh is open, the end of the log has not been reached yet.
+	logClosedCh *notify.Channel
+
+	// While logStartedCh is open, the log has not been fetched yet.
+	logStartedCh *notify.Channel
 
 	// err is the error that is stored when an error occurs in the status loop.
 	err atomicError.AtomicError
@@ -181,7 +185,7 @@ func (t *task) Log() []string {
 	}
 	t.startLogFetcher()
 	localLog := make(map[int]string)
-	<-t.closingCh.Done()
+	<-t.logStartedCh.Done() // Wait for the log to be fetched for the first time.
 	t.logCache.Range(func(key, value interface{}) bool {
 		localLog[key.(int)] = value.(string)
 		return true // continue iteration
@@ -272,17 +276,14 @@ func (t *task) WaitForCompletion() (err error) {
 	if t.id == "" { // if we didn't get a task ID, the function that instantiated the task should be changed to not return a task.
 		return nil
 	}
-	// t.startStatusFetcher()
-	var ended bool
-	for {
-		ended, err = t.ended()
-		if err != nil {
-			return err
-		}
-		if ended {
-			return nil
-		}
-		time.Sleep(t.pollingInterval)
+	<-t.statusCh.Done()  // Block until the task status has been fetched for the first time.
+	<-t.closingCh.Done() // Block until the task has ended.
+	select {
+	case <-t.logStartedCh.Done(): // We started fetching the log, so we should wait for it to finish.
+		<-t.logClosedCh.Done() // Block until the log has been fully fetched.
+		return t.err.Get()
+	default: // We haven't started fetching the log yet, so we can just return.
+		return t.err.Get()
 	}
 }
 
@@ -291,19 +292,11 @@ func newTask(ctx context.Context, c clientInterface, upID string, pollingInterva
 		client:          c,
 		closingCh:       notify.New(),
 		ctx:             ctx,
-		logCh:           notify.New(),
+		logClosedCh:     notify.New(),
+		logStartedCh:    notify.New(),
 		pollingInterval: pollingInterval,
 		statusCh:        notify.New()}
 	t.mapToSDK_Unsafe(upID)
-	go func() { // Wait for the context to be canceled, so it can cancel the task.
-		select {
-		case <-t.ctx.Done():
-			_ = t.cancel(t.ctx.Err())
-			return
-		case <-t.closingCh.Done():
-			return
-		}
-	}()
 	go func() { // Start the status fetcher, which periodically fetches the status from the API and stores it in the status field.
 		var err error
 		var gotFirstStatus bool
@@ -356,7 +349,7 @@ func (t *task) cancel(previousErr error) (err error) {
 		return
 	}
 	t.closingCh.Close()
-	t.logCh.Close()
+	t.logStartedCh.Close()
 	t.statusCh.Close()
 	return
 }
@@ -378,7 +371,8 @@ func (t *task) setError(err error) {
 	// Close the channel to stop the goroutines.
 	t.closingCh.Close()
 	// Close the channels to prevent blocking when users try to get data from task.
-	t.logCh.Close()
+	t.logClosedCh.Close()
+	t.logStartedCh.Close()
 	t.statusCh.Close()
 }
 
@@ -398,7 +392,11 @@ func (t *task) addLogChunkToCache(start uint) (total, cacheLen uint, err error) 
 	}
 	startInt := int(start) // Convert to int for the loop, so we don't have to convert it every iteration.
 	for i := range logEntries {
-		t.logCache.Store(i+startInt, logEntries[i].(map[string]interface{})["t"].(string))
+		logMessage := logEntries[i].(map[string]interface{})["t"].(string)
+		t.logCache.Store(i+startInt, logMessage)
+		if len(logMessage) >= 4 && logMessage[:4] == "TASK" { // The last log message will always be `TASK` followed by the status.
+			t.logClosedCh.Close()
+		}
 	}
 	cacheLen = uint(len(logEntries)) + start
 	return
@@ -408,7 +406,6 @@ func (t *task) addLogChunkToCache(start uint) (total, cacheLen uint, err error) 
 // The log fetcher is the goroutine that fetches the log from the API and stores it in the log cache.
 func (t *task) startLogFetcher() {
 	t.fetchLog.Do(func() {
-		// t.awaitTermination()
 		go func() {
 			var total, cacheLen uint
 			var err error
@@ -426,7 +423,8 @@ func (t *task) startLogFetcher() {
 							return
 						}
 						if !gotFirstLog {
-							t.logCh.Close()
+							t.logStartedCh.Close()
+							gotFirstLog = true
 						}
 						if total == cacheLen {
 							return
@@ -439,7 +437,7 @@ func (t *task) startLogFetcher() {
 						t.setError(err)
 					}
 					if !gotFirstLog {
-						t.logCh.Close()
+						t.logStartedCh.Close()
 						gotFirstLog = true
 					}
 					if total == cacheLen {
