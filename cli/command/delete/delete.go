@@ -22,9 +22,14 @@ func deleteID(ctx context.Context, args []string, IDtype string) (err error) {
 	var exitStatus string
 	id := cli.RequiredIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
+	var task proxmox.Task
 	switch IDtype {
 	case "AcmeAccount":
-		exitStatus, err = c.DeleteAcmeAccount(ctx, id)
+		task, err = c.DeleteAcmeAccount(ctx, id)
+		if err != nil {
+			return
+		}
+		err = task.WaitForCompletion()
 	case "Group":
 		err = proxmox.GroupName(id).Delete(ctx, c)
 	case "MetricServer":

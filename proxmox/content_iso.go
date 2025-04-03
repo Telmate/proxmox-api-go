@@ -48,10 +48,10 @@ func (content ConfigContent_Iso) Validate() (err error) {
 
 // Download an Iso file from a given URL.
 // https://pve.proxmox.com/pve-docs/api-viewer/#/nodes/{node}/storage/{storage}/download-url
-func DownloadIsoFromUrl(ctx context.Context, client *Client, content ConfigContent_Iso) (err error) {
-	_, err = client.PostWithTask(ctx, content.mapToApiValues(), "/nodes/"+content.Node+"/storage/"+content.Storage+"/download-url")
+func DownloadIsoFromUrl(ctx context.Context, client *Client, content ConfigContent_Iso) (Task, error) {
+	task, err := client.postWithTask(ctx, content.mapToApiValues(), "/nodes/"+content.Node+"/storage/"+content.Storage+"/download-url")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return task, nil
 }

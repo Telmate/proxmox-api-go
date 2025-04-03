@@ -29,8 +29,11 @@ var (
 			if err != nil {
 				return
 			}
-			err = config.Create(cli.Context(), client, vmr)
+			task, err := config.Create(cli.Context(), client, vmr)
 			if err != nil {
+				return
+			}
+			if err = task.WaitForCompletion(); err != nil {
 				return
 			}
 			cli.PrintItemCreated(CreateCmd.OutOrStdout(), snapName, "Snapshot")
