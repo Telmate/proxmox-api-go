@@ -23,6 +23,7 @@ type QemuScsiDisk struct {
 	Storage         string            `json:"storage"`
 	syntax          diskSyntaxEnum
 	WorldWideName   QemuWorldWideName `json:"wwn"`
+	ImportFrom      string            `json:"import-from,omitempty"`
 }
 
 func (disk *QemuScsiDisk) convertDataStructure() *qemuDisk {
@@ -46,6 +47,7 @@ func (disk *QemuScsiDisk) convertDataStructure() *qemuDisk {
 		fileSyntax:      disk.syntax,
 		Type:            scsi,
 		WorldWideName:   disk.WorldWideName,
+		ImportFrom:      disk.ImportFrom,
 	}
 }
 

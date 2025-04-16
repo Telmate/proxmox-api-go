@@ -208,6 +208,7 @@ type qemuDisk struct {
 	Storage       string // Only set for Disk
 	Type          qemuDiskType
 	WorldWideName QemuWorldWideName
+	ImportFrom    string
 }
 
 const (
@@ -255,7 +256,9 @@ func (disk qemuDisk) formatDisk(vmID, LinkedVmId GuestID, currentStorage string,
 func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId GuestID, currentStorage string, currentFormat QemuDiskFormat, syntax diskSyntaxEnum, create bool) (settings string) {
 	if disk.Storage != "" {
 		if create {
-			if disk.SizeInKibibytes%gibibyte == 0 {
+			if disk.ImportFrom != "" {
+				settings = disk.Storage + ":0,import-from=" + disk.ImportFrom
+			} else if disk.SizeInKibibytes%gibibyte == 0 {
 				settings = disk.Storage + ":" + strconv.FormatInt(int64(disk.SizeInKibibytes/gibibyte), 10)
 			} else {
 				settings = disk.Storage + ":0.001"
@@ -524,11 +527,14 @@ func (disk *qemuDisk) validate() (err error) {
 	}
 	if disk.Disk {
 		// disk
-		if err = disk.Format.Validate(); err != nil {
-			return
-		}
-		if err = disk.SizeInKibibytes.Validate(); err != nil {
-			return
+		if disk.ImportFrom == "" {
+			// size/format is mandatory except if import-from is set.
+			if err = disk.Format.Validate(); err != nil {
+				return
+			}
+			if err = disk.SizeInKibibytes.Validate(); err != nil {
+				return
+			}
 		}
 		if disk.Storage == "" {
 			return errors.New(Error_QemuDisk_Storage)
