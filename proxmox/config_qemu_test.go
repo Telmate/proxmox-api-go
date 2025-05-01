@@ -417,7 +417,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							SpecCtrl:   util.Pointer(TriBoolTrue),
 							VirtSSBD:   util.Pointer(TriBoolTrue)},
 						Type: util.Pointer(CpuType_Host)}},
-					output: map[string]interface{}{"cpu": "host,flags="}},
+					output: map[string]interface{}{"cpu": "host"}},
 				{name: `Flags & Type, update Flags`,
 					config: &ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
 						AmdNoSSB: util.Pointer(TriBoolTrue)}}},
