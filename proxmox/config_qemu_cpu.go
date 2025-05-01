@@ -26,9 +26,8 @@ type CpuFlags struct {
 	VirtSSBD   *TriBool `json:"cirtssbd,omitempty"`   // Basis for "Speculative Store Bypass" protection for AMD models.
 }
 
-func (flags CpuFlags) mapToApi(current *CpuFlags) (string, bool) {
+func (flags CpuFlags) mapToApi(current *CpuFlags) string {
 	var builder strings.Builder
-	var isSet bool
 
 	flagNames := []string{
 		"aes",
@@ -86,7 +85,6 @@ func (flags CpuFlags) mapToApi(current *CpuFlags) (string, bool) {
 			case TriBoolFalse:
 				builder.WriteString(";-" + flagNames[i])
 			}
-			isSet = true
 		} else if currentValues[i] != nil {
 			switch *currentValues[i] {
 			case TriBoolTrue:
@@ -94,10 +92,9 @@ func (flags CpuFlags) mapToApi(current *CpuFlags) (string, bool) {
 			case TriBoolFalse:
 				builder.WriteString(";-" + flagNames[i])
 			}
-			isSet = true
 		}
 	}
-	return builder.String(), isSet
+	return builder.String()
 }
 
 func (CpuFlags) mapToSDK(flags []string) *CpuFlags {
@@ -539,22 +536,18 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, ver
 	}
 	if cpu.Flags != nil || cpu.Type != nil {
 		var cpuType, flags string
-		var flagsSet bool
 		if current == nil { // Create
 			if cpu.Flags != nil {
-				flags, flagsSet = cpu.Flags.mapToApi(nil)
-				if flagsSet && flags == "" {
-					flagsSet = false
-				}
+				flags = cpu.Flags.mapToApi(nil)
 			}
 			if cpu.Type != nil {
 				cpuType = cpu.Type.mapToApi(version)
 			}
 		} else { // Update
 			if cpu.Flags != nil {
-				flags, flagsSet = cpu.Flags.mapToApi(current.Flags)
-			} else {
-				flags, flagsSet = CpuFlags{}.mapToApi(current.Flags)
+				flags = cpu.Flags.mapToApi(current.Flags)
+			} else if current.Flags != nil {
+				flags = current.Flags.mapToApi(nil)
 			}
 			if cpu.Type != nil {
 				cpuType = cpu.Type.mapToApi(version)
@@ -562,12 +555,8 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, ver
 				cpuType = current.Type.mapToApi(version)
 			}
 		}
-		if flagsSet {
-			if flags != "" {
-				params["cpu"] = cpuType + ",flags=" + flags[1:]
-			} else {
-				params["cpu"] = cpuType + ",flags="
-			}
+		if len(flags) != 0 {
+			params["cpu"] = cpuType + ",flags=" + flags[1:]
 		} else if cpuType != "" {
 			params["cpu"] = cpuType
 		}
