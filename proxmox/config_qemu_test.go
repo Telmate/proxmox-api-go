@@ -361,7 +361,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Affinity empty`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{})}},
 					currentConfig: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
-					output:        map[string]interface{}{"affinity": ""}},
+					output:        map[string]interface{}{"delete": "affinity"}},
 				{name: `Affinity empty no current`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{})}},
 					currentConfig: ConfigQemu{CPU: &QemuCPU{}},

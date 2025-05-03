@@ -515,7 +515,7 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, ver
 		if len(*cpu.Affinity) != 0 {
 			params["affinity"] = cpu.mapToApiAffinity(*cpu.Affinity)
 		} else if current != nil && current.Affinity != nil {
-			params["affinity"] = ""
+			delete += ",affinity"
 		}
 	}
 	if cpu.Cores != nil {
