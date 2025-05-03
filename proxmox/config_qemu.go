@@ -112,7 +112,8 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 			return nil, err
 		}
 	} else {
-		params["vmid"] = int(*config.ID)
+		id = *config.ID
+		params["vmid"] = int(id)
 		var exitStatus string
 		exitStatus, err = client.PostWithTask(ctx, params, url)
 		if err != nil {
