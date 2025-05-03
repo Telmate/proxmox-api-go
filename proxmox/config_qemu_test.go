@@ -361,7 +361,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Affinity empty`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{})}},
 					currentConfig: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
-					output:        map[string]interface{}{"affinity": ""}},
+					output:        map[string]interface{}{"delete": "affinity"}},
 				{name: `Affinity empty no current`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{})}},
 					currentConfig: ConfigQemu{CPU: &QemuCPU{}},
@@ -417,7 +417,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							SpecCtrl:   util.Pointer(TriBoolTrue),
 							VirtSSBD:   util.Pointer(TriBoolTrue)},
 						Type: util.Pointer(CpuType_Host)}},
-					output: map[string]interface{}{"cpu": "host,flags="}},
+					output: map[string]interface{}{"cpu": "host"}},
 				{name: `Flags & Type, update Flags`,
 					config: &ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
 						AmdNoSSB: util.Pointer(TriBoolTrue)}}},
