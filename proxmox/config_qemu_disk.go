@@ -736,6 +736,10 @@ const (
 	ERROR_QemuDiskId_Invalid string = "invalid Disk ID"
 )
 
+func (id QemuDiskId) String() string {
+	return string(id)
+}
+
 func (id QemuDiskId) Validate() error {
 	if len(id) >= 7 {
 		if id[0:6] == "virtio" {
@@ -939,91 +943,69 @@ type qemuStorage struct {
 	CloudInit   *QemuCloudInitDisk
 	Disk        *qemuDisk
 	Passthrough *qemuDisk
+	delete      bool
 }
 
-func (storage *qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, linkedVmId GuestID, id QemuDiskId, params map[string]interface{}, delete string) string {
-	if storage == nil {
-		return delete
+func (storage qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, linkedVmId GuestID, id QemuDiskId, params map[string]interface{}, delete string) string {
+	if storage.delete {
+		if currentStorage == nil {
+			return delete
+		}
+		return delete + "," + id.String()
 	}
 	// CDROM
 	if storage.CdRom != nil {
-		if currentStorage == nil || currentStorage.CdRom == nil {
-			// Create
+		if currentStorage == nil || currentStorage.CdRom == nil { // Create
 			params[string(id)] = storage.CdRom.mapToApiValues()
-		} else {
-			// Update
+		} else { // Update
 			cdRom := storage.CdRom.mapToApiValues()
 			if cdRom != currentStorage.CdRom.mapToApiValues() {
 				params[string(id)] = cdRom
 			}
 		}
 		return delete
-	} else if currentStorage != nil && currentStorage.CdRom != nil && storage.CloudInit == nil && storage.Disk == nil && storage.Passthrough == nil {
-		// Delete
-		return AddToList(delete, string(id))
 	}
 	// CloudInit
 	if storage.CloudInit != nil {
-		if currentStorage == nil || currentStorage.CloudInit == nil {
-			// Create
+		if currentStorage == nil || currentStorage.CloudInit == nil { // Create
 			params[string(id)] = storage.CloudInit.mapToApiValues()
-		} else {
-			// Update
+		} else { // Update
 			cloudInit := storage.CloudInit.mapToApiValues()
 			if cloudInit != currentStorage.CloudInit.mapToApiValues() {
 				params[string(id)] = cloudInit
 			}
 		}
 		return delete
-	} else if currentStorage != nil && currentStorage.CloudInit != nil && storage.Disk == nil && storage.Passthrough == nil {
-		// Delete
-		return AddToList(delete, string(id))
 	}
 	// Disk
 	if storage.Disk != nil {
-		if currentStorage == nil || currentStorage.Disk == nil {
-			// Create
+		if currentStorage == nil || currentStorage.Disk == nil { // Create
 			params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", false, true)
 		} else {
-			if storage.Disk.SizeInKibibytes >= currentStorage.Disk.SizeInKibibytes {
-				// Update
+			if storage.Disk.SizeInKibibytes >= currentStorage.Disk.SizeInKibibytes { // Update
 				storage.Disk.Id = currentStorage.Disk.Id
 				storage.Disk.LinkedDiskId = currentStorage.Disk.LinkedDiskId
 				disk := storage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, currentStorage.Disk.fileSyntax, false)
 				if disk != currentStorage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, currentStorage.Disk.fileSyntax, false) {
 					params[string(id)] = disk
 				}
-			} else {
-				// Delete and Create
+			} else { // Delete and Create
 				// creating a disk on top of an existing disk is the same as detaching the disk and creating a new one.
 				params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", false, true)
 			}
 		}
 		return delete
-	} else if currentStorage != nil && currentStorage.Disk != nil && storage.Passthrough == nil {
-		// Delete
-		return AddToList(delete, string(id))
 	}
 	// Passthrough
 	if storage.Passthrough != nil {
-		if currentStorage == nil || currentStorage.Passthrough == nil {
-			// Create
+		if currentStorage == nil || currentStorage.Passthrough == nil { // Create
 			params[string(id)] = storage.Passthrough.mapToApiValues(0, 0, "", "", false, false)
-		} else {
-			// Update
+		} else { // Update
 			passthrough := storage.Passthrough.mapToApiValues(0, 0, "", "", false, false)
 			if passthrough != currentStorage.Passthrough.mapToApiValues(0, 0, "", "", false, false) {
 				params[string(id)] = passthrough
 			}
 		}
-		return delete
-	} else if currentStorage != nil && currentStorage.Passthrough != nil {
-		// Delete
-		return AddToList(delete, string(id))
-	}
-	// Delete if no subtype was specified
-	if currentStorage != nil {
-		return AddToList(delete, string(id))
 	}
 	return delete
 }
