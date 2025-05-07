@@ -22,6 +22,7 @@ type QemuVirtIODisk struct {
 	Storage         string            `json:"storage"`
 	syntax          diskSyntaxEnum
 	WorldWideName   QemuWorldWideName `json:"wwn"`
+	ImportFrom      string            `json:"import_from,omitempty"`
 }
 
 func (disk *QemuVirtIODisk) convertDataStructure() *qemuDisk {
@@ -44,6 +45,7 @@ func (disk *QemuVirtIODisk) convertDataStructure() *qemuDisk {
 		Storage:         disk.Storage,
 		Type:            virtIO,
 		WorldWideName:   disk.WorldWideName,
+		ImportFrom:      disk.ImportFrom,
 	}
 }
 

@@ -21,6 +21,7 @@ type QemuSataDisk struct {
 	Storage         string            `json:"storage"`
 	syntax          diskSyntaxEnum
 	WorldWideName   QemuWorldWideName `json:"wwn"`
+	ImportFrom      string            `json:"import_from,omitempty"`
 }
 
 func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
@@ -42,6 +43,7 @@ func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
 		Storage:         disk.Storage,
 		Type:            sata,
 		WorldWideName:   disk.WorldWideName,
+		ImportFrom:      disk.ImportFrom,
 	}
 }
 
