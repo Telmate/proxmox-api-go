@@ -107,6 +107,9 @@ func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID, lin
 	diskMap := disks.mapToIntMap()
 	currentDiskMap := tmpCurrentDisks.mapToIntMap()
 	for i := range diskMap {
+		if diskMap[i] == nil {
+			continue
+		}
 		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, linkedVmId, QemuDiskId("scsi"+strconv.Itoa(int(i))), params, delete)
 	}
 	return delete
@@ -377,6 +380,7 @@ type QemuScsiStorage struct {
 	CloudInit   *QemuCloudInitDisk   `json:"cloudinit,omitempty"`
 	Disk        *QemuScsiDisk        `json:"disk,omitempty"`
 	Passthrough *QemuScsiPassthrough `json:"passthrough,omitempty"`
+	Delete      bool                 `json:"delete,omitempty"`
 }
 
 // converts to qemuStorage
@@ -387,6 +391,7 @@ func (storage *QemuScsiStorage) convertDataStructure() *qemuStorage {
 	generalizedStorage := qemuStorage{
 		CdRom:     storage.CdRom,
 		CloudInit: storage.CloudInit,
+		delete:    storage.Delete,
 	}
 	if storage.Disk != nil {
 		generalizedStorage.Disk = storage.Disk.convertDataStructure()
