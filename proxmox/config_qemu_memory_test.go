@@ -1,7 +1,10 @@
 package proxmox
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
@@ -216,6 +219,47 @@ func Test_QemuMemoryShares_Validate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
+func Test_QemuMemoryCapacity_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       []byte
+		outputValue QemuMemoryCapacity
+		outputError error
+	}{
+		{name: `Integer`,
+			input:       []byte(`32768`),
+			outputValue: QemuMemoryCapacity(32768),
+			outputError: nil,
+		},
+		{name: `String`,
+			input:       []byte(`"32768"`),
+			outputValue: QemuMemoryCapacity(32768),
+			outputError: nil,
+		},
+		{name: `InvalidSyntax`,
+			input:       []byte(`"abcd"`),
+			outputValue: QemuMemoryCapacity(0),
+			outputError: &strconv.NumError{Func: "ParseUint", Num: "abcd", Err: strconv.ErrSyntax},
+		},
+		{name: `InvalidType`,
+			input:       []byte(`true`),
+			outputValue: QemuMemoryCapacity(0),
+			outputError: fmt.Errorf("%s: %T", QemuMemoryCapacity_Error_InvalidType, true),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var capacity QemuMemoryCapacity
+
+			err := json.Unmarshal(test.input, &capacity)
+
+			require.Equal(t, test.outputError, err)
+			require.Equal(t, test.outputValue, capacity)
 		})
 	}
 }
