@@ -4065,12 +4065,12 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 		{category: `Tags`,
 			createUpdate: []test{
 				{name: `Tags Empty`,
-					currentConfig: ConfigQemu{Tags: util.Pointer([]Tag{"tag5", "tag6"})},
-					config:        &ConfigQemu{Tags: util.Pointer([]Tag{})},
+					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					config:        &ConfigQemu{Tags: util.Pointer(Tags{})},
 					output:        map[string]interface{}{"tags": string("")}},
 				{name: `Tags Full`,
-					currentConfig: ConfigQemu{Tags: util.Pointer([]Tag{"tag5", "tag6"})},
-					config:        &ConfigQemu{Tags: util.Pointer([]Tag{"tag1", "tag2"})},
+					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag1", "tag2"})},
 					output:        map[string]interface{}{"tags": string("tag1;tag2")}}}},
 		{category: `TPM`,
 			create: []test{
@@ -7304,9 +7304,9 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		return QemuNetworkInterfaces{id: config}
 	}
 	validCloudInit := QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}
-	validTags := func() []Tag {
+	validTags := func() Tags {
 		array := test_data_tag.Tag_Legal()
-		tags := make([]Tag, len(array))
+		tags := make(Tags, len(array))
 		for i, e := range array {
 			tags[i] = Tag(e)
 		}
@@ -9054,28 +9054,32 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{Serials: SerialInterfaces{SerialID3: SerialInterface{Path: "/dev/ttyS0"}}}}}}},
 		{category: `Tags`,
 			valid: testType{
-				create: []test{
+				createUpdate: []test{
 					{name: `normal`,
 						input:   baseConfig(ConfigQemu{Tags: util.Pointer(validTags())}),
-						current: &ConfigQemu{Tags: util.Pointer([]Tag{"a", "b"})}}}},
+						current: &ConfigQemu{Tags: util.Pointer(Tags{"a", "b"})}},
+					{name: `empty`,
+						input:   baseConfig(ConfigQemu{Tags: util.Pointer(Tags{})}),
+						current: &ConfigQemu{Tags: util.Pointer(validTags())}}}},
 			invalid: testType{
 				createUpdate: []test{
 					{name: `errors.New(Tag_Error_Invalid)`,
-						input:   baseConfig(ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Illegal())})}),
-						current: &ConfigQemu{Tags: util.Pointer([]Tag{"a", "b"})},
+						input:   baseConfig(ConfigQemu{Tags: util.Pointer(Tags{Tag(test_data_tag.Tag_Illegal())})}),
+						current: &ConfigQemu{Tags: util.Pointer(Tags{"a", "b"})},
 						err:     errors.New(Tag_Error_Invalid)},
-					{name: `errors.New(Tag_Error_Duplicate)`,
-						input:   baseConfig(ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Max_Legal()), Tag(test_data_tag.Tag_Max_Legal())})}),
-						current: &ConfigQemu{Tags: util.Pointer([]Tag{"a", "b"})},
-						err:     errors.New(Tag_Error_Duplicate)},
 					{name: `errors.New(Tag_Error_Empty)`,
-						input:   baseConfig(ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Empty())})}),
-						current: &ConfigQemu{Tags: util.Pointer([]Tag{"a", "b"})},
+						input:   baseConfig(ConfigQemu{Tags: util.Pointer(Tags{Tag(test_data_tag.Tag_Empty())})}),
+						current: &ConfigQemu{Tags: util.Pointer(Tags{"a", "b"})},
 						err:     errors.New(Tag_Error_Empty)},
 					{name: `errors.New(Tag_Error_MaxLength)`,
-						input:   baseConfig(ConfigQemu{Tags: util.Pointer([]Tag{Tag(test_data_tag.Tag_Max_Illegal())})}),
-						current: &ConfigQemu{Tags: util.Pointer([]Tag{"a", "b"})},
-						err:     errors.New(Tag_Error_MaxLength)}}}},
+						input:   baseConfig(ConfigQemu{Tags: util.Pointer(Tags{Tag(test_data_tag.Tag_Max_Illegal())})}),
+						current: &ConfigQemu{Tags: util.Pointer(Tags{"a", "b"})},
+						err:     errors.New(Tag_Error_MaxLength)},
+					{name: `errors.New(Tags_Error_Duplicate)`,
+						input:   baseConfig(ConfigQemu{Tags: util.Pointer(Tags{Tag(test_data_tag.Tag_Max_Legal()), Tag(test_data_tag.Tag_Max_Legal())})}),
+						current: &ConfigQemu{Tags: util.Pointer(Tags{"a", "b"})},
+						err:     errors.New(Tags_Error_Duplicate)}}},
+		},
 		{category: `TPM`,
 			valid: testType{
 				createUpdate: []test{

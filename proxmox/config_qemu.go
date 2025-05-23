@@ -69,7 +69,7 @@ type ConfigQemu struct {
 	Storage         string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
 	TPM             *TpmState             `json:"tpm,omitempty"`
 	Tablet          *bool                 `json:"tablet,omitempty"`
-	Tags            *[]Tag                `json:"tags,omitempty"`
+	Tags            *Tags                 `json:"tags,omitempty"`
 }
 
 const (
@@ -244,7 +244,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		params["tablet"] = *config.Tablet
 	}
 	if config.Tags != nil {
-		params["tags"] = Tag("").mapToApi(*config.Tags)
+		params["tags"] = (*config.Tags).mapToApi()
 	}
 	if config.Smbios1 != "" {
 		params["smbios1"] = config.Smbios1
@@ -417,7 +417,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.Tablet = util.Pointer(Itob(int(params["tablet"].(float64))))
 	}
 	if _, isSet := params["tags"]; isSet {
-		tmpTags := Tag("").mapToSDK(params["tags"].(string))
+		tmpTags := Tags{}.mapToSDK(params["tags"].(string))
 		config.Tags = &tmpTags
 	}
 	if _, isSet := params["smbios1"]; isSet {
@@ -772,7 +772,7 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 	}
 	if config.Tags != nil {
-		if err := Tag("").validate(*config.Tags); err != nil {
+		if err := (*config.Tags).Validate(); err != nil {
 			return err
 		}
 	}
