@@ -308,7 +308,184 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_ConfigLXC_mapToSDK(t *testing.T) {
+func Test_ConfigLXC_Validate(t *testing.T) {
+	var baseConfig = func(config ConfigLXC) ConfigLXC {
+		if config.BootMount == nil {
+			config.BootMount = &LxcBootMount{
+				Storage: util.Pointer("local-lvm")}
+		}
+		return config
+	}
+	type test struct {
+		name    string
+		input   ConfigLXC
+		current *ConfigLXC
+		err     error
+	}
+	type testType struct {
+		create       []test
+		createUpdate []test // value of currentConfig wil be used for update and ignored for create
+		update       []test
+	}
+	tests := []struct {
+		category string
+		valid    testType
+		invalid  testType
+	}{
+		{category: `BootMount`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(150000)),
+							Storage:         util.Pointer("test")}}),
+						current: &ConfigLXC{BootMount: &LxcBootMount{Storage: util.Pointer("text")}}}}},
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(ConfigLXC_Error_BootMountMissing)`,
+						input: ConfigLXC{},
+						err:   errors.New(ConfigLXC_Error_BootMountMissing)},
+					{name: `errors.New(LxcBootMount_Error_NoStorageDuringCreation)`,
+						input: ConfigLXC{BootMount: &LxcBootMount{}},
+						err:   errors.New(LxcBootMount_Error_NoStorageDuringCreation)}},
+				createUpdate: []test{
+					{name: `errors.New(TriBool_Error_Invalid)`,
+						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+							ACL: util.Pointer(TriBool(34))}}),
+						current: &ConfigLXC{BootMount: &LxcBootMount{
+							ACL: util.Pointer(TriBoolNone)}},
+						err: errors.New(TriBool_Error_Invalid)},
+					{name: `errors.New(LxcMountSize_Error_Minimum)`,
+						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+							Storage:         util.Pointer("local-lvm"),
+							SizeInKibibytes: util.Pointer(lxcMountSize_Minimum - 1)}}),
+						current: &ConfigLXC{BootMount: &LxcBootMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(131071))}},
+						err: errors.New(LxcMountSize_Error_Minimum)}}}},
+		{category: `ID`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigLXC{ID: util.Pointer(GuestID(150))}),
+						current: &ConfigLXC{ID: util.Pointer(GuestID(0))}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `empty`,
+						input:   baseConfig(ConfigLXC{ID: util.Pointer(GuestID(0))}),
+						current: &ConfigLXC{ID: util.Pointer(GuestID(0))},
+						err:     errors.New(GuestID_Error_Minimum)},
+					{name: `minimum`,
+						input:   baseConfig(ConfigLXC{ID: util.Pointer(GuestIdMinimum - 1)}),
+						current: &ConfigLXC{ID: util.Pointer(GuestID(0))},
+						err:     errors.New(GuestID_Error_Minimum)},
+					{name: `maximum`,
+						input:   baseConfig(ConfigLXC{ID: util.Pointer(GuestIdMaximum + 1)}),
+						current: &ConfigLXC{ID: util.Pointer(GuestID(0))},
+						err:     errors.New(GuestID_Error_Maximum)}}}},
+		{category: `Memory`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(512))}),
+						current: &ConfigLXC{Memory: util.Pointer(LxcMemory(256))}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `minimum`,
+						input:   baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(LxcMemoryMinimum - 1))}),
+						current: &ConfigLXC{Memory: util.Pointer(LxcMemory(256))},
+						err:     errors.New(LxcMemory_Error_Minimum)}}}},
+		{category: `Name`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))}),
+						current: &ConfigLXC{Name: util.Pointer(GuestName("text"))}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `empty`,
+						input:   baseConfig(ConfigLXC{Name: util.Pointer(GuestName(""))}),
+						current: &ConfigLXC{Name: util.Pointer(GuestName("text"))},
+						err:     errors.New(GuestName_Error_Empty)}}}},
+		{category: `Node`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigLXC{Node: util.Pointer(NodeName("test"))}),
+						current: &ConfigLXC{Node: util.Pointer(NodeName("text"))}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `empty`,
+						input:   baseConfig(ConfigLXC{Node: util.Pointer(NodeName(""))}),
+						current: &ConfigLXC{Node: util.Pointer(NodeName("text"))},
+						err:     errors.New(NodeName_Error_Empty)}}}},
+		{category: `Pool`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigLXC{Pool: util.Pointer(PoolName("test"))}),
+						current: &ConfigLXC{Pool: util.Pointer(PoolName("text"))}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `empty`,
+						input:   baseConfig(ConfigLXC{Pool: util.Pointer(PoolName(""))}),
+						current: &ConfigLXC{Pool: util.Pointer(PoolName("text"))},
+						err:     errors.New(PoolName_Error_Empty)}}}},
+		{category: `Tags`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigLXC{Tags: &Tags{"test"}}),
+						current: &ConfigLXC{Tags: &Tags{"text"}}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `empty`,
+						input:   baseConfig(ConfigLXC{Tags: &Tags{""}}),
+						current: &ConfigLXC{Tags: &Tags{"text"}},
+						err:     errors.New(Tag_Error_Empty)}}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range append(test.valid.create, test.valid.createUpdate...) {
+			name := test.category + "/Valid/Create"
+			if len(test.valid.create)+len(test.valid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(nil), name)
+			})
+		}
+		for _, subTest := range append(test.valid.update, test.valid.createUpdate...) {
+			name := test.category + "/Valid/Update"
+			if len(test.valid.update)+len(test.valid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.NotNil(t, subTest.current)
+				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current), name)
+			})
+		}
+		for _, subTest := range append(test.invalid.create, test.invalid.createUpdate...) {
+			name := test.category + "/Invalid/Create"
+			if len(test.invalid.create)+len(test.invalid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(nil), name)
+			})
+		}
+		for _, subTest := range append(test.invalid.update, test.invalid.createUpdate...) {
+			name := test.category + "/Invalid/Update"
+			if len(test.invalid.update)+len(test.invalid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.NotNil(t, subTest.current)
+				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current), name)
+			})
+		}
+	}
+}
+
+func Test_RawConfigLXC_ALL(t *testing.T) {
 	baseConfig := func(config ConfigLXC) *ConfigLXC {
 		if config.ID == nil {
 			config.ID = util.Pointer(GuestID(0))
@@ -501,183 +678,6 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 			}
 			t.Run(name, func(*testing.T) {
 				require.Equal(t, subTest.output, subTest.input.ALL(subTest.vmr), name)
-			})
-		}
-	}
-}
-
-func Test_ConfigLXC_Validate(t *testing.T) {
-	var baseConfig = func(config ConfigLXC) ConfigLXC {
-		if config.BootMount == nil {
-			config.BootMount = &LxcBootMount{
-				Storage: util.Pointer("local-lvm")}
-		}
-		return config
-	}
-	type test struct {
-		name    string
-		input   ConfigLXC
-		current *ConfigLXC
-		err     error
-	}
-	type testType struct {
-		create       []test
-		createUpdate []test // value of currentConfig wil be used for update and ignored for create
-		update       []test
-	}
-	tests := []struct {
-		category string
-		valid    testType
-		invalid  testType
-	}{
-		{category: `BootMount`,
-			valid: testType{
-				createUpdate: []test{
-					{name: `set`,
-						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
-							SizeInKibibytes: util.Pointer(LxcMountSize(150000)),
-							Storage:         util.Pointer("test")}}),
-						current: &ConfigLXC{BootMount: &LxcBootMount{Storage: util.Pointer("text")}}}}},
-			invalid: testType{
-				create: []test{
-					{name: `errors.New(ConfigLXC_Error_BootMountMissing)`,
-						input: ConfigLXC{},
-						err:   errors.New(ConfigLXC_Error_BootMountMissing)},
-					{name: `errors.New(LxcBootMount_Error_NoStorageDuringCreation)`,
-						input: ConfigLXC{BootMount: &LxcBootMount{}},
-						err:   errors.New(LxcBootMount_Error_NoStorageDuringCreation)}},
-				createUpdate: []test{
-					{name: `errors.New(TriBool_Error_Invalid)`,
-						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
-							ACL: util.Pointer(TriBool(34))}}),
-						current: &ConfigLXC{BootMount: &LxcBootMount{
-							ACL: util.Pointer(TriBoolNone)}},
-						err: errors.New(TriBool_Error_Invalid)},
-					{name: `errors.New(LxcMountSize_Error_Minimum)`,
-						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
-							Storage:         util.Pointer("local-lvm"),
-							SizeInKibibytes: util.Pointer(lxcMountSize_Minimum - 1)}}),
-						current: &ConfigLXC{BootMount: &LxcBootMount{
-							SizeInKibibytes: util.Pointer(LxcMountSize(131071))}},
-						err: errors.New(LxcMountSize_Error_Minimum)}}}},
-		{category: `ID`,
-			valid: testType{
-				createUpdate: []test{
-					{name: `set`,
-						input:   baseConfig(ConfigLXC{ID: util.Pointer(GuestID(150))}),
-						current: &ConfigLXC{ID: util.Pointer(GuestID(0))}}}},
-			invalid: testType{
-				createUpdate: []test{
-					{name: `empty`,
-						input:   baseConfig(ConfigLXC{ID: util.Pointer(GuestID(0))}),
-						current: &ConfigLXC{ID: util.Pointer(GuestID(0))},
-						err:     errors.New(GuestID_Error_Minimum)},
-					{name: `minimum`,
-						input:   baseConfig(ConfigLXC{ID: util.Pointer(GuestIdMinimum - 1)}),
-						current: &ConfigLXC{ID: util.Pointer(GuestID(0))},
-						err:     errors.New(GuestID_Error_Minimum)},
-					{name: `maximum`,
-						input:   baseConfig(ConfigLXC{ID: util.Pointer(GuestIdMaximum + 1)}),
-						current: &ConfigLXC{ID: util.Pointer(GuestID(0))},
-						err:     errors.New(GuestID_Error_Maximum)}}}},
-		{category: `Memory`,
-			valid: testType{
-				createUpdate: []test{
-					{name: `set`,
-						input:   baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(512))}),
-						current: &ConfigLXC{Memory: util.Pointer(LxcMemory(256))}}}},
-			invalid: testType{
-				createUpdate: []test{
-					{name: `minimum`,
-						input:   baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(LxcMemoryMinimum - 1))}),
-						current: &ConfigLXC{Memory: util.Pointer(LxcMemory(256))},
-						err:     errors.New(LxcMemory_Error_Minimum)}}}},
-		{category: `Name`,
-			valid: testType{
-				createUpdate: []test{
-					{name: `set`,
-						input:   baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))}),
-						current: &ConfigLXC{Name: util.Pointer(GuestName("text"))}}}},
-			invalid: testType{
-				createUpdate: []test{
-					{name: `empty`,
-						input:   baseConfig(ConfigLXC{Name: util.Pointer(GuestName(""))}),
-						current: &ConfigLXC{Name: util.Pointer(GuestName("text"))},
-						err:     errors.New(GuestName_Error_Empty)}}}},
-		{category: `Node`,
-			valid: testType{
-				createUpdate: []test{
-					{name: `set`,
-						input:   baseConfig(ConfigLXC{Node: util.Pointer(NodeName("test"))}),
-						current: &ConfigLXC{Node: util.Pointer(NodeName("text"))}}}},
-			invalid: testType{
-				createUpdate: []test{
-					{name: `empty`,
-						input:   baseConfig(ConfigLXC{Node: util.Pointer(NodeName(""))}),
-						current: &ConfigLXC{Node: util.Pointer(NodeName("text"))},
-						err:     errors.New(NodeName_Error_Empty)}}}},
-		{category: `Pool`,
-			valid: testType{
-				createUpdate: []test{
-					{name: `set`,
-						input:   baseConfig(ConfigLXC{Pool: util.Pointer(PoolName("test"))}),
-						current: &ConfigLXC{Pool: util.Pointer(PoolName("text"))}}}},
-			invalid: testType{
-				createUpdate: []test{
-					{name: `empty`,
-						input:   baseConfig(ConfigLXC{Pool: util.Pointer(PoolName(""))}),
-						current: &ConfigLXC{Pool: util.Pointer(PoolName("text"))},
-						err:     errors.New(PoolName_Error_Empty)}}}},
-		{category: `Tags`,
-			valid: testType{
-				createUpdate: []test{
-					{name: `set`,
-						input:   baseConfig(ConfigLXC{Tags: &Tags{"test"}}),
-						current: &ConfigLXC{Tags: &Tags{"text"}}}}},
-			invalid: testType{
-				createUpdate: []test{
-					{name: `empty`,
-						input:   baseConfig(ConfigLXC{Tags: &Tags{""}}),
-						current: &ConfigLXC{Tags: &Tags{"text"}},
-						err:     errors.New(Tag_Error_Empty)}}}},
-	}
-	for _, test := range tests {
-		for _, subTest := range append(test.valid.create, test.valid.createUpdate...) {
-			name := test.category + "/Valid/Create"
-			if len(test.valid.create)+len(test.valid.createUpdate) > 1 {
-				name += "/" + subTest.name
-			}
-			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.err, subTest.input.Validate(nil), name)
-			})
-		}
-		for _, subTest := range append(test.valid.update, test.valid.createUpdate...) {
-			name := test.category + "/Valid/Update"
-			if len(test.valid.update)+len(test.valid.createUpdate) > 1 {
-				name += "/" + subTest.name
-			}
-			t.Run(name, func(*testing.T) {
-				require.NotNil(t, subTest.current)
-				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current), name)
-			})
-		}
-		for _, subTest := range append(test.invalid.create, test.invalid.createUpdate...) {
-			name := test.category + "/Invalid/Create"
-			if len(test.invalid.create)+len(test.invalid.createUpdate) > 1 {
-				name += "/" + subTest.name
-			}
-			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.err, subTest.input.Validate(nil), name)
-			})
-		}
-		for _, subTest := range append(test.invalid.update, test.invalid.createUpdate...) {
-			name := test.category + "/Invalid/Update"
-			if len(test.invalid.update)+len(test.invalid.createUpdate) > 1 {
-				name += "/" + subTest.name
-			}
-			t.Run(name, func(*testing.T) {
-				require.NotNil(t, subTest.current)
-				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current), name)
 			})
 		}
 	}
