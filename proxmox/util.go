@@ -19,16 +19,6 @@ const (
 
 const hexPrefix string = "0x"
 
-func inArray(arr []string, str string) bool {
-	for _, elem := range arr {
-		if elem == str {
-			return true
-		}
-	}
-
-	return false
-}
-
 func Btoi(b bool) int {
 	switch b {
 	case true:

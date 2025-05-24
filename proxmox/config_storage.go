@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -727,7 +728,7 @@ func (newConfig *ConfigStorage) Validate(ctx context.Context, id string, create 
 			}
 		}
 	}
-	if !inArray([]string{"pbs", "zfs-over-iscsi"}, newConfig.Type) {
+	if !slices.Contains([]string{"pbs", "zfs-over-iscsi"}, newConfig.Type) {
 		// pbs has a hardcoded content type, of type backup.
 		// zfs-over-iscsi has a hardcoded content type, of type diskimage.
 		if exists && newConfig.Content != nil {
@@ -1155,22 +1156,22 @@ func NewConfigStorageFromApi(ctx context.Context, storageid string, client *Clie
 			contentArray := CSVtoArray(content)
 			config.Content = new(ConfigStorageContent)
 			if storageContentTypes[config.Type].([]bool)[0] {
-				config.Content.Backup = util.Pointer(inArray(contentArray, storageContentTypesAPI[0]))
+				config.Content.Backup = util.Pointer(slices.Contains(contentArray, storageContentTypesAPI[0]))
 			}
 			if storageContentTypes[config.Type].([]bool)[1] {
-				config.Content.Container = util.Pointer(inArray(contentArray, storageContentTypesAPI[1]))
+				config.Content.Container = util.Pointer(slices.Contains(contentArray, storageContentTypesAPI[1]))
 			}
 			if storageContentTypes[config.Type].([]bool)[2] {
-				config.Content.DiskImage = util.Pointer(inArray(contentArray, storageContentTypesAPI[2]))
+				config.Content.DiskImage = util.Pointer(slices.Contains(contentArray, storageContentTypesAPI[2]))
 			}
 			if storageContentTypes[config.Type].([]bool)[3] {
-				config.Content.Iso = util.Pointer(inArray(contentArray, storageContentTypesAPI[3]))
+				config.Content.Iso = util.Pointer(slices.Contains(contentArray, storageContentTypesAPI[3]))
 			}
 			if storageContentTypes[config.Type].([]bool)[4] {
-				config.Content.Snippets = util.Pointer(inArray(contentArray, storageContentTypesAPI[4]))
+				config.Content.Snippets = util.Pointer(slices.Contains(contentArray, storageContentTypesAPI[4]))
 			}
 			if storageContentTypes[config.Type].([]bool)[5] {
-				config.Content.Template = util.Pointer(inArray(contentArray, storageContentTypesAPI[5]))
+				config.Content.Template = util.Pointer(slices.Contains(contentArray, storageContentTypesAPI[5]))
 			}
 		} else {
 			// Edge cases
@@ -1182,7 +1183,7 @@ func NewConfigStorageFromApi(ctx context.Context, storageid string, client *Clie
 	}
 	if _, isSet := rawConfig["prune-backups"]; isSet {
 		prune := CSVtoArray(rawConfig["prune-backups"].(string))
-		if !inArray(prune, "keep-all=1") {
+		if !slices.Contains(prune, "keep-all=1") {
 			retentionSettings := make(map[string]int)
 			for _, e := range prune {
 				a := strings.Split(e, "=")

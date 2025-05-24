@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1149,7 +1150,7 @@ func (p QemuDeviceParam) createDeviceParam(
 ) QemuDeviceParam {
 
 	for key, value := range deviceConfMap {
-		if ignored := inArray(ignoredKeys, key); !ignored {
+		if ignored := slices.Contains(ignoredKeys, key); !ignored {
 			var confValue interface{}
 			if bValue, ok := value.(bool); ok && bValue {
 				confValue = "1"

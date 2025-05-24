@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 )
 
@@ -32,7 +33,8 @@ func (config ConfigAcmeAccount) CreateAcmeAccount(ctx context.Context, acmeId st
 	}
 
 	var tos string
-	if inArray(acmeDirectories, config.Directory) {
+
+	if slices.Contains(acmeDirectories, config.Directory) {
 		tos, err = client.GetAcmeTosUrl(ctx)
 		if err != nil {
 			return err

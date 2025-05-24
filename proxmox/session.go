@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"slices"
 )
 
 var Debug = new(bool)
@@ -120,7 +121,7 @@ func ParamsToValuesWithAllEmpty(params map[string]interface{}, allowedEmpty []st
 		}
 		if allowEmpty {
 			vals.Set(k, v)
-		} else if v != "" || inArray(allowedEmpty, k) {
+		} else if v != "" || slices.Contains(allowedEmpty, k) {
 			vals.Set(k, v)
 		}
 	}
