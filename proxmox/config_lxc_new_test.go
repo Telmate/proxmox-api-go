@@ -22,6 +22,169 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		createUpdate []test // value of currentConfig wil be used for update and ignored for create
 		update       []test
 	}{
+		{category: `BootMount`,
+			create: []test{
+				{name: `minimum 1G`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+						Storage:         util.Pointer("local-ext4")}},
+					output: map[string]any{"rootfs": "local-ext4:1"}},
+				{name: `minimum <1G`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						SizeInKibibytes: util.Pointer(LxcMountSize(917504)),
+						Storage:         util.Pointer("local-zfs")}},
+					output: map[string]any{"rootfs": "local-zfs:0.875"}},
+				{name: `minimum >1G`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						SizeInKibibytes: util.Pointer(LxcMountSize(1179648)),
+						Storage:         util.Pointer("local-lvm")}},
+					output: map[string]any{"rootfs": "local-lvm:1"}}},
+			createUpdate: []test{
+				{name: `ACL true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolTrue)}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolFalse)}},
+					output: map[string]any{"rootfs": ",acl=1"}},
+				{name: `ACL false`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolFalse)}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolTrue)}},
+					output: map[string]any{"rootfs": ",acl=0"}},
+				{name: `ACL none`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolNone)}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolTrue)}},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Options Discard true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard: util.Pointer(false)}}},
+					output: map[string]any{"rootfs": ",mountoptions=discard"}},
+				{name: `Options Discard false`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard: util.Pointer(true)}}},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Options LazyTime true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						LazyTime: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						LazyTime: util.Pointer(false)}}},
+					output: map[string]any{"rootfs": ",mountoptions=lazytime"}},
+				{name: `Options LazyTime false`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						LazyTime: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						LazyTime: util.Pointer(true)}}},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Options NoATime true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoATime: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoATime: util.Pointer(false)}}},
+					output: map[string]any{"rootfs": ",mountoptions=noatime"}},
+				{name: `Options NoATime false`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoATime: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoATime: util.Pointer(true)}}},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Options NoSuid true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoSuid: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoSuid: util.Pointer(false)}}},
+					output: map[string]any{"rootfs": ",mountoptions=nosuid"}},
+				{name: `Options NoSuid false`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoSuid: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoSuid: util.Pointer(true)}}},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Replication false`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						Replication: util.Pointer(false)}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						Replication: util.Pointer(true)}},
+					output: map[string]any{"rootfs": ",replicate=0"}},
+				{name: `Replication true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						Replication: util.Pointer(true)}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						Replication: util.Pointer(false)}},
+					output: map[string]any{"rootfs": ""}}},
+			update: []test{
+				{name: `Options Discard in-place true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard:  util.Pointer(false),
+						LazyTime: util.Pointer(true),
+						NoATime:  util.Pointer(false),
+						NoSuid:   util.Pointer(true)}}},
+					output: map[string]any{"rootfs": ",mountoptions=discard;lazytime;nosuid"}},
+				{name: `Options LazyTime in-place true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						LazyTime: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard:  util.Pointer(true),
+						LazyTime: util.Pointer(false),
+						NoATime:  util.Pointer(true),
+						NoSuid:   util.Pointer(false)}}},
+					output: map[string]any{"rootfs": ",mountoptions=discard;lazytime;noatime"}},
+				{name: `Options NoATime in-place true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoATime: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard:  util.Pointer(true),
+						LazyTime: util.Pointer(false),
+						NoATime:  util.Pointer(false),
+						NoSuid:   util.Pointer(true)}}},
+					output: map[string]any{"rootfs": ",mountoptions=discard;noatime;nosuid"}},
+				{name: `Options NoSuid in-place true`,
+					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						NoSuid: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
+						Discard:  util.Pointer(true),
+						LazyTime: util.Pointer(true),
+						NoATime:  util.Pointer(true),
+						NoSuid:   util.Pointer(false)}}},
+					output: map[string]any{"rootfs": ",mountoptions=discard;lazytime;noatime;nosuid"}},
+				{name: `Storage & size`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+						Storage:         util.Pointer("local-ext4")}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						SizeInKibibytes: util.Pointer(LxcMountSize(2097152)),
+						Storage:         util.Pointer("local-zfs"),
+						rawDisk:         "subvol-101-disk-0"}},
+					output: map[string]any{"rootfs": "local-ext4:subvol-101-disk-0"}},
+				{name: `no change`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolTrue),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(true),
+							LazyTime: util.Pointer(true),
+							NoATime:  util.Pointer(true),
+							NoSuid:   util.Pointer(true)},
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolTrue),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(true),
+							LazyTime: util.Pointer(true),
+							NoATime:  util.Pointer(true),
+							NoSuid:   util.Pointer(true)},
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs")}},
+					output: map[string]any{}}}},
 		{category: `Description`,
 			createUpdate: []test{
 				{name: `set`,
@@ -176,6 +339,105 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 				{name: `""`,
 					input:  RawConfigLXC{"arch": ""},
 					output: baseConfig(ConfigLXC{Architecture: ""})}}},
+		{category: `BootMount`,
+			tests: []test{
+				{name: `ACL true`,
+					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,acl=1"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL:         util.Pointer(TriBoolTrue),
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}})},
+				{name: `ACL false`,
+					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,acl=0"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL:         util.Pointer(TriBoolFalse),
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}})},
+				{name: `Options Discard true`,
+					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=discard"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolNone),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(true),
+							LazyTime: util.Pointer(false),
+							NoATime:  util.Pointer(false),
+							NoSuid:   util.Pointer(false)},
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}})},
+				{name: `Options LazyTime true`,
+					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=lazytime"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolNone),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(false),
+							LazyTime: util.Pointer(true),
+							NoATime:  util.Pointer(false),
+							NoSuid:   util.Pointer(false)},
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}})},
+				{name: `Options NoATime true`,
+					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=noatime"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolNone),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(false),
+							LazyTime: util.Pointer(false),
+							NoATime:  util.Pointer(true),
+							NoSuid:   util.Pointer(false)},
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}})},
+				{name: `Options NoSuid true`,
+					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=nosuid"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolNone),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(false),
+							LazyTime: util.Pointer(false),
+							NoATime:  util.Pointer(false),
+							NoSuid:   util.Pointer(true)},
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}})},
+				{name: `Replication false`,
+					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,replicate=0"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL:         util.Pointer(TriBoolNone),
+						Replication: util.Pointer(false),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}})},
+				{name: `Replication true`,
+					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,replicate=1"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL:         util.Pointer(TriBoolNone),
+						Replication: util.Pointer(true),
+						Storage:     util.Pointer("local-zfs"),
+						rawDisk:     "subvol-101-disk-0"}})},
+				{name: `SizeInKibibytes`,
+					input: RawConfigLXC{"rootfs": "local-ext4:subvol-101-disk-0,size=999M"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL:             util.Pointer(TriBoolNone),
+						Replication:     util.Pointer(true),
+						Storage:         util.Pointer("local-ext4"),
+						SizeInKibibytes: util.Pointer(LxcMountSize(1022976)),
+						rawDisk:         "subvol-101-disk-0"}})},
+				{name: `all`,
+					input: RawConfigLXC{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G"},
+					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolTrue),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(true),
+							LazyTime: util.Pointer(true),
+							NoATime:  util.Pointer(true),
+							NoSuid:   util.Pointer(true)},
+						Replication:     util.Pointer(true),
+						Storage:         util.Pointer("local-ext4"),
+						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+						rawDisk:         "subvol-101-disk-0"}})}}},
 		{category: `Description`,
 			tests: []test{
 				{name: `test`,
@@ -246,6 +508,10 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 
 func Test_ConfigLXC_Validate(t *testing.T) {
 	var baseConfig = func(config ConfigLXC) ConfigLXC {
+		if config.BootMount == nil {
+			config.BootMount = &LxcBootMount{
+				Storage: util.Pointer("local-lvm")}
+		}
 		return config
 	}
 	type test struct {
@@ -264,6 +530,36 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 		valid    testType
 		invalid  testType
 	}{
+		{category: `BootMount`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(150000)),
+							Storage:         util.Pointer("test")}}),
+						current: &ConfigLXC{BootMount: &LxcBootMount{Storage: util.Pointer("text")}}}}},
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(ConfigLXC_Error_BootMountMissing)`,
+						input: ConfigLXC{},
+						err:   errors.New(ConfigLXC_Error_BootMountMissing)},
+					{name: `errors.New(LxcBootMount_Error_NoStorageDuringCreation)`,
+						input: ConfigLXC{BootMount: &LxcBootMount{}},
+						err:   errors.New(LxcBootMount_Error_NoStorageDuringCreation)}},
+				createUpdate: []test{
+					{name: `errors.New(TriBool_Error_Invalid)`,
+						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+							ACL: util.Pointer(TriBool(34))}}),
+						current: &ConfigLXC{BootMount: &LxcBootMount{
+							ACL: util.Pointer(TriBoolNone)}},
+						err: errors.New(TriBool_Error_Invalid)},
+					{name: `errors.New(LxcMountSize_Error_Minimum)`,
+						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
+							Storage:         util.Pointer("local-lvm"),
+							SizeInKibibytes: util.Pointer(lxcMountSize_Minimum - 1)}}),
+						current: &ConfigLXC{BootMount: &LxcBootMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(131071))}},
+						err: errors.New(LxcMountSize_Error_Minimum)}}}},
 		{category: `ID`,
 			valid: testType{
 				createUpdate: []test{

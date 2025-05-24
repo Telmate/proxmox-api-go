@@ -10,6 +10,13 @@ import (
 
 var rxUserTokenExtract = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+!([a-z0-9]+)")
 
+const (
+	mebiByte          = 1024
+	gibiByte          = mebiByte * 1024
+	gibiByteOneEighth = gibiByte / 8
+	tebiByte          = gibiByte * 1024
+)
+
 const hexPrefix string = "0x"
 
 func inArray(arr []string, str string) bool {
@@ -41,6 +48,10 @@ func ensurePrefix(prefix, text string) string {
 
 func Itob(i int) bool {
 	return i == 1
+}
+
+func approximateDiskSize(SizeInKibibytes int64) float64 {
+	return float64(SizeInKibibytes/gibiByteOneEighth) * 0.125
 }
 
 func BoolInvert(b bool) bool {
@@ -117,6 +128,20 @@ func ParseConf(
 		confMap[key] = value
 	}
 	return confMap
+}
+
+func parseDiskSize(rawSize string) (size int64) {
+	tmpSize, _ := strconv.ParseInt(rawSize[:len(rawSize)-1], 10, 0)
+	switch rawSize[len(rawSize)-1:] {
+	case "T":
+		return tmpSize * tebiByte
+	case "G":
+		return tmpSize * gibiByte
+	case "M":
+		return tmpSize * mebiByte
+	}
+	// K
+	return tmpSize
 }
 
 func ParsePMConf(

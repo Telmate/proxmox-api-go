@@ -16,6 +16,7 @@ type OperatingSystem string
 
 type ConfigLXC struct {
 	Architecture    CpuArchitecture `json:"architecture"` // only returned
+	BootMount       *LxcBootMount   `json:"boot_mount,omitempty"`
 	Description     *string         `json:"description,omitempty"`
 	ID              *GuestID        `json:"id"` // only used during creation
 	Memory          *LxcMemory      `json:"memory,omitempty"`
@@ -28,6 +29,7 @@ type ConfigLXC struct {
 }
 
 const (
+	ConfigLXC_Error_BootMountMissing    = "boot mount is required during creation"
 	ConfigLXC_Error_NoSettingsSpecified = "no settings specified"
 )
 
@@ -72,6 +74,9 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	params := config.mapToApiShared()
 	var pool PoolName
+	if config.BootMount != nil {
+		params[lxcApiKeyRootFS] = config.BootMount.mapToApiCreate()
+	}
 	if config.Description != nil && *config.Description != "" {
 		params[lxcApiKeyDescription] = *config.Description
 	}
@@ -105,6 +110,9 @@ func (config ConfigLXC) mapToApiShared() map[string]any {
 func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	params := config.mapToApiShared()
 	var delete string
+	if config.BootMount != nil && current.BootMount != nil {
+		config.BootMount.mapToApiUpdate_Unsafe(current.BootMount, params)
+	}
 	if config.Description != nil {
 		if current.Description == nil || *config.Description != *current.Description {
 			if *config.Description == "" {
@@ -158,14 +166,18 @@ func (config ConfigLXC) updateNoCheck(ctx context.Context, vmr *VmRef, current *
 	if len(params) == 0 {
 		return errors.New(ConfigLXC_Error_NoSettingsSpecified)
 	}
+	// TODO add disk migration code here
 	return c.Put(ctx, params, "/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/config")
 }
 
 func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
-	if current == nil { // Create
+	if current != nil { // Update
+		err = config.validateUpdate(*current)
+	} else { // Create
 		err = config.validateCreate()
-	} else { // Update
-		err = config.validateUpdate()
+	}
+	if err != nil {
+		return
 	}
 	if config.ID != nil {
 		if err = config.ID.Validate(); err != nil {
@@ -201,11 +213,14 @@ func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
 }
 
 func (config ConfigLXC) validateCreate() (err error) {
-	return
+	if config.BootMount == nil {
+		return errors.New(ConfigLXC_Error_BootMountMissing)
+	}
+	return config.BootMount.Validate(nil)
 }
 
-func (config ConfigLXC) validateUpdate() (err error) {
-	return
+func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
+	return config.BootMount.Validate(current.BootMount)
 }
 
 type RawConfigLXC map[string]any
@@ -213,6 +228,7 @@ type RawConfigLXC map[string]any
 func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 	var privileged bool
 	config := ConfigLXC{
+		BootMount:  raw.BootMount(),
 		ID:         util.Pointer(vmr.vmId),
 		Node:       util.Pointer(vmr.node),
 		Privileged: &privileged}
@@ -252,6 +268,7 @@ const (
 	lxcApiKeyName            string = "name"
 	lxcApiKeyOperatingSystem string = "ostype"
 	lxcApiKeyPool            string = "pool"
+	lxcApiKeyRootFS          string = "rootfs"
 	lxcApiKeySwap            string = "swap"
 	lxcApiKeyTags            string = "tags"
 	lxcApiKeyUnprivileged    string = "unprivileged"
