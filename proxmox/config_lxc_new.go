@@ -133,44 +133,12 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	return params
 }
 
-func (ConfigLXC) mapToSDK(params map[string]any, vmr VmRef) *ConfigLXC {
-	var privileged bool
-	config := ConfigLXC{
-		ID:         util.Pointer(vmr.vmId),
-		Node:       util.Pointer(vmr.node),
-		Privileged: &privileged}
-	if vmr.pool != "" {
-		config.Pool = util.Pointer(PoolName(vmr.pool))
-	}
-	if v, isSet := params[lxcApiKeyArchitecture]; isSet {
-		config.Architecture = CpuArchitecture(v.(string))
-	}
-	if v, isSet := params[lxcApiKeyDescription]; isSet {
-		config.Description = util.Pointer(v.(string))
-	}
-	if v, isSet := params[lxcApiKeyMemory]; isSet {
-		config.Memory = util.Pointer(LxcMemory(v.(float64)))
-	}
-	if v, isSet := params[lxcApiKeyName]; isSet {
-		config.Name = util.Pointer(GuestName(v.(string)))
-	}
-	if v, isSet := params[lxcApiKeyOperatingSystem]; isSet {
-		config.OperatingSystem = OperatingSystem(v.(string))
-	}
-	if v, isSet := params[lxcApiKeyUnprivileged]; isSet {
-		privileged = v.(float64) == 0
-	}
-	if v, isSet := params[lxcApiKeyTags]; isSet {
-		config.Tags = util.Pointer(Tags{}.mapToSDK(v.(string)))
-	}
-	return &config
-}
-
 func (config ConfigLXC) Update(ctx context.Context, vmr *VmRef, c *Client) error {
-	current, err := NewConfigLXCFromApi(ctx, vmr, c)
+	raw, err := NewConfigLXCFromApi(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
+	current := raw.ALL(*vmr)
 	if err := config.Validate(current); err != nil {
 		return err
 	}
@@ -178,11 +146,11 @@ func (config ConfigLXC) Update(ctx context.Context, vmr *VmRef, c *Client) error
 }
 
 func (config ConfigLXC) UpdateNoCheck(ctx context.Context, vmr *VmRef, c *Client) error {
-	current, err := NewConfigLXCFromApi(ctx, vmr, c)
+	raw, err := NewConfigLXCFromApi(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
-	return config.updateNoCheck(ctx, vmr, current, c)
+	return config.updateNoCheck(ctx, vmr, raw.ALL(*vmr), c)
 }
 
 func (config ConfigLXC) updateNoCheck(ctx context.Context, vmr *VmRef, current *ConfigLXC, c *Client) error {
@@ -240,6 +208,41 @@ func (config ConfigLXC) validateUpdate() (err error) {
 	return
 }
 
+type RawConfigLXC map[string]any
+
+func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
+	var privileged bool
+	config := ConfigLXC{
+		ID:         util.Pointer(vmr.vmId),
+		Node:       util.Pointer(vmr.node),
+		Privileged: &privileged}
+	if vmr.pool != "" {
+		config.Pool = util.Pointer(PoolName(vmr.pool))
+	}
+	if v, isSet := raw[lxcApiKeyArchitecture]; isSet {
+		config.Architecture = CpuArchitecture(v.(string))
+	}
+	if v, isSet := raw[lxcApiKeyDescription]; isSet {
+		config.Description = util.Pointer(v.(string))
+	}
+	if v, isSet := raw[lxcApiKeyMemory]; isSet {
+		config.Memory = util.Pointer(LxcMemory(v.(float64)))
+	}
+	if v, isSet := raw[lxcApiKeyName]; isSet {
+		config.Name = util.Pointer(GuestName(v.(string)))
+	}
+	if v, isSet := raw[lxcApiKeyOperatingSystem]; isSet {
+		config.OperatingSystem = OperatingSystem(v.(string))
+	}
+	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
+		privileged = v.(float64) == 0
+	}
+	if v, isSet := raw[lxcApiKeyTags]; isSet {
+		config.Tags = util.Pointer(Tags{}.mapToSDK(v.(string)))
+	}
+	return &config
+}
+
 const (
 	lxcApiKeyArchitecture    string = "arch"
 	lxcApiKeyDelete          string = "delete"
@@ -270,10 +273,10 @@ func (memory LxcMemory) Validate() error {
 
 func (memory LxcMemory) String() string { return strconv.Itoa(int(memory)) } // String is for fmt.Stringer.
 
-func NewConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (*ConfigLXC, error) {
+func NewConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	rawConfig, err := c.GetVmConfig(ctx, vmr)
 	if err != nil {
 		return nil, err
 	}
-	return ConfigLXC{}.mapToSDK(rawConfig, *vmr), nil
+	return rawConfig, nil
 }

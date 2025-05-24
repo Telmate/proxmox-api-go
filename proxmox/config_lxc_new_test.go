@@ -160,7 +160,7 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 	}
 	type test struct {
 		name   string
-		input  map[string]any
+		input  RawConfigLXC
 		vmr    VmRef
 		output *ConfigLXC
 	}
@@ -171,18 +171,18 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 		{category: `Architecture`,
 			tests: []test{
 				{name: `amd64`,
-					input:  map[string]any{"arch": "amd64"},
+					input:  RawConfigLXC{"arch": "amd64"},
 					output: baseConfig(ConfigLXC{Architecture: "amd64"})},
 				{name: `""`,
-					input:  map[string]any{"arch": ""},
+					input:  RawConfigLXC{"arch": ""},
 					output: baseConfig(ConfigLXC{Architecture: ""})}}},
 		{category: `Description`,
 			tests: []test{
 				{name: `test`,
-					input:  map[string]any{"description": "test"},
+					input:  RawConfigLXC{"description": "test"},
 					output: baseConfig(ConfigLXC{Description: util.Pointer("test")})},
 				{name: `""`,
-					input:  map[string]any{"description": ""},
+					input:  RawConfigLXC{"description": ""},
 					output: baseConfig(ConfigLXC{Description: util.Pointer("")})}}},
 		{category: `ID`,
 			tests: []test{
@@ -192,7 +192,7 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 		{category: `Memory`,
 			tests: []test{
 				{name: `set`,
-					input:  map[string]any{"memory": float64(512)},
+					input:  RawConfigLXC{"memory": float64(512)},
 					output: baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(512))})}}},
 		{category: `Node`,
 			tests: []test{
@@ -202,12 +202,12 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 		{category: `Name`,
 			tests: []test{
 				{name: `set`,
-					input:  map[string]any{"name": "test"},
+					input:  RawConfigLXC{"name": "test"},
 					output: baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))})}}},
 		{category: `OperatingSystem`,
 			tests: []test{
 				{name: `set`,
-					input:  map[string]any{"ostype": "test"},
+					input:  RawConfigLXC{"ostype": "test"},
 					output: baseConfig(ConfigLXC{OperatingSystem: "test"})}}},
 		{category: `Pool`,
 			tests: []test{
@@ -217,18 +217,18 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 		{category: `Privileged`,
 			tests: []test{
 				{name: `true`,
-					input:  map[string]any{"unprivileged": float64(0)},
+					input:  RawConfigLXC{"unprivileged": float64(0)},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(true)})},
 				{name: `false`,
-					input:  map[string]any{"unprivileged": float64(1)},
+					input:  RawConfigLXC{"unprivileged": float64(1)},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(false)})},
 				{name: `default false`,
-					input:  map[string]any{},
+					input:  RawConfigLXC{},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(false)})}}},
 		{category: `Tags`,
 			tests: []test{
 				{name: `set`,
-					input:  map[string]any{"tags": "test"},
+					input:  RawConfigLXC{"tags": "test"},
 					output: baseConfig(ConfigLXC{Tags: &Tags{"test"}})}}},
 	}
 	for _, test := range tests {
@@ -238,7 +238,7 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.output, ConfigLXC{}.mapToSDK(subTest.input, subTest.vmr), name)
+				require.Equal(t, subTest.output, subTest.input.ALL(subTest.vmr), name)
 			})
 		}
 	}
