@@ -4067,11 +4067,16 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Tags Empty`,
 					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
 					config:        &ConfigQemu{Tags: util.Pointer(Tags{})},
-					output:        map[string]interface{}{"tags": string("")}},
+					output:        map[string]any{"tags": string("")}},
 				{name: `Tags Full`,
 					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
 					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag1", "tag2"})},
-					output:        map[string]interface{}{"tags": string("tag1;tag2")}}}},
+					output:        map[string]any{"tags": string("tag1;tag2")}}},
+			update: []test{
+				{name: `Tags same`,
+					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					output:        map[string]any{}}}},
 		{category: `TPM`,
 			create: []test{
 				{name: `TPM`,

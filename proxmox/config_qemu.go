@@ -244,7 +244,9 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		params["tablet"] = *config.Tablet
 	}
 	if config.Tags != nil {
-		params["tags"] = (*config.Tags).mapToApi()
+		if v, ok := config.Tags.mapToApiUpdate(currentConfig.Tags); ok {
+			params["tags"] = v
+		}
 	}
 	if config.Smbios1 != "" {
 		params["smbios1"] = config.Smbios1

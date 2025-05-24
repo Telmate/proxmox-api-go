@@ -3,6 +3,7 @@ package proxmox
 import (
 	"errors"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -12,15 +13,25 @@ const (
 	Tags_Error_Duplicate string = "duplicate tag found"
 )
 
-func (t Tags) mapToApi() string {
-	if len(t) == 0 {
-		return ""
+func (t Tags) Len() int           { return len(t) }           // Len is for sort.Interface.
+func (t Tags) Less(i, j int) bool { return t[i] < t[j] }      // Less is for sort.Interface.
+func (t Tags) Swap(i, j int)      { t[i], t[j] = t[j], t[i] } // Swap is for sort.Interface.
+
+func (new Tags) mapToApiCreate() string {
+	return new.String()
+}
+
+func (new Tags) mapToApiUpdate(current *Tags) (string, bool) {
+	if current != nil {
+		sort.Sort(new)
+		sort.Sort(*current)
+		newTags := new.String()
+		if newTags == current.String() {
+			return "", false
+		}
+		return newTags, true
 	}
-	var tags string
-	for _, e := range t {
-		tags += ";" + string(e)
-	}
-	return tags[1:]
+	return new.String(), true
 }
 
 func (Tags) mapToSDK(tags string) Tags {
@@ -30,6 +41,17 @@ func (Tags) mapToSDK(tags string) Tags {
 		typedTags[i] = Tag(e)
 	}
 	return typedTags
+}
+
+func (t Tags) String() string { // String is for fmt.Stringer.
+	if len(t) == 0 {
+		return ""
+	}
+	var tags string
+	for _, e := range t {
+		tags += ";" + e.String()
+	}
+	return tags[1:]
 }
 
 func (t Tags) Validate() error {
@@ -60,6 +82,8 @@ const (
 	Tag_Error_MaxLength string = "tag may only be 124 characters"
 	Tag_Error_Empty     string = "tag may not be empty"
 )
+
+func (t Tag) String() string { return string(t) } // String is for fmt.Stringer.
 
 func (t Tag) Validate() error {
 	if len(t) == 0 {
