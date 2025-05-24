@@ -62,6 +62,17 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config:        ConfigLXC{Memory: util.Pointer(LxcMemory(512))},
 					currentConfig: ConfigLXC{Memory: util.Pointer(LxcMemory(512))},
 					output:        map[string]any{}}}},
+		{category: `Name`,
+			createUpdate: []test{
+				{name: `set`,
+					config:        ConfigLXC{Name: util.Pointer(GuestName("test"))},
+					currentConfig: ConfigLXC{Name: util.Pointer(GuestName("text"))},
+					output:        map[string]any{"name": string("test")}}},
+			update: []test{
+				{name: `do nothing`,
+					config:        ConfigLXC{Name: util.Pointer(GuestName("test"))},
+					currentConfig: ConfigLXC{Name: util.Pointer(GuestName("test"))},
+					output:        map[string]any{}}}},
 		{category: `Node`,
 			createUpdate: []test{
 				{name: `do nothing`,
@@ -188,6 +199,11 @@ func Test_ConfigLXC_mapToSDK(t *testing.T) {
 				{name: `set`,
 					vmr:    VmRef{node: "test"},
 					output: baseConfig(ConfigLXC{Node: util.Pointer(NodeName("test"))})}}},
+		{category: `Name`,
+			tests: []test{
+				{name: `set`,
+					input:  map[string]any{"name": "test"},
+					output: baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))})}}},
 		{category: `OperatingSystem`,
 			tests: []test{
 				{name: `set`,
@@ -280,6 +296,18 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 						input:   baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(LxcMemoryMinimum - 1))}),
 						current: &ConfigLXC{Memory: util.Pointer(LxcMemory(256))},
 						err:     errors.New(LxcMemory_Error_Minimum)}}}},
+		{category: `Name`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))}),
+						current: &ConfigLXC{Name: util.Pointer(GuestName("text"))}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `empty`,
+						input:   baseConfig(ConfigLXC{Name: util.Pointer(GuestName(""))}),
+						current: &ConfigLXC{Name: util.Pointer(GuestName("text"))},
+						err:     errors.New(GuestName_Error_Empty)}}}},
 		{category: `Node`,
 			valid: testType{
 				createUpdate: []test{

@@ -3659,6 +3659,17 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
 					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
 					output:        map[string]interface{}{"delete": "shares"}}}},
+		{category: `Name`,
+			createUpdate: []test{
+				{name: `set`,
+					config:        &ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
+					currentConfig: ConfigQemu{Name: util.Pointer(GuestName("test-vm-2"))},
+					output:        map[string]any{"name": "test-vm"}}},
+			update: []test{
+				{name: `do nothing`,
+					config:        &ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
+					currentConfig: ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
+					output:        map[string]any{}}}},
 		{category: `Networks`,
 			create: []test{
 				{name: `Delete`,
@@ -6656,6 +6667,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `shares`,
 					input:  map[string]interface{}{"shares": float64(100)},
 					output: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(100))}})}}},
+		{category: `Name`,
+			tests: []test{
+				{name: `All`,
+					input:  map[string]any{"name": "testvm"},
+					output: baseConfig(ConfigQemu{Name: util.Pointer(GuestName("testvm"))})}}},
 		{category: `Networks`,
 			tests: []test{
 				{name: `all e1000`,
@@ -8741,6 +8757,18 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							CapacityMiB:        util.Pointer(QemuMemoryCapacity(2048)),
 							MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
 						err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)}}}},
+		{category: `Name`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigQemu{Name: util.Pointer(GuestName("test"))}),
+						current: &ConfigQemu{Name: util.Pointer(GuestName("test2"))}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `empty`,
+						input:   baseConfig(ConfigQemu{Name: util.Pointer(GuestName(""))}),
+						current: &ConfigQemu{Name: util.Pointer(GuestName("test"))},
+						err:     errors.New(GuestName_Error_Empty)}}}},
 		{category: `Network`,
 			valid: testType{
 				createUpdate: []test{

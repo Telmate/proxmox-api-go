@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -14,6 +15,38 @@ import (
 type GuestDNS struct {
 	NameServers  *[]netip.Addr `json:"nameservers,omitempty"`
 	SearchDomain *string       `json:"searchdomain,omitempty"` // we are not validating this field, as validating domain names is a complex topic.
+}
+
+// Length 128, first character must be a letter or number, the rest can be letters, numbers or hyphens.
+// Regex: ^([a-z]|[A-Z]|[0-9])([a-z]|[A-Z]|[0-9]|-){127,}$
+type GuestName string
+
+const (
+	guestNameMaxLength      = 128
+	GuestName_Error_Empty   = "name cannot be empty"
+	GuestName_Error_Invalid = "name can only contain the following characters: - a-z A-Z 0-9"
+	GuestName_Error_Length  = "name has a maximum length of 128"
+	GuestName_Error_Start   = "name cannot start with a hyphen (-)"
+)
+
+var guestNameRegex = regexp.MustCompile("^([a-z]|[A-Z]|[0-9]|-)+$")
+
+func (name GuestName) String() string { return string(name) } // String is for fmt.Stringer.
+
+func (name GuestName) Validate() error {
+	if len(name) == 0 {
+		return errors.New(GuestName_Error_Empty)
+	}
+	if len(name) > guestNameMaxLength {
+		return errors.New(GuestName_Error_Length)
+	}
+	if name[0:1] == "-" {
+		return errors.New(GuestName_Error_Start)
+	}
+	if !guestNameRegex.MatchString(string(name)) {
+		return errors.New(GuestName_Error_Invalid)
+	}
+	return nil
 }
 
 type GuestResource struct {
@@ -27,7 +60,7 @@ type GuestResource struct {
 	Id                 uint      `json:"id"`
 	MemoryTotalInBytes uint      `json:"memory_total"`
 	MemoryUsedInBytes  uint      `json:"memory_used"`
-	Name               string    `json:"name"` // TODO custom type
+	Name               GuestName `json:"name"`
 	NetworkIn          uint      `json:"network_in"`
 	NetworkOut         uint      `json:"network_out"`
 	Node               string    `json:"node"` // TODO custom type
@@ -38,6 +71,10 @@ type GuestResource struct {
 	Type               GuestType `json:"type"`
 	UptimeInSeconds    uint      `json:"uptime"`
 }
+
+const (
+	guestApiKeyName string = "name"
+)
 
 // https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/resources
 func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
@@ -77,8 +114,8 @@ func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
 		if _, isSet := tmpParams["mem"]; isSet {
 			resources[i].MemoryUsedInBytes = uint(tmpParams["mem"].(float64))
 		}
-		if _, isSet := tmpParams["name"]; isSet {
-			resources[i].Name = tmpParams["name"].(string)
+		if v, isSet := tmpParams[guestApiKeyName]; isSet {
+			resources[i].Name = GuestName(v.(string))
 		}
 		if _, isSet := tmpParams["netin"]; isSet {
 			resources[i].NetworkIn = uint(tmpParams["netin"].(float64))

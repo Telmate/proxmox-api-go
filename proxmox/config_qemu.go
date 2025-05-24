@@ -47,7 +47,7 @@ type ConfigQemu struct {
 	LinkedVmId      GuestID               `json:"linked_id,omitempty"` // Only returned setting it has no effect
 	Machine         string                `json:"machine,omitempty"`   // TODO should be custom type with enum
 	Memory          *QemuMemory           `json:"memory,omitempty"`
-	Name            string                `json:"name,omitempty"` // TODO should be custom type as there are character and length limitations
+	Name            *GuestName            `json:"name,omitempty"`
 	Networks        QemuNetworkInterfaces `json:"networks,omitempty"`
 	Onboot          *bool                 `json:"onboot,omitempty"`
 	Pool            *PoolName             `json:"pool,omitempty"`
@@ -77,6 +77,10 @@ const (
 	ConfigQemu_Error_CpuRequired                 string = "cpu is required during creation"
 	ConfigQemu_Error_MemoryRequired              string = "memory is required during creation"
 	ConfigQemu_Error_NodeRequired                string = "node is required during creation"
+)
+
+const (
+	qemuApiKeyName string = "name"
 )
 
 // Create - Tell Proxmox API to make the VM
@@ -222,8 +226,10 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if config.Machine != "" {
 		params["machine"] = config.Machine
 	}
-	if config.Name != "" {
-		params["name"] = config.Name
+	if config.Name != nil {
+		if currentConfig.Name == nil || *config.Name != *currentConfig.Name {
+			params[qemuApiKeyName] = config.Name.String()
+		}
 	}
 	if config.Onboot != nil {
 		params["onboot"] = *config.Onboot
@@ -391,8 +397,8 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	if _, isSet := params["machine"]; isSet {
 		config.Machine = params["machine"].(string)
 	}
-	if _, isSet := params["name"]; isSet {
-		config.Name = params["name"].(string)
+	if v, isSet := params[qemuApiKeyName]; isSet {
+		config.Name = util.Pointer(GuestName(v.(string)))
 	}
 	if _, isSet := params["onboot"]; isSet {
 		config.Onboot = util.Pointer(Itob(int(params["onboot"].(float64))))
@@ -760,6 +766,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 	if config.Disks != nil {
 		err = config.Disks.Validate()
 		if err != nil {
+			return
+		}
+	}
+	if config.Name != nil {
+		if err = config.Name.Validate(); err != nil {
 			return
 		}
 	}

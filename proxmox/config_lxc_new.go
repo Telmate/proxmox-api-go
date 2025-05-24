@@ -19,6 +19,7 @@ type ConfigLXC struct {
 	Description     *string         `json:"description,omitempty"`
 	ID              *GuestID        `json:"id"` // only used during creation
 	Memory          *LxcMemory      `json:"memory,omitempty"`
+	Name            *GuestName      `json:"name,omitempty"`
 	Node            *NodeName       `json:"node,omitempty"` // only used during creation
 	OperatingSystem OperatingSystem `json:"os"`             // only returned
 	Pool            *PoolName       `json:"pool,omitempty"`
@@ -77,6 +78,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.Memory != nil {
 		params[lxcApiKeyMemory] = *config.Memory
 	}
+	if config.Name != nil {
+		params[lxcApiKeyName] = (*config.Name).String()
+	}
 	if config.Pool != nil {
 		pool = *config.Pool
 		params[lxcApiKeyPool] = string(pool)
@@ -113,6 +117,11 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	if config.Memory != nil && (current.Memory == nil || *config.Memory != *current.Memory) {
 		params[lxcApiKeyMemory] = *config.Memory
 	}
+	if config.Name != nil {
+		if current.Name == nil || *config.Name != *current.Name {
+			params[lxcApiKeyName] = (*config.Name).String()
+		}
+	}
 	if config.Tags != nil {
 		if v, ok := (*config.Tags).mapToApiUpdate(current.Tags); ok {
 			params[lxcApiKeyTags] = v
@@ -141,6 +150,9 @@ func (ConfigLXC) mapToSDK(params map[string]any, vmr VmRef) *ConfigLXC {
 	}
 	if v, isSet := params[lxcApiKeyMemory]; isSet {
 		config.Memory = util.Pointer(LxcMemory(v.(float64)))
+	}
+	if v, isSet := params[lxcApiKeyName]; isSet {
+		config.Name = util.Pointer(GuestName(v.(string)))
 	}
 	if v, isSet := params[lxcApiKeyOperatingSystem]; isSet {
 		config.OperatingSystem = OperatingSystem(v.(string))
@@ -197,6 +209,11 @@ func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
 			return
 		}
 	}
+	if config.Name != nil {
+		if err = config.Name.Validate(); err != nil {
+			return
+		}
+	}
 	if config.Node != nil {
 		if err = config.Node.Validate(); err != nil {
 			return
@@ -229,6 +246,7 @@ const (
 	lxcApiKeyDescription     string = "description"
 	lxcApiKeyGuestID         string = "vmid"
 	lxcApiKeyMemory          string = "memory"
+	lxcApiKeyName            string = "name"
 	lxcApiKeyOperatingSystem string = "ostype"
 	lxcApiKeyPool            string = "pool"
 	lxcApiKeySwap            string = "swap"

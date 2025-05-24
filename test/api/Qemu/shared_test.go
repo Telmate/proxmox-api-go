@@ -25,7 +25,7 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 	mac, _ := net.ParseMAC("B6:8F:9D:7C:8F:BC")
 
 	config := pxapi.ConfigQemu{
-		Name:   "test-qemu01",
+		Name:   util.Pointer(pxapi.GuestName("test-qemu01")),
 		Bios:   "seabios",
 		Tablet: util.Pointer(true),
 		Memory: &pxapi.QemuMemory{CapacityMiB: util.Pointer(pxapi.QemuMemoryCapacity(128))},

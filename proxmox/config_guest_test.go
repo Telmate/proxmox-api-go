@@ -4,8 +4,40 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_guestname"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_GuestName_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []string
+		output error
+	}{
+		{name: `Valid GuestName`,
+			input:  test_data_guestname.GuestName_Legal(),
+			output: nil},
+		{name: `Invalid GuestName Empty`,
+			input:  []string{test_data_guestname.GuestName_Empty()},
+			output: errors.New(GuestName_Error_Empty)},
+		{name: `Invalid GuestName Invalid`,
+			input:  test_data_guestname.GuestName_Character_Illegal(),
+			output: errors.New(GuestName_Error_Invalid)},
+		{name: `Invalid GuestName Max Length`,
+			input:  []string{test_data_guestname.GuestName_Max_Illegal()},
+			output: errors.New(GuestName_Error_Length)},
+		{name: `Invalid GuestName begin with illegal character`,
+			input:  []string{test_data_guestname.GuestName_Start_Illegal()},
+			output: errors.New(GuestName_Error_Start)},
+	}
+	for _, test := range tests {
+		for _, e := range test.input {
+			t.Run(test.name+": "+e, func(t *testing.T) {
+				require.Equal(t, test.output, (GuestName(e)).Validate())
+			})
+		}
+	}
+}
 
 func Test_GuestResource_mapToStruct(t *testing.T) {
 	tests := []struct {
