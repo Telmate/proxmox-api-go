@@ -17,6 +17,7 @@ type OperatingSystem string
 type ConfigLXC struct {
 	Architecture    CpuArchitecture `json:"architecture"` // only returned
 	BootMount       *LxcBootMount   `json:"boot_mount,omitempty"`
+	CPU             *LxcCPU         `json:"cpu,omitempty"`
 	Description     *string         `json:"description,omitempty"`
 	ID              *GuestID        `json:"id"` // only used during creation
 	Memory          *LxcMemory      `json:"memory,omitempty"`
@@ -78,6 +79,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.BootMount != nil {
 		params[lxcApiKeyRootFS] = config.BootMount.mapToApiCreate()
 	}
+	if config.CPU != nil {
+		config.CPU.mapToApiCreate(params)
+	}
 	if config.Description != nil && *config.Description != "" {
 		params[lxcApiKeyDescription] = *config.Description
 	}
@@ -116,6 +120,13 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	var delete string
 	if config.BootMount != nil && current.BootMount != nil {
 		config.BootMount.mapToApiUpdate_Unsafe(current.BootMount, params)
+	}
+	if config.CPU != nil {
+		if current.CPU != nil {
+			delete += config.CPU.mapToApiUpdate(*current.CPU, params)
+		} else {
+			config.CPU.mapToApiUpdate(LxcCPU{}, params)
+		}
 	}
 	if config.Description != nil && (current.Description == nil || *config.Description != *current.Description) {
 		if *config.Description == "" {
@@ -182,6 +193,11 @@ func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
 	if err != nil {
 		return
 	}
+	if config.CPU != nil {
+		if err = config.CPU.Validate(); err != nil {
+			return
+		}
+	}
 	if config.ID != nil {
 		if err = config.ID.Validate(); err != nil {
 			return
@@ -232,6 +248,7 @@ func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 	var privileged bool
 	config := ConfigLXC{
 		BootMount:  raw.BootMount(),
+		CPU:        raw.CPU(),
 		ID:         util.Pointer(vmr.vmId),
 		Node:       util.Pointer(vmr.node),
 		Privileged: &privileged,
@@ -272,6 +289,9 @@ func (raw RawConfigLXC) Swap() *LxcSwap {
 
 const (
 	lxcApiKeyArchitecture    string = "arch"
+	lxcApiKeyCores           string = "cores"
+	lxcApiKeyCpuLimit        string = "cpulimit"
+	lxcApiKeyCpuUnits        string = "cpuunits"
 	lxcApiKeyDelete          string = "delete"
 	lxcApiKeyDescription     string = "description"
 	lxcApiKeyGuestID         string = "vmid"
