@@ -80,6 +80,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.Description != nil && *config.Description != "" {
 		params[lxcApiKeyDescription] = *config.Description
 	}
+	if config.ID != nil {
+		params[lxcApiKeyGuestID] = *config.ID
+	}
 	if config.Memory != nil {
 		params[lxcApiKeyMemory] = *config.Memory
 	}
@@ -92,9 +95,6 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	}
 	if config.Privileged != nil && !*config.Privileged {
 		params[lxcApiKeyUnprivileged] = 1
-	}
-	if config.ID != nil {
-		params[lxcApiKeyGuestID] = *config.ID
 	}
 	if config.Tags != nil {
 		params[lxcApiKeyTags] = (*config.Tags).mapToApiCreate()
