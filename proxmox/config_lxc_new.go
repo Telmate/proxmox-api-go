@@ -15,25 +15,27 @@ type CpuArchitecture string
 type OperatingSystem string
 
 type ConfigLXC struct {
-	Architecture    CpuArchitecture `json:"architecture"` // only returned
-	BootMount       *LxcBootMount   `json:"boot_mount,omitempty"`
-	CPU             *LxcCPU         `json:"cpu,omitempty"`
-	DNS             *GuestDNS       `json:"dns,omitempty"`
-	Description     *string         `json:"description,omitempty"`
-	ID              *GuestID        `json:"id"` // only used during creation
-	Memory          *LxcMemory      `json:"memory,omitempty"`
-	Name            *GuestName      `json:"name,omitempty"`
-	Node            *NodeName       `json:"node,omitempty"` // only used during creation
-	OperatingSystem OperatingSystem `json:"os"`             // only returned
-	Pool            *PoolName       `json:"pool,omitempty"`
-	Privileged      *bool           `json:"privileged,omitempty"` // only used during creation
-	Swap            *LxcSwap        `json:"swap,omitempty"`
-	Tags            *Tags           `json:"tags,omitempty"`
+	Architecture    CpuArchitecture   `json:"architecture"` // only returned
+	BootMount       *LxcBootMount     `json:"boot_mount,omitempty"`
+	CPU             *LxcCPU           `json:"cpu,omitempty"`
+	CreateOptions   *LxcCreateOptions `json:"create,omitempty"` // only used during creation, never returned
+	DNS             *GuestDNS         `json:"dns,omitempty"`
+	Description     *string           `json:"description,omitempty"`
+	ID              *GuestID          `json:"id"` // only used during creation
+	Memory          *LxcMemory        `json:"memory,omitempty"`
+	Name            *GuestName        `json:"name,omitempty"`
+	Node            *NodeName         `json:"node,omitempty"` // only used during creation
+	OperatingSystem OperatingSystem   `json:"os"`             // only returned
+	Pool            *PoolName         `json:"pool,omitempty"`
+	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation
+	Swap            *LxcSwap          `json:"swap,omitempty"`
+	Tags            *Tags             `json:"tags,omitempty"`
 }
 
 const (
-	ConfigLXC_Error_BootMountMissing    = "boot mount is required during creation"
-	ConfigLXC_Error_NoSettingsSpecified = "no settings specified"
+	ConfigLXC_Error_BootMountMissing     = "boot mount is required during creation"
+	ConfigLXC_Error_CreateOptionsMissing = "create options are required during creation"
+	ConfigLXC_Error_NoSettingsSpecified  = "no settings specified"
 )
 
 func (config ConfigLXC) Create(ctx context.Context, c *Client) (*VmRef, error) {
@@ -82,6 +84,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	}
 	if config.CPU != nil {
 		config.CPU.mapToApiCreate(params)
+	}
+	if config.CreateOptions != nil {
+		config.CreateOptions.mapToAPI(params)
 	}
 	if config.Description != nil && *config.Description != "" {
 		params[lxcApiKeyDescription] = *config.Description
@@ -246,7 +251,13 @@ func (config ConfigLXC) validateCreate() (err error) {
 	if config.BootMount == nil {
 		return errors.New(ConfigLXC_Error_BootMountMissing)
 	}
-	return config.BootMount.Validate(nil)
+	if err = config.BootMount.Validate(nil); err != nil {
+		return err
+	}
+	if config.CreateOptions == nil {
+		return errors.New(ConfigLXC_Error_CreateOptionsMissing)
+	}
+	return config.CreateOptions.Validate()
 }
 
 func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
@@ -349,12 +360,48 @@ const (
 	lxcApiKeyMemory          string = "memory"
 	lxcApiKeyName            string = "name"
 	lxcApiKeyOperatingSystem string = "ostype"
+	lxcApiKeyOsTemplate      string = "ostemplate"
+	lxcApiKeyPassword        string = "password"
 	lxcApiKeyPool            string = "pool"
 	lxcApiKeyRootFS          string = "rootfs"
+	lxcApiKeySSHPublicKeys   string = "ssh-public-keys"
 	lxcApiKeySwap            string = "swap"
 	lxcApiKeyTags            string = "tags"
 	lxcApiKeyUnprivileged    string = "unprivileged"
 )
+
+// These settings are only available during creation and can not be changed afterwards, or returned by the API
+type LxcCreateOptions struct {
+	OsTemplate    *LxcTemplate    `json:"os_template,omitempty"`
+	UserPassword  *string         `json:"password,omitempty"`
+	PublicSSHkeys []AuthorizedKey `json:"sshkeys,omitempty"`
+}
+
+const (
+	LxcCreateOptions_Error_TemplateMissing = "os template is required during creation"
+)
+
+func (config LxcCreateOptions) mapToAPI(params map[string]any) {
+	if config.OsTemplate != nil {
+		params[lxcApiKeyOsTemplate] = config.OsTemplate.String()
+	}
+	if config.UserPassword != nil {
+		params[lxcApiKeyPassword] = *config.UserPassword
+	}
+	if len(config.PublicSSHkeys) != 0 {
+		params[lxcApiKeySSHPublicKeys] = sshKeyUrlEncode(config.PublicSSHkeys)
+	}
+}
+
+func (config LxcCreateOptions) Validate() error {
+	if config.OsTemplate == nil {
+		return errors.New(LxcCreateOptions_Error_TemplateMissing)
+	}
+	if err := config.OsTemplate.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
 
 type LxcMemory uint
 
@@ -371,6 +418,30 @@ func (memory LxcMemory) Validate() error {
 }
 
 func (memory LxcMemory) String() string { return strconv.Itoa(int(memory)) } // String is for fmt.Stringer.
+
+type LxcTemplate struct {
+	Storage string `json:"storage"`
+	File    string `json:"template"`
+}
+
+const (
+	LxcTemplate_Error_StorageMissing = "storage is required"
+	LxcTemplate_Error_FileMissing    = "file is required"
+)
+
+func (template LxcTemplate) String() string {
+	return template.Storage + ":vztmpl/" + strings.TrimPrefix(template.File, "/")
+}
+
+func (template LxcTemplate) Validate() error {
+	if template.Storage == "" {
+		return errors.New(LxcTemplate_Error_StorageMissing)
+	}
+	if template.File == "" {
+		return errors.New(LxcTemplate_Error_FileMissing)
+	}
+	return nil
+}
 
 type LxcSwap uint
 

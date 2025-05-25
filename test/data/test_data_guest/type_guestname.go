@@ -1,4 +1,4 @@
-package test_data_guestname
+package test_data_guest
 
 func GuestName_Legal() []string {
 	return []string{

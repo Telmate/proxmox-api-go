@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_guest"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_pool"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_tag"
@@ -54,7 +55,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 		return *key
 	}
 	publicKeys := func() *[]AuthorizedKey {
-		data := test_data_qemu.PublicKey_Decoded_Input()
+		data := test_data_guest.AuthorizedKey_Decoded_Input()
 		keys := make([]AuthorizedKey, len(data))
 		for i := range data {
 			keys[i] = AuthorizedKey{Options: data[i].Options, PublicKey: data[i].PublicKey, Comment: data[i].Comment}
@@ -477,7 +478,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `CloudInit PublicSSHkeys`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: publicKeys()}},
 					currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{parsePublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key")})}},
-					output:        map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Output()}},
+					output:        map[string]interface{}{"sshkeys": test_data_guest.AuthorizedKey_Encoded_Output()}},
 				{name: `CloudInit UpgradePackages v7`,
 					version:       Version{Major: 7, Minor: 255, Patch: 255},
 					config:        &ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(false)}},
@@ -534,7 +535,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						"nameserver":   "1.1.1.1 8.8.8.8 9.9.9.9",
 						"ipconfig0":    "ip=dhcp,ip6=dhcp",
 						"ipconfig31":   "ip=10.20.4.7/22",
-						"sshkeys":      test_data_qemu.PublicKey_Encoded_Output(),
+						"sshkeys":      test_data_guest.AuthorizedKey_Encoded_Output(),
 						"cipassword":   "Enter123!",
 						"ciuser":       "root"}},
 				{name: `CloudInit Full v8`,
@@ -573,7 +574,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						"nameserver":   "1.1.1.1 8.8.8.8 9.9.9.9",
 						"ipconfig0":    "ip=dhcp,ip6=dhcp",
 						"ipconfig31":   "ip=10.20.4.7/22",
-						"sshkeys":      test_data_qemu.PublicKey_Encoded_Output(),
+						"sshkeys":      test_data_guest.AuthorizedKey_Encoded_Output(),
 						"ciupgrade":    1,
 						"cipassword":   "Enter123!",
 						"ciuser":       "root"}},
@@ -4315,7 +4316,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		return
 	}
 	publicKeys := func() *[]AuthorizedKey {
-		rawOutput := test_data_qemu.PublicKey_Decoded_Output()
+		rawOutput := test_data_guest.AuthorizedKey_Decoded_Output()
 		output := make([]AuthorizedKey, len(rawOutput))
 		for i := range rawOutput {
 			output[i] = AuthorizedKey{Options: rawOutput[i].Options, PublicKey: rawOutput[i].PublicKey, Comment: rawOutput[i].Comment}
@@ -4522,7 +4523,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						"ipconfig0":    string("ip=dhcp,ip6=dhcp"),
 						"ipconfig19":   string(""),
 						"ipconfig31":   string("ip=10.20.4.7/22"),
-						"sshkeys":      test_data_qemu.PublicKey_Encoded_Input(),
+						"sshkeys":      test_data_guest.AuthorizedKey_Encoded_Input(),
 						"ciupgrade":    float64(1),
 						"cipassword":   string("Enter123!"),
 						"ciuser":       string("root")},
@@ -4616,7 +4617,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							QemuNetworkInterfaceID31: CloudInitNetworkConfig{
 								IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("10.20.4.7/22"))}}}}})},
 				{name: `PublicSSHkeys`,
-					input: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Input()},
+					input: map[string]interface{}{"sshkeys": test_data_guest.AuthorizedKey_Encoded_Input()},
 					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						NetworkInterfaces: CloudInitNetworkInterfaces{},
 						PublicSSHkeys:     publicKeys()}})},

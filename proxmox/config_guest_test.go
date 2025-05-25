@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/test/data/test_data_guestname"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_guest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,19 +15,19 @@ func Test_GuestName_Validate(t *testing.T) {
 		output error
 	}{
 		{name: `Valid GuestName`,
-			input:  test_data_guestname.GuestName_Legal(),
+			input:  test_data_guest.GuestName_Legal(),
 			output: nil},
 		{name: `Invalid GuestName Empty`,
-			input:  []string{test_data_guestname.GuestName_Empty()},
+			input:  []string{test_data_guest.GuestName_Empty()},
 			output: errors.New(GuestName_Error_Empty)},
 		{name: `Invalid GuestName Invalid`,
-			input:  test_data_guestname.GuestName_Character_Illegal(),
+			input:  test_data_guest.GuestName_Character_Illegal(),
 			output: errors.New(GuestName_Error_Invalid)},
 		{name: `Invalid GuestName Max Length`,
-			input:  []string{test_data_guestname.GuestName_Max_Illegal()},
+			input:  []string{test_data_guest.GuestName_Max_Illegal()},
 			output: errors.New(GuestName_Error_Length)},
 		{name: `Invalid GuestName begin with illegal character`,
-			input:  []string{test_data_guestname.GuestName_Start_Illegal()},
+			input:  []string{test_data_guest.GuestName_Start_Illegal()},
 			output: errors.New(GuestName_Error_Start)},
 	}
 	for _, test := range tests {

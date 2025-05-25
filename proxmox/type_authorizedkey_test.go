@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_guest"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 )
@@ -211,8 +211,8 @@ func Test_AuthorizedKey_UnmarshalJSON(t *testing.T) {
 }
 
 func Test_sshKeyUrlDecode(t *testing.T) {
-	rawOutput := test_data_qemu.PublicKey_Decoded_Output()
-	input := test_data_qemu.PublicKey_Encoded_Input()
+	rawOutput := test_data_guest.AuthorizedKey_Decoded_Output()
+	input := test_data_guest.AuthorizedKey_Encoded_Input()
 	output := make([]AuthorizedKey, len(rawOutput))
 	for i := range rawOutput {
 		output[i] = AuthorizedKey{Options: rawOutput[i].Options, PublicKey: rawOutput[i].PublicKey, Comment: rawOutput[i].Comment}
@@ -222,7 +222,7 @@ func Test_sshKeyUrlDecode(t *testing.T) {
 
 // Test the encoding logic to encode the ssh keys
 func Test_sshKeyUrlEncode(t *testing.T) {
-	rawInput := test_data_qemu.PublicKey_Decoded_Input()
+	rawInput := test_data_guest.AuthorizedKey_Decoded_Input()
 	input := make([]AuthorizedKey, len(rawInput))
 	for i := range rawInput {
 		input[i] = AuthorizedKey{Options: rawInput[i].Options, PublicKey: rawInput[i].PublicKey, Comment: rawInput[i].Comment}
@@ -235,7 +235,7 @@ func Test_sshKeyUrlEncode(t *testing.T) {
 	}{
 		{name: `multiple keys`,
 			input:  input,
-			output: test_data_qemu.PublicKey_Encoded_Output()},
+			output: test_data_guest.AuthorizedKey_Encoded_Output()},
 		{name: `empty key`,
 			input:  []AuthorizedKey{{}},
 			output: ""},
@@ -248,7 +248,7 @@ func Test_sshKeyUrlEncode(t *testing.T) {
 }
 
 func Benchmark_sshKeyUrlDecode(b *testing.B) {
-	input := test_data_qemu.PublicKey_Encoded_Input()
+	input := test_data_guest.AuthorizedKey_Encoded_Input()
 
 	b.ResetTimer() // Reset timer to exclude setup time
 	for i := 0; i < b.N; i++ {
@@ -257,7 +257,7 @@ func Benchmark_sshKeyUrlDecode(b *testing.B) {
 }
 
 func Benchmark_sshKeyUrlEncode(b *testing.B) {
-	rawInput := test_data_qemu.PublicKey_Decoded_Input()
+	rawInput := test_data_guest.AuthorizedKey_Decoded_Input()
 	input := make([]AuthorizedKey, len(rawInput))
 	for i := range rawInput {
 		input[i] = AuthorizedKey{PublicKey: rawInput[i].PublicKey, Comment: rawInput[i].Comment}

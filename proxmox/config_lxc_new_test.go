@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_guest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,6 +15,14 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		ip, err := netip.ParseAddr(rawIP)
 		failPanic(err)
 		return ip
+	}
+	publicKeys := func() []AuthorizedKey {
+		data := test_data_guest.AuthorizedKey_Decoded_Input()
+		keys := make([]AuthorizedKey, len(data))
+		for i := range data {
+			keys[i] = AuthorizedKey{Options: data[i].Options, PublicKey: data[i].PublicKey, Comment: data[i].Comment}
+		}
+		return keys
 	}
 	type test struct {
 		name          string
@@ -266,6 +275,54 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config:        ConfigLXC{CPU: &LxcCPU{Units: util.Pointer(LxcCpuUnits(0))}},
 					currentConfig: ConfigLXC{},
 					output:        map[string]any{}}}},
+		{category: `CreateOptions`,
+			create: []test{
+				{name: `all`,
+					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
+						OsTemplate: &LxcTemplate{
+							Storage: "local",
+							File:    "test-template"},
+						UserPassword:  util.Pointer("myPassword!"),
+						PublicSSHkeys: publicKeys()}},
+					output: map[string]any{
+						"ostemplate":      string("local:vztmpl/test-template"),
+						"password":        string("myPassword!"),
+						"ssh-public-keys": string(test_data_guest.AuthorizedKey_Encoded_Output())}},
+				{name: `OsTemplate`,
+					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
+						OsTemplate: &LxcTemplate{
+							Storage: "local",
+							File:    "test-template"}}},
+					output: map[string]any{
+						"ostemplate": string("local:vztmpl/test-template")}},
+				{name: `UserPassword`,
+					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
+						UserPassword: util.Pointer("myPassword!")}},
+					output: map[string]any{
+						"password": string("myPassword!")}},
+				{name: `UserPassword empty`,
+					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
+						UserPassword: util.Pointer("")}},
+					output: map[string]any{
+						"password": string("")}},
+				{name: `PublicSSHkeys`,
+					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
+						PublicSSHkeys: publicKeys()}},
+					output: map[string]any{
+						"ssh-public-keys": string(test_data_guest.AuthorizedKey_Encoded_Output())}},
+				{name: `PublicSSHkeys empty`,
+					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
+						PublicSSHkeys: []AuthorizedKey{}}},
+					output: map[string]any{}}},
+			update: []test{
+				{name: `all do nothing`,
+					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
+						OsTemplate: &LxcTemplate{
+							Storage: "local",
+							File:    "test-template"},
+						UserPassword:  util.Pointer("myPassword!"),
+						PublicSSHkeys: publicKeys()}},
+					output: map[string]any{}}}},
 		{category: `Description`,
 			createUpdate: []test{
 				{name: `set`,
@@ -450,12 +507,26 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 }
 
 func Test_ConfigLXC_Validate(t *testing.T) {
-	var baseConfig = func(config ConfigLXC) ConfigLXC {
+	baseConfig := func(config ConfigLXC) ConfigLXC {
 		if config.BootMount == nil {
 			config.BootMount = &LxcBootMount{
 				Storage: util.Pointer("local-lvm")}
 		}
+		if config.CreateOptions == nil {
+			config.CreateOptions = &LxcCreateOptions{
+				OsTemplate: &LxcTemplate{
+					Storage: "local",
+					File:    "test-template"}}
+		}
 		return config
+	}
+	publicKeys := func() []AuthorizedKey {
+		data := test_data_guest.AuthorizedKey_Decoded_Input()
+		keys := make([]AuthorizedKey, len(data))
+		for i := range data {
+			keys[i] = AuthorizedKey{Options: data[i].Options, PublicKey: data[i].PublicKey, Comment: data[i].Comment}
+		}
+		return keys
 	}
 	type test struct {
 		name    string
@@ -535,6 +606,56 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 						current: &ConfigLXC{CPU: &LxcCPU{
 							Units: util.Pointer(LxcCpuUnits(3))}},
 						err: errors.New(LxcCpuUnits_Error_Invalid)}}}},
+		{category: `CreateOptions`,
+			valid: testType{
+				create: []test{
+					{name: `all`,
+						input: ConfigLXC{
+							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							CreateOptions: &LxcCreateOptions{
+								OsTemplate: &LxcTemplate{
+									Storage: "local",
+									File:    "test-template"},
+								UserPassword:  util.Pointer("myPassword!"),
+								PublicSSHkeys: publicKeys()}}},
+					{name: `UserPassword`,
+						input: ConfigLXC{
+							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							CreateOptions: &LxcCreateOptions{
+								OsTemplate: &LxcTemplate{
+									Storage: "local",
+									File:    "test-template"},
+								UserPassword: util.Pointer("")}}},
+					{name: `PublicSSHkeys`,
+						input: ConfigLXC{
+							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							CreateOptions: &LxcCreateOptions{
+								OsTemplate: &LxcTemplate{
+									Storage: "local",
+									File:    "test-template"},
+								PublicSSHkeys: []AuthorizedKey{}}}}}},
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(ConfigLXC_Error_CreateOptionsMissing)`,
+						input: ConfigLXC{BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")}},
+						err:   errors.New(ConfigLXC_Error_CreateOptionsMissing)},
+					{name: `errors.New(LxcCreateOptions_Error_TemplateMissing)`,
+						input: ConfigLXC{
+							BootMount:     &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							CreateOptions: &LxcCreateOptions{}},
+						err: errors.New(LxcCreateOptions_Error_TemplateMissing)},
+					{name: `errors.New(LxcTemplate_Error_StorageMissing)`,
+						input: ConfigLXC{
+							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							CreateOptions: &LxcCreateOptions{
+								OsTemplate: &LxcTemplate{}}},
+						err: errors.New(LxcTemplate_Error_StorageMissing)},
+					{name: `errors.New(LxcTemplate_Error_StorageMissing)`,
+						input: ConfigLXC{
+							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							CreateOptions: &LxcCreateOptions{
+								OsTemplate: &LxcTemplate{Storage: "local"}}},
+						err: errors.New(LxcTemplate_Error_FileMissing)}}}},
 		{category: `ID`,
 			valid: testType{
 				createUpdate: []test{
