@@ -245,44 +245,79 @@ func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 type RawConfigLXC map[string]any
 
 func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
-	var privileged bool
 	config := ConfigLXC{
-		BootMount:  raw.BootMount(),
-		CPU:        raw.CPU(),
-		ID:         util.Pointer(vmr.vmId),
-		Node:       util.Pointer(vmr.node),
-		Privileged: &privileged,
-		Swap:       raw.Swap()}
+		Architecture:    raw.Architecture(),
+		BootMount:       raw.BootMount(),
+		CPU:             raw.CPU(),
+		Description:     raw.Description(),
+		ID:              util.Pointer(vmr.vmId),
+		Memory:          raw.Memory(),
+		Name:            raw.Name(),
+		Node:            util.Pointer(vmr.node),
+		OperatingSystem: raw.OperatingSystem(),
+		Privileged:      raw.Privileged(),
+		Swap:            raw.Swap(),
+		Tags:            raw.Tags()}
 	if vmr.pool != "" {
 		config.Pool = util.Pointer(PoolName(vmr.pool))
 	}
-	if v, isSet := raw[lxcApiKeyArchitecture]; isSet {
-		config.Architecture = CpuArchitecture(v.(string))
-	}
-	if v, isSet := raw[lxcApiKeyDescription]; isSet {
-		config.Description = util.Pointer(v.(string))
-	}
-	if v, isSet := raw[lxcApiKeyMemory]; isSet {
-		config.Memory = util.Pointer(LxcMemory(v.(float64)))
-	}
-	if v, isSet := raw[lxcApiKeyName]; isSet {
-		config.Name = util.Pointer(GuestName(v.(string)))
-	}
-	if v, isSet := raw[lxcApiKeyOperatingSystem]; isSet {
-		config.OperatingSystem = OperatingSystem(v.(string))
-	}
-	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
-		privileged = v.(float64) == 0
-	}
-	if v, isSet := raw[lxcApiKeyTags]; isSet {
-		config.Tags = util.Pointer(Tags{}.mapToSDK(v.(string)))
-	}
 	return &config
+}
+
+func (raw RawConfigLXC) Architecture() CpuArchitecture {
+	if v, isSet := raw[lxcApiKeyArchitecture]; isSet {
+		return CpuArchitecture(v.(string))
+	}
+	return ""
+}
+
+func (raw RawConfigLXC) Description() *string {
+	if v, isSet := raw[lxcApiKeyDescription]; isSet {
+		return util.Pointer(v.(string))
+	}
+	return nil
+}
+
+func (raw RawConfigLXC) Memory() *LxcMemory {
+	if v, isSet := raw[lxcApiKeyMemory]; isSet {
+		return util.Pointer(LxcMemory(v.(float64)))
+	}
+	return nil
+}
+
+func (raw RawConfigLXC) Name() *GuestName {
+	if v, isSet := raw[lxcApiKeyName]; isSet {
+		return util.Pointer(GuestName(v.(string)))
+	}
+	return nil
+}
+
+func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
+	if v, isSet := raw[lxcApiKeyOperatingSystem]; isSet {
+		return OperatingSystem(v.(string))
+	}
+	return ""
+}
+
+// Privileged returns true if the container is privileged, false if it is unprivileged.
+// Pointer is never nil.
+func (raw RawConfigLXC) Privileged() *bool {
+	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
+		return util.Pointer(v.(float64) == 0)
+	}
+	return util.Pointer(false)
 }
 
 func (raw RawConfigLXC) Swap() *LxcSwap {
 	if v, isSet := raw[lxcApiKeySwap]; isSet {
 		return util.Pointer(LxcSwap(v.(float64)))
+	}
+	return nil
+}
+
+func (raw RawConfigLXC) Tags() *Tags {
+	if v, isSet := raw[lxcApiKeyTags]; isSet {
+		return util.Pointer(Tags{}.mapToSDK(v.(string)))
 	}
 	return nil
 }
