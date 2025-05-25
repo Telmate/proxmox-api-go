@@ -18,6 +18,7 @@ type ConfigLXC struct {
 	Architecture    CpuArchitecture `json:"architecture"` // only returned
 	BootMount       *LxcBootMount   `json:"boot_mount,omitempty"`
 	CPU             *LxcCPU         `json:"cpu,omitempty"`
+	DNS             *GuestDNS       `json:"dns,omitempty"`
 	Description     *string         `json:"description,omitempty"`
 	ID              *GuestID        `json:"id"` // only used during creation
 	Memory          *LxcMemory      `json:"memory,omitempty"`
@@ -85,6 +86,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.Description != nil && *config.Description != "" {
 		params[lxcApiKeyDescription] = *config.Description
 	}
+	if config.DNS != nil {
+		config.DNS.mapToApiCreate(params)
+	}
 	if config.ID != nil {
 		params[lxcApiKeyGuestID] = *config.ID
 	}
@@ -133,6 +137,13 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 			delete += "," + lxcApiKeyDescription
 		} else {
 			params[lxcApiKeyDescription] = *config.Description
+		}
+	}
+	if config.DNS != nil {
+		if current.DNS != nil {
+			delete += config.DNS.mapToApiUpdate(*current.DNS, params)
+		} else {
+			config.DNS.mapToApiCreate(params)
 		}
 	}
 	if config.Memory != nil && (current.Memory == nil || *config.Memory != *current.Memory) {
@@ -249,6 +260,7 @@ func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 		Architecture:    raw.Architecture(),
 		BootMount:       raw.BootMount(),
 		CPU:             raw.CPU(),
+		DNS:             raw.DNS(),
 		Description:     raw.Description(),
 		ID:              util.Pointer(vmr.vmId),
 		Memory:          raw.Memory(),
@@ -276,6 +288,10 @@ func (raw RawConfigLXC) Description() *string {
 		return util.Pointer(v.(string))
 	}
 	return nil
+}
+
+func (raw RawConfigLXC) DNS() *GuestDNS {
+	return GuestDNS{}.mapToSDK(raw)
 }
 
 func (raw RawConfigLXC) Memory() *LxcMemory {

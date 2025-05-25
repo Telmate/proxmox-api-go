@@ -674,10 +674,19 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 						NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
 					output: map[string]interface{}{"delete": "nameserver"}},
+				{name: `CloudInit DNS NameServers no DNS`,
+					config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+						NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
+					currentConfig: ConfigQemu{CloudInit: &CloudInit{}},
+					output:        map[string]any{"nameserver": string("8.8.8.8")}},
 				{name: `CloudInit DNS SearchDomain empty`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
 					currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
 					output:        map[string]interface{}{"delete": "searchdomain"}},
+				{name: `CloudInit DNS SearchDomain no DNS`,
+					config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}}},
+					currentConfig: ConfigQemu{CloudInit: &CloudInit{}},
+					output:        map[string]any{"searchdomain": string("example.com")}},
 				{name: `CloudInit NetworkInterfaces Ipv4.Address update`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID0: CloudInitNetworkConfig{

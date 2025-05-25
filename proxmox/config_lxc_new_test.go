@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"errors"
+	"net/netip"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
@@ -9,6 +10,11 @@ import (
 )
 
 func Test_ConfigLXC_mapToAPI(t *testing.T) {
+	parseIP := func(rawIP string) netip.Addr {
+		ip, err := netip.ParseAddr(rawIP)
+		failPanic(err)
+		return ip
+	}
 	type test struct {
 		name          string
 		config        ConfigLXC
@@ -279,6 +285,51 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config:        ConfigLXC{Description: util.Pointer("test")},
 					currentConfig: ConfigLXC{Description: util.Pointer("test")},
 					output:        map[string]any{}}}},
+		{category: `DNS`,
+			createUpdate: []test{
+				{name: `all`,
+					config: ConfigLXC{DNS: &GuestDNS{
+						NameServers:  util.Pointer([]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8")}),
+						SearchDomain: util.Pointer("example.com")}},
+					currentConfig: ConfigLXC{DNS: &GuestDNS{
+						NameServers:  util.Pointer([]netip.Addr{parseIP("8.8.8.8"), parseIP("1.1.1.1")}),
+						SearchDomain: util.Pointer("test.net")}},
+					output: map[string]any{
+						"nameserver":   string("1.1.1.1 8.8.8.8"),
+						"searchdomain": string("example.com")}}},
+			create: []test{
+				{name: `do nothing`,
+					config: ConfigLXC{DNS: &GuestDNS{
+						NameServers:  util.Pointer([]netip.Addr{}),
+						SearchDomain: util.Pointer("")}},
+					output: map[string]any{}}},
+			update: []test{
+				{name: `NameServers delete`,
+					config:        ConfigLXC{DNS: &GuestDNS{NameServers: util.Pointer([]netip.Addr{})}},
+					currentConfig: ConfigLXC{DNS: &GuestDNS{NameServers: util.Pointer([]netip.Addr{parseIP("1.1.1.1")})}},
+					output:        map[string]any{"delete": "nameserver"}},
+				{name: `NameServers current empty`,
+					config: ConfigLXC{DNS: &GuestDNS{
+						NameServers: util.Pointer([]netip.Addr{parseIP("1.1.1.1")})}},
+					currentConfig: ConfigLXC{},
+					output:        map[string]any{"nameserver": string("1.1.1.1")}},
+				{name: `SearchDomain delete`,
+					config:        ConfigLXC{DNS: &GuestDNS{SearchDomain: util.Pointer("")}},
+					currentConfig: ConfigLXC{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}},
+					output:        map[string]any{"delete": "searchdomain"}},
+				{name: `SearchDomain current empty`,
+					config: ConfigLXC{DNS: &GuestDNS{
+						SearchDomain: util.Pointer("example.com")}},
+					currentConfig: ConfigLXC{},
+					output:        map[string]any{"searchdomain": string("example.com")}},
+				{name: `do nothing`,
+					config: ConfigLXC{DNS: &GuestDNS{
+						NameServers:  util.Pointer([]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8")}),
+						SearchDomain: util.Pointer("example.com")}},
+					currentConfig: ConfigLXC{DNS: &GuestDNS{
+						NameServers:  util.Pointer([]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8")}),
+						SearchDomain: util.Pointer("example.com")}},
+					output: map[string]any{}}}},
 		{category: `ID`,
 			create: []test{
 				{name: `set`,
@@ -608,6 +659,11 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 }
 
 func Test_RawConfigLXC_ALL(t *testing.T) {
+	parseIP := func(rawIP string) netip.Addr {
+		ip, err := netip.ParseAddr(rawIP)
+		failPanic(err)
+		return ip
+	}
 	baseConfig := func(config ConfigLXC) *ConfigLXC {
 		if config.ID == nil {
 			config.ID = util.Pointer(GuestID(0))
@@ -756,6 +812,28 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `""`,
 					input:  RawConfigLXC{"description": ""},
 					output: baseConfig(ConfigLXC{Description: util.Pointer("")})}}},
+		{category: `DNS`,
+			tests: []test{
+				{name: `all`,
+					input: RawConfigLXC{
+						"nameserver":   "1.1.1.1 8.8.8.8 9.9.9.9",
+						"searchdomain": "example.com"},
+					output: baseConfig(ConfigLXC{DNS: &GuestDNS{
+						NameServers: util.Pointer([]netip.Addr{
+							parseIP("1.1.1.1"),
+							parseIP("8.8.8.8"),
+							parseIP("9.9.9.9")}),
+						SearchDomain: util.Pointer("example.com")}})},
+				{name: `NameServers`,
+					input: RawConfigLXC{"nameserver": "8.8.8.8"},
+					output: baseConfig(ConfigLXC{DNS: &GuestDNS{
+						NameServers:  util.Pointer([]netip.Addr{parseIP("8.8.8.8")}),
+						SearchDomain: util.Pointer("")}})},
+				{name: `SearchDomain`,
+					input: RawConfigLXC{"searchdomain": "example.com"},
+					output: baseConfig(ConfigLXC{DNS: &GuestDNS{
+						NameServers:  util.Pointer([]netip.Addr(nil)),
+						SearchDomain: util.Pointer("example.com")}})}}},
 		{category: `ID`,
 			tests: []test{
 				{name: `set`,

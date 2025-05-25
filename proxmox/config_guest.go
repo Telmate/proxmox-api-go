@@ -17,6 +17,83 @@ type GuestDNS struct {
 	SearchDomain *string       `json:"searchdomain,omitempty"` // we are not validating this field, as validating domain names is a complex topic.
 }
 
+func (config GuestDNS) mapToApiCreate(params map[string]any) {
+	if config.NameServers != nil && len(*config.NameServers) > 0 {
+		var nameservers string
+		for _, ns := range *config.NameServers {
+			nameservers += " " + ns.String()
+		}
+		params[guestApiKeyNameServer] = nameservers[1:]
+	}
+	if config.SearchDomain != nil && *config.SearchDomain != "" {
+		params[guestApiKeySearchDomain] = *config.SearchDomain
+	}
+}
+
+func (config GuestDNS) mapToApiUpdate(current GuestDNS, params map[string]any) (delete string) {
+	if config.SearchDomain != nil {
+		if *config.SearchDomain != "" {
+			if current.SearchDomain == nil || *config.SearchDomain != *current.SearchDomain {
+				params[guestApiKeySearchDomain] = *config.SearchDomain
+			}
+		} else if current.SearchDomain != nil {
+			delete += "," + guestApiKeySearchDomain
+		}
+	}
+	if config.NameServers != nil {
+		if len(*config.NameServers) > 0 {
+			var nameServers string
+			for i := range *config.NameServers {
+				nameServers += " " + (*config.NameServers)[i].String()
+			}
+			if current.NameServers != nil && len(*current.NameServers) > 0 {
+				var currentNameServers string
+				for i := range *config.NameServers {
+					currentNameServers += " " + (*current.NameServers)[i].String()
+				}
+				if nameServers == currentNameServers {
+					return
+				}
+			}
+			params[guestApiKeyNameServer] = nameServers[1:]
+		} else if current.NameServers != nil {
+			delete += "," + guestApiKeyNameServer
+		}
+	}
+	return
+}
+
+func (GuestDNS) mapToSDK(params map[string]any) *GuestDNS {
+	var dnsSet bool
+	var nameservers []netip.Addr
+	if v, isSet := params[guestApiKeyNameServer]; isSet {
+		tmp := strings.Split(v.(string), " ")
+		nameservers = make([]netip.Addr, len(tmp))
+		for i, e := range tmp {
+			nameservers[i], _ = netip.ParseAddr(e)
+		}
+		dnsSet = true
+	}
+	var domain string
+	if v, isSet := params[guestApiKeySearchDomain]; isSet {
+		if len(v.(string)) > 1 {
+			domain = v.(string)
+			dnsSet = true
+		}
+	}
+	if !dnsSet {
+		return nil
+	}
+	return &GuestDNS{
+		SearchDomain: &domain,
+		NameServers:  &nameservers}
+}
+
+const (
+	guestApiKeyNameServer   string = "nameserver"
+	guestApiKeySearchDomain string = "searchdomain"
+)
+
 // Length 128, first character must be a letter or number, the rest can be letters, numbers or hyphens.
 // Regex: ^([a-z]|[A-Z]|[0-9])([a-z]|[A-Z]|[0-9]|-){127,}$
 type GuestName string
