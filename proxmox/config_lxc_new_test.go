@@ -277,6 +277,21 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config:        ConfigLXC{Privileged: util.Pointer(false)},
 					currentConfig: ConfigLXC{Privileged: util.Pointer(true)},
 					output:        map[string]any{}}}},
+		{category: `Swap`,
+			createUpdate: []test{
+				{name: `set`,
+					config:        ConfigLXC{Swap: util.Pointer(LxcSwap(256))},
+					currentConfig: ConfigLXC{Swap: util.Pointer(LxcSwap(128))},
+					output:        map[string]any{"swap": int(256)}},
+				{name: `set 0`,
+					config:        ConfigLXC{Swap: util.Pointer(LxcSwap(0))},
+					currentConfig: ConfigLXC{Swap: util.Pointer(LxcSwap(128))},
+					output:        map[string]any{"swap": int(0)}}},
+			update: []test{
+				{name: `do nothing`,
+					config:        ConfigLXC{Swap: util.Pointer(LxcSwap(256))},
+					currentConfig: ConfigLXC{Swap: util.Pointer(LxcSwap(256))},
+					output:        map[string]any{}}}},
 		{category: `Tags`,
 			createUpdate: []test{
 				{name: `set`,
@@ -664,6 +679,14 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `default false`,
 					input:  RawConfigLXC{},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(false)})}}},
+		{category: `Swap`,
+			tests: []test{
+				{name: `set`,
+					input:  RawConfigLXC{"swap": float64(256)},
+					output: baseConfig(ConfigLXC{Swap: util.Pointer(LxcSwap(256))})},
+				{name: `set 0`,
+					input:  RawConfigLXC{"swap": float64(0)},
+					output: baseConfig(ConfigLXC{Swap: util.Pointer(LxcSwap(0))})}}},
 		{category: `Tags`,
 			tests: []test{
 				{name: `set`,
@@ -685,4 +708,8 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 
 func Test_LxcMemory_String(t *testing.T) {
 	require.Equal(t, "583421", LxcMemory(583421).String())
+}
+
+func Test_LxcSwap_String(t *testing.T) {
+	require.Equal(t, "8423", LxcSwap(8423).String())
 }

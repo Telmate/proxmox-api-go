@@ -25,6 +25,7 @@ type ConfigLXC struct {
 	OperatingSystem OperatingSystem `json:"os"`             // only returned
 	Pool            *PoolName       `json:"pool,omitempty"`
 	Privileged      *bool           `json:"privileged,omitempty"` // only used during creation
+	Swap            *LxcSwap        `json:"swap,omitempty"`
 	Tags            *Tags           `json:"tags,omitempty"`
 }
 
@@ -96,6 +97,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.Privileged != nil && !*config.Privileged {
 		params[lxcApiKeyUnprivileged] = 1
 	}
+	if config.Swap != nil {
+		params[lxcApiKeySwap] = int(*config.Swap)
+	}
 	if config.Tags != nil {
 		params[lxcApiKeyTags] = (*config.Tags).mapToApiCreate()
 	}
@@ -125,6 +129,9 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	}
 	if config.Name != nil && (current.Name == nil || *config.Name != *current.Name) {
 		params[lxcApiKeyName] = (*config.Name).String()
+	}
+	if config.Swap != nil && (current.Swap == nil || *config.Swap != *current.Swap) {
+		params[lxcApiKeySwap] = int(*config.Swap)
 	}
 	if config.Tags != nil {
 		if v, ok := (*config.Tags).mapToApiUpdate(current.Tags); ok {
@@ -227,7 +234,8 @@ func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 		BootMount:  raw.BootMount(),
 		ID:         util.Pointer(vmr.vmId),
 		Node:       util.Pointer(vmr.node),
-		Privileged: &privileged}
+		Privileged: &privileged,
+		Swap:       raw.Swap()}
 	if vmr.pool != "" {
 		config.Pool = util.Pointer(PoolName(vmr.pool))
 	}
@@ -253,6 +261,13 @@ func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 		config.Tags = util.Pointer(Tags{}.mapToSDK(v.(string)))
 	}
 	return &config
+}
+
+func (raw RawConfigLXC) Swap() *LxcSwap {
+	if v, isSet := raw[lxcApiKeySwap]; isSet {
+		return util.Pointer(LxcSwap(v.(float64)))
+	}
+	return nil
 }
 
 const (
@@ -285,6 +300,10 @@ func (memory LxcMemory) Validate() error {
 }
 
 func (memory LxcMemory) String() string { return strconv.Itoa(int(memory)) } // String is for fmt.Stringer.
+
+type LxcSwap uint
+
+func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String is for fmt.Stringer.
 
 func NewConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	rawConfig, err := c.GetVmConfig(ctx, vmr)
