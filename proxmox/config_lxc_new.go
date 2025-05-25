@@ -113,22 +113,18 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	if config.BootMount != nil && current.BootMount != nil {
 		config.BootMount.mapToApiUpdate_Unsafe(current.BootMount, params)
 	}
-	if config.Description != nil {
-		if current.Description == nil || *config.Description != *current.Description {
-			if *config.Description == "" {
-				delete += "," + lxcApiKeyDescription
-			} else {
-				params[lxcApiKeyDescription] = *config.Description
-			}
+	if config.Description != nil && (current.Description == nil || *config.Description != *current.Description) {
+		if *config.Description == "" {
+			delete += "," + lxcApiKeyDescription
+		} else {
+			params[lxcApiKeyDescription] = *config.Description
 		}
 	}
 	if config.Memory != nil && (current.Memory == nil || *config.Memory != *current.Memory) {
 		params[lxcApiKeyMemory] = *config.Memory
 	}
-	if config.Name != nil {
-		if current.Name == nil || *config.Name != *current.Name {
-			params[lxcApiKeyName] = (*config.Name).String()
-		}
+	if config.Name != nil && (current.Name == nil || *config.Name != *current.Name) {
+		params[lxcApiKeyName] = (*config.Name).String()
 	}
 	if config.Tags != nil {
 		if v, ok := (*config.Tags).mapToApiUpdate(current.Tags); ok {
