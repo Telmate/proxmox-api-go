@@ -682,3 +682,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		}
 	}
 }
+
+func Test_LxcMemory_String(t *testing.T) {
+	require.Equal(t, "583421", LxcMemory(583421).String())
+}
