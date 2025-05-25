@@ -125,7 +125,7 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 		if current.CPU != nil {
 			delete += config.CPU.mapToApiUpdate(*current.CPU, params)
 		} else {
-			config.CPU.mapToApiUpdate(LxcCPU{}, params)
+			config.CPU.mapToApiCreate(params)
 		}
 	}
 	if config.Description != nil && (current.Description == nil || *config.Description != *current.Description) {
