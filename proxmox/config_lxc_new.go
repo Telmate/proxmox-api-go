@@ -21,6 +21,7 @@ type ConfigLXC struct {
 	CreateOptions   *LxcCreateOptions `json:"create,omitempty"` // only used during creation, never returned
 	DNS             *GuestDNS         `json:"dns,omitempty"`
 	Description     *string           `json:"description,omitempty"`
+	Features        *LxcFeatures      `json:"features,omitempty"`
 	ID              *GuestID          `json:"id"` // only used during creation
 	Memory          *LxcMemory        `json:"memory,omitempty"`
 	Name            *GuestName        `json:"name,omitempty"`
@@ -94,6 +95,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.DNS != nil {
 		config.DNS.mapToApiCreate(params)
 	}
+	if config.Features != nil {
+		config.Features.mapToApiCreate(params)
+	}
 	if config.ID != nil {
 		params[lxcApiKeyGuestID] = *config.ID
 	}
@@ -149,6 +153,13 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 			delete += config.DNS.mapToApiUpdate(*current.DNS, params)
 		} else {
 			config.DNS.mapToApiCreate(params)
+		}
+	}
+	if config.Features != nil {
+		if current.Features != nil {
+			delete += config.Features.mapToApiUpdate(*current.Features, params)
+		} else {
+			config.Features.mapToApiCreate(params)
 		}
 	}
 	if config.Memory != nil && (current.Memory == nil || *config.Memory != *current.Memory) {
@@ -273,6 +284,7 @@ func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 		CPU:             raw.CPU(),
 		DNS:             raw.DNS(),
 		Description:     raw.Description(),
+		Features:        raw.Features(),
 		ID:              util.Pointer(vmr.vmId),
 		Memory:          raw.Memory(),
 		Name:            raw.Name(),
@@ -356,6 +368,7 @@ const (
 	lxcApiKeyCpuUnits        string = "cpuunits"
 	lxcApiKeyDelete          string = "delete"
 	lxcApiKeyDescription     string = "description"
+	lxcApiKeyFeatures        string = "features"
 	lxcApiKeyGuestID         string = "vmid"
 	lxcApiKeyMemory          string = "memory"
 	lxcApiKeyName            string = "name"
@@ -429,7 +442,7 @@ const (
 	LxcTemplate_Error_FileMissing    = "file is required"
 )
 
-func (template LxcTemplate) String() string {
+func (template LxcTemplate) String() string { // String is for fmt.Stringer.
 	return template.Storage + ":vztmpl/" + strings.TrimPrefix(template.File, "/")
 }
 
