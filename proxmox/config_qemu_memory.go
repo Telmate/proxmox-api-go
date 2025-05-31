@@ -1,7 +1,10 @@
 package proxmox
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"strconv"
 
 	"github.com/Telmate/proxmox-api-go/internal/parse"
 )
@@ -135,10 +138,50 @@ func (m QemuMemoryBalloonCapacity) Validate() error {
 type QemuMemoryCapacity uint32 // max 4178944
 
 const (
-	QemuMemoryCapacity_Error_Maximum string             = "memory capacity has a maximum of 4178944"
-	QemuMemoryCapacity_Error_Minimum string             = "memory capacity has a minimum of 1"
-	qemuMemoryCapacity_Max           QemuMemoryCapacity = 4178944
+	QemuMemoryCapacity_Error_Maximum     string             = "memory capacity has a maximum of 4178944"
+	QemuMemoryCapacity_Error_Minimum     string             = "memory capacity has a minimum of 1"
+	QemuMemoryCapacity_Error_InvalidType string             = "memory capacity has invalid type"
+	qemuMemoryCapacity_Max               QemuMemoryCapacity = 4178944
+	qemuMemoryCapacity_Base                                 = 10
 )
+
+func (capacity *QemuMemoryCapacity) populateString(value string) error {
+	resultValue, err := strconv.ParseUint(value, qemuMemoryCapacity_Base, 32)
+	if err != nil {
+		return err
+	}
+
+	*capacity = QemuMemoryCapacity(resultValue)
+	return nil
+}
+
+func (capacity *QemuMemoryCapacity) populateNumber(value float64) {
+	*capacity = QemuMemoryCapacity(value)
+}
+
+func (capacity *QemuMemoryCapacity) populate(rawValue interface{}) error {
+	switch value := rawValue.(type) {
+	case string:
+		return capacity.populateString(value)
+
+	case float64:
+		capacity.populateNumber(value)
+		return nil
+
+	default:
+		return fmt.Errorf("%s: %T", QemuMemoryCapacity_Error_InvalidType, rawValue)
+	}
+}
+
+func (capacity *QemuMemoryCapacity) UnmarshalJSON(data []byte) error {
+	var rawValue interface{}
+
+	if err := json.Unmarshal(data, &rawValue); err != nil {
+		return err
+	}
+
+	return capacity.populate(rawValue)
+}
 
 func (m QemuMemoryCapacity) Validate() error {
 	if m == 0 {
