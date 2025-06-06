@@ -25,6 +25,7 @@ type ConfigLXC struct {
 	ID              *GuestID          `json:"id"` // only used during creation
 	Memory          *LxcMemory        `json:"memory,omitempty"`
 	Name            *GuestName        `json:"name,omitempty"`
+	Networks        LxcNetworks       `json:"networks,omitempty"`
 	Node            *NodeName         `json:"node,omitempty"` // only used during creation
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
@@ -107,6 +108,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.Name != nil {
 		params[lxcApiKeyName] = (*config.Name).String()
 	}
+	if config.Networks != nil {
+		config.Networks.mapToApiCreate(params)
+	}
 	if config.Pool != nil {
 		pool = *config.Pool
 		params[lxcApiKeyPool] = string(pool)
@@ -167,6 +171,13 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	}
 	if config.Name != nil && (current.Name == nil || *config.Name != *current.Name) {
 		params[lxcApiKeyName] = (*config.Name).String()
+	}
+	if config.Networks != nil {
+		if len(current.Networks) > 0 {
+			delete += config.Networks.mapToApiUpdate(current.Networks, params)
+		} else {
+			config.Networks.mapToApiCreate(params)
+		}
 	}
 	if config.Swap != nil && (current.Swap == nil || *config.Swap != *current.Swap) {
 		params[lxcApiKeySwap] = int(*config.Swap)
@@ -263,16 +274,22 @@ func (config ConfigLXC) validateCreate() (err error) {
 		return errors.New(ConfigLXC_Error_BootMountMissing)
 	}
 	if err = config.BootMount.Validate(nil); err != nil {
-		return err
+		return
 	}
 	if config.CreateOptions == nil {
 		return errors.New(ConfigLXC_Error_CreateOptionsMissing)
 	}
-	return config.CreateOptions.Validate()
+	if err = config.CreateOptions.Validate(); err != nil {
+		return
+	}
+	return config.Networks.Validate(nil)
 }
 
 func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
-	return config.BootMount.Validate(current.BootMount)
+	if err = config.BootMount.Validate(current.BootMount); err != nil {
+		return
+	}
+	return config.Networks.Validate(current.Networks)
 }
 
 type RawConfigLXC map[string]any
@@ -288,6 +305,7 @@ func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 		ID:              util.Pointer(vmr.vmId),
 		Memory:          raw.Memory(),
 		Name:            raw.Name(),
+		Networks:        raw.Networks(),
 		Node:            util.Pointer(vmr.node),
 		OperatingSystem: raw.OperatingSystem(),
 		Privileged:      raw.Privileged(),
@@ -381,6 +399,7 @@ const (
 	lxcApiKeySwap            string = "swap"
 	lxcApiKeyTags            string = "tags"
 	lxcApiKeyUnprivileged    string = "unprivileged"
+	lxcPrefixApiKeyNetwork   string = "net"
 )
 
 // These settings are only available during creation and can not be changed afterwards, or returned by the API

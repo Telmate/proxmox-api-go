@@ -39,6 +39,27 @@ func Test_GuestName_Validate(t *testing.T) {
 	}
 }
 
+func Test_GuestNetworkRate_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  GuestNetworkRate
+		output error
+	}{
+		{name: `Valid maximum`,
+			input: 10240000},
+		{name: `Valid minimum`,
+			input: 0},
+		{name: `Invalid`,
+			input:  10240001,
+			output: errors.New(GuestNetworkRate_Error_Invalid)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
+
 func Test_GuestResource_mapToStruct(t *testing.T) {
 	tests := []struct {
 		name   string

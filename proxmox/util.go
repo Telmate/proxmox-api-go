@@ -3,6 +3,7 @@ package proxmox
 import (
 	"fmt"
 	"log"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -309,4 +310,16 @@ func failPanic(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func macToString(new net.HardwareAddr, old string) string {
+	mac := new.String() // Returns a lowercase MAC address
+	if old != "" {
+		if mac == strings.ToLower(old) { // Preserve the original case, changing causes network interface reconnect
+			return old
+		} else {
+			return strings.ToUpper(mac)
+		}
+	}
+	return strings.ToUpper(mac)
 }

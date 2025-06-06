@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"errors"
+	"net"
 	"net/netip"
 	"testing"
 
@@ -24,6 +25,31 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		ip, err := netip.ParseAddr(rawIP)
 		failPanic(err)
 		return ip
+	}
+	parseMAC := func(rawMAC string) net.HardwareAddr {
+		mac, err := net.ParseMAC(rawMAC)
+		failPanic(err)
+		return mac
+	}
+	network := func() LxcNetwork {
+		return LxcNetwork{
+			Bridge:    util.Pointer("vmbr0"),
+			Connected: util.Pointer(false),
+			Firewall:  util.Pointer(true),
+			IPv4: &LxcIPv4{
+				Address: util.Pointer(IPv4CIDR("192.168.10.12/24")),
+				Gateway: util.Pointer(IPv4Address("192.168.10.1"))},
+			IPv6: &LxcIPv6{
+				Address: util.Pointer(IPv6CIDR("2001:db8::1234/64")),
+				Gateway: util.Pointer(IPv6Address("2001:db8::1"))},
+			MAC:           util.Pointer(parseMAC("52:A4:00:12:b4:56")),
+			Mtu:           util.Pointer(MTU(1500)),
+			Name:          util.Pointer(LxcNetworkName("my_net")),
+			NativeVlan:    util.Pointer(Vlan(23)),
+			RateLimitKBps: util.Pointer(GuestNetworkRate(45)),
+			TaggedVlans:   util.Pointer(Vlans{12, 23, 45}),
+			mac:           "52:A4:00:12:b4:56",
+		}
 	}
 	publicKeys := func() []AuthorizedKey {
 		data := test_data_guest.AuthorizedKey_Decoded_Input()
@@ -509,6 +535,313 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config:        ConfigLXC{Name: util.Pointer(GuestName("test"))},
 					currentConfig: ConfigLXC{Name: util.Pointer(GuestName("test"))},
 					output:        map[string]any{}}}},
+		{category: `Networks`,
+			create: []test{
+				{name: `Delete`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID3: LxcNetwork{Delete: true}}},
+					output: map[string]any{}}},
+			createUpdate: []test{
+				{name: `create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID1: LxcNetwork{Bridge: util.Pointer("vmbr0")}}},
+					currentConfig: ConfigLXC{},
+					output: map[string]any{
+						"net1": ",bridge=vmbr0"}},
+				{name: `delete no effect`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID1: LxcNetwork{Delete: true}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID5: LxcNetwork{Bridge: util.Pointer("vmbr0")}}},
+					output: map[string]any{}},
+				{name: `Bridge`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID0: LxcNetwork{Bridge: util.Pointer("vmbr0")}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID0: LxcNetwork{Bridge: util.Pointer("vmbr1")}}},
+					output: map[string]any{
+						"net0": ",bridge=vmbr0"}},
+				{name: `Connected true`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID1: LxcNetwork{Connected: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID1: LxcNetwork{Connected: util.Pointer(false)}}},
+					output: map[string]any{
+						"net1": ""}},
+				{name: `Connected false`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID2: LxcNetwork{Connected: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID2: LxcNetwork{Connected: util.Pointer(true)}}},
+					output: map[string]any{
+						"net2": ",link_down=1"}},
+				{name: `Firewall true`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID4: LxcNetwork{Firewall: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID4: LxcNetwork{Firewall: util.Pointer(false)}}},
+					output: map[string]any{"net4": ",firewall=1"}},
+				{name: `Firewall false`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID5: LxcNetwork{Firewall: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID5: LxcNetwork{Firewall: util.Pointer(true)}}},
+					output: map[string]any{"net5": ""}},
+				{name: `IPv4 Address create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID6: LxcNetwork{IPv4: util.Pointer(LxcIPv4{
+							Address: util.Pointer(IPv4CIDR("10.0.0.10/24"))})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID6: LxcNetwork{}}},
+					output: map[string]any{"net6": ",ip=10.0.0.10/24"}},
+				{name: `IPv4 DHCP create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID7: LxcNetwork{IPv4: util.Pointer(LxcIPv4{
+							DHCP: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID7: LxcNetwork{}}},
+					output: map[string]any{"net7": ",ip=dhcp"}},
+				{name: `IPv4 Gateway create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID8: LxcNetwork{IPv4: util.Pointer(LxcIPv4{
+							Gateway: util.Pointer(IPv4Address("10.0.0.1"))})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID8: LxcNetwork{}}},
+					output: map[string]any{"net8": ",gw=10.0.0.1"}},
+				{name: `IPv4 Manual create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID9: LxcNetwork{IPv4: util.Pointer(LxcIPv4{
+							Manual: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID9: LxcNetwork{}}},
+					output: map[string]any{"net9": ",ip=manual"}},
+				{name: `IPv6 Address create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID10: LxcNetwork{IPv6: util.Pointer(LxcIPv6{
+							Address: util.Pointer(IPv6CIDR("2001:db8::1/64"))})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID10: LxcNetwork{}}},
+					output: map[string]any{"net10": ",ip6=2001:db8::1/64"}},
+				{name: `IPv6 DHCP create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID11: LxcNetwork{IPv6: util.Pointer(LxcIPv6{
+							DHCP: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID11: LxcNetwork{}}},
+					output: map[string]any{"net11": ",ip6=dhcp"}},
+				{name: `IPv6 Gateway create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID12: LxcNetwork{IPv6: util.Pointer(LxcIPv6{
+							Gateway: util.Pointer(IPv6Address("2001:db8::2"))})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID12: LxcNetwork{}}},
+					output: map[string]any{"net12": ",gw6=2001:db8::2"}},
+				{name: `IPv6 SLAAC create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID13: LxcNetwork{IPv6: util.Pointer(LxcIPv6{
+							SLAAC: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID13: LxcNetwork{}}},
+					output: map[string]any{"net13": ",ip6=auto"}},
+				{name: `IPv6 Manual create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID14: LxcNetwork{IPv6: util.Pointer(LxcIPv6{
+							Manual: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID14: LxcNetwork{}}},
+					output: map[string]any{"net14": ",ip6=manual"}},
+				{name: `MAC set`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID15: LxcNetwork{MAC: util.Pointer(parseMAC("00:11:22:33:44:55"))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID15: LxcNetwork{MAC: util.Pointer(parseMAC("00:11:22:33:44:66"))}}},
+					output: map[string]any{"net15": ",hwaddr=00:11:22:33:44:55"}},
+				{name: `MAC unset`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID5: LxcNetwork{MAC: util.Pointer(net.HardwareAddr{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID5: LxcNetwork{MAC: util.Pointer(parseMAC("00:11:22:33:44:66"))}}},
+					output: map[string]any{"net5": ""}},
+				{name: `Mtu set`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID0: LxcNetwork{Mtu: util.Pointer(MTU(1500))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID0: LxcNetwork{Mtu: util.Pointer(MTU(1400))}}},
+					output: map[string]any{"net0": ",mtu=1500"}},
+				{name: `Mtu unset`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID1: LxcNetwork{Mtu: util.Pointer(MTU(0))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID1: LxcNetwork{Mtu: util.Pointer(MTU(1400))}}},
+					output: map[string]any{"net1": ""}},
+				{name: `Name`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID2: LxcNetwork{Name: util.Pointer(LxcNetworkName("test0"))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID2: LxcNetwork{Name: util.Pointer(LxcNetworkName("text0"))}}},
+					output: map[string]any{
+						"net2": "name=test0"}},
+				{name: `NativeVlan set`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID3: LxcNetwork{NativeVlan: util.Pointer(Vlan(100))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID3: LxcNetwork{NativeVlan: util.Pointer(Vlan(200))}}},
+					output: map[string]any{"net3": ",tag=100"}},
+				{name: `NativeVlan unset`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID4: LxcNetwork{NativeVlan: util.Pointer(Vlan(0))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID4: LxcNetwork{NativeVlan: util.Pointer(Vlan(200))}}},
+					output: map[string]any{"net4": ""}},
+				{name: `RateLimitKBps set`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID5: LxcNetwork{RateLimitKBps: util.Pointer(GuestNetworkRate(1023))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID5: LxcNetwork{RateLimitKBps: util.Pointer(GuestNetworkRate(1024))}}},
+					output: map[string]any{"net5": ",rate=1.023"}},
+				{name: `RateLimitKBps unset`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID6: LxcNetwork{RateLimitKBps: util.Pointer(GuestNetworkRate(0))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID6: LxcNetwork{RateLimitKBps: util.Pointer(GuestNetworkRate(1024))}}},
+					output: map[string]any{"net6": ""}},
+				{name: `TaggedVlans set`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID7: LxcNetwork{TaggedVlans: util.Pointer(Vlans{Vlan(100), Vlan(200)})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID7: LxcNetwork{TaggedVlans: util.Pointer(Vlans{Vlan(100), Vlan(300)})}}},
+					output: map[string]any{"net7": ",trunks=100;200"}},
+				{name: `TaggedVlans unset`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID8: LxcNetwork{TaggedVlans: util.Pointer(Vlans{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID8: LxcNetwork{TaggedVlans: util.Pointer(Vlans{Vlan(100), Vlan(200)})}}},
+					output: map[string]any{"net8": ""}}},
+			update: []test{
+				{name: `create`,
+					config: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID0: network()}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID1: network()}},
+					output: map[string]any{"net0": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `delete`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: LxcNetwork{Delete: true}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: network()}},
+					output:        map[string]any{"delete": "net0"}},
+				{name: `no change`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: network()}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: network()}},
+					output:        map[string]any{}},
+				{name: `Bridge replace`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: LxcNetwork{Bridge: util.Pointer("vmbr3")}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: network()}},
+					output:        map[string]any{"net0": "name=my_net,bridge=vmbr3,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `Connected replace`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID1: LxcNetwork{Connected: util.Pointer(true)}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID1: network()}},
+					output:        map[string]any{"net1": "name=my_net,bridge=vmbr0,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `Firewall replace`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID2: LxcNetwork{Firewall: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID2: network()}},
+					output:        map[string]any{"net2": "name=my_net,bridge=vmbr0,link_down=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv4 inherit Address`,
+					config: ConfigLXC{Networks: LxcNetworks{LxcNetworkID4: LxcNetwork{
+						Name: util.Pointer(LxcNetworkName("test0")),
+						IPv4: util.Pointer(LxcIPv4{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID4: LxcNetwork{IPv4: util.Pointer(LxcIPv4{Address: util.Pointer(IPv4CIDR("192.168.1.34/24"))})}}},
+					output:        map[string]any{"net4": "name=test0,ip=192.168.1.34/24"}},
+				{name: `IPv4 inherit DHCP`,
+					config: ConfigLXC{Networks: LxcNetworks{LxcNetworkID4: LxcNetwork{
+						Name: util.Pointer(LxcNetworkName("test0")),
+						IPv4: util.Pointer(LxcIPv4{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID4: LxcNetwork{IPv4: util.Pointer(LxcIPv4{DHCP: true})}}},
+					output:        map[string]any{"net4": "name=test0,ip=dhcp"}},
+				{name: `IPv4 inherit Manual`,
+					config: ConfigLXC{Networks: LxcNetworks{LxcNetworkID8: LxcNetwork{
+						Name: util.Pointer(LxcNetworkName("test0")),
+						IPv4: util.Pointer(LxcIPv4{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID8: LxcNetwork{IPv4: util.Pointer(LxcIPv4{Manual: true})}}},
+					output:        map[string]any{"net8": "name=test0,ip=manual"}},
+				{name: `IPv4 replace Address`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID3: LxcNetwork{IPv4: util.Pointer(LxcIPv4{Address: util.Pointer(IPv4CIDR("10.0.0.2/24"))})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID3: network()}},
+					output:        map[string]any{"net3": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=10.0.0.2/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv4 replace DHCP`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID4: LxcNetwork{IPv4: util.Pointer(LxcIPv4{DHCP: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID4: network()}},
+					output:        map[string]any{"net4": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=dhcp,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv4 replace Gateway`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID5: LxcNetwork{IPv4: util.Pointer(LxcIPv4{Gateway: util.Pointer(IPv4Address("1.1.1.1"))})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID5: network()}},
+					output:        map[string]any{"net5": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=1.1.1.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv4 replace Manual`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID6: LxcNetwork{IPv4: util.Pointer(LxcIPv4{Manual: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID6: network()}},
+					output:        map[string]any{"net6": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=manual,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv6 inherit Address`,
+					config: ConfigLXC{Networks: LxcNetworks{LxcNetworkID12: LxcNetwork{
+						Name: util.Pointer(LxcNetworkName("test0")),
+						IPv6: util.Pointer(LxcIPv6{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID12: LxcNetwork{IPv6: util.Pointer(LxcIPv6{Address: util.Pointer(IPv6CIDR("2001:db8::2/64"))})}}},
+					output:        map[string]any{"net12": "name=test0,ip6=2001:db8::2/64"}},
+				{name: `IPv6 inherit DHCP`,
+					config: ConfigLXC{Networks: LxcNetworks{LxcNetworkID12: LxcNetwork{
+						Name: util.Pointer(LxcNetworkName("test0")),
+						IPv6: util.Pointer(LxcIPv6{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID12: LxcNetwork{IPv6: util.Pointer(LxcIPv6{DHCP: true})}}},
+					output:        map[string]any{"net12": "name=test0,ip6=dhcp"}},
+				{name: `IPv6 inherit SLAAC`,
+					config: ConfigLXC{Networks: LxcNetworks{LxcNetworkID13: LxcNetwork{
+						Name: util.Pointer(LxcNetworkName("test0")),
+						IPv6: util.Pointer(LxcIPv6{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID13: LxcNetwork{IPv6: util.Pointer(LxcIPv6{SLAAC: true})}}},
+					output:        map[string]any{"net13": "name=test0,ip6=auto"}},
+				{name: `IPv6 inherit Manual`,
+					config: ConfigLXC{Networks: LxcNetworks{LxcNetworkID13: LxcNetwork{
+						Name: util.Pointer(LxcNetworkName("test0")),
+						IPv6: util.Pointer(LxcIPv6{})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID13: LxcNetwork{IPv6: util.Pointer(LxcIPv6{Manual: true})}}},
+					output:        map[string]any{"net13": "name=test0,ip6=manual"}},
+				{name: `IPv6 replace Address`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID7: LxcNetwork{IPv6: util.Pointer(LxcIPv6{Address: util.Pointer(IPv6CIDR("2001:db8::2/64"))})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID7: network()}},
+					output:        map[string]any{"net7": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::2/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv6 replace DHCP`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID8: LxcNetwork{IPv6: util.Pointer(LxcIPv6{DHCP: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID8: network()}},
+					output:        map[string]any{"net8": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=dhcp,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv6 replace Gateway`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID9: LxcNetwork{IPv6: util.Pointer(LxcIPv6{Gateway: util.Pointer(IPv6Address("2001:db8::3"))})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID9: network()}},
+					output:        map[string]any{"net9": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::3,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv6 replace SLAAC`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID10: LxcNetwork{IPv6: util.Pointer(LxcIPv6{SLAAC: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID10: network()}},
+					output:        map[string]any{"net10": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=auto,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `IPv6 replace Manual`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID11: LxcNetwork{IPv6: util.Pointer(LxcIPv6{Manual: true})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID11: network()}},
+					output:        map[string]any{"net11": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=manual,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `MAC replace`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID12: LxcNetwork{MAC: util.Pointer(parseMAC("00:11:a2:B3:44:66"))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID12: network()}},
+					output:        map[string]any{"net12": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=00:11:A2:B3:44:66,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `Name replace`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID13: LxcNetwork{Name: util.Pointer(LxcNetworkName("test0"))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID13: network()}},
+					output:        map[string]any{"net13": "name=test0,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=12;23;45"}},
+				{name: `NativeVlan replace`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID14: LxcNetwork{NativeVlan: util.Pointer(Vlan(200))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID14: network()}},
+					output:        map[string]any{"net14": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=200,rate=0.045,trunks=12;23;45"}},
+				{name: `RateLimitKBps replace`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID15: LxcNetwork{RateLimitKBps: util.Pointer(GuestNetworkRate(2040))}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID15: network()}},
+					output:        map[string]any{"net15": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=2.04,trunks=12;23;45"}},
+				{name: `TaggedVlans replace`,
+					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: LxcNetwork{TaggedVlans: util.Pointer(Vlans{Vlan(200), Vlan(100), Vlan(300)})}}},
+					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: network()}},
+					output:        map[string]any{"net0": "name=my_net,bridge=vmbr0,link_down=1,firewall=1,ip=192.168.10.12/24,gw=192.168.10.1,ip6=2001:db8::1234/64,gw6=2001:db8::1,hwaddr=52:A4:00:12:b4:56,mtu=1500,tag=23,rate=0.045,trunks=100;200;300"}}}},
 		{category: `Node`,
 			createUpdate: []test{
 				{name: `do nothing`,
@@ -790,6 +1123,130 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 						input:   baseConfig(ConfigLXC{Name: util.Pointer(GuestName(""))}),
 						current: &ConfigLXC{Name: util.Pointer(GuestName("text"))},
 						err:     errors.New(GuestName_Error_Empty)}}}},
+		{category: `Networks`,
+			valid: testType{
+				create: []test{
+					{name: `all`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID0: LxcNetwork{
+								Name:          util.Pointer(LxcNetworkName("my_net")),
+								Bridge:        util.Pointer("vmbr0"),
+								IPv4:          util.Pointer(LxcIPv4{DHCP: true}),
+								IPv6:          util.Pointer(LxcIPv6{SLAAC: true}),
+								Mtu:           util.Pointer(MTU(1500)),
+								NativeVlan:    util.Pointer(Vlan(23)),
+								RateLimitKBps: util.Pointer(GuestNetworkRate(45)),
+								TaggedVlans:   util.Pointer(Vlans{Vlan(12), Vlan(23), Vlan(45)})},
+							LxcNetworkID5: LxcNetwork{
+								Name:          util.Pointer(LxcNetworkName("my_net2")),
+								Bridge:        util.Pointer("vmbr0"),
+								IPv4:          util.Pointer(LxcIPv4{Manual: true}),
+								IPv6:          util.Pointer(LxcIPv6{Manual: true}),
+								RateLimitKBps: util.Pointer(GuestNetworkRate(45)),
+								TaggedVlans:   util.Pointer(Vlans{Vlan(12), Vlan(23), Vlan(45)})},
+							LxcNetworkID3: LxcNetwork{
+								Name:   util.Pointer(LxcNetworkName("eth3")),
+								Bridge: util.Pointer("vmbr0"),
+								IPv4: util.Pointer(LxcIPv4{
+									Address: util.Pointer(IPv4CIDR("192.168.0.10/24")),
+									Gateway: util.Pointer(IPv4Address("192.168.0.1"))}),
+								IPv6: util.Pointer(LxcIPv6{
+									Address: util.Pointer(IPv6CIDR("2001:db8::1234/64")),
+									Gateway: util.Pointer(IPv6Address("2001:db8::1"))})}}})},
+					{name: `minimum`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID10: LxcNetwork{
+								Name:   util.Pointer(LxcNetworkName("my_net")),
+								Bridge: util.Pointer("vmbr0")}}})}},
+				update: []test{
+					{name: `all`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID0: LxcNetwork{
+								Name:          util.Pointer(LxcNetworkName("eth0")),
+								Bridge:        util.Pointer("vmbr0"),
+								IPv4:          util.Pointer(LxcIPv4{DHCP: true}),
+								IPv6:          util.Pointer(LxcIPv6{SLAAC: true}),
+								Mtu:           util.Pointer(MTU(1500)),
+								NativeVlan:    util.Pointer(Vlan(23)),
+								RateLimitKBps: util.Pointer(GuestNetworkRate(45)),
+								TaggedVlans:   util.Pointer(Vlans{Vlan(12), Vlan(23), Vlan(45)})},
+							LxcNetworkID5: LxcNetwork{
+								Name:          util.Pointer(LxcNetworkName("eth2")),
+								Bridge:        util.Pointer("vmbr0"),
+								IPv4:          util.Pointer(LxcIPv4{Manual: true}),
+								IPv6:          util.Pointer(LxcIPv6{Manual: true}),
+								RateLimitKBps: util.Pointer(GuestNetworkRate(45)),
+								TaggedVlans:   util.Pointer(Vlans{Vlan(12), Vlan(23), Vlan(45)})},
+							LxcNetworkID3: LxcNetwork{
+								Name:   util.Pointer(LxcNetworkName("my_net")),
+								Bridge: util.Pointer("vmbr0"),
+								IPv4: util.Pointer(LxcIPv4{
+									Address: util.Pointer(IPv4CIDR("192.168.0.10/24")),
+									Gateway: util.Pointer(IPv4Address("192.168.0.1"))}),
+								IPv6: util.Pointer(LxcIPv6{
+									Address: util.Pointer(IPv6CIDR("2001:db8::1234/64")),
+									Gateway: util.Pointer(IPv6Address("2001:db8::1"))})},
+							LxcNetworkID10: LxcNetwork{
+								Name:   util.Pointer(LxcNetworkName("lo0")),
+								Bridge: util.Pointer("vmbr0")}}}),
+						current: &ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID11: LxcNetwork{
+								Name:          util.Pointer(LxcNetworkName("eth6")),
+								Bridge:        util.Pointer("vmbr0"),
+								IPv4:          util.Pointer(LxcIPv4{DHCP: true}),
+								IPv6:          util.Pointer(LxcIPv6{SLAAC: true}),
+								Mtu:           util.Pointer(MTU(1500)),
+								NativeVlan:    util.Pointer(Vlan(23)),
+								RateLimitKBps: util.Pointer(GuestNetworkRate(45))}}}},
+					{name: `minimum`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID12: LxcNetwork{}}}),
+						current: &ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID12: LxcNetwork{
+								Name:   util.Pointer(LxcNetworkName("text")),
+								Bridge: util.Pointer("vmbr0")}}}},
+					{name: `duplicate net overwrite`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID13: LxcNetwork{
+								Name: util.Pointer(LxcNetworkName("text"))},
+							LxcNetworkID12: LxcNetwork{
+								Name: util.Pointer(LxcNetworkName("test"))},
+							LxcNetworkID11: LxcNetwork{
+								Name: util.Pointer(LxcNetworkName("net"))}}}),
+						current: &ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID13: LxcNetwork{
+								Name: util.Pointer(LxcNetworkName("test"))},
+							LxcNetworkID12: LxcNetwork{
+								Name: util.Pointer(LxcNetworkName("text"))},
+							LxcNetworkID11: LxcNetwork{
+								Name: util.Pointer(LxcNetworkName("net"))}}},
+					},
+				},
+			},
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(LxcNetwork_Error_BridgeRequired)`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: LxcNetwork{}}}),
+						err:   errors.New(LxcNetwork_Error_BridgeRequired)},
+				},
+				createUpdate: []test{
+					{name: `errors.New(LxcNetworks_Error_Amount)`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
+							0: LxcNetwork{}, 1: LxcNetwork{}, 2: LxcNetwork{},
+							3: LxcNetwork{}, 4: LxcNetwork{}, 5: LxcNetwork{},
+							6: LxcNetwork{}, 7: LxcNetwork{}, 8: LxcNetwork{},
+							9: LxcNetwork{}, 10: LxcNetwork{}, 11: LxcNetwork{},
+							12: LxcNetwork{}, 13: LxcNetwork{}, 14: LxcNetwork{},
+							15: LxcNetwork{}, 16: LxcNetwork{}}}),
+						current: &ConfigLXC{Networks: LxcNetworks{}},
+						err:     errors.New(LxcNetworks_Error_Amount)},
+					{name: `errors.New(LxcNetworkID_Error_Invalid)`,
+						input:   baseConfig(ConfigLXC{Networks: LxcNetworks{45: LxcNetwork{}}}),
+						current: &ConfigLXC{Networks: LxcNetworks{LxcNetworkID11: LxcNetwork{}}},
+						err:     errors.New(LxcNetworkID_Error_Invalid)},
+				},
+			},
+		},
 		{category: `Node`,
 			valid: testType{
 				createUpdate: []test{
@@ -875,9 +1332,17 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		failPanic(err)
 		return ip
 	}
+	parseMAC := func(rawMAC string) net.HardwareAddr {
+		mac, err := net.ParseMAC(rawMAC)
+		failPanic(err)
+		return mac
+	}
 	baseConfig := func(config ConfigLXC) *ConfigLXC {
 		if config.ID == nil {
 			config.ID = util.Pointer(GuestID(0))
+		}
+		if config.Networks == nil {
+			config.Networks = make(LxcNetworks)
 		}
 		if config.Node == nil {
 			config.Node = util.Pointer(NodeName(""))
@@ -886,6 +1351,21 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 			config.Privileged = util.Pointer(false)
 		}
 		return &config
+	}
+	baseNetwork := func(config LxcNetwork) LxcNetwork {
+		if config.Bridge == nil {
+			config.Bridge = util.Pointer("")
+		}
+		if config.Connected == nil {
+			config.Connected = util.Pointer(true)
+		}
+		if config.Firewall == nil {
+			config.Firewall = util.Pointer(false)
+		}
+		if config.Name == nil {
+			config.Name = util.Pointer(LxcNetworkName(""))
+		}
+		return config
 	}
 	type test struct {
 		name   string
@@ -1129,16 +1609,121 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `set`,
 					input:  RawConfigLXC{"memory": float64(512)},
 					output: baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(512))})}}},
-		{category: `Node`,
-			tests: []test{
-				{name: `set`,
-					vmr:    VmRef{node: "test"},
-					output: baseConfig(ConfigLXC{Node: util.Pointer(NodeName("test"))})}}},
 		{category: `Name`,
 			tests: []test{
 				{name: `set`,
 					input:  RawConfigLXC{"name": "test"},
 					output: baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))})}}},
+		{category: `Networks`,
+			tests: []test{
+				{name: `all`,
+					input: RawConfigLXC{"net0": "name=eth0,bridge=vmbr0,ip=192.168.0.23/24,gw=12.168.0.1,rate=0.810,trunks=101,hwaddr=00:A1:22:b3:44:55,tag=100,link_down=1,firewall=1,ip6=2001:db8::1/64,gw6=2001:db8::2,mtu=896"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID0: baseNetwork(LxcNetwork{
+							Bridge:    util.Pointer("vmbr0"),
+							Connected: util.Pointer(false),
+							Firewall:  util.Pointer(true),
+							IPv4: &LxcIPv4{
+								Address: util.Pointer(IPv4CIDR("192.168.0.23/24")),
+								Gateway: util.Pointer(IPv4Address("12.168.0.1"))},
+							IPv6: &LxcIPv6{
+								Address: util.Pointer(IPv6CIDR("2001:db8::1/64")),
+								Gateway: util.Pointer(IPv6Address("2001:db8::2"))},
+							MAC:           util.Pointer(parseMAC("00:a1:22:B3:44:55")),
+							Mtu:           util.Pointer(MTU(896)),
+							Name:          util.Pointer(LxcNetworkName("eth0")),
+							NativeVlan:    util.Pointer(Vlan(100)),
+							RateLimitKBps: util.Pointer(GuestNetworkRate(810)),
+							TaggedVlans:   util.Pointer(Vlans{Vlan(101)}),
+							mac:           "00:A1:22:b3:44:55"})}})},
+				{name: `Bridge`,
+					input: RawConfigLXC{"net0": "bridge=vmbr0"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID0: baseNetwork(LxcNetwork{Bridge: util.Pointer("vmbr0")})}})},
+				{name: `Connected`,
+					input: RawConfigLXC{"net1": "link_down=1"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID1: baseNetwork(LxcNetwork{Connected: util.Pointer(false)})}})},
+				{name: `Firewall`,
+					input: RawConfigLXC{"net2": "firewall=1"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID2: baseNetwork(LxcNetwork{Firewall: util.Pointer(true)})}})},
+				{name: `IPv4 Address`,
+					input: RawConfigLXC{"net3": "ip=192.168.0.10/24"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID3: baseNetwork(LxcNetwork{IPv4: &LxcIPv4{
+							Address: util.Pointer(IPv4CIDR("192.168.0.10/24"))}})}})},
+				{name: `IPv4 DHCP`,
+					input: RawConfigLXC{"net4": "ip=dhcp"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID4: baseNetwork(LxcNetwork{IPv4: &LxcIPv4{
+							DHCP: true}})}})},
+				{name: `IPv4 Gateway`,
+					input: RawConfigLXC{"net5": "gw=1.1.1.1"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID5: baseNetwork(LxcNetwork{IPv4: &LxcIPv4{
+							Gateway: util.Pointer(IPv4Address("1.1.1.1"))}})}})},
+				{name: `IPv4 Manual`,
+					input: RawConfigLXC{"net6": "ip=manual"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID6: baseNetwork(LxcNetwork{IPv4: &LxcIPv4{
+							Manual: true}})}})},
+				{name: `IPv6 Address`,
+					input: RawConfigLXC{"net7": "ip6=2001:db8::1/64"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID7: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
+							Address: util.Pointer(IPv6CIDR("2001:db8::1/64"))}})}})},
+				{name: `IPv6 DHCP`,
+					input: RawConfigLXC{"net8": "ip6=dhcp"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID8: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
+							DHCP: true}})}})},
+				{name: `IPv6 Gateway`,
+					input: RawConfigLXC{"net9": "gw6=2001:db8::2"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID9: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
+							Gateway: util.Pointer(IPv6Address("2001:db8::2"))}})}})},
+				{name: `IPv6 Manual`,
+					input: RawConfigLXC{"net10": "ip6=manual"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID10: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
+							Manual: true}})}})},
+				{name: `IPv6 SLAAC`,
+					input: RawConfigLXC{"net11": "ip6=auto"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID11: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
+							SLAAC: true}})}})},
+				{name: `MAC`,
+					input: RawConfigLXC{"net12": "hwaddr=00:A1:22:b3:44:55"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID12: baseNetwork(LxcNetwork{
+							MAC: util.Pointer(parseMAC("00:a1:22:B3:44:55")),
+							mac: "00:A1:22:b3:44:55"})}})},
+				{name: `Mtu`,
+					input: RawConfigLXC{"net13": "mtu=1321"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID13: baseNetwork(LxcNetwork{Mtu: util.Pointer(MTU(1321))})}})},
+				{name: `Name`,
+					input: RawConfigLXC{"net13": "name=eth0"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID13: baseNetwork(LxcNetwork{Name: util.Pointer(LxcNetworkName("eth0"))})}})},
+				{name: `NativeVlan`,
+					input: RawConfigLXC{"net14": "tag=100"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID14: baseNetwork(LxcNetwork{NativeVlan: util.Pointer(Vlan(100))})}})},
+				{name: `RateLimitKBps`,
+					input: RawConfigLXC{"net15": "rate=95.649"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID15: baseNetwork(LxcNetwork{RateLimitKBps: util.Pointer(GuestNetworkRate(95649))})}})},
+				{name: `TaggedVlans`,
+					input: RawConfigLXC{"net0": "trunks=200;100;300"},
+					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
+						LxcNetworkID0: baseNetwork(LxcNetwork{TaggedVlans: &Vlans{Vlan(100), Vlan(200), Vlan(300)}})}})}}},
+		{category: `Node`,
+			tests: []test{
+				{name: `set`,
+					vmr:    VmRef{node: "test"},
+					output: baseConfig(ConfigLXC{Node: util.Pointer(NodeName("test"))})}}},
 		{category: `OperatingSystem`,
 			tests: []test{
 				{name: `set`,

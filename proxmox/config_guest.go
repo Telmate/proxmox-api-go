@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 // All code LXC and Qemu have in common should be placed here.
@@ -122,6 +124,58 @@ func (name GuestName) Validate() error {
 	}
 	if !guestNameRegex.MatchString(string(name)) {
 		return errors.New(GuestName_Error_Invalid)
+	}
+	return nil
+}
+
+// 0 to 10240000, where 0 means no limit
+type GuestNetworkRate uint32
+
+const (
+	GuestNetworkRate_Error_Invalid = "network rate must be in the range 0 to 10240000"
+	GuestNetworkRateMaximum        = 10240000
+	GuestNetworkRateUnlimited      = GuestNetworkRate(0)
+)
+
+// unsafe requires caller to check for nil
+func (rate GuestNetworkRate) mapToAPI() string {
+	if rate == GuestNetworkRateUnlimited {
+		return ""
+	}
+	rawRate := strconv.Itoa(int(rate))
+	length := len(rawRate)
+	if length > 3 {
+		// Insert a decimal point three places from the end
+		if rate%1000 == 0 {
+			return ",rate=" + rawRate[:length-3]
+		} else {
+			return strings.TrimRight(",rate="+rawRate[:length-3]+"."+rawRate[length-3:], "0")
+		}
+	}
+	// Prepend zeros to ensure decimal places
+	prefixRate := "000" + rawRate
+	return strings.TrimRight(",rate=0."+prefixRate[length:], "0")
+}
+
+func (GuestNetworkRate) mapToSDK(rawRate string) *GuestNetworkRate {
+	splitRate := strings.Split(rawRate, ".")
+	var rate int
+	switch len(splitRate) {
+	case 1:
+		if splitRate[0] != "0" {
+			rate, _ = strconv.Atoi(splitRate[0] + "000")
+		}
+	case 2:
+		// Pad the fractional part to ensure it has at least 3 digits
+		fractional := splitRate[1] + "000"
+		rate, _ = strconv.Atoi(splitRate[0] + fractional[:3])
+	}
+	return util.Pointer(GuestNetworkRate(rate))
+}
+
+func (rate GuestNetworkRate) Validate() error {
+	if rate > GuestNetworkRateMaximum {
+		return errors.New(GuestNetworkRate_Error_Invalid)
 	}
 	return nil
 }
