@@ -122,30 +122,61 @@ The SDK needs to convert the API response to something the SDK understands.
 In [Example Mapping to SDK](#example-mapping-to-sdk) a code example is given of how to convert the API response to the SDK data structure.
 The Rules of the logic for mapping to the SDK are:
 
-- The SDK config should have a private function named `mapToSdk()` that is responsible for converting the JSON from the API to the SDK config.
-- When Converting from the API to the SDK small and simple transformations may be done in the top level objects `mapToSdk()` function. For more complex and bigger transformations dedicated functions should be used.
+- We start with a raw config object, which uses a primitive `map[string]any`, in the example this is called `RawExampleConfig`.
+- For each top-level field in the final SDK config, there should be a corresponding method in the raw config that returns the value for that field. This enables opt-in conversion from the raw config to the SDK config.
+- The raw config has an `ALL()` method that calls all individual conversion methods, returning a fully populated SDK config.
 
 #### Example Mapping to SDK
 
 ```json
 {
-    "itemunit": "56", // this is always a number represented as a string
+    "item_unit": "56", // this is always a number represented as a string
     "flag": "true,1,false", //this are always 3 values and are always in the same order
-    "configdescription": "long comment" //this is always a string
+    "config_description": "long comment" //this is always a string
 }
 ```
 
 ```go
 func main(){
-    params := map[string]interface{}{
-        "itemunit": "56",
+    var raw RawExampleConfig
+    raw = map[string]any{
+        "item_unit": "56",
         "flag": "true,1,false",
-        "configdescription": "long comment",
+        "config_description": "long comment",
     }
-    config := ConfigExample{}.mapToSDK(params)
+    config := raw.ALL()
+}
+
+// all root configs should be prefixed with 'Config'
+type ConfigExample struct {
+    ID      *ExampleID
+    Comment *string
+    Flags   *ExampleFlags
+}
+
+// RawExampleConfig is a map that represents the raw configuration data from the API.
+type RawExampleConfig map[string]any
+
+// ALL converts the raw configuration to a fully populated ConfigExample struct.
+func (raw RawExampleConfig) ALL() (config ConfigExample) {
+    return ConfigExample{
+        ID:      raw.ID(),
+        Comment: raw.Comment(),
+        Flags:   raw.Flags(),
+    }
 }
 
 type ExampleID uint
+
+// ID returns the ID of the raw configuration as an ExampleID.
+func (raw RawExampleConfig) ID() *ExampleID {
+    if itemValue, isSet := raw["item_unit"]; isSet {
+        tmpID, _ := strconv.Atoi(itemValue.(string))
+        id := ExampleID(tmpID)
+        return &id
+    }
+    return nil
+}
 
 // api key 'flag' was given a custom to type to improve clarity.
 type ExampleFlags struct {
@@ -154,29 +185,22 @@ type ExampleFlags struct {
     C bool
 }
 
-func (ExampleFlags) mapToSDK(rawFlags string) flags ExampleFlags {
-    // omitted for brevity.
+// Flags returns the flags of the raw configuration as an ExampleFlags struct.
+func (raw RawExampleConfig) Flags() (*ExampleFlags) {
+    if itemValue, isSet := raw["flag"]; isSet {
+        // omitted for brevity.
+        return &ExampleFlags{}
+    }
+    return nil
 }
 
-// all root configs should be prefixed with 'Config'
-type ConfigExample struct {
-    ID      ExampleID
-    Comment string
-    Flags   ExampleFlags
-}
-
-func (ConfigExample) mapToSDK(params map[string]interface{}) (config ConfigExample) {
-    if itemValue, isSet := params["itemunit"]; isSet {
-        tmpID,_:=strconv.Itoa(itemValue.(string))
-        config.ID = ExampleID(tmpID)
+// Comment returns the comment of the raw configuration as a string pointer.
+func (raw RawExampleConfig) Comment() (*string) {
+    if itemValue, isSet := raw["config_description"]; isSet {
+        comment := itemValue.(string)
+        return &comment
     }
-    if itemValue, isSet := params["configdescription"]; isSet {
-        config.Comment = itemValue.(string)
-    }
-    if itemValue, isSet := params["flag"]; isSet {
-        config.Flags = ExampleFlags{}.mapToSDK(itemValue.(string))
-    }
-    return
+    return nil
 }
 ```
 

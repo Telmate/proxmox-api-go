@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_guest"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_pool"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_tag"
@@ -54,7 +55,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 		return *key
 	}
 	publicKeys := func() *[]AuthorizedKey {
-		data := test_data_qemu.PublicKey_Decoded_Input()
+		data := test_data_guest.AuthorizedKey_Decoded_Input()
 		keys := make([]AuthorizedKey, len(data))
 		for i := range data {
 			keys[i] = AuthorizedKey{Options: data[i].Options, PublicKey: data[i].PublicKey, Comment: data[i].Comment}
@@ -70,7 +71,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 			MTU:           util.Pointer(QemuMTU{Value: 1500}),
 			Model:         util.Pointer(QemuNetworkModel("virtio")),
 			MultiQueue:    util.Pointer(QemuNetworkQueue(5)),
-			RateLimitKBps: util.Pointer(QemuNetworkRate(45)),
+			RateLimitKBps: util.Pointer(GuestNetworkRate(45)),
 			NativeVlan:    util.Pointer(Vlan(23)),
 			TaggedVlans:   util.Pointer(Vlans{12, 23, 45})}
 	}
@@ -477,7 +478,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `CloudInit PublicSSHkeys`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: publicKeys()}},
 					currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{parsePublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key")})}},
-					output:        map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Output()}},
+					output:        map[string]interface{}{"sshkeys": test_data_guest.AuthorizedKey_Encoded_Output()}},
 				{name: `CloudInit UpgradePackages v7`,
 					version:       Version{Major: 7, Minor: 255, Patch: 255},
 					config:        &ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(false)}},
@@ -534,7 +535,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						"nameserver":   "1.1.1.1 8.8.8.8 9.9.9.9",
 						"ipconfig0":    "ip=dhcp,ip6=dhcp",
 						"ipconfig31":   "ip=10.20.4.7/22",
-						"sshkeys":      test_data_qemu.PublicKey_Encoded_Output(),
+						"sshkeys":      test_data_guest.AuthorizedKey_Encoded_Output(),
 						"cipassword":   "Enter123!",
 						"ciuser":       "root"}},
 				{name: `CloudInit Full v8`,
@@ -573,7 +574,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						"nameserver":   "1.1.1.1 8.8.8.8 9.9.9.9",
 						"ipconfig0":    "ip=dhcp,ip6=dhcp",
 						"ipconfig31":   "ip=10.20.4.7/22",
-						"sshkeys":      test_data_qemu.PublicKey_Encoded_Output(),
+						"sshkeys":      test_data_guest.AuthorizedKey_Encoded_Output(),
 						"ciupgrade":    1,
 						"cipassword":   "Enter123!",
 						"ciuser":       "root"}},
@@ -674,10 +675,19 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 						NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
 					output: map[string]interface{}{"delete": "nameserver"}},
+				{name: `CloudInit DNS NameServers no DNS`,
+					config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+						NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
+					currentConfig: ConfigQemu{CloudInit: &CloudInit{}},
+					output:        map[string]any{"nameserver": string("8.8.8.8")}},
 				{name: `CloudInit DNS SearchDomain empty`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
 					currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
 					output:        map[string]interface{}{"delete": "searchdomain"}},
+				{name: `CloudInit DNS SearchDomain no DNS`,
+					config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}}},
+					currentConfig: ConfigQemu{CloudInit: &CloudInit{}},
+					output:        map[string]any{"searchdomain": string("example.com")}},
 				{name: `CloudInit NetworkInterfaces Ipv4.Address update`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID0: CloudInitNetworkConfig{
@@ -3659,6 +3669,17 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
 					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
 					output:        map[string]interface{}{"delete": "shares"}}}},
+		{category: `Name`,
+			createUpdate: []test{
+				{name: `set`,
+					config:        &ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
+					currentConfig: ConfigQemu{Name: util.Pointer(GuestName("test-vm-2"))},
+					output:        map[string]any{"name": "test-vm"}}},
+			update: []test{
+				{name: `do nothing`,
+					config:        &ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
+					currentConfig: ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
+					output:        map[string]any{}}}},
 		{category: `Networks`,
 			create: []test{
 				{name: `Delete`,
@@ -3670,7 +3691,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						MAC:           util.Pointer(net.HardwareAddr("00:11:22:33:44:55")),
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
 						MultiQueue:    util.Pointer(QemuNetworkQueue(4)),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(45)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(45)),
 						NativeVlan:    util.Pointer(Vlan(23))}}},
 					output: map[string]interface{}{}}},
 			createUpdate: []test{
@@ -3741,32 +3762,32 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(2))}}},
 					output:        map[string]interface{}{"net12": ""}},
 				{name: `RateLimitKBps 0`,
-					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(0))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(0))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net13": ""}},
 				{name: `RateLimitKBps 0.007`,
-					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(7))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(7))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net13": ",rate=0.007"}},
 				{name: `RateLimitKBps 0.07`,
-					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(70))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(70))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net14": ",rate=0.07"}},
 				{name: `RateLimitKBps 0.7`,
-					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(700))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(700))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net15": ",rate=0.7"}},
 				{name: `RateLimitKBps 7`,
-					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(7000))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(7000))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net16": ",rate=7"}},
 				{name: `RateLimitKBps 7.546`,
-					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(7546))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(7546))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net17": ",rate=7.546"}},
 				{name: `RateLimitKBps 734.546`,
-					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(734546))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(5))}}},
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(734546))}}},
+					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net18": ",rate=734.546"}},
 				{name: `NativeVlan unset`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(0))}}},
@@ -3779,7 +3800,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `TaggedVlans set`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{10, 43, 23})}}},
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{12, 56})}}},
-					output:        map[string]interface{}{"net21": ",trunks=10;43;23"}},
+					output:        map[string]interface{}{"net21": ",trunks=10;23;43"}},
 				{name: `TaggedVlans unset`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{})}}},
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{12, 56})}}},
@@ -3830,7 +3851,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID25: networkInterface()}},
 					output:        map[string]interface{}{"net25": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=4,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `RateLimitKBps replace`,
-					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(539))}}},
+					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(539))}}},
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: networkInterface()}},
 					output:        map[string]interface{}{"net24": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.539,tag=23,trunks=12;23;45"}},
 				{name: `NaitiveVlan replace`,
@@ -3840,7 +3861,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `TaggedVlans replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{10, 70, 18})}}},
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: networkInterface()}},
-					output:        map[string]interface{}{"net22": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=10;70;18"}},
+					output:        map[string]interface{}{"net22": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=10;18;70"}},
 				{name: `Delete`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{Delete: true}}},
 					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{}}},
@@ -4067,11 +4088,16 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Tags Empty`,
 					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
 					config:        &ConfigQemu{Tags: util.Pointer(Tags{})},
-					output:        map[string]interface{}{"tags": string("")}},
+					output:        map[string]any{"tags": string("")}},
 				{name: `Tags Full`,
 					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
 					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag1", "tag2"})},
-					output:        map[string]interface{}{"tags": string("tag1;tag2")}}}},
+					output:        map[string]any{"tags": string("tag1;tag2")}}},
+			update: []test{
+				{name: `Tags same`,
+					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					output:        map[string]any{}}}},
 		{category: `TPM`,
 			create: []test{
 				{name: `TPM`,
@@ -4290,7 +4316,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 		return
 	}
 	publicKeys := func() *[]AuthorizedKey {
-		rawOutput := test_data_qemu.PublicKey_Decoded_Output()
+		rawOutput := test_data_guest.AuthorizedKey_Decoded_Output()
 		output := make([]AuthorizedKey, len(rawOutput))
 		for i := range rawOutput {
 			output[i] = AuthorizedKey{Options: rawOutput[i].Options, PublicKey: rawOutput[i].PublicKey, Comment: rawOutput[i].Comment}
@@ -4497,7 +4523,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						"ipconfig0":    string("ip=dhcp,ip6=dhcp"),
 						"ipconfig19":   string(""),
 						"ipconfig31":   string("ip=10.20.4.7/22"),
-						"sshkeys":      test_data_qemu.PublicKey_Encoded_Input(),
+						"sshkeys":      test_data_guest.AuthorizedKey_Encoded_Input(),
 						"ciupgrade":    float64(1),
 						"cipassword":   string("Enter123!"),
 						"ciuser":       string("root")},
@@ -4591,7 +4617,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 							QemuNetworkInterfaceID31: CloudInitNetworkConfig{
 								IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("10.20.4.7/22"))}}}}})},
 				{name: `PublicSSHkeys`,
-					input: map[string]interface{}{"sshkeys": test_data_qemu.PublicKey_Encoded_Input()},
+					input: map[string]interface{}{"sshkeys": test_data_guest.AuthorizedKey_Encoded_Input()},
 					output: baseConfig(ConfigQemu{CloudInit: &CloudInit{
 						NetworkInterfaces: CloudInitNetworkInterfaces{},
 						PublicSSHkeys:     publicKeys()}})},
@@ -6651,6 +6677,11 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 				{name: `shares`,
 					input:  map[string]interface{}{"shares": float64(100)},
 					output: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(100))}})}}},
+		{category: `Name`,
+			tests: []test{
+				{name: `All`,
+					input:  map[string]any{"name": "testvm"},
+					output: baseConfig(ConfigQemu{Name: util.Pointer(GuestName("testvm"))})}}},
 		{category: `Networks`,
 			tests: []test{
 				{name: `all e1000`,
@@ -6664,7 +6695,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						// MTU is only supported for virtio
 						Model:         util.Pointer(QemuNetworkModelE1000),
 						MultiQueue:    util.Pointer(QemuNetworkQueue(23)),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(1530)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(1530)),
 						NativeVlan:    util.Pointer(Vlan(12)),
 						TaggedVlans:   util.Pointer(Vlans{34, 18, 25})}}})},
 				{name: `all virtio`,
@@ -6678,7 +6709,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						MTU:           util.Pointer(QemuMTU{Value: 1395}),
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
 						MultiQueue:    util.Pointer(QemuNetworkQueue(23)),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(1530)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(1530)),
 						NativeVlan:    util.Pointer(Vlan(12)),
 						TaggedVlans:   util.Pointer(Vlans{34, 18, 25})}}})},
 				{name: `Bridge`,
@@ -6810,7 +6841,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						mac:           "BC:24:11:E1:BB:5D",
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(1)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(1)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 0.01`,
 					input: map[string]interface{}{"net15": "virtio=BC:24:11:E1:BB:5D,rate=0.010"},
@@ -6820,7 +6851,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						mac:           "BC:24:11:E1:BB:5D",
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(10)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(10)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 0.1`,
 					input: map[string]interface{}{"net16": "virtio=BC:24:11:E1:BB:5D,rate=0.1"},
@@ -6830,7 +6861,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						mac:           "BC:24:11:E1:BB:5D",
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(100)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(100)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 1`,
 					input: map[string]interface{}{"net17": "virtio=BC:24:11:E1:BB:5D,rate=1"},
@@ -6840,7 +6871,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						mac:           "BC:24:11:E1:BB:5D",
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(1000)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(1000)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 1.264`,
 					input: map[string]interface{}{"net18": "virtio=BC:24:11:E1:BB:5D,rate=1.264"},
@@ -6850,7 +6881,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						mac:           "BC:24:11:E1:BB:5D",
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(1264)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(1264)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `RateLimitKBps 15.264`,
 					input: map[string]interface{}{"net19": "virtio=BC:24:11:E1:BB:5D,rate=15.264"},
@@ -6860,7 +6891,7 @@ func Test_ConfigQemu_mapToStruct(t *testing.T) {
 						MAC:           util.Pointer(parseMAC("BC:24:11:E1:BB:5D")),
 						mac:           "BC:24:11:E1:BB:5D",
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
-						RateLimitKBps: util.Pointer(QemuNetworkRate(15264)),
+						RateLimitKBps: util.Pointer(GuestNetworkRate(15264)),
 						TaggedVlans:   util.Pointer(Vlans{})}}})},
 				{name: `NaitiveVlan`,
 					input: map[string]interface{}{"net20": "virtio=BC:24:11:E1:BB:5D,tag=1"},
@@ -8736,6 +8767,18 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							CapacityMiB:        util.Pointer(QemuMemoryCapacity(2048)),
 							MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
 						err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)}}}},
+		{category: `Name`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `set`,
+						input:   baseConfig(ConfigQemu{Name: util.Pointer(GuestName("test"))}),
+						current: &ConfigQemu{Name: util.Pointer(GuestName("test2"))}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `empty`,
+						input:   baseConfig(ConfigQemu{Name: util.Pointer(GuestName(""))}),
+						current: &ConfigQemu{Name: util.Pointer(GuestName("test"))},
+						err:     errors.New(GuestName_Error_Empty)}}}},
 		{category: `Network`,
 			valid: testType{
 				createUpdate: []test{
@@ -8775,7 +8818,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{}}}},
 					{name: `RateLimitKBps`,
 						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID5,
-							QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(10240000))})}),
+							QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(10240000))})}),
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{}}}},
 					{name: `NativeVlan`,
 						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID6,
@@ -8838,12 +8881,12 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							MultiQueue: util.Pointer(QemuNetworkQueue(75))})}),
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{}}},
 						err:     errors.New(QemuNetworkQueue_Error_Invalid)},
-					{name: `errors.New(QemuNetworkRate_Error_Invalid)`,
+					{name: `errors.New(GuestNetworkRate_Error_Invalid)`,
 						input: baseConfig(
 							ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID15, QemuNetworkInterface{
-								RateLimitKBps: util.Pointer(QemuNetworkRate(10240001))})}),
+								RateLimitKBps: util.Pointer(GuestNetworkRate(10240001))})}),
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{}}},
-						err:     errors.New(QemuNetworkRate_Error_Invalid)},
+						err:     errors.New(GuestNetworkRate_Error_Invalid)},
 					{name: `NativeVlan errors.New(Vlan_Error_Invalid)`,
 						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID16, QemuNetworkInterface{
 							NativeVlan: util.Pointer(Vlan(4096))})}),

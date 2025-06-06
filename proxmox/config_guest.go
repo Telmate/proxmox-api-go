@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 // All code LXC and Qemu have in common should be placed here.
@@ -14,6 +17,167 @@ import (
 type GuestDNS struct {
 	NameServers  *[]netip.Addr `json:"nameservers,omitempty"`
 	SearchDomain *string       `json:"searchdomain,omitempty"` // we are not validating this field, as validating domain names is a complex topic.
+}
+
+func (config GuestDNS) mapToApiCreate(params map[string]any) {
+	if config.NameServers != nil && len(*config.NameServers) > 0 {
+		var nameservers string
+		for _, ns := range *config.NameServers {
+			nameservers += " " + ns.String()
+		}
+		params[guestApiKeyNameServer] = nameservers[1:]
+	}
+	if config.SearchDomain != nil && *config.SearchDomain != "" {
+		params[guestApiKeySearchDomain] = *config.SearchDomain
+	}
+}
+
+func (config GuestDNS) mapToApiUpdate(current GuestDNS, params map[string]any) (delete string) {
+	if config.SearchDomain != nil {
+		if *config.SearchDomain != "" {
+			if current.SearchDomain == nil || *config.SearchDomain != *current.SearchDomain {
+				params[guestApiKeySearchDomain] = *config.SearchDomain
+			}
+		} else if current.SearchDomain != nil {
+			delete += "," + guestApiKeySearchDomain
+		}
+	}
+	if config.NameServers != nil {
+		if len(*config.NameServers) > 0 {
+			var nameServers string
+			for i := range *config.NameServers {
+				nameServers += " " + (*config.NameServers)[i].String()
+			}
+			if current.NameServers != nil && len(*current.NameServers) > 0 {
+				var currentNameServers string
+				for i := range *config.NameServers {
+					currentNameServers += " " + (*current.NameServers)[i].String()
+				}
+				if nameServers == currentNameServers {
+					return
+				}
+			}
+			params[guestApiKeyNameServer] = nameServers[1:]
+		} else if current.NameServers != nil {
+			delete += "," + guestApiKeyNameServer
+		}
+	}
+	return
+}
+
+func (GuestDNS) mapToSDK(params map[string]any) *GuestDNS {
+	var dnsSet bool
+	var nameservers []netip.Addr
+	if v, isSet := params[guestApiKeyNameServer]; isSet {
+		tmp := strings.Split(v.(string), " ")
+		nameservers = make([]netip.Addr, len(tmp))
+		for i, e := range tmp {
+			nameservers[i], _ = netip.ParseAddr(e)
+		}
+		dnsSet = true
+	}
+	var domain string
+	if v, isSet := params[guestApiKeySearchDomain]; isSet {
+		if len(v.(string)) > 1 {
+			domain = v.(string)
+			dnsSet = true
+		}
+	}
+	if !dnsSet {
+		return nil
+	}
+	return &GuestDNS{
+		SearchDomain: &domain,
+		NameServers:  &nameservers}
+}
+
+const (
+	guestApiKeyNameServer   string = "nameserver"
+	guestApiKeySearchDomain string = "searchdomain"
+)
+
+// Length 128, first character must be a letter or number, the rest can be letters, numbers or hyphens.
+// Regex: ^([a-z]|[A-Z]|[0-9])([a-z]|[A-Z]|[0-9]|-){127,}$
+type GuestName string
+
+const (
+	guestNameMaxLength      = 128
+	GuestName_Error_Empty   = "name cannot be empty"
+	GuestName_Error_Invalid = "name can only contain the following characters: - a-z A-Z 0-9"
+	GuestName_Error_Length  = "name has a maximum length of 128"
+	GuestName_Error_Start   = "name cannot start with a hyphen (-)"
+)
+
+var guestNameRegex = regexp.MustCompile("^([a-z]|[A-Z]|[0-9]|-)+$")
+
+func (name GuestName) String() string { return string(name) } // String is for fmt.Stringer.
+
+func (name GuestName) Validate() error {
+	if len(name) == 0 {
+		return errors.New(GuestName_Error_Empty)
+	}
+	if len(name) > guestNameMaxLength {
+		return errors.New(GuestName_Error_Length)
+	}
+	if name[0:1] == "-" {
+		return errors.New(GuestName_Error_Start)
+	}
+	if !guestNameRegex.MatchString(string(name)) {
+		return errors.New(GuestName_Error_Invalid)
+	}
+	return nil
+}
+
+// 0 to 10240000, where 0 means no limit
+type GuestNetworkRate uint32
+
+const (
+	GuestNetworkRate_Error_Invalid = "network rate must be in the range 0 to 10240000"
+	GuestNetworkRateMaximum        = 10240000
+	GuestNetworkRateUnlimited      = GuestNetworkRate(0)
+)
+
+// unsafe requires caller to check for nil
+func (rate GuestNetworkRate) mapToAPI() string {
+	if rate == GuestNetworkRateUnlimited {
+		return ""
+	}
+	rawRate := strconv.Itoa(int(rate))
+	length := len(rawRate)
+	if length > 3 {
+		// Insert a decimal point three places from the end
+		if rate%1000 == 0 {
+			return ",rate=" + rawRate[:length-3]
+		} else {
+			return strings.TrimRight(",rate="+rawRate[:length-3]+"."+rawRate[length-3:], "0")
+		}
+	}
+	// Prepend zeros to ensure decimal places
+	prefixRate := "000" + rawRate
+	return strings.TrimRight(",rate=0."+prefixRate[length:], "0")
+}
+
+func (GuestNetworkRate) mapToSDK(rawRate string) *GuestNetworkRate {
+	splitRate := strings.Split(rawRate, ".")
+	var rate int
+	switch len(splitRate) {
+	case 1:
+		if splitRate[0] != "0" {
+			rate, _ = strconv.Atoi(splitRate[0] + "000")
+		}
+	case 2:
+		// Pad the fractional part to ensure it has at least 3 digits
+		fractional := splitRate[1] + "000"
+		rate, _ = strconv.Atoi(splitRate[0] + fractional[:3])
+	}
+	return util.Pointer(GuestNetworkRate(rate))
+}
+
+func (rate GuestNetworkRate) Validate() error {
+	if rate > GuestNetworkRateMaximum {
+		return errors.New(GuestNetworkRate_Error_Invalid)
+	}
+	return nil
 }
 
 type GuestResource struct {
@@ -27,7 +191,7 @@ type GuestResource struct {
 	Id                 uint      `json:"id"`
 	MemoryTotalInBytes uint      `json:"memory_total"`
 	MemoryUsedInBytes  uint      `json:"memory_used"`
-	Name               string    `json:"name"` // TODO custom type
+	Name               GuestName `json:"name"`
 	NetworkIn          uint      `json:"network_in"`
 	NetworkOut         uint      `json:"network_out"`
 	Node               string    `json:"node"` // TODO custom type
@@ -38,6 +202,10 @@ type GuestResource struct {
 	Type               GuestType `json:"type"`
 	UptimeInSeconds    uint      `json:"uptime"`
 }
+
+const (
+	guestApiKeyName string = "name"
+)
 
 // https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/resources
 func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
@@ -77,8 +245,8 @@ func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
 		if _, isSet := tmpParams["mem"]; isSet {
 			resources[i].MemoryUsedInBytes = uint(tmpParams["mem"].(float64))
 		}
-		if _, isSet := tmpParams["name"]; isSet {
-			resources[i].Name = tmpParams["name"].(string)
+		if v, isSet := tmpParams[guestApiKeyName]; isSet {
+			resources[i].Name = GuestName(v.(string))
 		}
 		if _, isSet := tmpParams["netin"]; isSet {
 			resources[i].NetworkIn = uint(tmpParams["netin"].(float64))

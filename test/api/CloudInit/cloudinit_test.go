@@ -30,7 +30,7 @@ func Test_Cloud_Init_VM(t *testing.T) {
 	disk["storage"] = "local"
 
 	config.QemuDisks[0] = disk
-	config.Name = "Base-Image"
+	config.Name = util.Pointer(pxapi.GuestName("Base-Image"))
 
 	_, err = config.Create(context.Background(), Test.GetClient())
 	require.NoError(t, err)

@@ -24,7 +24,7 @@ func (config *QemuMTU) mapToApiUnsafe(builder *strings.Builder) {
 		return
 	}
 	if config.Value != 0 {
-		builder.WriteString(",mtu=" + strconv.Itoa(int(config.Value)))
+		builder.WriteString(",mtu=" + config.Value.string())
 	}
 }
 
@@ -54,7 +54,7 @@ type QemuNetworkInterface struct {
 	MTU           *QemuMTU          `json:"mtu,omitempty"`   // only when `Model == QemuNetworkModelVirtIO`
 	Model         *QemuNetworkModel `json:"model,omitempty"` // Required for creation
 	MultiQueue    *QemuNetworkQueue `json:"queue,omitempty"`
-	RateLimitKBps *QemuNetworkRate  `json:"rate,omitempty"`
+	RateLimitKBps *GuestNetworkRate `json:"rate,omitempty"`
 	NativeVlan    *Vlan             `json:"native_vlan,omitempty"`
 	TaggedVlans   *Vlans            `json:"tagged_vlans,omitempty"`
 	mac           string
@@ -122,9 +122,9 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 			builder.WriteString(",queues=" + strconv.Itoa(int(*current.MultiQueue)))
 		}
 		if config.RateLimitKBps != nil {
-			config.RateLimitKBps.mapToApiUnsafe(&builder)
+			builder.WriteString(config.RateLimitKBps.mapToAPI())
 		} else if current.RateLimitKBps != nil {
-			current.RateLimitKBps.mapToApiUnsafe(&builder)
+			builder.WriteString(current.RateLimitKBps.mapToAPI())
 		}
 		if config.NativeVlan != nil {
 			if *config.NativeVlan != 0 {
@@ -134,14 +134,12 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 			builder.WriteString(",tag=" + current.NativeVlan.String())
 		}
 		if config.TaggedVlans != nil {
-			vlans := config.TaggedVlans.mapToApiUnsafe()
-			if vlans != "" {
-				builder.WriteString(",trunks=" + vlans[1:])
+			if v := config.TaggedVlans.string(); v != "" {
+				builder.WriteString(",trunks=" + v)
 			}
 		} else if current.TaggedVlans != nil {
-			vlans := current.TaggedVlans.mapToApiUnsafe()
-			if vlans != "" {
-				builder.WriteString(",trunks=" + vlans[1:])
+			if v := current.TaggedVlans.string(); v != "" {
+				builder.WriteString(",trunks=" + v)
 			}
 		}
 		return builder.String()
@@ -173,15 +171,14 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 		builder.WriteString(",queues=" + strconv.Itoa(int(*config.MultiQueue)))
 	}
 	if config.RateLimitKBps != nil {
-		config.RateLimitKBps.mapToApiUnsafe(&builder)
+		builder.WriteString(config.RateLimitKBps.mapToAPI())
 	}
 	if config.NativeVlan != nil && *config.NativeVlan != 0 {
 		builder.WriteString(",tag=" + config.NativeVlan.String())
 	}
 	if config.TaggedVlans != nil {
-		vlans := config.TaggedVlans.mapToApiUnsafe()
-		if vlans != "" {
-			builder.WriteString(",trunks=" + vlans[1:])
+		if v := config.TaggedVlans.string(); v != "" {
+			builder.WriteString(",trunks=" + v)
 		}
 	}
 	return builder.String()
@@ -229,7 +226,7 @@ func (QemuNetworkInterface) mapToSDK(rawParams string) (config QemuNetworkInterf
 		config.MultiQueue = util.Pointer(QemuNetworkQueue(tmpQueue))
 	}
 	if v, isSet := params["rate"]; isSet {
-		config.RateLimitKBps = QemuNetworkRate(0).mapToSDK(v)
+		config.RateLimitKBps = GuestNetworkRate(0).mapToSDK(v)
 	}
 	if v, isSet := params["tag"]; isSet {
 		tmpVlan, _ := strconv.Atoi(v)
@@ -487,58 +484,6 @@ const (
 func (queue QemuNetworkQueue) Validate() error {
 	if queue > QemuNetworkQueueMaximum {
 		return errors.New(QemuNetworkQueue_Error_Invalid)
-	}
-	return nil
-}
-
-type QemuNetworkRate uint32 // 0-10240000
-
-const (
-	QemuNetworkRate_Error_Invalid string          = "network rate must be in the range 0-10240000"
-	QemuNetworkRateMaximum        QemuNetworkRate = 10240000
-)
-
-// unsafe requires caller to check for nil
-func (rate QemuNetworkRate) mapToApiUnsafe(builder *strings.Builder) {
-	if rate == 0 {
-		return
-	}
-	rawRate := strconv.Itoa(int(rate))
-	length := len(rawRate)
-	switch {
-	case length > 3:
-		// Insert a decimal point three places from the end
-		if rate%1000 == 0 {
-			builder.WriteString(",rate=" + rawRate[:length-3])
-		} else {
-			builder.WriteString(strings.TrimRight(",rate="+rawRate[:length-3]+"."+rawRate[length-3:], "0"))
-		}
-	case length > 0:
-		// Prepend zeros to ensure decimal places
-		prefixRate := "000" + rawRate
-		builder.WriteString(strings.TrimRight(",rate=0."+prefixRate[length:], "0"))
-	}
-}
-
-func (QemuNetworkRate) mapToSDK(rawRate string) *QemuNetworkRate {
-	splitRate := strings.Split(rawRate, ".")
-	var rate int
-	switch len(splitRate) {
-	case 1:
-		if splitRate[0] != "0" {
-			rate, _ = strconv.Atoi(splitRate[0] + "000")
-		}
-	case 2:
-		// Pad the fractional part to ensure it has at least 3 digits
-		fractional := splitRate[1] + "000"
-		rate, _ = strconv.Atoi(splitRate[0] + fractional[:3])
-	}
-	return util.Pointer(QemuNetworkRate(rate))
-}
-
-func (rate QemuNetworkRate) Validate() error {
-	if rate > QemuNetworkRateMaximum {
-		return errors.New(QemuNetworkRate_Error_Invalid)
 	}
 	return nil
 }

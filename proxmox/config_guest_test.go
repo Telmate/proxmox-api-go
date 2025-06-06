@@ -4,8 +4,61 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_guest"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_GuestName_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []string
+		output error
+	}{
+		{name: `Valid GuestName`,
+			input:  test_data_guest.GuestName_Legal(),
+			output: nil},
+		{name: `Invalid GuestName Empty`,
+			input:  []string{test_data_guest.GuestName_Empty()},
+			output: errors.New(GuestName_Error_Empty)},
+		{name: `Invalid GuestName Invalid`,
+			input:  test_data_guest.GuestName_Character_Illegal(),
+			output: errors.New(GuestName_Error_Invalid)},
+		{name: `Invalid GuestName Max Length`,
+			input:  []string{test_data_guest.GuestName_Max_Illegal()},
+			output: errors.New(GuestName_Error_Length)},
+		{name: `Invalid GuestName begin with illegal character`,
+			input:  []string{test_data_guest.GuestName_Start_Illegal()},
+			output: errors.New(GuestName_Error_Start)},
+	}
+	for _, test := range tests {
+		for _, e := range test.input {
+			t.Run(test.name+": "+e, func(t *testing.T) {
+				require.Equal(t, test.output, (GuestName(e)).Validate())
+			})
+		}
+	}
+}
+
+func Test_GuestNetworkRate_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  GuestNetworkRate
+		output error
+	}{
+		{name: `Valid maximum`,
+			input: 10240000},
+		{name: `Valid minimum`,
+			input: 0},
+		{name: `Invalid`,
+			input:  10240001,
+			output: errors.New(GuestNetworkRate_Error_Invalid)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.Validate())
+		})
+	}
+}
 
 func Test_GuestResource_mapToStruct(t *testing.T) {
 	tests := []struct {

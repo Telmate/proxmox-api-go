@@ -2,8 +2,6 @@ package proxmox
 
 import (
 	"errors"
-	"net"
-	"net/netip"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,23 +38,10 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 			delete += ",cipassword"
 		}
 		if config.DNS != nil {
-			if config.DNS.SearchDomain != nil {
-				if *config.DNS.SearchDomain != "" {
-					params["searchdomain"] = *config.DNS.SearchDomain
-				} else {
-					delete += ",searchdomain"
-				}
-			}
-			if config.DNS.NameServers != nil {
-				if len(*config.DNS.NameServers) > 0 {
-					var nameservers string
-					for _, ns := range *config.DNS.NameServers {
-						nameservers += " " + ns.String()
-					}
-					params["nameserver"] = nameservers[1:]
-				} else {
-					delete += ",nameserver"
-				}
+			if current.DNS != nil {
+				delete += config.DNS.mapToApiUpdate(*current.DNS, params)
+			} else {
+				config.DNS.mapToApiCreate(params)
 			}
 		}
 		delete += config.NetworkInterfaces.mapToAPI(current.NetworkInterfaces, params)
@@ -80,16 +65,7 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 			params["ciuser"] = *config.Username
 		}
 		if config.DNS != nil {
-			if config.DNS.SearchDomain != nil && *config.DNS.SearchDomain != "" {
-				params["searchdomain"] = *config.DNS.SearchDomain
-			}
-			if config.DNS.NameServers != nil && len(*config.DNS.NameServers) > 0 {
-				var nameservers string
-				for _, ns := range *config.DNS.NameServers {
-					nameservers += " " + ns.String()
-				}
-				params["nameserver"] = nameservers[1:]
-			}
+			config.DNS.mapToApiCreate(params)
 		}
 		config.NetworkInterfaces.mapToAPI(nil, params)
 		if config.PublicSSHkeys != nil && len(*config.PublicSSHkeys) > 0 {
@@ -134,28 +110,8 @@ func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
 		ci.PublicSSHkeys = util.Pointer(sshKeyUrlDecode(v.(string)))
 		set = true
 	}
-	var dnsSet bool
-	var nameservers []netip.Addr
-	if v, isSet := params["nameserver"]; isSet {
-		tmp := strings.Split(v.(string), " ")
-		nameservers = make([]netip.Addr, len(tmp))
-		for i, e := range tmp {
-			nameservers[i], _ = netip.ParseAddr(e)
-		}
-		dnsSet = true
-	}
-	var domain string
-	if v, isSet := params["searchdomain"]; isSet {
-		if len(v.(string)) > 1 {
-			domain = v.(string)
-			dnsSet = true
-		}
-	}
-	if dnsSet {
-		ci.DNS = &GuestDNS{
-			SearchDomain: &domain,
-			NameServers:  &nameservers,
-		}
+	if v := (GuestDNS{}.mapToSDK(params)); v != nil {
+		ci.DNS = v
 		set = true
 	}
 	ci.NetworkInterfaces = CloudInitNetworkInterfaces{}.mapToSDK(params)
@@ -636,76 +592,6 @@ func (path CloudInitSnippetPath) Validate() error {
 	}
 	if !regexCloudInitSnippetPath_Path.MatchString(string(path)) {
 		return errors.New(CloudInitSnippetPath_Error_InvalidPath)
-	}
-	return nil
-}
-
-type IPv4Address string
-
-const IPv4Address_Error_Invalid = "ipv4Address is not a valid ipv6 address"
-
-func (ip IPv4Address) Validate() error {
-	if ip == "" {
-		return nil
-	}
-	if net.ParseIP(string(ip)) == nil {
-		return errors.New(IPv4Address_Error_Invalid)
-	}
-	if !isIPv4(string(ip)) {
-		return errors.New(IPv4Address_Error_Invalid)
-	}
-	return nil
-}
-
-type IPv4CIDR string
-
-const IPv4CIDR_Error_Invalid = "ipv4CIDR is not a valid ipv4 address"
-
-func (cidr IPv4CIDR) Validate() error {
-	if cidr == "" {
-		return nil
-	}
-	ip, _, err := net.ParseCIDR(string(cidr))
-	if err != nil {
-		return errors.New(IPv4CIDR_Error_Invalid)
-	}
-	if !isIPv4(ip.String()) {
-		return errors.New(IPv4CIDR_Error_Invalid)
-	}
-	return err
-}
-
-type IPv6Address string
-
-const IPv6Address_Error_Invalid = "ipv6Address is not a valid ipv6 address"
-
-func (ip IPv6Address) Validate() error {
-	if ip == "" {
-		return nil
-	}
-	if net.ParseIP(string(ip)) == nil {
-		return errors.New(IPv6Address_Error_Invalid)
-	}
-	if !isIPv6(string(ip)) {
-		return errors.New(IPv6Address_Error_Invalid)
-	}
-	return nil
-}
-
-type IPv6CIDR string
-
-const IPv6CIDR_Error_Invalid = "ipv6CIDR is not a valid ipv6 address"
-
-func (cidr IPv6CIDR) Validate() error {
-	if cidr == "" {
-		return nil
-	}
-	ip, _, err := net.ParseCIDR(string(cidr))
-	if err != nil {
-		return errors.New(IPv6CIDR_Error_Invalid)
-	}
-	if !isIPv6(ip.String()) {
-		return errors.New(IPv6CIDR_Error_Invalid)
 	}
 	return nil
 }

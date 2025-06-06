@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -26,22 +27,28 @@ func (config Vlan) Validate() error {
 
 type Vlans []Vlan
 
-func (config *Vlans) mapToApiUnsafe() string {
+func (config Vlans) string() string {
+	if len(config) == 0 {
+		return ""
+	}
 	// Use a map to track seen elements and remove duplicates.
-	seen := make(map[Vlan]bool)
-	result := make([]int, 0, len(*config))
+	uniqueMap := make(map[int]struct{})
 	// Iterate over the input slice and add unique elements to the result slice.
-	for _, value := range *config {
-		if _, ok := seen[value]; !ok {
-			seen[value] = true
-			result = append(result, int(value))
-		}
+	for i := range config {
+		uniqueMap[int(config[i])] = struct{}{}
 	}
+	uniqueArr := make([]int, len(uniqueMap))
+	var index int
+	for key := range uniqueMap {
+		uniqueArr[index] = key
+		index++
+	}
+	slices.Sort(uniqueArr)
 	builder := strings.Builder{}
-	for _, vlan := range result {
-		builder.WriteString(";" + strconv.Itoa(vlan))
+	for i := range uniqueArr {
+		builder.WriteString(";" + strconv.Itoa(uniqueArr[i]))
 	}
-	return builder.String()
+	return builder.String()[1:] // Skip the leading semicolon
 }
 
 func (config Vlans) Validate() error {

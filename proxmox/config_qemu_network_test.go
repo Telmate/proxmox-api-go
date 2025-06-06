@@ -75,7 +75,7 @@ func Test_QemuNetworkInterface_Validate(t *testing.T) {
 				current: &QemuNetworkInterface{}}},
 		{name: `Valid RateLimitKBps`,
 			input: testInput{
-				config:  QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(10240000))},
+				config:  QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(10240000))},
 				current: &QemuNetworkInterface{}}},
 		{name: `Valid NativeVlan`,
 			input: testInput{
@@ -118,11 +118,11 @@ func Test_QemuNetworkInterface_Validate(t *testing.T) {
 				config:  QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(65))},
 				current: &QemuNetworkInterface{}},
 			output: errors.New(QemuNetworkQueue_Error_Invalid)},
-		{name: `Invalid errors.New(QemuNetworkRate_Error_Invalid)`,
+		{name: `Invalid errors.New(GuestNetworkRate_Error_Invalid)`,
 			input: testInput{
-				config:  QemuNetworkInterface{RateLimitKBps: util.Pointer(QemuNetworkRate(10240001))},
+				config:  QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(10240001))},
 				current: &QemuNetworkInterface{}},
-			output: errors.New(QemuNetworkRate_Error_Invalid)},
+			output: errors.New(GuestNetworkRate_Error_Invalid)},
 		{name: `Invalid NativeVlan errors.New(Vlan_Error_Invalid)`,
 			input: testInput{
 				config:  QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(4096))},
@@ -203,7 +203,7 @@ func Test_QemuNetworkInterfaces_Validate(t *testing.T) {
 		{name: `Valid RateLimitKBps`,
 			input: testInput{
 				config: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
-					RateLimitKBps: util.Pointer(QemuNetworkRate(10240000))}},
+					RateLimitKBps: util.Pointer(GuestNetworkRate(10240000))}},
 				current: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{}}}},
 		{name: `Valid NativeVlan`,
 			input: testInput{
@@ -255,9 +255,9 @@ func Test_QemuNetworkInterfaces_Validate(t *testing.T) {
 		{name: `Invalid errors.New(QemuNetworkRate_Error_Invalid)`,
 			input: testInput{
 				config: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{
-					RateLimitKBps: util.Pointer(QemuNetworkRate(10240001))}},
+					RateLimitKBps: util.Pointer(GuestNetworkRate(10240001))}},
 				current: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{}}},
-			output: errors.New(QemuNetworkRate_Error_Invalid)},
+			output: errors.New(GuestNetworkRate_Error_Invalid)},
 		{name: `Invalid NativeVlan errors.New(Vlan_Error_Invalid)`,
 			input: testInput{
 				config: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{
@@ -315,27 +315,6 @@ func Test_QemuNetworkQueue_Validate(t *testing.T) {
 		{name: `Invalid`,
 			input:  65,
 			output: errors.New(QemuNetworkQueue_Error_Invalid)},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, test.input.Validate())
-		})
-	}
-}
-
-func Test_QemuNetworkRate_Validate(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  QemuNetworkRate
-		output error
-	}{
-		{name: `Valid maximum`,
-			input: 10240000},
-		{name: `Valid minimum`,
-			input: 0},
-		{name: `Invalid`,
-			input:  10240001,
-			output: errors.New(QemuNetworkRate_Error_Invalid)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

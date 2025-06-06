@@ -3,6 +3,7 @@ package proxmox
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 )
 
 func ValidateIntInRange(min, max, value int, text string) error {
@@ -31,7 +32,7 @@ func ValidateStringInArray(array []string, value, text string) error {
 	if err != nil {
 		return err
 	}
-	if inArray(array, value) {
+	if slices.Contains(array, value) {
 		return nil
 	}
 	return fmt.Errorf("error the value of key (%s) must be one of %s", text, ArrayToCSV(array))
