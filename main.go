@@ -273,7 +273,7 @@ func main() {
 		failError(json.Unmarshal(GetConfig(*fConfigFile), &config))
 		fmt.Println("Parsed conf: ", config)
 		log.Println("Looking for template: " + flag.Args()[1])
-		sourceVmrs, err := c.GetVmRefsByName(ctx, flag.Args()[1])
+		sourceVmrs, err := c.GetVmRefsByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		failError(err)
 		if sourceVmrs == nil {
 			log.Fatal("Can't find template")
@@ -304,19 +304,19 @@ func main() {
 		log.Println("Created guest with ID: " + vmr.VmId().String())
 
 	case "createQemuSnapshot":
-		sourceVmr, err := c.GetVmRefByName(ctx, flag.Args()[1])
+		sourceVmr, err := c.GetVmRefByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		failError(err)
 		jbody, err = c.CreateQemuSnapshot(sourceVmr, flag.Args()[2])
 		failError(err)
 
 	case "deleteQemuSnapshot":
-		sourceVmr, err := c.GetVmRefByName(ctx, flag.Args()[1])
+		sourceVmr, err := c.GetVmRefByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		failError(err)
 		jbody, err = c.DeleteQemuSnapshot(sourceVmr, flag.Args()[2])
 		failError(err)
 
 	case "listQemuSnapshot":
-		sourceVmr, err := c.GetVmRefByName(ctx, flag.Args()[1])
+		sourceVmr, err := c.GetVmRefByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		if err == nil {
 			jbody, _, err = c.ListQemuSnapshot(sourceVmr)
 			if rec, ok := jbody.(map[string]interface{}); ok {
@@ -334,7 +334,7 @@ func main() {
 		failError(err)
 
 	case "listQemuSnapshot2":
-		sourceVmrs, err := c.GetVmRefsByName(ctx, flag.Args()[1])
+		sourceVmrs, err := c.GetVmRefsByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		if err == nil {
 			for _, sourceVmr := range sourceVmrs {
 				jbody, _, err = c.ListQemuSnapshot(sourceVmr)
@@ -354,7 +354,7 @@ func main() {
 		failError(err)
 
 	case "rollbackQemu":
-		sourceVmr, err := c.GetVmRefByName(ctx, flag.Args()[1])
+		sourceVmr, err := c.GetVmRefByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		failError(err)
 		jbody, err = c.RollbackQemuVm(sourceVmr, flag.Args()[2])
 		failError(err)
