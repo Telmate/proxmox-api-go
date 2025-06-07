@@ -33,7 +33,7 @@ func Test_CloneLxcTarget_mapToAPI(t *testing.T) {
 					"newid":  100}}},
 		{name: `Full Name`,
 			input: CloneLxcTarget{Full: &CloneLxcFull{
-				Name: util.Pointer("test")}},
+				Name: util.Pointer(GuestName("test"))}},
 			output: testOutput{
 				api: map[string]interface{}{
 					"full":     true,
@@ -75,7 +75,7 @@ func Test_CloneLxcTarget_mapToAPI(t *testing.T) {
 					"newid":  100}}},
 		{name: `Linked Name`,
 			input: CloneLxcTarget{Linked: &CloneLinked{
-				Name: util.Pointer("test")}},
+				Name: util.Pointer(GuestName("test"))}},
 			output: testOutput{
 				api: map[string]interface{}{
 					"full":     false,
@@ -131,11 +131,11 @@ func Test_CloneLxcTarget_Validate(t *testing.T) {
 			input: CloneLxcTarget{Full: &CloneLxcFull{
 				ID: util.Pointer(GuestID(99))}},
 			output: errors.New(GuestID_Error_Minimum)},
-		{name: `Invalid Full Name`, // TODO this should be an error
+		{name: `Invalid Full Name errors.New(GuestName_Error_Empty)`,
 			input: CloneLxcTarget{Full: &CloneLxcFull{
 				Node: "test",
-				Name: util.Pointer("")}},
-			output: nil},
+				Name: util.Pointer(GuestName(""))}},
+			output: errors.New(GuestName_Error_Empty)},
 		{name: `Invalid Full Pool errors.New(PoolName_Error_Empty)`,
 			input: CloneLxcTarget{Full: &CloneLxcFull{
 				Pool: util.Pointer(PoolName(""))}},
@@ -152,11 +152,11 @@ func Test_CloneLxcTarget_Validate(t *testing.T) {
 			input: CloneLxcTarget{Linked: &CloneLinked{
 				ID: util.Pointer(GuestID(99))}},
 			output: errors.New(GuestID_Error_Minimum)},
-		{name: `Invalid Linked Name`, // TODO this should be an error
+		{name: `Invalid Linked Name errors.New(GuestName_Error_Empty)`,
 			input: CloneLxcTarget{Linked: &CloneLinked{
 				Node: "test",
-				Name: util.Pointer("")}},
-			output: nil},
+				Name: util.Pointer(GuestName(""))}},
+			output: errors.New(GuestName_Error_Empty)},
 		{name: `Invalid Linked Pool errors.New(PoolName_Error_Empty)`,
 			input: CloneLxcTarget{Linked: &CloneLinked{
 				Pool: util.Pointer(PoolName(""))}},
@@ -199,7 +199,7 @@ func Test_CloneQemuTarget_mapToAPI(t *testing.T) {
 					"newid":  100}}},
 		{name: `Full Name`,
 			input: CloneQemuTarget{Full: &CloneQemuFull{
-				Name: util.Pointer("test")}},
+				Name: util.Pointer(GuestName("test"))}},
 			output: testOutput{
 				api: map[string]interface{}{
 					"full":   true,
@@ -249,7 +249,7 @@ func Test_CloneQemuTarget_mapToAPI(t *testing.T) {
 					"newid":  100}}},
 		{name: `Linked Name`,
 			input: CloneQemuTarget{Linked: &CloneLinked{
-				Name: util.Pointer("test")}},
+				Name: util.Pointer(GuestName("test"))}},
 			output: testOutput{
 				api: map[string]interface{}{
 					"full":   false,
@@ -305,11 +305,11 @@ func Test_CloneQemuTarget_Validate(t *testing.T) {
 			input: CloneQemuTarget{Full: &CloneQemuFull{
 				ID: util.Pointer(GuestID(99))}},
 			output: errors.New(GuestID_Error_Minimum)},
-		{name: `Invalid Full Name`, // TODO this should be an error
+		{name: `Invalid Full Name errors.New(GuestName_Error_Empty)`,
 			input: CloneQemuTarget{Full: &CloneQemuFull{
 				Node: "test",
-				Name: util.Pointer("")}},
-			output: nil},
+				Name: util.Pointer(GuestName(""))}},
+			output: errors.New(GuestName_Error_Empty)},
 		{name: `Invalid Full Pool errors.New(PoolName_Error_Empty)`,
 			input: CloneQemuTarget{Full: &CloneQemuFull{
 				Pool: util.Pointer(PoolName(""))}},
@@ -330,11 +330,11 @@ func Test_CloneQemuTarget_Validate(t *testing.T) {
 			input: CloneQemuTarget{Linked: &CloneLinked{
 				ID: util.Pointer(GuestID(99))}},
 			output: errors.New(GuestID_Error_Minimum)},
-		{name: `Invalid Linked Name`, // TODO this should be an error
+		{name: `Invalid Linked Name errors.New(GuestName_Error_Empty)`,
 			input: CloneQemuTarget{Linked: &CloneLinked{
 				Node: "test",
-				Name: util.Pointer("")}},
-			output: nil},
+				Name: util.Pointer(GuestName(""))}},
+			output: errors.New(GuestName_Error_Empty)},
 		{name: `Invalid Linked Pool errors.New(PoolName_Error_Empty)`,
 			input: CloneQemuTarget{Linked: &CloneLinked{
 				Pool: util.Pointer(PoolName(""))}},

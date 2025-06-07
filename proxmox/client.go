@@ -268,8 +268,8 @@ func (c *Client) GetVmInfo(ctx context.Context, vmr *VmRef) (vmInfo map[string]i
 	return nil, fmt.Errorf("vm '%d' not found", vmr.vmId)
 }
 
-func (c *Client) GetVmRefByName(ctx context.Context, vmName string) (vmr *VmRef, err error) {
-	vmrs, err := c.GetVmRefsByName(ctx, vmName)
+func (c *Client) GetVmRefByName(ctx context.Context, name GuestName) (vmr *VmRef, err error) {
+	vmrs, err := c.GetVmRefsByName(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -277,14 +277,14 @@ func (c *Client) GetVmRefByName(ctx context.Context, vmName string) (vmr *VmRef,
 	return vmrs[0], nil
 }
 
-func (c *Client) GetVmRefsByName(ctx context.Context, vmName string) (vmrs []*VmRef, err error) {
+func (c *Client) GetVmRefsByName(ctx context.Context, name GuestName) (vmrs []*VmRef, err error) {
 	vms, err := c.GetResourceList(ctx, resourceListGuest)
 	if err != nil {
 		return
 	}
 	for vmii := range vms {
 		vm := vms[vmii].(map[string]interface{})
-		if vm["name"] != nil && vm["name"].(string) == vmName {
+		if vm["name"] != nil && GuestName(vm["name"].(string)) == name {
 			vmr := NewVmRef(GuestID(vm["vmid"].(float64)))
 			vmr.node = NodeName(vm["node"].(string))
 			vmr.vmType = vm["type"].(string)
@@ -299,7 +299,7 @@ func (c *Client) GetVmRefsByName(ctx context.Context, vmName string) (vmrs []*Vm
 		}
 	}
 	if len(vmrs) == 0 {
-		return nil, fmt.Errorf("vm '%s' not found", vmName)
+		return nil, fmt.Errorf("vm '%s' not found", name)
 	} else {
 		return
 	}

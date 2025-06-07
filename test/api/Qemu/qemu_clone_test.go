@@ -30,7 +30,7 @@ func Test_Clone_Qemu_VM(t *testing.T) {
 	_, err := sourceVmRef.CloneQemu(context.Background(), pxapi.CloneQemuTarget{
 		Full: &pxapi.CloneQemuFull{
 			Node: newGuest.Node(),
-			Name: util.Pointer("test-qemu02"),
+			Name: util.Pointer(pxapi.GuestName("test-qemu02")),
 			ID:   util.Pointer(newGuest.VmId()),
 		},
 	}, Test.GetClient())
@@ -50,7 +50,7 @@ func Test_Clone_Qemu_VM_To_Different_Storage(t *testing.T) {
 	_, err := sourceVmRef.CloneQemu(context.Background(), pxapi.CloneQemuTarget{
 		Full: &pxapi.CloneQemuFull{
 			Node:    newGuest.Node(),
-			Name:    util.Pointer("test-qemu02"),
+			Name:    util.Pointer(pxapi.GuestName("test-qemu02")),
 			ID:      util.Pointer(newGuest.VmId()),
 			Storage: util.Pointer("other-storage"),
 		},

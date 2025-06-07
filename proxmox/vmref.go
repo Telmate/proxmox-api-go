@@ -198,15 +198,20 @@ func (target CloneQemuTarget) mapToAPI() (GuestID, NodeName, PoolName, map[strin
 
 // Linked Clone in the same for both LXC and QEMU
 type CloneLinked struct {
-	Node NodeName  `json:"node"`
-	ID   *GuestID  `json:"id,omitempty"`   // Optional
-	Name *string   `json:"name,omitempty"` // Optional // TODO replace one we have a type for it
-	Pool *PoolName `json:"pool,omitempty"` // Optional
+	Node NodeName   `json:"node"`
+	ID   *GuestID   `json:"id,omitempty"`   // Optional
+	Name *GuestName `json:"name,omitempty"` // Optional
+	Pool *PoolName  `json:"pool,omitempty"` // Optional
 }
 
 func (linked CloneLinked) Validate() (err error) {
 	if linked.ID != nil {
 		if err = linked.ID.Validate(); err != nil {
+			return
+		}
+	}
+	if linked.Name != nil {
+		if err = linked.Name.Validate(); err != nil {
 			return
 		}
 	}
@@ -229,16 +234,21 @@ func (linked CloneLinked) mapToAPI(nameFlag string) (GuestID, NodeName, PoolName
 }
 
 type CloneLxcFull struct {
-	Node    NodeName  `json:"node"`
-	ID      *GuestID  `json:"id,omitempty"`      // Optional
-	Name    *string   `json:"name,omitempty"`    // Optional // TODO replace one we have a type for it
-	Pool    *PoolName `json:"pool,omitempty"`    // Optional
-	Storage *string   `json:"storage,omitempty"` // Optional // TODO replace one we have a type for it
+	Node    NodeName   `json:"node"`
+	ID      *GuestID   `json:"id,omitempty"`      // Optional
+	Name    *GuestName `json:"name,omitempty"`    // Optional
+	Pool    *PoolName  `json:"pool,omitempty"`    // Optional
+	Storage *string    `json:"storage,omitempty"` // Optional // TODO replace one we have a type for it
 }
 
 func (full CloneLxcFull) Validate() (err error) {
 	if full.ID != nil {
 		if err = full.ID.Validate(); err != nil {
+			return
+		}
+	}
+	if full.Name != nil {
+		if err = full.Name.Validate(); err != nil {
 			return
 		}
 	}
@@ -264,7 +274,7 @@ func (full CloneLxcFull) mapToAPI() (GuestID, NodeName, PoolName, map[string]int
 type CloneQemuFull struct {
 	Node          NodeName        `json:"node"`
 	ID            *GuestID        `json:"id,omitempty"`      // Optional
-	Name          *string         `json:"name,omitempty"`    // Optional // TODO replace one we have a type for it
+	Name          *GuestName      `json:"name,omitempty"`    // Optional
 	Pool          *PoolName       `json:"pool,omitempty"`    // Optional
 	Storage       *string         `json:"storage,omitempty"` // Optional // TODO replace one we have a type for it
 	StorageFormat *QemuDiskFormat `json:"format,omitempty"`  // Optional
@@ -273,6 +283,11 @@ type CloneQemuFull struct {
 func (full CloneQemuFull) Validate() (err error) {
 	if full.ID != nil {
 		if err = full.ID.Validate(); err != nil {
+			return
+		}
+	}
+	if full.Name != nil {
+		if err = full.Name.Validate(); err != nil {
 			return
 		}
 	}
@@ -305,7 +320,7 @@ type cloneSettings struct {
 	FullClone     bool
 	ID            *GuestID
 	nameFlag      string
-	Name          *string // TODO replace one we have a type for it
+	Name          *GuestName
 	Node          NodeName
 	Pool          *PoolName
 	Storage       *string // TODO replace one we have a type for it
@@ -323,7 +338,7 @@ func (clone cloneSettings) mapToAPI() (GuestID, NodeName, PoolName, map[string]i
 		params["newid"] = int(id)
 	}
 	if clone.Name != nil {
-		params[clone.nameFlag] = *clone.Name
+		params[clone.nameFlag] = (*clone.Name).String()
 	}
 	var pool PoolName
 	if clone.Pool != nil {
