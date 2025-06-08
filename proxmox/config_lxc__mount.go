@@ -9,9 +9,9 @@ import (
 )
 
 type LxcBootMount struct {
-	ACL             *TriBool
+	ACL             *TriBool // Never nil when returned
 	Options         *LxcBootMountOptions
-	Replication     *bool
+	Replicate       *bool         // Never nil when returned
 	SizeInKibibytes *LxcMountSize // Required during creation, never nil when returned
 	Storage         *string       // Required during creation, never nil when returned
 	rawDisk         string
@@ -46,8 +46,8 @@ func (mount LxcBootMount) combine(usedConfig LxcBootMount) LxcBootMount {
 			usedConfig.Options.NoSuid = mount.Options.NoSuid
 		}
 	}
-	if mount.Replication != nil {
-		usedConfig.Replication = mount.Replication
+	if mount.Replicate != nil {
+		usedConfig.Replicate = mount.Replicate
 	}
 	if mount.ACL != nil {
 		usedConfig.ACL = mount.ACL
@@ -116,7 +116,7 @@ func (config LxcBootMount) string() (rootFs string) {
 			rootFs += ",mountoptions=" + options[1:]
 		}
 	}
-	if config.Replication != nil && !*config.Replication {
+	if config.Replicate != nil && !*config.Replicate {
 		rootFs += ",replicate=0"
 	}
 	return
@@ -179,9 +179,13 @@ func (size LxcMountSize) Validate() error {
 }
 
 func (raw RawConfigLXC) BootMount() *LxcBootMount {
+	var acl TriBool
 	var size LxcMountSize
 	var storage string
+	replicate := true
 	config := LxcBootMount{
+		ACL:             &acl,
+		Replicate:       &replicate,
 		SizeInKibibytes: &size,
 		Storage:         &storage}
 	var settings map[string]string
@@ -201,9 +205,9 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 	}
 	if v, isSet := settings["acl"]; isSet {
 		if v == "1" {
-			config.ACL = util.Pointer(TriBoolTrue)
+			acl = TriBoolTrue
 		} else {
-			config.ACL = util.Pointer(TriBoolFalse)
+			acl = TriBoolFalse
 		}
 	} else {
 		config.ACL = util.Pointer(TriBoolNone)
@@ -235,9 +239,7 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 		config.Options = &mountOptions
 	}
 	if v, isSet := settings["replicate"]; isSet {
-		config.Replication = util.Pointer(v == "1")
-	} else {
-		config.Replication = util.Pointer(true)
+		replicate = v == "1"
 	}
 	return &config
 }
