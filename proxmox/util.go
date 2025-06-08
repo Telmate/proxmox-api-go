@@ -11,7 +11,8 @@ import (
 var rxUserTokenExtract = regexp.MustCompile("[a-z0-9]+@[a-z0-9]+!([a-z0-9]+)")
 
 const (
-	mebiByte          = 1024
+	kibibyte          = 1
+	mebiByte          = kibibyte * 1024
 	gibiByte          = mebiByte * 1024
 	gibiByteOneEighth = gibiByte / 8
 	tebiByte          = gibiByte * 1024

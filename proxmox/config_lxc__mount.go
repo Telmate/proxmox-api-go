@@ -72,9 +72,12 @@ func (config LxcBootMount) mapToApiCreate() string {
 func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, params map[string]any) {
 	var usedConfig LxcBootMount
 	usedConfig = config.combine(current.combine(usedConfig))
-	rootFs := usedConfig.string()
+	var rootFs string
+	if usedConfig.SizeInKibibytes != nil {
+		rootFs += ",size=" + usedConfig.SizeInKibibytes.String()
+	}
+	rootFs += usedConfig.string()
 	if usedConfig.Storage != nil {
-		// we can ignore adding the size, the call will work without it
 		rootFs = *usedConfig.Storage + ":" + current.rawDisk + rootFs
 		if current.Storage != nil && rootFs == *current.Storage+":"+current.rawDisk+current.string() {
 			return
@@ -155,7 +158,18 @@ const (
 	gibiByteLxc                = mebiByte * 1024
 )
 
-func (size LxcMountSize) String() string { return strconv.Itoa(int(size)) } // String is for fmt.Stringer.
+func (size LxcMountSize) String() string { // String is for fmt.Stringer.
+	if size%tebiByte == 0 {
+		return strconv.Itoa(int(size/tebiByte)) + "T"
+	}
+	if size%gibiByte == 0 {
+		return strconv.Itoa(int(size/gibiByte)) + "G"
+	}
+	if size%mebiByte == 0 {
+		return strconv.Itoa(int(size/mebiByte)) + "M"
+	}
+	return strconv.Itoa(int(size)) + "K"
+}
 
 func (size LxcMountSize) Validate() error {
 	if size < lxcMountSize_Minimum {

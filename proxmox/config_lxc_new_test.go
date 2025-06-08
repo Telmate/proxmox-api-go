@@ -181,6 +181,21 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						Replication: util.Pointer(false)}},
 					output: map[string]any{"rootfs": ""}}},
 			update: []test{
+				{name: `all storage change`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						Storage: util.Pointer("local-zfs")}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						Storage:         util.Pointer("local-ext4"),
+						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+						ACL:             util.Pointer(TriBoolTrue),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(true),
+							LazyTime: util.Pointer(true),
+							NoATime:  util.Pointer(true),
+							NoSuid:   util.Pointer(true)},
+						Replication: util.Pointer(false),
+						rawDisk:     "subvol-101-disk-0"}},
+					output: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,size=1G,acl=1,mountoptions=discard;lazytime;noatime;nosuid,replicate=0"}},
 				{name: `Options Discard in-place true`,
 					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
 						Discard: util.Pointer(true)}}},
@@ -219,13 +234,13 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					output: map[string]any{"rootfs": ",mountoptions=discard;lazytime;noatime;nosuid"}},
 				{name: `Storage & size`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
-						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+						SizeInKibibytes: util.Pointer(LxcMountSize(2621440)),
 						Storage:         util.Pointer("local-ext4")}},
 					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
 						SizeInKibibytes: util.Pointer(LxcMountSize(2097152)),
 						Storage:         util.Pointer("local-zfs"),
 						rawDisk:         "subvol-101-disk-0"}},
-					output: map[string]any{"rootfs": "local-ext4:subvol-101-disk-0"}},
+					output: map[string]any{"rootfs": "local-ext4:subvol-101-disk-0,size=2560M"}},
 				{name: `no change`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						ACL: util.Pointer(TriBoolTrue),
