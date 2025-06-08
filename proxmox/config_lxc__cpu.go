@@ -76,7 +76,8 @@ func (raw RawConfigLXC) CPU() *LxcCPU {
 		parameterSet = true
 	}
 	if v, isSet := raw[lxcApiKeyCpuLimit]; isSet {
-		tmp := LxcCpuLimit(v.(float64))
+		tmpInt, _ := strconv.ParseInt(v.(string), 10, 32)
+		tmp := LxcCpuLimit(tmpInt)
 		cpu.Limit = &tmp
 		parameterSet = true
 	}

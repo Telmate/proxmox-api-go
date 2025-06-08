@@ -1567,7 +1567,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 					input:  map[string]any{"cores": float64(1)},
 					output: baseConfig(ConfigLXC{CPU: &LxcCPU{Cores: util.Pointer(LxcCpuCores(1))}})},
 				{name: `Limit`,
-					input:  map[string]any{"cpulimit": float64(2)},
+					input:  map[string]any{"cpulimit": string("2")},
 					output: baseConfig(ConfigLXC{CPU: &LxcCPU{Limit: util.Pointer(LxcCpuLimit(2))}})},
 				{name: `Units`,
 					input:  map[string]any{"cpuunits": float64(3)},
