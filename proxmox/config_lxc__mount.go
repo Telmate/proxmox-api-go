@@ -141,10 +141,10 @@ func (config LxcBootMount) Validate(current *LxcBootMount) error {
 }
 
 type LxcBootMountOptions struct {
-	Discard  *bool
-	LazyTime *bool
-	NoATime  *bool
-	NoSuid   *bool
+	Discard  *bool // Never nil when returned
+	LazyTime *bool // Never nil when returned
+	NoATime  *bool // Never nil when returned
+	NoSuid   *bool // Never nil when returned
 }
 
 type LxcMountSize uint
@@ -200,26 +200,23 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 		for i := range tmpOptions {
 			options[tmpOptions[i]] = struct{}{}
 		}
-		var mountOptions LxcBootMountOptions
+		var discard, lazyTime, noATime, noSuid bool
+		mountOptions := LxcBootMountOptions{
+			Discard:  &discard,
+			LazyTime: &lazyTime,
+			NoATime:  &noATime,
+			NoSuid:   &noSuid}
 		if _, isSet := options["discard"]; isSet {
-			mountOptions.Discard = util.Pointer(true)
-		} else {
-			mountOptions.Discard = util.Pointer(false)
+			discard = true
 		}
 		if _, isSet := options["lazytime"]; isSet {
-			mountOptions.LazyTime = util.Pointer(true)
-		} else {
-			mountOptions.LazyTime = util.Pointer(false)
+			lazyTime = true
 		}
 		if _, isSet := options["noatime"]; isSet {
-			mountOptions.NoATime = util.Pointer(true)
-		} else {
-			mountOptions.NoATime = util.Pointer(false)
+			noATime = true
 		}
 		if _, isSet := options["nosuid"]; isSet {
-			mountOptions.NoSuid = util.Pointer(true)
-		} else {
-			mountOptions.NoSuid = util.Pointer(false)
+			noSuid = true
 		}
 		config.Options = &mountOptions
 	}
