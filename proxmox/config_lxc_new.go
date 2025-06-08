@@ -136,7 +136,7 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	params := config.mapToApiShared()
 	var delete string
 	if config.BootMount != nil && current.BootMount != nil {
-		config.BootMount.mapToApiUpdate_Unsafe(current.BootMount, params)
+		config.BootMount.mapToApiUpdate(*current.BootMount, params)
 	}
 	if config.CPU != nil {
 		if current.CPU != nil {

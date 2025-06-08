@@ -69,7 +69,7 @@ func (config LxcBootMount) mapToApiCreate() string {
 	return rootFs
 }
 
-func (config LxcBootMount) mapToApiUpdate_Unsafe(current *LxcBootMount, params map[string]any) {
+func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, params map[string]any) {
 	var usedConfig LxcBootMount
 	usedConfig = config.combine(current.combine(usedConfig))
 	rootFs := usedConfig.string()
