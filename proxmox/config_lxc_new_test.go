@@ -11,6 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_CpuArchitecture_String(t *testing.T) {
+	require.Equal(t, "amd64", CpuArchitecture("amd64").String())
+}
+
 func Test_ConfigLXC_mapToAPI(t *testing.T) {
 	feature := func(value bool) *LxcFeatures {
 		return &LxcFeatures{

@@ -12,6 +12,10 @@ import (
 
 type CpuArchitecture string
 
+func (arch CpuArchitecture) String() string { // String is for fmt.Stringer.
+	return string(arch)
+}
+
 type OperatingSystem string
 
 type ConfigLXC struct {
