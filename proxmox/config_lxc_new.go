@@ -26,8 +26,8 @@ type ConfigLXC struct {
 	DNS             *GuestDNS         `json:"dns,omitempty"`
 	Description     *string           `json:"description,omitempty"`
 	Features        *LxcFeatures      `json:"features,omitempty"`
-	ID              *GuestID          `json:"id"` // only used during creation
-	Memory          *LxcMemory        `json:"memory,omitempty"`
+	ID              *GuestID          `json:"id"`               // only used during creation
+	Memory          *LxcMemory        `json:"memory,omitempty"` // Never nil when returned
 	Name            *GuestName        `json:"name,omitempty"`
 	Networks        LxcNetworks       `json:"networks,omitempty"`
 	Node            *NodeName         `json:"node,omitempty"` // only used during creation
@@ -340,10 +340,11 @@ func (raw RawConfigLXC) DNS() *GuestDNS {
 }
 
 func (raw RawConfigLXC) Memory() *LxcMemory {
+	var memory LxcMemory
 	if v, isSet := raw[lxcApiKeyMemory]; isSet {
-		return util.Pointer(LxcMemory(v.(float64)))
+		memory = LxcMemory(v.(float64))
 	}
-	return nil
+	return &memory
 }
 
 func (raw RawConfigLXC) Name() *GuestName {

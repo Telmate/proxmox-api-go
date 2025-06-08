@@ -1404,6 +1404,9 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		if config.ID == nil {
 			config.ID = util.Pointer(GuestID(0))
 		}
+		if config.Memory == nil {
+			config.Memory = util.Pointer(LxcMemory(0))
+		}
 		if config.Networks == nil {
 			config.Networks = make(LxcNetworks)
 		}
