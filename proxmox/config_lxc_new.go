@@ -74,7 +74,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		node:   node,
 		vmId:   id,
 		pool:   pool,
-		vmType: vmRefQemu,
+		vmType: vmRefLXC,
 	}, nil
 }
 
