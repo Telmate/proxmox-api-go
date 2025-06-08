@@ -11,6 +11,7 @@ import (
 type LxcBootMount struct {
 	ACL             *TriBool // Never nil when returned
 	Options         *LxcBootMountOptions
+	Quota           *bool         // Never nil when returned
 	Replicate       *bool         // Never nil when returned
 	SizeInKibibytes *LxcMountSize // Required during creation, never nil when returned
 	Storage         *string       // Required during creation, never nil when returned
@@ -48,6 +49,9 @@ func (mount LxcBootMount) combine(usedConfig LxcBootMount) LxcBootMount {
 	}
 	if mount.Replicate != nil {
 		usedConfig.Replicate = mount.Replicate
+	}
+	if mount.Quota != nil {
+		usedConfig.Quota = mount.Quota
 	}
 	if mount.ACL != nil {
 		usedConfig.ACL = mount.ACL
@@ -116,6 +120,9 @@ func (config LxcBootMount) string() (rootFs string) {
 			rootFs += ",mountoptions=" + options[1:]
 		}
 	}
+	if config.Quota != nil && *config.Quota {
+		rootFs += ",quota=1"
+	}
 	if config.Replicate != nil && !*config.Replicate {
 		rootFs += ",replicate=0"
 	}
@@ -180,22 +187,25 @@ func (size LxcMountSize) Validate() error {
 
 func (raw RawConfigLXC) BootMount() *LxcBootMount {
 	var acl TriBool
+	var quota bool
 	var size LxcMountSize
 	var storage string
 	replicate := true
 	config := LxcBootMount{
 		ACL:             &acl,
+		Quota:           &quota,
 		Replicate:       &replicate,
 		SizeInKibibytes: &size,
 		Storage:         &storage}
 	var settings map[string]string
-	if v, isSet := raw[lxcApiKeyRootFS]; isSet {
-		if tmpString := strings.SplitN(v.(string), ",", 2); len(tmpString) == 2 {
-			if index := strings.IndexRune(tmpString[0], ':'); index != -1 {
-				storage = tmpString[0][:index]
-				config.rawDisk = tmpString[0][index+1:]
-				settings = splitStringOfSettings(tmpString[1])
-			}
+	if v, isSet := raw[lxcApiKeyRootFS].(string); isSet {
+		tmpString := strings.SplitN(v, ",", 2)
+		if index := strings.IndexRune(tmpString[0], ':'); index != -1 {
+			storage = tmpString[0][:index]
+			config.rawDisk = tmpString[0][index+1:]
+		}
+		if len(tmpString) == 2 {
+			settings = splitStringOfSettings(tmpString[1])
 		}
 	} else {
 		return nil
@@ -237,6 +247,9 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 			noSuid = true
 		}
 		config.Options = &mountOptions
+	}
+	if v, isSet := settings["quota"]; isSet {
+		quota = v == "1"
 	}
 	if v, isSet := settings["replicate"]; isSet {
 		replicate = v == "1"
