@@ -933,7 +933,8 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 	baseConfig := func(config ConfigLXC) ConfigLXC {
 		if config.BootMount == nil {
 			config.BootMount = &LxcBootMount{
-				Storage: util.Pointer("local-lvm")}
+				SizeInKibibytes: util.Pointer(LxcMountSize(131072)),
+				Storage:         util.Pointer("local-lvm")}
 		}
 		if config.CreateOptions == nil {
 			config.CreateOptions = &LxcCreateOptions{
@@ -982,7 +983,11 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 						err:   errors.New(ConfigLXC_Error_BootMountMissing)},
 					{name: `errors.New(LxcBootMount_Error_NoStorageDuringCreation)`,
 						input: ConfigLXC{BootMount: &LxcBootMount{}},
-						err:   errors.New(LxcBootMount_Error_NoStorageDuringCreation)}},
+						err:   errors.New(LxcBootMount_Error_NoStorageDuringCreation)},
+					{name: `errors.New(LxcBootMount_Error_NoSizeDuringCreation)`,
+						input: ConfigLXC{BootMount: &LxcBootMount{
+							Storage: util.Pointer("local-lvm")}},
+						err: errors.New(LxcBootMount_Error_NoSizeDuringCreation)}},
 				createUpdate: []test{
 					{name: `errors.New(TriBool_Error_Invalid)`,
 						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
@@ -1034,7 +1039,9 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 				create: []test{
 					{name: `all`,
 						input: ConfigLXC{
-							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(131072)),
+								Storage:         util.Pointer("local-lvm")},
 							CreateOptions: &LxcCreateOptions{
 								OsTemplate: &LxcTemplate{
 									Storage: "local",
@@ -1043,7 +1050,9 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 								PublicSSHkeys: publicKeys()}}},
 					{name: `UserPassword`,
 						input: ConfigLXC{
-							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(131072)),
+								Storage:         util.Pointer("local-lvm")},
 							CreateOptions: &LxcCreateOptions{
 								OsTemplate: &LxcTemplate{
 									Storage: "local",
@@ -1051,7 +1060,9 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 								UserPassword: util.Pointer("")}}},
 					{name: `PublicSSHkeys`,
 						input: ConfigLXC{
-							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(131072)),
+								Storage:         util.Pointer("local-lvm")},
 							CreateOptions: &LxcCreateOptions{
 								OsTemplate: &LxcTemplate{
 									Storage: "local",
@@ -1060,22 +1071,30 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 			invalid: testType{
 				create: []test{
 					{name: `errors.New(ConfigLXC_Error_CreateOptionsMissing)`,
-						input: ConfigLXC{BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")}},
-						err:   errors.New(ConfigLXC_Error_CreateOptionsMissing)},
+						input: ConfigLXC{BootMount: &LxcBootMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(131072)),
+							Storage:         util.Pointer("local-lvm")}},
+						err: errors.New(ConfigLXC_Error_CreateOptionsMissing)},
 					{name: `errors.New(LxcCreateOptions_Error_TemplateMissing)`,
 						input: ConfigLXC{
-							BootMount:     &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(131072)),
+								Storage:         util.Pointer("local-lvm")},
 							CreateOptions: &LxcCreateOptions{}},
 						err: errors.New(LxcCreateOptions_Error_TemplateMissing)},
 					{name: `errors.New(LxcTemplate_Error_StorageMissing)`,
 						input: ConfigLXC{
-							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(131072)),
+								Storage:         util.Pointer("local-lvm")},
 							CreateOptions: &LxcCreateOptions{
 								OsTemplate: &LxcTemplate{}}},
 						err: errors.New(LxcTemplate_Error_StorageMissing)},
 					{name: `errors.New(LxcTemplate_Error_StorageMissing)`,
 						input: ConfigLXC{
-							BootMount: &LxcBootMount{Storage: util.Pointer("local-lvm")},
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(131072)),
+								Storage:         util.Pointer("local-lvm")},
 							CreateOptions: &LxcCreateOptions{
 								OsTemplate: &LxcTemplate{Storage: "local"}}},
 						err: errors.New(LxcTemplate_Error_FileMissing)}}}},

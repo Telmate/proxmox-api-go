@@ -18,6 +18,7 @@ type LxcBootMount struct {
 }
 
 const (
+	LxcBootMount_Error_NoSizeDuringCreation    = "size must be set during creation"
 	LxcBootMount_Error_NoStorageDuringCreation = "storage must be set during creation"
 )
 
@@ -125,8 +126,13 @@ func (config LxcBootMount) Validate(current *LxcBootMount) error {
 			return err
 		}
 	}
-	if current == nil && config.Storage == nil {
-		return errors.New(LxcBootMount_Error_NoStorageDuringCreation)
+	if current == nil { // Create
+		if config.Storage == nil {
+			return errors.New(LxcBootMount_Error_NoStorageDuringCreation)
+		}
+		if config.SizeInKibibytes == nil {
+			return errors.New(LxcBootMount_Error_NoSizeDuringCreation)
+		}
 	}
 	if config.SizeInKibibytes != nil {
 		err = config.SizeInKibibytes.Validate()
