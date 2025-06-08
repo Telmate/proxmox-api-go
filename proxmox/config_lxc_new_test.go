@@ -1416,6 +1416,9 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		if config.Privileged == nil {
 			config.Privileged = util.Pointer(false)
 		}
+		if config.Swap == nil {
+			config.Swap = util.Pointer(LxcSwap(0))
+		}
 		return &config
 	}
 	baseBootMount := func(config LxcBootMount) *LxcBootMount {

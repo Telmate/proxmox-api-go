@@ -34,7 +34,7 @@ type ConfigLXC struct {
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
 	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation
-	Swap            *LxcSwap          `json:"swap,omitempty"`
+	Swap            *LxcSwap          `json:"swap,omitempty"`       // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
 }
 
@@ -371,10 +371,11 @@ func (raw RawConfigLXC) Privileged() *bool {
 }
 
 func (raw RawConfigLXC) Swap() *LxcSwap {
+	var swap LxcSwap
 	if v, isSet := raw[lxcApiKeySwap]; isSet {
-		return util.Pointer(LxcSwap(v.(float64)))
+		swap = LxcSwap(v.(float64))
 	}
-	return nil
+	return &swap
 }
 
 func (raw RawConfigLXC) Tags() *Tags {
