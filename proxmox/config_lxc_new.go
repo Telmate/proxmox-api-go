@@ -56,7 +56,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 	if config.Node != nil {
 		node = *config.Node
 	}
-	url := "/nodes/" + node.String() + "/qemu"
+	url := "/nodes/" + node.String() + "/lxc"
 	if config.ID == nil {
 		id, err = guestCreateLoop(ctx, "vmid", url, params, c)
 		if err != nil {
