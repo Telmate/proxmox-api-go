@@ -12,8 +12,8 @@ type LxcBootMount struct {
 	ACL             *TriBool
 	Options         *LxcBootMountOptions
 	Replication     *bool
-	SizeInKibibytes *LxcMountSize
-	Storage         *string // Required during creation
+	SizeInKibibytes *LxcMountSize // Required during creation, never nil when returned
+	Storage         *string       // Required during creation, never nil when returned
 	rawDisk         string
 }
 
@@ -165,12 +165,16 @@ func (size LxcMountSize) Validate() error {
 }
 
 func (raw RawConfigLXC) BootMount() *LxcBootMount {
-	var config LxcBootMount
+	var size LxcMountSize
+	var storage string
+	config := LxcBootMount{
+		SizeInKibibytes: &size,
+		Storage:         &storage}
 	var settings map[string]string
 	if v, isSet := raw[lxcApiKeyRootFS]; isSet {
 		if tmpString := strings.SplitN(v.(string), ",", 2); len(tmpString) == 2 {
 			if index := strings.IndexRune(tmpString[0], ':'); index != -1 {
-				config.Storage = util.Pointer(tmpString[0][:index])
+				storage = tmpString[0][:index]
 				config.rawDisk = tmpString[0][index+1:]
 				settings = splitStringOfSettings(tmpString[1])
 			}
@@ -179,7 +183,7 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 		return nil
 	}
 	if v, isSet := settings["size"]; isSet {
-		config.SizeInKibibytes = util.Pointer(LxcMountSize(parseDiskSize(v)))
+		size = LxcMountSize(parseDiskSize(v))
 	}
 	if v, isSet := settings["acl"]; isSet {
 		if v == "1" {
@@ -193,7 +197,7 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 	if v, isSet := settings["mountoptions"]; isSet {
 		tmpOptions := strings.Split(v, ";")
 		options := make(map[string]struct{}, len(tmpOptions))
-		for i := 0; i < len(tmpOptions); i++ {
+		for i := range tmpOptions {
 			options[tmpOptions[i]] = struct{}{}
 		}
 		var mountOptions LxcBootMountOptions
