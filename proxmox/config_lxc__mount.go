@@ -64,7 +64,7 @@ func (config LxcBootMount) mapToApiCreate() string {
 		} else {
 			size = float64(*config.SizeInKibibytes / gibiByteLxc)
 		}
-		rootFs = *config.Storage + ":" + strconv.FormatFloat(size, 'f', -1, 64)
+		rootFs = *config.Storage + ":" + strconv.FormatFloat(size, 'f', -1, 64) + rootFs
 	}
 	return rootFs
 }

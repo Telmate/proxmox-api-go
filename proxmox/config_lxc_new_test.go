@@ -74,6 +74,18 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 	}{
 		{category: `BootMount`,
 			create: []test{
+				{name: `all`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						ACL: util.Pointer(TriBoolTrue),
+						Options: &LxcBootMountOptions{
+							Discard:  util.Pointer(true),
+							LazyTime: util.Pointer(true),
+							NoATime:  util.Pointer(true),
+							NoSuid:   util.Pointer(true)},
+						Replication:     util.Pointer(false),
+						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+						Storage:         util.Pointer("local-zfs")}},
+					output: map[string]any{"rootfs": "local-zfs:1,acl=1,mountoptions=discard;lazytime;noatime;nosuid,replicate=0"}},
 				{name: `minimum 1G`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
