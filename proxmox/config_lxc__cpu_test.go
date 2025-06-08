@@ -29,7 +29,7 @@ func Test_LxcCPU_Validate(t *testing.T) {
 			output: errors.New(LxcCpuLimit_Error_Invalid)},
 		{name: `Invalid Units`,
 			input:  LxcCPU{Units: util.Pointer(LxcCpuUnits(100001))},
-			output: errors.New(LxcCpuUnits_Error_Invalid)},
+			output: errors.New(LxcCpuUnits_Error_Maximum)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -98,13 +98,18 @@ func Test_LxcCpuUnits_Validate(t *testing.T) {
 		input  LxcCpuUnits
 		output error
 	}{
-		{name: `Valid minimum`,
+		{name: `Valid default`,
 			input: 0},
+		{name: `Valid minimum`,
+			input: 8},
 		{name: `Valid maximum`,
 			input: 100000},
+		{name: `Invalid 7`,
+			input:  7,
+			output: errors.New(LxcCpuUnits_Error_Minimum)},
 		{name: `Invalid 8193`,
 			input:  100001,
-			output: errors.New(LxcCpuUnits_Error_Invalid)},
+			output: errors.New(LxcCpuUnits_Error_Maximum)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

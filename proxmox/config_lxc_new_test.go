@@ -1049,7 +1049,7 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 						input: baseConfig(ConfigLXC{CPU: &LxcCPU{
 							Cores: util.Pointer(LxcCpuCores(2)),
 							Limit: util.Pointer(LxcCpuLimit(3)),
-							Units: util.Pointer(LxcCpuUnits(4))}}),
+							Units: util.Pointer(LxcCpuUnits(8))}}),
 						current: &ConfigLXC{CPU: &LxcCPU{
 							Cores: util.Pointer(LxcCpuCores(1)),
 							Limit: util.Pointer(LxcCpuLimit(2)),
@@ -1073,7 +1073,7 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 							Units: util.Pointer(LxcCpuUnits(100001))}}),
 						current: &ConfigLXC{CPU: &LxcCPU{
 							Units: util.Pointer(LxcCpuUnits(3))}},
-						err: errors.New(LxcCpuUnits_Error_Invalid)}}}},
+						err: errors.New(LxcCpuUnits_Error_Maximum)}}}},
 		{category: `CreateOptions`,
 			valid: testType{
 				create: []test{
