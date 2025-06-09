@@ -440,6 +440,10 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						SearchDomain: util.Pointer("")}},
 					output: map[string]any{}}},
 			update: []test{
+				{name: `NameServers add`,
+					config:        ConfigLXC{DNS: &GuestDNS{NameServers: util.Pointer([]netip.Addr{parseIP("1.1.1.1"), parseIP("9.9.9.9"), parseIP("8.8.8.8")})}},
+					currentConfig: ConfigLXC{DNS: &GuestDNS{NameServers: util.Pointer([]netip.Addr{parseIP("1.1.1.1")})}},
+					output:        map[string]any{"nameserver": string("1.1.1.1 9.9.9.9 8.8.8.8")}},
 				{name: `NameServers delete`,
 					config:        ConfigLXC{DNS: &GuestDNS{NameServers: util.Pointer([]netip.Addr{})}},
 					currentConfig: ConfigLXC{DNS: &GuestDNS{NameServers: util.Pointer([]netip.Addr{parseIP("1.1.1.1")})}},

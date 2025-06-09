@@ -50,7 +50,7 @@ func (config GuestDNS) mapToApiUpdate(current GuestDNS, params map[string]any) (
 			}
 			if current.NameServers != nil && len(*current.NameServers) > 0 {
 				var currentNameServers string
-				for i := range *config.NameServers {
+				for i := range *current.NameServers {
 					currentNameServers += " " + (*current.NameServers)[i].String()
 				}
 				if nameServers == currentNameServers {
