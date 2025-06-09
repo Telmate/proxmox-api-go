@@ -33,7 +33,7 @@ type ConfigLXC struct {
 	Node            *NodeName         `json:"node,omitempty"` // only used during creation
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
-	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation
+	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, never nil when returned
 	Swap            *LxcSwap          `json:"swap,omitempty"`       // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
 }
@@ -364,10 +364,11 @@ func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
 // Privileged returns true if the container is privileged, false if it is unprivileged.
 // Pointer is never nil.
 func (raw RawConfigLXC) Privileged() *bool {
+	var privileged bool
 	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
-		return util.Pointer(v.(float64) == 0)
+		privileged = v.(float64) == 0
 	}
-	return util.Pointer(false)
+	return &privileged
 }
 
 func (raw RawConfigLXC) Swap() *LxcSwap {
