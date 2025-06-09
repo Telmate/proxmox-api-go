@@ -364,7 +364,7 @@ func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
 // Privileged returns true if the container is privileged, false if it is unprivileged.
 // Pointer is never nil.
 func (raw RawConfigLXC) Privileged() *bool {
-	var privileged bool
+	privileged := true
 	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
 		privileged = v.(float64) == 0
 	}

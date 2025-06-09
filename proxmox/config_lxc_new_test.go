@@ -1418,7 +1418,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 			config.Node = util.Pointer(NodeName(""))
 		}
 		if config.Privileged == nil {
-			config.Privileged = util.Pointer(false)
+			config.Privileged = util.Pointer(true)
 		}
 		if config.Swap == nil {
 			config.Swap = util.Pointer(LxcSwap(0))
@@ -1833,9 +1833,9 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `false`,
 					input:  RawConfigLXC{"unprivileged": float64(1)},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(false)})},
-				{name: `default false`,
+				{name: `default true`,
 					input:  RawConfigLXC{},
-					output: baseConfig(ConfigLXC{Privileged: util.Pointer(false)})}}},
+					output: baseConfig(ConfigLXC{Privileged: util.Pointer(true)})}}},
 		{category: `Swap`,
 			tests: []test{
 				{name: `set`,
