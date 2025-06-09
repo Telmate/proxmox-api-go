@@ -260,7 +260,7 @@ func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
 			return
 		}
 	}
-	if config.Pool != nil {
+	if config.Pool != nil && config.Pool.String() != "" {
 		if err = config.Pool.Validate(); err != nil {
 			return
 		}

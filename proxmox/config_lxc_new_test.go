@@ -1331,13 +1331,16 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 				createUpdate: []test{
 					{name: `set`,
 						input:   baseConfig(ConfigLXC{Pool: util.Pointer(PoolName("test"))}),
+						current: &ConfigLXC{Pool: util.Pointer(PoolName("text"))}},
+					{name: `empty`,
+						input:   baseConfig(ConfigLXC{Pool: util.Pointer(PoolName(""))}),
 						current: &ConfigLXC{Pool: util.Pointer(PoolName("text"))}}}},
 			invalid: testType{
 				createUpdate: []test{
-					{name: `empty`,
-						input:   baseConfig(ConfigLXC{Pool: util.Pointer(PoolName(""))}),
+					{name: `characters`,
+						input:   baseConfig(ConfigLXC{Pool: util.Pointer(PoolName("^&$%"))}),
 						current: &ConfigLXC{Pool: util.Pointer(PoolName("text"))},
-						err:     errors.New(PoolName_Error_Empty)}}}},
+						err:     errors.New(PoolName_Error_Characters)}}}},
 		{category: `Tags`,
 			valid: testType{
 				createUpdate: []test{
