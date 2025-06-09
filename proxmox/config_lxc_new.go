@@ -28,7 +28,7 @@ type ConfigLXC struct {
 	Features        *LxcFeatures      `json:"features,omitempty"`
 	ID              *GuestID          `json:"id"`               // only used during creation
 	Memory          *LxcMemory        `json:"memory,omitempty"` // Never nil when returned
-	Name            *GuestName        `json:"name,omitempty"`
+	Name            *GuestName        `json:"name,omitempty"`   // Never nil when returned
 	Networks        LxcNetworks       `json:"networks,omitempty"`
 	Node            *NodeName         `json:"node,omitempty"` // only used during creation
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
@@ -348,10 +348,11 @@ func (raw RawConfigLXC) Memory() *LxcMemory {
 }
 
 func (raw RawConfigLXC) Name() *GuestName {
+	var name GuestName
 	if v, isSet := raw[lxcApiKeyName]; isSet {
-		return util.Pointer(GuestName(v.(string)))
+		name = GuestName(v.(string))
 	}
-	return nil
+	return &name
 }
 
 func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
@@ -396,7 +397,7 @@ const (
 	lxcApiKeyFeatures        string = "features"
 	lxcApiKeyGuestID         string = "vmid"
 	lxcApiKeyMemory          string = "memory"
-	lxcApiKeyName            string = "name"
+	lxcApiKeyName            string = "hostname"
 	lxcApiKeyOperatingSystem string = "ostype"
 	lxcApiKeyOsTemplate      string = "ostemplate"
 	lxcApiKeyPassword        string = "password"

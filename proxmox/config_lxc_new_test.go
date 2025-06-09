@@ -577,7 +577,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `set`,
 					config:        ConfigLXC{Name: util.Pointer(GuestName("test"))},
 					currentConfig: ConfigLXC{Name: util.Pointer(GuestName("text"))},
-					output:        map[string]any{"name": string("test")}}},
+					output:        map[string]any{"hostname": string("test")}}},
 			update: []test{
 				{name: `do nothing`,
 					config:        ConfigLXC{Name: util.Pointer(GuestName("test"))},
@@ -1411,6 +1411,9 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		if config.Memory == nil {
 			config.Memory = util.Pointer(LxcMemory(0))
 		}
+		if config.Name == nil {
+			config.Name = util.Pointer(GuestName(""))
+		}
 		if config.Networks == nil {
 			config.Networks = make(LxcNetworks)
 		}
@@ -1703,7 +1706,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		{category: `Name`,
 			tests: []test{
 				{name: `set`,
-					input:  RawConfigLXC{"name": "test"},
+					input:  RawConfigLXC{"hostname": "test"},
 					output: baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))})}}},
 		{category: `Networks`,
 			tests: []test{
