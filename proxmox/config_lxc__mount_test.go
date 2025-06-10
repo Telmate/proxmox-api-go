@@ -13,7 +13,7 @@ func Test_LxcMountSize_String(t *testing.T) {
 		output string
 	}{
 		{name: "Kibibyte",
-			input:  kibibyte,
+			input:  kibiByte,
 			output: "1K"},
 		{name: "Mebibyte",
 			input:  mebiByte,
