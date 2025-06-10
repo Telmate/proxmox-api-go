@@ -1257,6 +1257,7 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 								Name:   util.Pointer(LxcNetworkName("lo0")),
 								Bridge: util.Pointer("vmbr0")}}}),
 						current: &ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID3: LxcNetwork{},
 							LxcNetworkID11: LxcNetwork{
 								Name:          util.Pointer(LxcNetworkName("eth6")),
 								Bridge:        util.Pointer("vmbr0"),
