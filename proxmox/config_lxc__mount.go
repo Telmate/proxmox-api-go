@@ -9,15 +9,17 @@ import (
 )
 
 type LxcBootMount struct {
-	ACL             *TriBool
+	ACL             *TriBool // Never nil when returned
 	Options         *LxcBootMountOptions
-	Replication     *bool
-	SizeInKibibytes *LxcMountSize
-	Storage         *string // Required during creation
+	Quota           *bool         // Never nil when returned
+	Replicate       *bool         // Never nil when returned
+	SizeInKibibytes *LxcMountSize // Required during creation, never nil when returned
+	Storage         *string       // Required during creation, never nil when returned
 	rawDisk         string
 }
 
 const (
+	LxcBootMount_Error_NoSizeDuringCreation    = "size must be set during creation"
 	LxcBootMount_Error_NoStorageDuringCreation = "storage must be set during creation"
 )
 
@@ -45,8 +47,11 @@ func (mount LxcBootMount) combine(usedConfig LxcBootMount) LxcBootMount {
 			usedConfig.Options.NoSuid = mount.Options.NoSuid
 		}
 	}
-	if mount.Replication != nil {
-		usedConfig.Replication = mount.Replication
+	if mount.Replicate != nil {
+		usedConfig.Replicate = mount.Replicate
+	}
+	if mount.Quota != nil {
+		usedConfig.Quota = mount.Quota
 	}
 	if mount.ACL != nil {
 		usedConfig.ACL = mount.ACL
@@ -63,17 +68,20 @@ func (config LxcBootMount) mapToApiCreate() string {
 		} else {
 			size = float64(*config.SizeInKibibytes / gibiByteLxc)
 		}
-		rootFs = *config.Storage + ":" + strconv.FormatFloat(size, 'f', -1, 64)
+		rootFs = *config.Storage + ":" + strconv.FormatFloat(size, 'f', -1, 64) + rootFs
 	}
 	return rootFs
 }
 
-func (config LxcBootMount) mapToApiUpdate_Unsafe(current *LxcBootMount, params map[string]any) {
+func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, params map[string]any) {
 	var usedConfig LxcBootMount
 	usedConfig = config.combine(current.combine(usedConfig))
-	rootFs := usedConfig.string()
+	var rootFs string
+	if usedConfig.SizeInKibibytes != nil {
+		rootFs += ",size=" + usedConfig.SizeInKibibytes.String()
+	}
+	rootFs += usedConfig.string()
 	if usedConfig.Storage != nil {
-		// we can ignore adding the size, the call will work without it
 		rootFs = *usedConfig.Storage + ":" + current.rawDisk + rootFs
 		if current.Storage != nil && rootFs == *current.Storage+":"+current.rawDisk+current.string() {
 			return
@@ -112,7 +120,10 @@ func (config LxcBootMount) string() (rootFs string) {
 			rootFs += ",mountoptions=" + options[1:]
 		}
 	}
-	if config.Replication != nil && !*config.Replication {
+	if config.Quota != nil && *config.Quota {
+		rootFs += ",quota=1"
+	}
+	if config.Replicate != nil && !*config.Replicate {
 		rootFs += ",replicate=0"
 	}
 	return
@@ -125,8 +136,13 @@ func (config LxcBootMount) Validate(current *LxcBootMount) error {
 			return err
 		}
 	}
-	if current == nil && config.Storage == nil {
-		return errors.New(LxcBootMount_Error_NoStorageDuringCreation)
+	if current == nil { // Create
+		if config.Storage == nil {
+			return errors.New(LxcBootMount_Error_NoStorageDuringCreation)
+		}
+		if config.SizeInKibibytes == nil {
+			return errors.New(LxcBootMount_Error_NoSizeDuringCreation)
+		}
 	}
 	if config.SizeInKibibytes != nil {
 		err = config.SizeInKibibytes.Validate()
@@ -135,10 +151,10 @@ func (config LxcBootMount) Validate(current *LxcBootMount) error {
 }
 
 type LxcBootMountOptions struct {
-	Discard  *bool
-	LazyTime *bool
-	NoATime  *bool
-	NoSuid   *bool
+	Discard  *bool // Never nil when returned
+	LazyTime *bool // Never nil when returned
+	NoATime  *bool // Never nil when returned
+	NoSuid   *bool // Never nil when returned
 }
 
 type LxcMountSize uint
@@ -149,7 +165,18 @@ const (
 	gibiByteLxc                = mebiByte * 1024
 )
 
-func (size LxcMountSize) String() string { return strconv.Itoa(int(size)) } // String is for fmt.Stringer.
+func (size LxcMountSize) String() string { // String is for fmt.Stringer.
+	if size%tebiByte == 0 {
+		return strconv.Itoa(int(size/tebiByte)) + "T"
+	}
+	if size%gibiByte == 0 {
+		return strconv.Itoa(int(size/gibiByte)) + "G"
+	}
+	if size%mebiByte == 0 {
+		return strconv.Itoa(int(size/mebiByte)) + "M"
+	}
+	return strconv.Itoa(int(size)) + "K"
+}
 
 func (size LxcMountSize) Validate() error {
 	if size < lxcMountSize_Minimum {
@@ -159,27 +186,38 @@ func (size LxcMountSize) Validate() error {
 }
 
 func (raw RawConfigLXC) BootMount() *LxcBootMount {
-	var config LxcBootMount
+	var acl TriBool
+	var quota bool
+	var size LxcMountSize
+	var storage string
+	replicate := true
+	config := LxcBootMount{
+		ACL:             &acl,
+		Quota:           &quota,
+		Replicate:       &replicate,
+		SizeInKibibytes: &size,
+		Storage:         &storage}
 	var settings map[string]string
-	if v, isSet := raw[lxcApiKeyRootFS]; isSet {
-		if tmpString := strings.SplitN(v.(string), ",", 2); len(tmpString) == 2 {
-			if index := strings.IndexRune(tmpString[0], ':'); index != -1 {
-				config.Storage = util.Pointer(tmpString[0][:index])
-				config.rawDisk = tmpString[0][index+1:]
-				settings = splitStringOfSettings(tmpString[1])
-			}
+	if v, isSet := raw[lxcApiKeyRootFS].(string); isSet {
+		tmpString := strings.SplitN(v, ",", 2)
+		if index := strings.IndexRune(tmpString[0], ':'); index != -1 {
+			storage = tmpString[0][:index]
+			config.rawDisk = tmpString[0][index+1:]
+		}
+		if len(tmpString) == 2 {
+			settings = splitStringOfSettings(tmpString[1])
 		}
 	} else {
 		return nil
 	}
 	if v, isSet := settings["size"]; isSet {
-		config.SizeInKibibytes = util.Pointer(LxcMountSize(parseDiskSize(v)))
+		size = LxcMountSize(parseDiskSize(v))
 	}
 	if v, isSet := settings["acl"]; isSet {
 		if v == "1" {
-			config.ACL = util.Pointer(TriBoolTrue)
+			acl = TriBoolTrue
 		} else {
-			config.ACL = util.Pointer(TriBoolFalse)
+			acl = TriBoolFalse
 		}
 	} else {
 		config.ACL = util.Pointer(TriBoolNone)
@@ -187,36 +225,34 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 	if v, isSet := settings["mountoptions"]; isSet {
 		tmpOptions := strings.Split(v, ";")
 		options := make(map[string]struct{}, len(tmpOptions))
-		for i := 0; i < len(tmpOptions); i++ {
+		for i := range tmpOptions {
 			options[tmpOptions[i]] = struct{}{}
 		}
-		var mountOptions LxcBootMountOptions
+		var discard, lazyTime, noATime, noSuid bool
+		mountOptions := LxcBootMountOptions{
+			Discard:  &discard,
+			LazyTime: &lazyTime,
+			NoATime:  &noATime,
+			NoSuid:   &noSuid}
 		if _, isSet := options["discard"]; isSet {
-			mountOptions.Discard = util.Pointer(true)
-		} else {
-			mountOptions.Discard = util.Pointer(false)
+			discard = true
 		}
 		if _, isSet := options["lazytime"]; isSet {
-			mountOptions.LazyTime = util.Pointer(true)
-		} else {
-			mountOptions.LazyTime = util.Pointer(false)
+			lazyTime = true
 		}
 		if _, isSet := options["noatime"]; isSet {
-			mountOptions.NoATime = util.Pointer(true)
-		} else {
-			mountOptions.NoATime = util.Pointer(false)
+			noATime = true
 		}
 		if _, isSet := options["nosuid"]; isSet {
-			mountOptions.NoSuid = util.Pointer(true)
-		} else {
-			mountOptions.NoSuid = util.Pointer(false)
+			noSuid = true
 		}
 		config.Options = &mountOptions
 	}
+	if v, isSet := settings["quota"]; isSet {
+		quota = v == "1"
+	}
 	if v, isSet := settings["replicate"]; isSet {
-		config.Replication = util.Pointer(v == "1")
-	} else {
-		config.Replication = util.Pointer(true)
+		replicate = v == "1"
 	}
 	return &config
 }

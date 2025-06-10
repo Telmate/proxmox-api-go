@@ -12,6 +12,10 @@ import (
 
 type CpuArchitecture string
 
+func (arch CpuArchitecture) String() string { // String is for fmt.Stringer.
+	return string(arch)
+}
+
 type OperatingSystem string
 
 type ConfigLXC struct {
@@ -22,15 +26,15 @@ type ConfigLXC struct {
 	DNS             *GuestDNS         `json:"dns,omitempty"`
 	Description     *string           `json:"description,omitempty"`
 	Features        *LxcFeatures      `json:"features,omitempty"`
-	ID              *GuestID          `json:"id"` // only used during creation
-	Memory          *LxcMemory        `json:"memory,omitempty"`
-	Name            *GuestName        `json:"name,omitempty"`
+	ID              *GuestID          `json:"id"`               // only used during creation
+	Memory          *LxcMemory        `json:"memory,omitempty"` // Never nil when returned
+	Name            *GuestName        `json:"name,omitempty"`   // Never nil when returned
 	Networks        LxcNetworks       `json:"networks,omitempty"`
 	Node            *NodeName         `json:"node,omitempty"` // only used during creation
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
-	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation
-	Swap            *LxcSwap          `json:"swap,omitempty"`
+	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, never nil when returned
+	Swap            *LxcSwap          `json:"swap,omitempty"`       // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
 }
 
@@ -56,7 +60,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 	if config.Node != nil {
 		node = *config.Node
 	}
-	url := "/nodes/" + node.String() + "/qemu"
+	url := "/nodes/" + node.String() + "/lxc"
 	if config.ID == nil {
 		id, err = guestCreateLoop(ctx, "vmid", url, params, c)
 		if err != nil {
@@ -74,7 +78,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		node:   node,
 		vmId:   id,
 		pool:   pool,
-		vmType: vmRefQemu,
+		vmType: vmRefLXC,
 	}, nil
 }
 
@@ -136,7 +140,7 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	params := config.mapToApiShared()
 	var delete string
 	if config.BootMount != nil && current.BootMount != nil {
-		config.BootMount.mapToApiUpdate_Unsafe(current.BootMount, params)
+		config.BootMount.mapToApiUpdate(*current.BootMount, params)
 	}
 	if config.CPU != nil {
 		if current.CPU != nil {
@@ -256,7 +260,7 @@ func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
 			return
 		}
 	}
-	if config.Pool != nil {
+	if config.Pool != nil && config.Pool.String() != "" {
 		if err = config.Pool.Validate(); err != nil {
 			return
 		}
@@ -336,17 +340,19 @@ func (raw RawConfigLXC) DNS() *GuestDNS {
 }
 
 func (raw RawConfigLXC) Memory() *LxcMemory {
+	var memory LxcMemory
 	if v, isSet := raw[lxcApiKeyMemory]; isSet {
-		return util.Pointer(LxcMemory(v.(float64)))
+		memory = LxcMemory(v.(float64))
 	}
-	return nil
+	return &memory
 }
 
 func (raw RawConfigLXC) Name() *GuestName {
+	var name GuestName
 	if v, isSet := raw[lxcApiKeyName]; isSet {
-		return util.Pointer(GuestName(v.(string)))
+		name = GuestName(v.(string))
 	}
-	return nil
+	return &name
 }
 
 func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
@@ -359,17 +365,19 @@ func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
 // Privileged returns true if the container is privileged, false if it is unprivileged.
 // Pointer is never nil.
 func (raw RawConfigLXC) Privileged() *bool {
+	privileged := true
 	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
-		return util.Pointer(v.(float64) == 0)
+		privileged = v.(float64) == 0
 	}
-	return util.Pointer(false)
+	return &privileged
 }
 
 func (raw RawConfigLXC) Swap() *LxcSwap {
+	var swap LxcSwap
 	if v, isSet := raw[lxcApiKeySwap]; isSet {
-		return util.Pointer(LxcSwap(v.(float64)))
+		swap = LxcSwap(v.(float64))
 	}
-	return nil
+	return &swap
 }
 
 func (raw RawConfigLXC) Tags() *Tags {
@@ -389,7 +397,7 @@ const (
 	lxcApiKeyFeatures        string = "features"
 	lxcApiKeyGuestID         string = "vmid"
 	lxcApiKeyMemory          string = "memory"
-	lxcApiKeyName            string = "name"
+	lxcApiKeyName            string = "hostname"
 	lxcApiKeyOperatingSystem string = "ostype"
 	lxcApiKeyOsTemplate      string = "ostemplate"
 	lxcApiKeyPassword        string = "password"

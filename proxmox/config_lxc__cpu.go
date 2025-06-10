@@ -76,7 +76,8 @@ func (raw RawConfigLXC) CPU() *LxcCPU {
 		parameterSet = true
 	}
 	if v, isSet := raw[lxcApiKeyCpuLimit]; isSet {
-		tmp := LxcCpuLimit(v.(float64))
+		tmpInt, _ := strconv.ParseInt(v.(string), 10, 32)
+		tmp := LxcCpuLimit(tmpInt)
 		cpu.Limit = &tmp
 		parameterSet = true
 	}
@@ -152,8 +153,10 @@ func (limit LxcCpuLimit) Validate() error {
 type LxcCpuUnits uint32
 
 const (
+	LxcCpuUnitsDefault        = 0 // uses the PVE default
 	LxcCpuUnitsMaximum        = 100000
-	LxcCpuUnits_Error_Invalid = "cpu units has a maximum of 100000"
+	LxcCpuUnits_Error_Minimum = "cpu units has a minimum of 8"
+	LxcCpuUnits_Error_Maximum = "cpu units has a maximum of 100000"
 )
 
 func (units LxcCpuUnits) String() string {
@@ -161,8 +164,14 @@ func (units LxcCpuUnits) String() string {
 }
 
 func (units LxcCpuUnits) Validate() error {
+	if units == LxcCpuUnitsDefault {
+		return nil
+	}
+	if units < 8 {
+		return errors.New(LxcCpuUnits_Error_Minimum)
+	}
 	if units > LxcCpuUnitsMaximum {
-		return errors.New(LxcCpuUnits_Error_Invalid)
+		return errors.New(LxcCpuUnits_Error_Maximum)
 	}
 	return nil
 }
