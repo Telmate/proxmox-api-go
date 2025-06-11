@@ -33,10 +33,14 @@ type ConfigLXC struct {
 	Node            *NodeName         `json:"node,omitempty"` // only used during creation
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
-	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, never nil when returned
+	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, defaults to false ,never nil when returned
 	Swap            *LxcSwap          `json:"swap,omitempty"`       // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
 }
+
+const (
+	lxcDefaultPrivileged bool = false
+)
 
 const (
 	ConfigLXC_Error_BootMountMissing     = "boot mount is required during creation"
@@ -119,7 +123,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		pool = *config.Pool
 		params[lxcApiKeyPool] = string(pool)
 	}
-	if config.Privileged != nil && !*config.Privileged {
+	if config.Privileged == nil {
+		params[lxcApiKeyUnprivileged] = 1
+	} else if !*config.Privileged {
 		params[lxcApiKeyUnprivileged] = 1
 	}
 	if config.Swap != nil {
@@ -365,11 +371,14 @@ func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
 // Privileged returns true if the container is privileged, false if it is unprivileged.
 // Pointer is never nil.
 func (raw RawConfigLXC) Privileged() *bool {
-	privileged := true
+	return util.Pointer(raw.isPrivileged())
+}
+
+func (raw RawConfigLXC) isPrivileged() bool {
 	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
-		privileged = v.(float64) == 0
+		return v.(float64) == 0
 	}
-	return &privileged
+	return true
 }
 
 func (raw RawConfigLXC) Swap() *LxcSwap {

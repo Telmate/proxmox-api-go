@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"errors"
+	"maps"
 	"net"
 	"net/netip"
 	"testing"
@@ -68,6 +69,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		config        ConfigLXC
 		currentConfig ConfigLXC
 		output        map[string]any
+		omitDefaults  bool // opt out of default values in returned map
 		pool          PoolName
 	}
 	tests := []struct {
@@ -917,8 +919,9 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		{category: `Privileged`,
 			create: []test{
 				{name: `true`,
-					config: ConfigLXC{Privileged: util.Pointer(true)},
-					output: map[string]any{}},
+					config:       ConfigLXC{Privileged: util.Pointer(true)},
+					omitDefaults: true,
+					output:       map[string]any{}},
 				{name: `false`,
 					config: ConfigLXC{Privileged: util.Pointer(false)},
 					output: map[string]any{"unprivileged": int(1)}}},
@@ -963,7 +966,13 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			name := test.category + "/Create/" + subTest.name
 			t.Run(name, func(*testing.T) {
 				tmpParams, pool := subTest.config.mapToApiCreate()
-				require.Equal(t, subTest.output, tmpParams, name)
+				clone := maps.Clone(subTest.output)
+				if !subTest.omitDefaults {
+					if _, isSet := clone["unprivileged"]; !isSet {
+						clone["unprivileged"] = int(1) // Default to unprivileged
+					}
+				}
+				require.Equal(t, clone, tmpParams, name)
 				require.Equal(t, subTest.pool, pool, name)
 			})
 		}
