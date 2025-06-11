@@ -296,8 +296,10 @@ func (config ConfigLXC) validateCreate() (err error) {
 }
 
 func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
-	if err = config.BootMount.Validate(current.BootMount); err != nil {
-		return
+	if config.BootMount != nil {
+		if err = config.BootMount.Validate(current.BootMount); err != nil {
+			return
+		}
 	}
 	return config.Networks.Validate(current.Networks)
 }
