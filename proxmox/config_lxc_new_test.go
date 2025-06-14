@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"errors"
+	"maps"
 	"net"
 	"net/netip"
 	"testing"
@@ -16,14 +17,20 @@ func Test_CpuArchitecture_String(t *testing.T) {
 }
 
 func Test_ConfigLXC_mapToAPI(t *testing.T) {
-	feature := func(value bool) *LxcFeatures {
-		return &LxcFeatures{
+	featuresPrivileged := func(value bool) *LxcFeatures {
+		return &LxcFeatures{Privileged: &PrivilegedFeatures{
+			CreateDeviceNodes: util.Pointer(value),
+			FUSE:              util.Pointer(value),
+			NFS:               util.Pointer(value),
+			Nesting:           util.Pointer(value),
+			SMB:               util.Pointer(value)}}
+	}
+	featuresUnprivileged := func(value bool) *LxcFeatures {
+		return &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
 			CreateDeviceNodes: util.Pointer(value),
 			FUSE:              util.Pointer(value),
 			KeyCtl:            util.Pointer(value),
-			NFS:               util.Pointer(value),
-			Nesting:           util.Pointer(value),
-			SMB:               util.Pointer(value)}
+			Nesting:           util.Pointer(value)}}
 	}
 	parseIP := func(rawIP string) netip.Addr {
 		ip, err := netip.ParseAddr(rawIP)
@@ -68,6 +75,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		config        ConfigLXC
 		currentConfig ConfigLXC
 		output        map[string]any
+		omitDefaults  bool // opt out of default values in returned map
 		pool          PoolName
 	}
 	tests := []struct {
@@ -471,85 +479,153 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						SearchDomain: util.Pointer("example.com")}},
 					output: map[string]any{}}}},
 		{category: `Features`,
+			create: []test{
+				{name: `all false Privileged`,
+					config: ConfigLXC{Features: featuresPrivileged(false)},
+					output: map[string]any{}},
+				{name: `all false Unprivileged`,
+					config: ConfigLXC{Features: featuresUnprivileged(false)},
+					output: map[string]any{}}},
 			createUpdate: []test{
-				{name: `CreateDeviceNodes`,
-					config:        ConfigLXC{Features: &LxcFeatures{CreateDeviceNodes: util.Pointer(true)}},
-					currentConfig: ConfigLXC{Features: feature(false)},
-					output:        map[string]any{"features": "mknod=1"}},
-				{name: `FUSE`,
-					config:        ConfigLXC{Features: &LxcFeatures{FUSE: util.Pointer(true)}},
-					currentConfig: ConfigLXC{Features: feature(false)},
-					output:        map[string]any{"features": "fuse=1"}},
-				{name: `KeyCtl`,
-					config:        ConfigLXC{Features: &LxcFeatures{KeyCtl: util.Pointer(true)}},
-					currentConfig: ConfigLXC{Features: feature(false)},
-					output:        map[string]any{"features": "keyctl=1"}},
-				{name: `NFS`,
-					config:        ConfigLXC{Features: &LxcFeatures{NFS: util.Pointer(true)}},
-					currentConfig: ConfigLXC{Features: feature(false)},
-					output:        map[string]any{"features": "mount=nfs"}},
-				{name: `smb`,
-					config:        ConfigLXC{Features: &LxcFeatures{SMB: util.Pointer(true)}},
-					currentConfig: ConfigLXC{Features: feature(false)},
-					output:        map[string]any{"features": "mount=cifs"}},
-				{name: `Nesting`,
-					config:        ConfigLXC{Features: &LxcFeatures{Nesting: util.Pointer(true)}},
-					currentConfig: ConfigLXC{Features: feature(false)},
-					output:        map[string]any{"features": "nesting=1"}},
-				{name: `NFS and SMB`,
-					config:        ConfigLXC{Features: &LxcFeatures{NFS: util.Pointer(true), SMB: util.Pointer(true)}},
-					currentConfig: ConfigLXC{Features: feature(false)},
-					output:        map[string]any{"features": "mount=nfs;cifs"}},
-				{name: `delete no effect false`,
-					config:        ConfigLXC{Features: feature(false)},
-					currentConfig: ConfigLXC{Features: feature(false)},
-					output:        map[string]any{}}},
+				{name: `CreateDeviceNodes Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						CreateDeviceNodes: util.Pointer(true)}}},
+					output: map[string]any{"features": "mknod=1"}},
+				{name: `CreateDeviceNodes Unprivileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+						CreateDeviceNodes: util.Pointer(true)}}},
+					output: map[string]any{"features": "mknod=1"}},
+				{name: `FUSE Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						FUSE: util.Pointer(true)}}},
+					output: map[string]any{"features": "fuse=1"}},
+				{name: `FUSE Unprivileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+						FUSE: util.Pointer(true)}}},
+					output: map[string]any{"features": "fuse=1"}},
+				{name: `KeyCtl Unprivileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+						KeyCtl: util.Pointer(true)}}},
+					output: map[string]any{"features": "keyctl=1"}},
+				{name: `NFS Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						NFS: util.Pointer(true)}}},
+					output: map[string]any{"features": "mount=nfs"}},
+				{name: `SMB Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						SMB: util.Pointer(true)}}},
+					output: map[string]any{"features": "mount=cifs"}},
+				{name: `Nesting Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						Nesting: util.Pointer(true)}}},
+					output: map[string]any{"features": "nesting=1"}},
+				{name: `Nesting Unprivileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+						Nesting: util.Pointer(true)}}},
+					output: map[string]any{"features": "nesting=1"}},
+				{name: `NFS and SMB Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						NFS: util.Pointer(true), SMB: util.Pointer(true)}}},
+					output: map[string]any{"features": "mount=nfs;cifs"}},
+				{name: `delete no effect false Privileged`,
+					config:        ConfigLXC{Features: featuresPrivileged(false)},
+					currentConfig: ConfigLXC{Features: featuresPrivileged(false)},
+					output:        map[string]any{}},
+				{name: `delete no effect false Unprivileged`,
+					config:        ConfigLXC{Features: featuresUnprivileged(false)},
+					currentConfig: ConfigLXC{Features: featuresUnprivileged(false)},
+					output:        map[string]any{}},
+				{name: `only top-level set, no effect`,
+					config:        ConfigLXC{Features: &LxcFeatures{}},
+					currentConfig: ConfigLXC{Features: &LxcFeatures{}},
+					output:        map[string]any{}},
+			},
 			update: []test{
-				{name: `CreateDeviceNodes false`,
-					config:        ConfigLXC{Features: &LxcFeatures{CreateDeviceNodes: util.Pointer(false)}},
-					currentConfig: ConfigLXC{Features: feature(true)},
-					output:        map[string]any{"features": "fuse=1,keyctl=1,mount=nfs;cifs,nesting=1"}},
-				{name: `FUSE false`,
-					config:        ConfigLXC{Features: &LxcFeatures{FUSE: util.Pointer(false)}},
-					currentConfig: ConfigLXC{Features: feature(true)},
-					output:        map[string]any{"features": "mknod=1,keyctl=1,mount=nfs;cifs,nesting=1"}},
-				{name: `KeyCtl false`,
-					config:        ConfigLXC{Features: &LxcFeatures{KeyCtl: util.Pointer(false)}},
-					currentConfig: ConfigLXC{Features: feature(true)},
-					output:        map[string]any{"features": "mknod=1,fuse=1,mount=nfs;cifs,nesting=1"}},
-				{name: `NFS false`,
-					config:        ConfigLXC{Features: &LxcFeatures{NFS: util.Pointer(false)}},
-					currentConfig: ConfigLXC{Features: feature(true)},
-					output:        map[string]any{"features": "mknod=1,fuse=1,keyctl=1,mount=cifs,nesting=1"}},
-				{name: `SMB false`,
-					config:        ConfigLXC{Features: &LxcFeatures{SMB: util.Pointer(false)}},
-					currentConfig: ConfigLXC{Features: feature(true)},
-					output:        map[string]any{"features": "mknod=1,fuse=1,keyctl=1,mount=nfs,nesting=1"}},
-				{name: `Nesting false`,
-					config:        ConfigLXC{Features: &LxcFeatures{Nesting: util.Pointer(false)}},
-					currentConfig: ConfigLXC{Features: feature(true)},
-					output:        map[string]any{"features": "mknod=1,fuse=1,keyctl=1,mount=nfs;cifs"}},
-				{name: `delete`,
-					config: ConfigLXC{Features: feature(false)},
-					currentConfig: ConfigLXC{Features: &LxcFeatures{
+				{name: `CreateDeviceNodes false Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						CreateDeviceNodes: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresPrivileged(true)},
+					output:        map[string]any{"features": "fuse=1,mount=nfs;cifs,nesting=1"}},
+				{name: `CreateDeviceNodes false Unprivileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+						CreateDeviceNodes: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresUnprivileged(true)},
+					output:        map[string]any{"features": "fuse=1,keyctl=1,nesting=1"}},
+				{name: `FUSE false Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						FUSE: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresPrivileged(true)},
+					output:        map[string]any{"features": "mknod=1,mount=nfs;cifs,nesting=1"}},
+				{name: `FUSE false Unprivileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+						FUSE: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresUnprivileged(true)},
+					output:        map[string]any{"features": "mknod=1,keyctl=1,nesting=1"}},
+				{name: `KeyCtl false Unprivileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+						KeyCtl: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresUnprivileged(true)},
+					output:        map[string]any{"features": "mknod=1,fuse=1,nesting=1"}},
+				{name: `NFS false Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						NFS: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresPrivileged(true)},
+					output:        map[string]any{"features": "mknod=1,fuse=1,mount=cifs,nesting=1"}},
+				{name: `SMB false Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						SMB: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresPrivileged(true)},
+					output:        map[string]any{"features": "mknod=1,fuse=1,mount=nfs,nesting=1"}},
+				{name: `Nesting false Privileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						Nesting: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresPrivileged(true)},
+					output:        map[string]any{"features": "mknod=1,fuse=1,mount=nfs;cifs"}},
+				{name: `Nesting false Unprivileged`,
+					config: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+						Nesting: util.Pointer(false)}}},
+					currentConfig: ConfigLXC{Features: featuresUnprivileged(true)},
+					output:        map[string]any{"features": "mknod=1,fuse=1,keyctl=1"}},
+				{name: `delete Privileged`,
+					config: ConfigLXC{Features: featuresPrivileged(false)},
+					currentConfig: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
+						CreateDeviceNodes: util.Pointer(true),
+						FUSE:              util.Pointer(false),
+						NFS:               util.Pointer(false),
+						Nesting:           util.Pointer(true),
+						SMB:               util.Pointer(true)}}},
+					output: map[string]any{"delete": "features"}},
+				{name: `delete Unprivileged`,
+					config: ConfigLXC{Features: featuresUnprivileged(false)},
+					currentConfig: ConfigLXC{Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
 						CreateDeviceNodes: util.Pointer(true),
 						FUSE:              util.Pointer(false),
 						KeyCtl:            util.Pointer(true),
-						NFS:               util.Pointer(false),
-						Nesting:           util.Pointer(true),
-						SMB:               util.Pointer(true)}},
+						Nesting:           util.Pointer(true)}}},
 					output: map[string]any{"delete": "features"}},
-				{name: `delete no effect nil`,
-					config:        ConfigLXC{Features: feature(false)},
+				{name: `delete no effect nil Privileged`,
+					config:        ConfigLXC{Features: featuresPrivileged(false)},
 					currentConfig: ConfigLXC{Features: nil},
 					output:        map[string]any{}},
-				{name: `same true`,
-					config:        ConfigLXC{Features: feature(true)},
-					currentConfig: ConfigLXC{Features: feature(true)},
+				{name: `delete no effect nil Unprivileged`,
+					config:        ConfigLXC{Features: featuresUnprivileged(false)},
+					currentConfig: ConfigLXC{Features: nil},
 					output:        map[string]any{}},
-				{name: `same true`,
-					config:        ConfigLXC{Features: feature(false)},
-					currentConfig: ConfigLXC{Features: feature(false)},
+				{name: `same false Privileged`,
+					config:        ConfigLXC{Features: featuresPrivileged(false)},
+					currentConfig: ConfigLXC{Features: featuresPrivileged(false)},
+					output:        map[string]any{}},
+				{name: `same false Unprivileged`,
+					config:        ConfigLXC{Features: featuresUnprivileged(false)},
+					currentConfig: ConfigLXC{Features: featuresUnprivileged(false)},
+					output:        map[string]any{}},
+				{name: `same true Privileged`,
+					config:        ConfigLXC{Features: featuresPrivileged(true)},
+					currentConfig: ConfigLXC{Features: featuresPrivileged(true)},
+					output:        map[string]any{}},
+				{name: `same true Unprivileged`,
+					config:        ConfigLXC{Features: featuresUnprivileged(true)},
+					currentConfig: ConfigLXC{Features: featuresUnprivileged(true)},
 					output:        map[string]any{}}}},
 		{category: `ID`,
 			create: []test{
@@ -917,8 +993,9 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		{category: `Privileged`,
 			create: []test{
 				{name: `true`,
-					config: ConfigLXC{Privileged: util.Pointer(true)},
-					output: map[string]any{}},
+					config:       ConfigLXC{Privileged: util.Pointer(true)},
+					omitDefaults: true,
+					output:       map[string]any{}},
 				{name: `false`,
 					config: ConfigLXC{Privileged: util.Pointer(false)},
 					output: map[string]any{"unprivileged": int(1)}}},
@@ -963,7 +1040,13 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			name := test.category + "/Create/" + subTest.name
 			t.Run(name, func(*testing.T) {
 				tmpParams, pool := subTest.config.mapToApiCreate()
-				require.Equal(t, subTest.output, tmpParams, name)
+				clone := maps.Clone(subTest.output)
+				if !subTest.omitDefaults {
+					if _, isSet := clone["unprivileged"]; !isSet {
+						clone["unprivileged"] = int(1) // Default to unprivileged
+					}
+				}
+				require.Equal(t, clone, tmpParams, name)
 				require.Equal(t, subTest.pool, pool, name)
 			})
 		}
@@ -1146,6 +1229,68 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 							CreateOptions: &LxcCreateOptions{
 								OsTemplate: &LxcTemplate{Storage: "local"}}},
 						err: errors.New(LxcTemplate_Error_FileMissing)}}}},
+		{category: `Features`,
+			valid: testType{
+				create: []test{
+					{name: `privileged`,
+						input: baseConfig(ConfigLXC{Privileged: util.Pointer(true),
+							Features: &LxcFeatures{
+								Privileged: &PrivilegedFeatures{}}})},
+					{name: `unprivileged`,
+						input: baseConfig(ConfigLXC{Privileged: util.Pointer(false),
+							Features: &LxcFeatures{
+								Unprivileged: &UnprivilegedFeatures{}}})},
+				},
+				update: []test{
+					{name: `privileged`,
+						input: baseConfig(ConfigLXC{
+							Features: &LxcFeatures{
+								Privileged: &PrivilegedFeatures{}}}),
+						current: &ConfigLXC{Privileged: util.Pointer(true)}},
+					{name: `unprivileged`,
+						input: baseConfig(ConfigLXC{
+							Features: &LxcFeatures{
+								Unprivileged: &UnprivilegedFeatures{}}}),
+						current: &ConfigLXC{Privileged: util.Pointer(false)},
+					},
+				},
+			},
+			invalid: testType{
+				create: []test{
+					{name: `privilege default errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)`,
+						input: baseConfig(ConfigLXC{Features: &LxcFeatures{
+							Privileged: &PrivilegedFeatures{}}}),
+						err: errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)},
+					{name: `errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)`,
+						input: baseConfig(ConfigLXC{Privileged: util.Pointer(false),
+							Features: &LxcFeatures{
+								Privileged: &PrivilegedFeatures{}}}),
+						err: errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)},
+					{name: `errors.New(LxcFeatures_Error_UnprivilegedInPrivileged)`,
+						input: baseConfig(ConfigLXC{Privileged: util.Pointer(true),
+							Features: &LxcFeatures{
+								Unprivileged: &UnprivilegedFeatures{}}}),
+						err: errors.New(LxcFeatures_Error_UnprivilegedInPrivileged)}},
+				createUpdate: []test{
+					{name: `errors.New(LxcFeatures_Error_MutuallyExclusive)`,
+						input: baseConfig(ConfigLXC{Features: &LxcFeatures{
+							Privileged:   &PrivilegedFeatures{},
+							Unprivileged: &UnprivilegedFeatures{}}}),
+						current: &ConfigLXC{Privileged: util.Pointer(false)},
+						err:     errors.New(LxcFeatures_Error_MutuallyExclusive)}},
+				update: []test{
+					{name: `errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)`,
+						input: ConfigLXC{Features: &LxcFeatures{
+							Privileged: &PrivilegedFeatures{}}},
+						current: &ConfigLXC{Privileged: util.Pointer(false)},
+						err:     errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)},
+					{name: `errors.New(LxcFeatures_Error_UnprivilegedInPrivileged)`,
+						input: ConfigLXC{Features: &LxcFeatures{
+							Unprivileged: &UnprivilegedFeatures{}}},
+						current: &ConfigLXC{Privileged: util.Pointer(true)},
+						err:     errors.New(LxcFeatures_Error_UnprivilegedInPrivileged)}},
+			},
+		},
 		{category: `ID`,
 			valid: testType{
 				createUpdate: []test{
@@ -1625,78 +1770,108 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 						SearchDomain: util.Pointer("example.com")}})}}},
 		{category: `Features`,
 			tests: []test{
-				{name: `CreateDeviceNodes`,
-					input: map[string]any{"features": "mknod=1"},
-					output: baseConfig(ConfigLXC{Features: &LxcFeatures{
+				{name: `CreateDeviceNodes Privileged`,
+					input: map[string]any{"features": string("mknod=1")},
+					output: baseConfig(ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
 						CreateDeviceNodes: util.Pointer(true),
 						FUSE:              util.Pointer(false),
-						KeyCtl:            util.Pointer(false),
 						NFS:               util.Pointer(false),
 						Nesting:           util.Pointer(false),
-						SMB:               util.Pointer(false)}})},
-				{name: `FUSE`,
-					input: map[string]any{"features": "fuse=1"},
-					output: baseConfig(ConfigLXC{Features: &LxcFeatures{
+						SMB:               util.Pointer(false)}}})},
+				{name: `CreateDeviceNodes Unprivileged`,
+					input: map[string]any{
+						"features":     string("mknod=1"),
+						"unprivileged": float64(1)},
+					output: baseConfig(ConfigLXC{
+						Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+							CreateDeviceNodes: util.Pointer(true),
+							FUSE:              util.Pointer(false),
+							KeyCtl:            util.Pointer(false),
+							Nesting:           util.Pointer(false)}},
+						Privileged: util.Pointer(false)})},
+				{name: `FUSE Privileged`,
+					input: map[string]any{"features": string("fuse=1")},
+					output: baseConfig(ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
 						CreateDeviceNodes: util.Pointer(false),
 						FUSE:              util.Pointer(true),
-						KeyCtl:            util.Pointer(false),
 						NFS:               util.Pointer(false),
 						Nesting:           util.Pointer(false),
-						SMB:               util.Pointer(false)}})},
-				{name: `KeyCtl`,
-					input: map[string]any{"features": "keyctl=1"},
-					output: baseConfig(ConfigLXC{Features: &LxcFeatures{
+						SMB:               util.Pointer(false)}}})},
+				{name: `FUSE Unprivileged`,
+					input: map[string]any{
+						"features":     string("fuse=1"),
+						"unprivileged": float64(1)},
+					output: baseConfig(ConfigLXC{
+						Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+							CreateDeviceNodes: util.Pointer(false),
+							FUSE:              util.Pointer(true),
+							KeyCtl:            util.Pointer(false),
+							Nesting:           util.Pointer(false)}},
+						Privileged: util.Pointer(false)})},
+				{name: `KeyCtl Unprivileged`,
+					input: map[string]any{
+						"features":     string("keyctl=1"),
+						"unprivileged": float64(1)},
+					output: baseConfig(ConfigLXC{
+						Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+							CreateDeviceNodes: util.Pointer(false),
+							FUSE:              util.Pointer(false),
+							KeyCtl:            util.Pointer(true),
+							Nesting:           util.Pointer(false)}},
+						Privileged: util.Pointer(false)})},
+				{name: `NFS Privileged`,
+					input: map[string]any{"features": string("mount=nfs")},
+					output: baseConfig(ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
 						CreateDeviceNodes: util.Pointer(false),
 						FUSE:              util.Pointer(false),
-						KeyCtl:            util.Pointer(true),
-						NFS:               util.Pointer(false),
-						Nesting:           util.Pointer(false),
-						SMB:               util.Pointer(false)}})},
-				{name: `NFS`,
-					input: map[string]any{"features": "mount=nfs"},
-					output: baseConfig(ConfigLXC{Features: &LxcFeatures{
-						CreateDeviceNodes: util.Pointer(false),
-						FUSE:              util.Pointer(false),
-						KeyCtl:            util.Pointer(false),
 						NFS:               util.Pointer(true),
 						Nesting:           util.Pointer(false),
-						SMB:               util.Pointer(false)}})},
-				{name: `NFS and SMB`,
-					input: map[string]any{"features": "mount=nfs;cifs"},
-					output: baseConfig(ConfigLXC{Features: &LxcFeatures{
+						SMB:               util.Pointer(false)}}})},
+				{name: `NFS and SMB Privileged`,
+					input: map[string]any{
+						"features":     string("mount=nfs;cifs"),
+						"unprivileged": float64(0)},
+					output: baseConfig(ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
 						CreateDeviceNodes: util.Pointer(false),
 						FUSE:              util.Pointer(false),
-						KeyCtl:            util.Pointer(false),
 						NFS:               util.Pointer(true),
 						Nesting:           util.Pointer(false),
-						SMB:               util.Pointer(true)}})},
-				{name: `Nesting`,
-					input: map[string]any{"features": "nesting=1"},
-					output: baseConfig(ConfigLXC{Features: &LxcFeatures{
+						SMB:               util.Pointer(true)}}})},
+				{name: `Nesting Privileged`,
+					input: map[string]any{"features": string("nesting=1")},
+					output: baseConfig(ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
 						CreateDeviceNodes: util.Pointer(false),
 						FUSE:              util.Pointer(false),
-						KeyCtl:            util.Pointer(false),
 						NFS:               util.Pointer(false),
 						Nesting:           util.Pointer(true),
-						SMB:               util.Pointer(false)}})},
-				{name: `SMB`,
-					input: map[string]any{"features": "mount=cifs"},
-					output: baseConfig(ConfigLXC{Features: &LxcFeatures{
+						SMB:               util.Pointer(false)}}})},
+				{name: `Nesting Unprivileged`,
+					input: map[string]any{
+						"features":     string("nesting=1"),
+						"unprivileged": float64(1)},
+					output: baseConfig(ConfigLXC{
+						Features: &LxcFeatures{Unprivileged: &UnprivilegedFeatures{
+							CreateDeviceNodes: util.Pointer(false),
+							FUSE:              util.Pointer(false),
+							KeyCtl:            util.Pointer(false),
+							Nesting:           util.Pointer(true)}},
+						Privileged: util.Pointer(false)})},
+				{name: `SMB Privileged`,
+					input: map[string]any{"features": string("mount=cifs")},
+					output: baseConfig(ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
 						CreateDeviceNodes: util.Pointer(false),
 						FUSE:              util.Pointer(false),
-						KeyCtl:            util.Pointer(false),
 						NFS:               util.Pointer(false),
 						Nesting:           util.Pointer(false),
-						SMB:               util.Pointer(true)}})},
-				{name: `SMB and NFS`,
-					input: map[string]any{"features": "mount=cifs;nfs"},
-					output: baseConfig(ConfigLXC{Features: &LxcFeatures{
+						SMB:               util.Pointer(true)}}})},
+				{name: `SMB and NFS Privileged`,
+					input: map[string]any{"features": string("mount=cifs;nfs")},
+					output: baseConfig(ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
 						CreateDeviceNodes: util.Pointer(false),
 						FUSE:              util.Pointer(false),
-						KeyCtl:            util.Pointer(false),
 						NFS:               util.Pointer(true),
 						Nesting:           util.Pointer(false),
-						SMB:               util.Pointer(true)}})}}},
+						SMB:               util.Pointer(true)}}})}}},
 		{category: `ID`,
 			tests: []test{
 				{name: `set`,

@@ -1,59 +1,49 @@
 package proxmox
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 type LxcFeatures struct {
-	CreateDeviceNodes *bool `json:"create_device_nodes,omitempty"`
-	FUSE              *bool `json:"fuse,omitempty"`
-	KeyCtl            *bool `json:"keyctl,omitempty"`
-	NFS               *bool `json:"nfs,omitempty"`
-	Nesting           *bool `json:"nesting,omitempty"`
-	SMB               *bool `json:"smb,omitempty"`
+	Privileged   *PrivilegedFeatures   `json:"privileged,omitempty"`   // Mutually exclusive with Unprivileged
+	Unprivileged *UnprivilegedFeatures `json:"unprivileged,omitempty"` // Mutually exclusive with Privileged
 }
 
+const (
+	LxcFeatures_Error_MutuallyExclusive        = "privileged and unprivileged features are mutually exclusive"
+	LxcFeatures_Error_PrivilegedInUnprivileged = "privileged features cannot be set in unprivileged containers"
+	LxcFeatures_Error_UnprivilegedInPrivileged = "unprivileged features cannot be set in privileged containers"
+)
+
 func (config LxcFeatures) mapToApiCreate(params map[string]any) {
-	var usedConfig lxcFeatures
-	usedConfig = config.mapToApiIntermediary_Unsafe(usedConfig)
-	if v := usedConfig.String(); v != "" {
-		params[lxcApiKeyFeatures] = v[1:]
+	if config.Privileged != nil {
+		config.Privileged.mapToApiCreate(params)
+	} else if config.Unprivileged != nil {
+		config.Unprivileged.mapToApiCreate(params)
 	}
 }
 
 func (config LxcFeatures) mapToApiUpdate(current LxcFeatures, params map[string]interface{}) string {
-	var usedConfig, currentConfig lxcFeatures
-	usedConfig = current.mapToApiIntermediary_Unsafe(usedConfig)
-	currentConfig = usedConfig
-	usedConfig = config.mapToApiIntermediary_Unsafe(usedConfig)
-	if usedConfig == currentConfig {
-		return ""
+	if config.Privileged != nil && current.Privileged != nil {
+		return config.Privileged.mapToApiUpdate(*current.Privileged, params)
+	} else if config.Unprivileged != nil && current.Unprivileged != nil {
+		return config.Unprivileged.mapToApiUpdate(*current.Unprivileged, params)
 	}
-	if v := usedConfig.String(); v != "" {
-		params[lxcApiKeyFeatures] = v[1:]
-		return ""
-	}
-	return "," + lxcApiKeyFeatures
+	return ""
 }
 
-func (config LxcFeatures) mapToApiIntermediary_Unsafe(usedConfig lxcFeatures) lxcFeatures {
-	if config.CreateDeviceNodes != nil {
-		usedConfig[lxcFeaturesCreateDeviceNodes] = *config.CreateDeviceNodes
+func (config LxcFeatures) Validate(privileged bool) error {
+	if config.Privileged != nil && config.Unprivileged != nil {
+		return errors.New(LxcFeatures_Error_MutuallyExclusive)
 	}
-	if config.FUSE != nil {
-		usedConfig[lxcFeaturesFUSE] = *config.FUSE
+	if config.Privileged != nil && !privileged {
+		return errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)
 	}
-	if config.KeyCtl != nil {
-		usedConfig[lxcFeaturesKeyCtl] = *config.KeyCtl
+	if config.Unprivileged != nil && privileged {
+		return errors.New(LxcFeatures_Error_UnprivilegedInPrivileged)
 	}
-	if config.NFS != nil {
-		usedConfig[lxcFeaturesNFS] = *config.NFS
-	}
-	if config.Nesting != nil {
-		usedConfig[lxcFeaturesNesting] = *config.Nesting
-	}
-	if config.SMB != nil {
-		usedConfig[lxcFeaturesSMB] = *config.SMB
-	}
-	return usedConfig
+	return nil
 }
 
 type lxcFeatures [lxcFeaturesLength]bool
@@ -91,6 +81,102 @@ func (features lxcFeatures) String() (settings string) { // String is for fmt.St
 		settings += ",nesting=1"
 	}
 	return
+}
+
+type PrivilegedFeatures struct {
+	CreateDeviceNodes *bool `json:"create_device_nodes,omitempty"` // Never nil when returned
+	FUSE              *bool `json:"fuse,omitempty"`                // Never nil when returned
+	NFS               *bool `json:"nfs,omitempty"`                 // Never nil when returned
+	Nesting           *bool `json:"nesting,omitempty"`             // Never nil when returned
+	SMB               *bool `json:"smb,omitempty"`                 // Never nil when returned
+}
+
+func (config PrivilegedFeatures) mapToApiCreate(params map[string]any) {
+	var usedConfig lxcFeatures
+	usedConfig = config.mapToApiIntermediary(usedConfig)
+	if v := usedConfig.String(); v != "" {
+		params[lxcApiKeyFeatures] = v[1:]
+	}
+}
+
+func (config PrivilegedFeatures) mapToApiUpdate(current PrivilegedFeatures, params map[string]any) string {
+	var usedConfig, currentConfig lxcFeatures
+	usedConfig = current.mapToApiIntermediary(usedConfig)
+	currentConfig = usedConfig
+	usedConfig = config.mapToApiIntermediary(usedConfig)
+	if usedConfig == currentConfig {
+		return ""
+	}
+	if v := usedConfig.String(); v != "" {
+		params[lxcApiKeyFeatures] = v[1:]
+		return ""
+	}
+	return "," + lxcApiKeyFeatures
+}
+
+func (config PrivilegedFeatures) mapToApiIntermediary(usedConfig lxcFeatures) lxcFeatures {
+	if config.CreateDeviceNodes != nil {
+		usedConfig[lxcFeaturesCreateDeviceNodes] = *config.CreateDeviceNodes
+	}
+	if config.FUSE != nil {
+		usedConfig[lxcFeaturesFUSE] = *config.FUSE
+	}
+	if config.NFS != nil {
+		usedConfig[lxcFeaturesNFS] = *config.NFS
+	}
+	if config.Nesting != nil {
+		usedConfig[lxcFeaturesNesting] = *config.Nesting
+	}
+	if config.SMB != nil {
+		usedConfig[lxcFeaturesSMB] = *config.SMB
+	}
+	return usedConfig
+}
+
+type UnprivilegedFeatures struct {
+	CreateDeviceNodes *bool `json:"create_device_nodes,omitempty"` // Never nil when returned
+	FUSE              *bool `json:"fuse,omitempty"`                // Never nil when returned
+	KeyCtl            *bool `json:"keyctl,omitempty"`              // Never nil when returned
+	Nesting           *bool `json:"nesting,omitempty"`             // Never nil when returned
+}
+
+func (config UnprivilegedFeatures) mapToApiCreate(params map[string]any) {
+	var usedConfig lxcFeatures
+	usedConfig = config.mapToApiIntermediary(usedConfig)
+	if v := usedConfig.String(); v != "" {
+		params[lxcApiKeyFeatures] = v[1:]
+	}
+}
+
+func (config UnprivilegedFeatures) mapToApiUpdate(current UnprivilegedFeatures, params map[string]any) string {
+	var usedConfig, currentConfig lxcFeatures
+	usedConfig = current.mapToApiIntermediary(usedConfig)
+	currentConfig = usedConfig
+	usedConfig = config.mapToApiIntermediary(usedConfig)
+	if usedConfig == currentConfig {
+		return ""
+	}
+	if v := usedConfig.String(); v != "" {
+		params[lxcApiKeyFeatures] = v[1:]
+		return ""
+	}
+	return "," + lxcApiKeyFeatures
+}
+
+func (config UnprivilegedFeatures) mapToApiIntermediary(usedConfig lxcFeatures) lxcFeatures {
+	if config.CreateDeviceNodes != nil {
+		usedConfig[lxcFeaturesCreateDeviceNodes] = *config.CreateDeviceNodes
+	}
+	if config.FUSE != nil {
+		usedConfig[lxcFeaturesFUSE] = *config.FUSE
+	}
+	if config.KeyCtl != nil {
+		usedConfig[lxcFeaturesKeyCtl] = *config.KeyCtl
+	}
+	if config.Nesting != nil {
+		usedConfig[lxcFeaturesNesting] = *config.Nesting
+	}
+	return usedConfig
 }
 
 func (raw RawConfigLXC) Features() *LxcFeatures {
@@ -134,11 +220,19 @@ func (raw RawConfigLXC) Features() *LxcFeatures {
 	if !set {
 		return nil
 	}
+	if raw.isPrivileged() {
+		return &LxcFeatures{
+			Privileged: &PrivilegedFeatures{
+				CreateDeviceNodes: &features[lxcFeaturesCreateDeviceNodes],
+				FUSE:              &features[lxcFeaturesFUSE],
+				NFS:               &features[lxcFeaturesNFS],
+				Nesting:           &features[lxcFeaturesNesting],
+				SMB:               &features[lxcFeaturesSMB]}}
+	}
 	return &LxcFeatures{
-		CreateDeviceNodes: &features[lxcFeaturesCreateDeviceNodes],
-		FUSE:              &features[lxcFeaturesFUSE],
-		KeyCtl:            &features[lxcFeaturesKeyCtl],
-		NFS:               &features[lxcFeaturesNFS],
-		Nesting:           &features[lxcFeaturesNesting],
-		SMB:               &features[lxcFeaturesSMB]}
+		Unprivileged: &UnprivilegedFeatures{
+			KeyCtl:            &features[lxcFeaturesKeyCtl],
+			CreateDeviceNodes: &features[lxcFeaturesCreateDeviceNodes],
+			FUSE:              &features[lxcFeaturesFUSE],
+			Nesting:           &features[lxcFeaturesNesting]}}
 }

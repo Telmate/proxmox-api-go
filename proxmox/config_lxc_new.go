@@ -33,10 +33,14 @@ type ConfigLXC struct {
 	Node            *NodeName         `json:"node,omitempty"` // only used during creation
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
-	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, never nil when returned
+	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, defaults to false ,never nil when returned
 	Swap            *LxcSwap          `json:"swap,omitempty"`       // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
 }
+
+const (
+	lxcDefaultPrivilege bool = false
+)
 
 const (
 	ConfigLXC_Error_BootMountMissing     = "boot mount is required during creation"
@@ -119,7 +123,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		pool = *config.Pool
 		params[lxcApiKeyPool] = string(pool)
 	}
-	if config.Privileged != nil && !*config.Privileged {
+	if config.Privileged == nil || !*config.Privileged {
 		params[lxcApiKeyUnprivileged] = 1
 	}
 	if config.Swap != nil {
@@ -286,12 +290,28 @@ func (config ConfigLXC) validateCreate() (err error) {
 	if err = config.CreateOptions.Validate(); err != nil {
 		return
 	}
+	if config.Features != nil {
+		privilege := lxcDefaultPrivilege
+		if config.Privileged != nil {
+			privilege = *config.Privileged
+		}
+		if err = config.Features.Validate(privilege); err != nil {
+			return
+		}
+	}
 	return config.Networks.Validate(nil)
 }
 
 func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
-	if err = config.BootMount.Validate(current.BootMount); err != nil {
-		return
+	if config.BootMount != nil {
+		if err = config.BootMount.Validate(current.BootMount); err != nil {
+			return
+		}
+	}
+	if config.Features != nil {
+		if err = config.Features.Validate(*current.Privileged); err != nil {
+			return
+		}
 	}
 	return config.Networks.Validate(current.Networks)
 }
@@ -365,11 +385,14 @@ func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
 // Privileged returns true if the container is privileged, false if it is unprivileged.
 // Pointer is never nil.
 func (raw RawConfigLXC) Privileged() *bool {
-	privileged := true
+	return util.Pointer(raw.isPrivileged())
+}
+
+func (raw RawConfigLXC) isPrivileged() bool {
 	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
-		privileged = v.(float64) == 0
+		return v.(float64) == 0
 	}
-	return &privileged
+	return true // when privileged the API does not return the key at all, so we assume it is privileged
 }
 
 func (raw RawConfigLXC) Swap() *LxcSwap {
