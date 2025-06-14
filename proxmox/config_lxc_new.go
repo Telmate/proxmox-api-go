@@ -291,11 +291,11 @@ func (config ConfigLXC) validateCreate() (err error) {
 		return
 	}
 	if config.Features != nil {
-		priviledge := lxcDefaultPrivilege
+		privilege := lxcDefaultPrivilege
 		if config.Privileged != nil {
-			priviledge = *config.Privileged
+			privilege = *config.Privileged
 		}
-		if err = config.Features.Validate(priviledge); err != nil {
+		if err = config.Features.Validate(privilege); err != nil {
 			return
 		}
 	}

@@ -1257,7 +1257,7 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 			},
 			invalid: testType{
 				create: []test{
-					{name: `priviledge default errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)`,
+					{name: `privilege default errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)`,
 						input: baseConfig(ConfigLXC{Features: &LxcFeatures{
 							Privileged: &PrivilegedFeatures{}}}),
 						err: errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)},
