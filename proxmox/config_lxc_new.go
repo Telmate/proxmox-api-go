@@ -394,7 +394,7 @@ func (raw RawConfigLXC) isPrivileged() bool {
 	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
 		return v.(float64) == 0
 	}
-	return true
+	return true // when privileged the API does not return the key at all, so we assume it is privileged
 }
 
 func (raw RawConfigLXC) Swap() *LxcSwap {
