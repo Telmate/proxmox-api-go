@@ -33,14 +33,14 @@ func (config LxcFeatures) mapToApiUpdate(current LxcFeatures, params map[string]
 	return ""
 }
 
-func (config LxcFeatures) Validate(Privileged bool) error {
+func (config LxcFeatures) Validate(privileged bool) error {
 	if config.Privileged != nil && config.Unprivileged != nil {
 		return errors.New(LxcFeatures_Error_MutuallyExclusive)
 	}
-	if config.Privileged != nil && !Privileged {
+	if config.Privileged != nil && !privileged {
 		return errors.New(LxcFeatures_Error_PrivilegedInUnprivileged)
 	}
-	if config.Unprivileged != nil && Privileged {
+	if config.Unprivileged != nil && privileged {
 		return errors.New(LxcFeatures_Error_UnprivilegedInPrivileged)
 	}
 	return nil
