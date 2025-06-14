@@ -123,9 +123,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		pool = *config.Pool
 		params[lxcApiKeyPool] = string(pool)
 	}
-	if config.Privileged == nil {
-		params[lxcApiKeyUnprivileged] = 1
-	} else if !*config.Privileged {
+	if config.Privileged == nil || !*config.Privileged {
 		params[lxcApiKeyUnprivileged] = 1
 	}
 	if config.Swap != nil {
