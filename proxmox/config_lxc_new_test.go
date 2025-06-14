@@ -1778,7 +1778,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 						NFS:               util.Pointer(false),
 						Nesting:           util.Pointer(false),
 						SMB:               util.Pointer(false)}}})},
-				{name: `CreateDeviceNodes Unrivileged`,
+				{name: `CreateDeviceNodes Unprivileged`,
 					input: map[string]any{
 						"features":     string("mknod=1"),
 						"unprivileged": float64(1)},
@@ -1797,7 +1797,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 						NFS:               util.Pointer(false),
 						Nesting:           util.Pointer(false),
 						SMB:               util.Pointer(false)}}})},
-				{name: `FUSE Unrivileged`,
+				{name: `FUSE Unprivileged`,
 					input: map[string]any{
 						"features":     string("fuse=1"),
 						"unprivileged": float64(1)},
@@ -1808,7 +1808,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 							KeyCtl:            util.Pointer(false),
 							Nesting:           util.Pointer(false)}},
 						Privileged: util.Pointer(false)})},
-				{name: `KeyCtl Unrivileged`,
+				{name: `KeyCtl Unprivileged`,
 					input: map[string]any{
 						"features":     string("keyctl=1"),
 						"unprivileged": float64(1)},
@@ -1845,7 +1845,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 						NFS:               util.Pointer(false),
 						Nesting:           util.Pointer(true),
 						SMB:               util.Pointer(false)}}})},
-				{name: `Nesting Unrivileged`,
+				{name: `Nesting Unprivileged`,
 					input: map[string]any{
 						"features":     string("nesting=1"),
 						"unprivileged": float64(1)},

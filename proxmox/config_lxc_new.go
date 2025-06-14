@@ -39,7 +39,7 @@ type ConfigLXC struct {
 }
 
 const (
-	lxcDefaultPrivileged bool = false
+	lxcDefaultPrivilege bool = false
 )
 
 const (
@@ -293,7 +293,7 @@ func (config ConfigLXC) validateCreate() (err error) {
 		return
 	}
 	if config.Features != nil {
-		priviledge := lxcDefaultPrivileged
+		priviledge := lxcDefaultPrivilege
 		if config.Privileged != nil {
 			priviledge = *config.Privileged
 		}
