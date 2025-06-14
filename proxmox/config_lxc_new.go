@@ -292,12 +292,26 @@ func (config ConfigLXC) validateCreate() (err error) {
 	if err = config.CreateOptions.Validate(); err != nil {
 		return
 	}
+	if config.Features != nil {
+		priviledge := lxcDefaultPrivileged
+		if config.Privileged != nil {
+			priviledge = *config.Privileged
+		}
+		if err = config.Features.Validate(priviledge); err != nil {
+			return
+		}
+	}
 	return config.Networks.Validate(nil)
 }
 
 func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 	if config.BootMount != nil {
 		if err = config.BootMount.Validate(current.BootMount); err != nil {
+			return
+		}
+	}
+	if config.Features != nil {
+		if err = config.Features.Validate(*current.Privileged); err != nil {
 			return
 		}
 	}
