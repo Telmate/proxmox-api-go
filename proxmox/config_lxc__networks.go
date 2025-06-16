@@ -15,18 +15,18 @@ import (
 // https://github.com/proxmox/proxmox-ve-rs/blob/1811e0560cb11186aa94fe24605ce8bf7d05cc62/proxmox-ve-config/src/guest/vm.rs#L154
 
 type LxcNetwork struct {
-	Bridge        *string           `json:"bridge,omitempty"`    // Required for creation. Never nil
-	Connected     *bool             `json:"connected,omitempty"` // Never nil
-	Delete        bool              `json:"delete,omitempty"`
-	Firewall      *bool             `json:"firewall,omitempty"` // Never nil
+	Bridge        *string           `json:"bridge,omitempty"`    // Required for creation. Never nil when returned
+	Connected     *bool             `json:"connected,omitempty"` // Never nil when returned
+	Firewall      *bool             `json:"firewall,omitempty"`  // Never nil when returned
 	IPv4          *LxcIPv4          `json:"ipv4,omitempty"`
 	IPv6          *LxcIPv6          `json:"ipv6,omitempty"`
 	MAC           *net.HardwareAddr `json:"mac,omitempty"`
 	Mtu           *MTU              `json:"mtu,omitempty"`
-	Name          *LxcNetworkName   `json:"name,omitempty"` // Required for creation. Never nil
+	Name          *LxcNetworkName   `json:"name,omitempty"` // Required for creation. Never nil when returned
 	NativeVlan    *Vlan             `json:"native_vlan,omitempty"`
 	RateLimitKBps *GuestNetworkRate `json:"rate,omitempty"`
 	TaggedVlans   *Vlans            `json:"tagged_vlans,omitempty"`
+	Delete        bool              `json:"delete,omitempty"`
 	mac           string
 }
 
@@ -474,8 +474,8 @@ func (name LxcNetworkName) Validate() error {
 
 type LxcIPv4 struct {
 	Address *IPv4CIDR    `json:"address,omitempty"`
-	DHCP    bool         `json:"dhcp,omitempty"`
 	Gateway *IPv4Address `json:"gateway,omitempty"`
+	DHCP    bool         `json:"dhcp,omitempty"`
 	Manual  bool         `json:"manual,omitempty"`
 }
 
@@ -563,8 +563,8 @@ func (ipv4 LxcIPv4) Validate() error {
 
 type LxcIPv6 struct {
 	Address *IPv6CIDR    `json:"address,omitempty"`
-	DHCP    bool         `json:"dhcp,omitempty"`
 	Gateway *IPv6Address `json:"gateway,omitempty"`
+	DHCP    bool         `json:"dhcp,omitempty"`
 	SLAAC   bool         `json:"slaac,omitempty"`
 	Manual  bool         `json:"manual,omitempty"`
 }
