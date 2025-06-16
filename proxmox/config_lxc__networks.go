@@ -20,7 +20,7 @@ type LxcNetwork struct {
 	Firewall      *bool             `json:"firewall,omitempty"`  // Never nil when returned
 	IPv4          *LxcIPv4          `json:"ipv4,omitempty"`
 	IPv6          *LxcIPv6          `json:"ipv6,omitempty"`
-	MAC           *net.HardwareAddr `json:"mac,omitempty"`
+	MAC           *net.HardwareAddr `json:"mac,omitempty"` // Never nil when returned
 	Mtu           *MTU              `json:"mtu,omitempty"`
 	Name          *LxcNetworkName   `json:"name,omitempty"` // Required for creation. Never nil when returned
 	NativeVlan    *Vlan             `json:"native_vlan,omitempty"`
@@ -349,6 +349,8 @@ func (raw RawConfigLXC) Networks() LxcNetworks {
 			var connected bool = true
 			var firewall bool
 			var name LxcNetworkName
+			var mac net.HardwareAddr
+			var macOriginal string
 			settings := splitStringOfSettings(v.(string))
 			if v, isSet := settings["bridge"]; isSet {
 				bridge = v
@@ -362,11 +364,17 @@ func (raw RawConfigLXC) Networks() LxcNetworks {
 			if v, isSet := settings["name"]; isSet {
 				name = LxcNetworkName(v)
 			}
+			if v, isSet := settings["hwaddr"]; isSet {
+				macOriginal = v // Store the original MAC address to preserve case
+				mac, _ = net.ParseMAC(v)
+			}
 			network := LxcNetwork{
 				Bridge:    &bridge,
 				Connected: &connected,
 				Firewall:  &firewall,
-				Name:      &name}
+				MAC:       &mac,
+				Name:      &name,
+				mac:       macOriginal}
 			var ipSet bool
 			var ipv4 LxcIPv4
 			if v, isSet := settings["ip"]; isSet {
@@ -408,11 +416,6 @@ func (raw RawConfigLXC) Networks() LxcNetworks {
 			}
 			if ipSet {
 				network.IPv6 = &ipv6
-			}
-			if v, isSet := settings["hwaddr"]; isSet {
-				network.mac = v // Store the original MAC address to preserve case
-				mac, _ := net.ParseMAC(v)
-				network.MAC = &mac
 			}
 			if v, isSet := settings["mtu"]; isSet {
 				mtu, _ := strconv.Atoi(v)

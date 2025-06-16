@@ -1608,6 +1608,10 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		if config.Name == nil {
 			config.Name = util.Pointer(LxcNetworkName(""))
 		}
+		if config.MAC == nil {
+			var mac net.HardwareAddr
+			config.MAC = util.Pointer(mac)
+		}
 		return config
 	}
 	type test struct {
