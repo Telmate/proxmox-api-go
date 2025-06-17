@@ -15,18 +15,18 @@ import (
 // https://github.com/proxmox/proxmox-ve-rs/blob/1811e0560cb11186aa94fe24605ce8bf7d05cc62/proxmox-ve-config/src/guest/vm.rs#L154
 
 type LxcNetwork struct {
-	Bridge        *string           `json:"bridge,omitempty"`    // Required for creation. Never nil
-	Connected     *bool             `json:"connected,omitempty"` // Never nil
-	Delete        bool              `json:"delete,omitempty"`
-	Firewall      *bool             `json:"firewall,omitempty"` // Never nil
+	Bridge        *string           `json:"bridge,omitempty"`    // Required for creation. Never nil when returned
+	Connected     *bool             `json:"connected,omitempty"` // Never nil when returned
+	Firewall      *bool             `json:"firewall,omitempty"`  // Never nil when returned
 	IPv4          *LxcIPv4          `json:"ipv4,omitempty"`
 	IPv6          *LxcIPv6          `json:"ipv6,omitempty"`
-	MAC           *net.HardwareAddr `json:"mac,omitempty"`
+	MAC           *net.HardwareAddr `json:"mac,omitempty"` // Never nil when returned
 	Mtu           *MTU              `json:"mtu,omitempty"`
-	Name          *LxcNetworkName   `json:"name,omitempty"` // Required for creation. Never nil
+	Name          *LxcNetworkName   `json:"name,omitempty"` // Required for creation. Never nil when returned
 	NativeVlan    *Vlan             `json:"native_vlan,omitempty"`
 	RateLimitKBps *GuestNetworkRate `json:"rate,omitempty"`
 	TaggedVlans   *Vlans            `json:"tagged_vlans,omitempty"`
+	Delete        bool              `json:"delete,omitempty"`
 	mac           string
 }
 
@@ -179,6 +179,9 @@ func (config LxcNetwork) Validate(current *LxcNetwork) error {
 }
 
 func (config LxcNetwork) validate() error {
+	if config.Delete {
+		return nil
+	}
 	if config.IPv4 != nil {
 		if err := config.IPv4.Validate(); err != nil {
 			return err
@@ -218,10 +221,13 @@ func (config LxcNetwork) validate() error {
 }
 
 func (config LxcNetwork) validateCreate() error {
+	if config.Delete {
+		return nil // nothing to validate
+	}
 	if config.Bridge == nil || *config.Bridge == "" {
 		return errors.New(LxcNetwork_Error_BridgeRequired)
 	}
-	if config.Name == nil || *config.Name == "" {
+	if config.Name == nil {
 		return errors.New(LxcNetwork_Error_NameRequired)
 	}
 	return config.validate()
@@ -269,25 +275,28 @@ func (config LxcNetworks) Validate(current LxcNetworks) error {
 	if len(config) > LxcNetworksAmount {
 		return errors.New(LxcNetworks_Error_Amount)
 	}
-	// Check for duplicate Name
-	combined := make(map[LxcNetworkID]LxcNetworkName, len(config)+len(current))
-	for k, e := range current {
-		if e.Name != nil {
-			combined[k] = *e.Name
+
+	transformedState := map[LxcNetworkID]LxcNetworkName{} // The transformed state of config being applied over current
+	for k, v := range current {
+		if v.Name != nil {
+			transformedState[k] = *v.Name
 		}
 	}
-	for k, e := range config {
-		if e.Name != nil {
-			combined[k] = *e.Name
+	for k, v := range config {
+		if v.Delete { // Remove all networks marked for deletion
+			delete(transformedState, k)
+		} else if v.Name != nil { // Add or Overwrite existing networks
+			transformedState[k] = *v.Name
 		}
 	}
-	uniqueNames := make(map[LxcNetworkName]struct{}, len(config)+len(current))
-	for _, e := range combined {
-		if _, isSet := uniqueNames[e]; isSet {
+	uniqueNames := make(map[LxcNetworkName]struct{}, len(transformedState))
+	for _, v := range transformedState {
+		if _, duplicate := uniqueNames[v]; duplicate {
 			return errors.New(LxcNetworks_Error_DuplicateName)
 		}
-		uniqueNames[e] = struct{}{}
+		uniqueNames[v] = struct{}{}
 	}
+
 	var err error
 	for id, network := range config {
 		if err = id.Validate(); err != nil {
@@ -349,6 +358,8 @@ func (raw RawConfigLXC) Networks() LxcNetworks {
 			var connected bool = true
 			var firewall bool
 			var name LxcNetworkName
+			var mac net.HardwareAddr
+			var macOriginal string
 			settings := splitStringOfSettings(v.(string))
 			if v, isSet := settings["bridge"]; isSet {
 				bridge = v
@@ -362,11 +373,17 @@ func (raw RawConfigLXC) Networks() LxcNetworks {
 			if v, isSet := settings["name"]; isSet {
 				name = LxcNetworkName(v)
 			}
+			if v, isSet := settings["hwaddr"]; isSet {
+				macOriginal = v // Store the original MAC address to preserve case
+				mac, _ = net.ParseMAC(v)
+			}
 			network := LxcNetwork{
 				Bridge:    &bridge,
 				Connected: &connected,
 				Firewall:  &firewall,
-				Name:      &name}
+				MAC:       &mac,
+				Name:      &name,
+				mac:       macOriginal}
 			var ipSet bool
 			var ipv4 LxcIPv4
 			if v, isSet := settings["ip"]; isSet {
@@ -408,11 +425,6 @@ func (raw RawConfigLXC) Networks() LxcNetworks {
 			}
 			if ipSet {
 				network.IPv6 = &ipv6
-			}
-			if v, isSet := settings["hwaddr"]; isSet {
-				network.mac = v // Store the original MAC address to preserve case
-				mac, _ := net.ParseMAC(v)
-				network.MAC = &mac
 			}
 			if v, isSet := settings["mtu"]; isSet {
 				mtu, _ := strconv.Atoi(v)
@@ -474,8 +486,8 @@ func (name LxcNetworkName) Validate() error {
 
 type LxcIPv4 struct {
 	Address *IPv4CIDR    `json:"address,omitempty"`
-	DHCP    bool         `json:"dhcp,omitempty"`
 	Gateway *IPv4Address `json:"gateway,omitempty"`
+	DHCP    bool         `json:"dhcp,omitempty"`
 	Manual  bool         `json:"manual,omitempty"`
 }
 
@@ -484,6 +496,21 @@ const (
 	LxcIPv4_Error_MutuallyExclusiveAddress = "lxc IPv4 Address and DHCP/Manual are mutually exclusive"
 	LxcIPv4_Error_MutuallyExclusiveGateway = "lxc IPv4 Gateway and DHCP/Manual are mutually exclusive"
 )
+
+func (config LxcIPv4) combine(current LxcIPv4) LxcIPv4 {
+	combined := LxcIPv4{
+		Address: current.Address,
+		DHCP:    config.DHCP,
+		Gateway: current.Gateway,
+		Manual:  config.Manual}
+	if config.Address != nil {
+		combined.Address = config.Address
+	}
+	if config.Gateway != nil {
+		combined.Gateway = config.Gateway
+	}
+	return combined
+}
 
 func (config LxcIPv4) mapToApiCreate() string {
 	if config.DHCP {
@@ -494,39 +521,36 @@ func (config LxcIPv4) mapToApiCreate() string {
 	}
 	var settings string
 	if config.Address != nil {
-		settings += ",ip=" + config.Address.String()
+		if v := config.Address.String(); v != "" {
+			settings += ",ip=" + v
+		}
 	}
 	if config.Gateway != nil {
-		return settings + ",gw=" + config.Gateway.String()
+		if v := config.Gateway.String(); v != "" {
+			return settings + ",gw=" + v
+		}
 	}
 	return settings
 }
 
 func (config LxcIPv4) mapToApiUpdate(current LxcIPv4) string {
-	if config.DHCP {
+	combined := config.combine(current) // Combine the current and new config to preserve settings not being updated
+	if combined.DHCP {
 		return ",ip=dhcp"
 	}
-	if config.Manual {
+	if combined.Manual {
 		return ",ip=manual"
 	}
 	var settings string
-	if config.Address != nil {
-		settings += ",ip=" + config.Address.String()
-	} else {
-		if current.DHCP {
-			return ",ip=dhcp"
-		}
-		if current.Manual {
-			return ",ip=manual"
-		}
-		if current.Address != nil && current.Address.String() != "" {
-			settings += ",ip=" + current.Address.String()
+	if combined.Address != nil {
+		if v := combined.Address.String(); v != "" {
+			settings += ",ip=" + v
 		}
 	}
-	if config.Gateway != nil {
-		return settings + ",gw=" + config.Gateway.String()
-	} else if current.Gateway != nil && current.Gateway.String() != "" {
-		return settings + ",gw=" + current.Gateway.String()
+	if combined.Gateway != nil {
+		if v := combined.Gateway.String(); v != "" {
+			return settings + ",gw=" + v
+		}
 	}
 	return settings
 }
@@ -563,8 +587,8 @@ func (ipv4 LxcIPv4) Validate() error {
 
 type LxcIPv6 struct {
 	Address *IPv6CIDR    `json:"address,omitempty"`
-	DHCP    bool         `json:"dhcp,omitempty"`
 	Gateway *IPv6Address `json:"gateway,omitempty"`
+	DHCP    bool         `json:"dhcp,omitempty"`
 	SLAAC   bool         `json:"slaac,omitempty"`
 	Manual  bool         `json:"manual,omitempty"`
 }
@@ -574,6 +598,22 @@ const (
 	LxcIPv6_Error_MutuallyExclusiveAddress = "lxc IPv6 Address and DHCP/SLAAC/Manual are mutually exclusive"
 	LxcIPv6_Error_MutuallyExclusiveGateway = "lxc IPv6 Gateway and DHCP/SLAAC/Manual are mutually exclusive"
 )
+
+func (config LxcIPv6) combine(current LxcIPv6) LxcIPv6 {
+	combined := LxcIPv6{
+		Address: current.Address,
+		DHCP:    config.DHCP,
+		Gateway: current.Gateway,
+		Manual:  config.Manual,
+		SLAAC:   config.SLAAC}
+	if config.Address != nil {
+		combined.Address = config.Address
+	}
+	if config.Gateway != nil {
+		combined.Gateway = config.Gateway
+	}
+	return combined
+}
 
 func (config LxcIPv6) mapToApiCreate() string {
 	if config.DHCP {
@@ -587,45 +627,39 @@ func (config LxcIPv6) mapToApiCreate() string {
 	}
 	var settings string
 	if config.Address != nil {
-		settings += ",ip6=" + config.Address.String()
+		if v := config.Address.String(); v != "" {
+			settings += ",ip6=" + v
+		}
 	}
 	if config.Gateway != nil {
-		return settings + ",gw6=" + config.Gateway.String()
+		if v := config.Gateway.String(); v != "" {
+			return settings + ",gw6=" + v
+		}
 	}
 	return settings
 }
 
 func (config LxcIPv6) mapToApiUpdate(current LxcIPv6) string {
-	if config.DHCP {
+	combined := config.combine(current)
+	if combined.DHCP {
 		return ",ip6=dhcp"
 	}
-	if config.Manual {
+	if combined.Manual {
 		return ",ip6=manual"
 	}
-	if config.SLAAC {
+	if combined.SLAAC {
 		return ",ip6=auto"
 	}
 	var settings string
-	if config.Address != nil {
-		settings += ",ip6=" + config.Address.String()
-	} else {
-		if current.DHCP {
-			return ",ip6=dhcp"
-		}
-		if current.Manual {
-			return ",ip6=manual"
-		}
-		if current.SLAAC {
-			return ",ip6=auto"
-		}
-		if current.Address != nil && current.Address.String() != "" {
-			settings += ",ip6=" + current.Address.String()
+	if combined.Address != nil {
+		if v := combined.Address.String(); v != "" {
+			settings += ",ip6=" + v
 		}
 	}
-	if config.Gateway != nil {
-		return settings + ",gw6=" + config.Gateway.String()
-	} else if current.Gateway != nil && current.Gateway.String() != "" {
-		return settings + ",gw6=" + current.Gateway.String()
+	if combined.Gateway != nil {
+		if v := combined.Gateway.String(); v != "" {
+			return settings + ",gw6=" + v
+		}
 	}
 	return settings
 }
