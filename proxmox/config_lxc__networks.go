@@ -179,6 +179,9 @@ func (config LxcNetwork) Validate(current *LxcNetwork) error {
 }
 
 func (config LxcNetwork) validate() error {
+	if config.Delete {
+		return nil
+	}
 	if config.IPv4 != nil {
 		if err := config.IPv4.Validate(); err != nil {
 			return err
@@ -218,6 +221,9 @@ func (config LxcNetwork) validate() error {
 }
 
 func (config LxcNetwork) validateCreate() error {
+	if config.Delete {
+		return nil // nothing to validate
+	}
 	if config.Bridge == nil || *config.Bridge == "" {
 		return errors.New(LxcNetwork_Error_BridgeRequired)
 	}

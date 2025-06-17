@@ -1370,6 +1370,11 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 							LxcNetworkID10: LxcNetwork{
 								Name:   util.Pointer(LxcNetworkName("my_net")),
 								Bridge: util.Pointer("vmbr0")}}})}},
+				createUpdate: []test{
+					{name: `delete non existing`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
+							LxcNetworkID1: LxcNetwork{Delete: true}}}),
+						current: &ConfigLXC{Networks: LxcNetworks{}}}},
 				update: []test{
 					{name: `all`,
 						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
