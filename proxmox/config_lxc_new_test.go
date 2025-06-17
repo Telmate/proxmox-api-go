@@ -1508,16 +1508,12 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 							LxcNetworkID12: LxcNetwork{
 								Name: util.Pointer(LxcNetworkName("text"))},
 							LxcNetworkID11: LxcNetwork{
-								Name: util.Pointer(LxcNetworkName("net"))}}},
-					},
-				},
-			},
+								Name: util.Pointer(LxcNetworkName("net"))}}}}}},
 			invalid: testType{
 				create: []test{
 					{name: `errors.New(LxcNetwork_Error_BridgeRequired)`,
 						input: baseConfig(ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: LxcNetwork{}}}),
-						err:   errors.New(LxcNetwork_Error_BridgeRequired)},
-				},
+						err:   errors.New(LxcNetwork_Error_BridgeRequired)}},
 				createUpdate: []test{
 					{name: `errors.New(LxcNetworks_Error_Amount)`,
 						input: baseConfig(ConfigLXC{Networks: LxcNetworks{
@@ -1533,9 +1529,13 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 						input:   baseConfig(ConfigLXC{Networks: LxcNetworks{45: LxcNetwork{}}}),
 						current: &ConfigLXC{Networks: LxcNetworks{LxcNetworkID11: LxcNetwork{}}},
 						err:     errors.New(LxcNetworkID_Error_Invalid)},
-				},
-			},
-		},
+					{name: `errors.New(LxcNetworkName_Error_LengthMinimum)`,
+						input: baseConfig(ConfigLXC{Networks: LxcNetworks{LxcNetworkID14: LxcNetwork{
+							Bridge: util.Pointer("vmbr0"),
+							Name:   util.Pointer(LxcNetworkName(""))}}}),
+						current: &ConfigLXC{Networks: LxcNetworks{LxcNetworkID14: LxcNetwork{
+							Name: util.Pointer(LxcNetworkName("eth0"))}}},
+						err: errors.New(LxcNetworkName_Error_LengthMinimum)}}}},
 		{category: `Node`,
 			valid: testType{
 				createUpdate: []test{

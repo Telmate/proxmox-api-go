@@ -227,7 +227,7 @@ func (config LxcNetwork) validateCreate() error {
 	if config.Bridge == nil || *config.Bridge == "" {
 		return errors.New(LxcNetwork_Error_BridgeRequired)
 	}
-	if config.Name == nil || *config.Name == "" {
+	if config.Name == nil {
 		return errors.New(LxcNetwork_Error_NameRequired)
 	}
 	return config.validate()
