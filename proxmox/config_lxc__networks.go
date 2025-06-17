@@ -275,25 +275,28 @@ func (config LxcNetworks) Validate(current LxcNetworks) error {
 	if len(config) > LxcNetworksAmount {
 		return errors.New(LxcNetworks_Error_Amount)
 	}
-	// Check for duplicate Name
-	combined := make(map[LxcNetworkID]LxcNetworkName, len(config)+len(current))
-	for k, e := range current {
-		if e.Name != nil {
-			combined[k] = *e.Name
+
+	transformedState := map[LxcNetworkID]LxcNetworkName{} // The transformed state of config being applied over current
+	for k, v := range current {
+		if v.Name != nil {
+			transformedState[k] = *v.Name
 		}
 	}
-	for k, e := range config {
-		if e.Name != nil {
-			combined[k] = *e.Name
+	for k, v := range config {
+		if v.Delete { // Remove all networks marked for deletion
+			delete(transformedState, k)
+		} else if v.Name != nil { // Add or Overwrite existing networks
+			transformedState[k] = *v.Name
 		}
 	}
-	uniqueNames := make(map[LxcNetworkName]struct{}, len(config)+len(current))
-	for _, e := range combined {
-		if _, isSet := uniqueNames[e]; isSet {
+	uniqueNames := make(map[LxcNetworkName]struct{}, len(transformedState))
+	for _, v := range transformedState {
+		if _, duplicate := uniqueNames[v]; duplicate {
 			return errors.New(LxcNetworks_Error_DuplicateName)
 		}
-		uniqueNames[e] = struct{}{}
+		uniqueNames[v] = struct{}{}
 	}
+
 	var err error
 	for id, network := range config {
 		if err = id.Validate(); err != nil {

@@ -157,6 +157,18 @@ func Test_LxcNetworks_Validate(t *testing.T) {
 				config: LxcNetworks{
 					LxcNetworkID0: {}}},
 			output: errors.New(LxcNetwork_Error_BridgeRequired)},
+		{name: `Valid duplicate name, update`,
+			input: testInput{
+				config: LxcNetworks{
+					LxcNetworkID12: {Name: util.Pointer(LxcNetworkName("replaced1"))},
+					LxcNetworkID15: {Delete: true},
+					LxcNetworkID3:  {Name: util.Pointer(LxcNetworkName("switch2"))},
+					LxcNetworkID8:  {Name: util.Pointer(LxcNetworkName("switch1"))}},
+				current: LxcNetworks{
+					LxcNetworkID12: {Name: util.Pointer(LxcNetworkName("eth1"))},
+					LxcNetworkID15: {Name: util.Pointer(LxcNetworkName("replaced1"))},
+					LxcNetworkID3:  {Name: util.Pointer(LxcNetworkName("switch1"))},
+					LxcNetworkID8:  {Name: util.Pointer(LxcNetworkName("switch2"))}}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
