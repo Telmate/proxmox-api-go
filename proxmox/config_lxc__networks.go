@@ -494,6 +494,21 @@ const (
 	LxcIPv4_Error_MutuallyExclusiveGateway = "lxc IPv4 Gateway and DHCP/Manual are mutually exclusive"
 )
 
+func (config LxcIPv4) combine(current LxcIPv4) LxcIPv4 {
+	combined := LxcIPv4{
+		Address: current.Address,
+		DHCP:    config.DHCP,
+		Gateway: current.Gateway,
+		Manual:  config.Manual}
+	if config.Address != nil {
+		combined.Address = config.Address
+	}
+	if config.Gateway != nil {
+		combined.Gateway = config.Gateway
+	}
+	return combined
+}
+
 func (config LxcIPv4) mapToApiCreate() string {
 	if config.DHCP {
 		return ",ip=dhcp"
@@ -503,39 +518,36 @@ func (config LxcIPv4) mapToApiCreate() string {
 	}
 	var settings string
 	if config.Address != nil {
-		settings += ",ip=" + config.Address.String()
+		if v := config.Address.String(); v != "" {
+			settings += ",ip=" + v
+		}
 	}
 	if config.Gateway != nil {
-		return settings + ",gw=" + config.Gateway.String()
+		if v := config.Gateway.String(); v != "" {
+			return settings + ",gw=" + v
+		}
 	}
 	return settings
 }
 
 func (config LxcIPv4) mapToApiUpdate(current LxcIPv4) string {
-	if config.DHCP {
+	combined := config.combine(current) // Combine the current and new config to preserve settings not being updated
+	if combined.DHCP {
 		return ",ip=dhcp"
 	}
-	if config.Manual {
+	if combined.Manual {
 		return ",ip=manual"
 	}
 	var settings string
-	if config.Address != nil {
-		settings += ",ip=" + config.Address.String()
-	} else {
-		if current.DHCP {
-			return ",ip=dhcp"
-		}
-		if current.Manual {
-			return ",ip=manual"
-		}
-		if current.Address != nil && current.Address.String() != "" {
-			settings += ",ip=" + current.Address.String()
+	if combined.Address != nil {
+		if v := combined.Address.String(); v != "" {
+			settings += ",ip=" + v
 		}
 	}
-	if config.Gateway != nil {
-		return settings + ",gw=" + config.Gateway.String()
-	} else if current.Gateway != nil && current.Gateway.String() != "" {
-		return settings + ",gw=" + current.Gateway.String()
+	if combined.Gateway != nil {
+		if v := combined.Gateway.String(); v != "" {
+			return settings + ",gw=" + v
+		}
 	}
 	return settings
 }
@@ -584,6 +596,22 @@ const (
 	LxcIPv6_Error_MutuallyExclusiveGateway = "lxc IPv6 Gateway and DHCP/SLAAC/Manual are mutually exclusive"
 )
 
+func (config LxcIPv6) combine(current LxcIPv6) LxcIPv6 {
+	combined := LxcIPv6{
+		Address: current.Address,
+		DHCP:    config.DHCP,
+		Gateway: current.Gateway,
+		Manual:  config.Manual,
+		SLAAC:   config.SLAAC}
+	if config.Address != nil {
+		combined.Address = config.Address
+	}
+	if config.Gateway != nil {
+		combined.Gateway = config.Gateway
+	}
+	return combined
+}
+
 func (config LxcIPv6) mapToApiCreate() string {
 	if config.DHCP {
 		return ",ip6=dhcp"
@@ -596,45 +624,39 @@ func (config LxcIPv6) mapToApiCreate() string {
 	}
 	var settings string
 	if config.Address != nil {
-		settings += ",ip6=" + config.Address.String()
+		if v := config.Address.String(); v != "" {
+			settings += ",ip6=" + v
+		}
 	}
 	if config.Gateway != nil {
-		return settings + ",gw6=" + config.Gateway.String()
+		if v := config.Gateway.String(); v != "" {
+			return settings + ",gw6=" + v
+		}
 	}
 	return settings
 }
 
 func (config LxcIPv6) mapToApiUpdate(current LxcIPv6) string {
-	if config.DHCP {
+	combined := config.combine(current)
+	if combined.DHCP {
 		return ",ip6=dhcp"
 	}
-	if config.Manual {
+	if combined.Manual {
 		return ",ip6=manual"
 	}
-	if config.SLAAC {
+	if combined.SLAAC {
 		return ",ip6=auto"
 	}
 	var settings string
-	if config.Address != nil {
-		settings += ",ip6=" + config.Address.String()
-	} else {
-		if current.DHCP {
-			return ",ip6=dhcp"
-		}
-		if current.Manual {
-			return ",ip6=manual"
-		}
-		if current.SLAAC {
-			return ",ip6=auto"
-		}
-		if current.Address != nil && current.Address.String() != "" {
-			settings += ",ip6=" + current.Address.String()
+	if combined.Address != nil {
+		if v := combined.Address.String(); v != "" {
+			settings += ",ip6=" + v
 		}
 	}
-	if config.Gateway != nil {
-		return settings + ",gw6=" + config.Gateway.String()
-	} else if current.Gateway != nil && current.Gateway.String() != "" {
-		return settings + ",gw6=" + current.Gateway.String()
+	if combined.Gateway != nil {
+		if v := combined.Gateway.String(); v != "" {
+			return settings + ",gw6=" + v
+		}
 	}
 	return settings
 }
