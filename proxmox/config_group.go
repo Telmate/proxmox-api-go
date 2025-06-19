@@ -69,6 +69,7 @@ func (config ConfigGroup) Set(ctx context.Context, client *Client) (err error) {
 
 // Updates the specified group
 func (config ConfigGroup) Update(ctx context.Context, client *Client) error {
+	// TODO add digest during update to check if the config has changed
 	config.Validate(false)
 	params := config.mapToApiValues(true)
 	err := client.Put(ctx, params, "/access/groups/"+string(config.Name))

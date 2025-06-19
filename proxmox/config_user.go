@@ -150,6 +150,7 @@ func (config *ConfigUser) SetUser(ctx context.Context, userId UserID, password U
 }
 
 func (config ConfigUser) UpdateUser(ctx context.Context, client *Client) (err error) {
+	// TODO add digest during update to check if the config has changed
 	params := config.mapToApiValues(false)
 	err = client.Put(ctx, params, "/access/users/"+config.User.String())
 	if err != nil {
