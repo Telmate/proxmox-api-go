@@ -140,14 +140,14 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 
 // SetAPIToken specifies a pair of user identifier and token UUID to use
 // for authenticating API calls.
-// If this is set, a ticket from calling `Login` will not be used.
+// If this is set, a ticket from calling `login` will not be used.
 //
 // - `userID` is expected to be in the form `USER@REALM!TOKENID`
 // - `token` is just the UUID you get when initially creating the token
 //
 // See https://pve.proxmox.com/wiki/User_Management#pveum_tokens
 func (c *Client) SetAPIToken(userID, token string) {
-	c.session.SetAPIToken(userID, token)
+	c.session.setAPIToken(userID, token)
 }
 
 // SetTicket let's set directly ticket and csrfPreventionToken obtained in
@@ -166,7 +166,7 @@ func (c *Client) Login(ctx context.Context, username string, password string, ot
 	c.Username = username
 	c.Password = password
 	c.Otp = otp
-	return c.session.Login(ctx, username, password, otp)
+	return c.session.login(ctx, username, password, otp)
 }
 
 // Updates the client's cached version information and returns it.
@@ -190,7 +190,7 @@ func (c *Client) GetVersion(ctx context.Context) (version Version, err error) {
 func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[string]interface{}, tries int, errorString ...string) error {
 	var statErr error
 	for ii := 0; ii < tries; ii++ {
-		_, statErr = c.session.GetJSON(ctx, url, nil, nil, data)
+		_, statErr = c.session.getJSON(ctx, url, nil, nil, data)
 		if statErr == nil {
 			return nil
 		}
@@ -391,7 +391,7 @@ func (c *Client) GetVmSpiceProxy(ctx context.Context, vmr *VmRef) (vmSpiceProxy 
 	}
 	var data map[string]interface{}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/spiceproxy", vmr.node, vmr.vmType, vmr.vmId)
-	_, err = c.session.PostJSON(ctx, url, nil, nil, nil, &data)
+	_, err = c.session.postJSON(ctx, url, nil, nil, nil, &data)
 	if err != nil {
 		return nil, err
 	}
@@ -414,12 +414,12 @@ func (c *Client) CreateTemplate(ctx context.Context, vmr *VmRef) error {
 	}
 
 	url := fmt.Sprintf("/nodes/%s/%s/%d/template", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, nil)
+	resp, err := c.session.post(ctx, url, nil, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	taskResponse, err := ResponseJSON(resp)
+	taskResponse, err := responseJSON(resp)
 	if err != nil {
 		return err
 	}
@@ -443,13 +443,13 @@ func (c *Client) MonitorCmd(ctx context.Context, vmr *VmRef, command string) (mo
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(map[string]interface{}{"command": command})
+	reqbody := paramsToBody(map[string]interface{}{"command": command})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/monitor", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err != nil {
 		return nil, err
 	}
-	monitorRes, err = ResponseJSON(resp)
+	monitorRes, err = responseJSON(resp)
 	return
 }
 
@@ -458,10 +458,10 @@ func (c *Client) Sendkey(ctx context.Context, vmr *VmRef, qmKey string) error {
 	if err != nil {
 		return err
 	}
-	reqbody := ParamsToBody(map[string]interface{}{"key": qmKey})
+	reqbody := paramsToBody(map[string]interface{}{"key": qmKey})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/sendkey", vmr.node, vmr.vmType, vmr.vmId)
 	// No return, even for errors: https://bugzilla.proxmox.com/show_bug.cgi?id=2275
-	_, err = c.session.Put(ctx, url, nil, nil, &reqbody)
+	_, err = c.session.put(ctx, url, nil, nil, &reqbody)
 
 	return err
 }
@@ -503,7 +503,7 @@ func (c *Client) GetTaskExitstatus(ctx context.Context, taskUpid string) (exitSt
 	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
 	url := fmt.Sprintf("/nodes/%s/tasks/%s/status", node, taskUpid)
 	var data map[string]interface{}
-	_, err = c.session.GetJSON(ctx, url, nil, nil, &data)
+	_, err = c.session.getJSON(ctx, url, nil, nil, &data)
 	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
@@ -578,9 +578,9 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 	// Remove HA if required
 	if vmr.haState != "" {
 		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
-		resp, err := c.session.Delete(ctx, url, nil, nil)
+		resp, err := c.session.delete(ctx, url, nil, nil)
 		if err == nil {
-			taskResponse, err := ResponseJSON(resp)
+			taskResponse, err := responseJSON(resp)
 			if err != nil {
 				return "", err
 			}
@@ -591,13 +591,13 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 		}
 	}
 
-	values := ParamsToValues(params)
+	values := paramsToValues(params)
 	url := fmt.Sprintf("/nodes/%s/%s/%d", vmr.node, vmr.vmType, vmr.vmId)
 	var taskResponse map[string]interface{}
 	if len(values) != 0 {
-		_, err = c.session.RequestJSON(ctx, "DELETE", url, &values, nil, nil, &taskResponse)
+		_, err = c.session.requestJSON(ctx, "DELETE", url, &values, nil, nil, &taskResponse)
 	} else {
-		_, err = c.session.RequestJSON(ctx, "DELETE", url, nil, nil, nil, &taskResponse)
+		_, err = c.session.requestJSON(ctx, "DELETE", url, nil, nil, nil, &taskResponse)
 	}
 	if err != nil {
 		return
@@ -615,10 +615,10 @@ func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[s
 	}
 
 	// Then create the VM itself.
-	reqbody := ParamsToBody(vmParams)
+	reqbody := paramsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu", node)
 	var resp *http.Response
-	resp, err = c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err = c.session.post(ctx, url, nil, nil, &reqbody)
 	if err != nil {
 		// Only attempt to read the body if it is available.
 		if resp != nil && resp.Body != nil {
@@ -634,7 +634,7 @@ func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[s
 		return "", err
 	}
 
-	taskResponse, err := ResponseJSON(resp)
+	taskResponse, err := responseJSON(resp)
 	if err != nil {
 		return "", err
 	}
@@ -651,10 +651,10 @@ func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[s
 }
 
 func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams map[string]interface{}) (exitStatus string, err error) {
-	reqbody := ParamsToBody(vmParams)
+	reqbody := paramsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc", node)
 	var resp *http.Response
-	resp, err = c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err = c.session.post(ctx, url, nil, nil, &reqbody)
 	if err != nil {
 		defer resp.Body.Close()
 		// This might not work if we never got a body. We'll ignore errors in trying to read,
@@ -664,7 +664,7 @@ func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams m
 		return exitStatus, err
 	}
 
-	taskResponse, err := ResponseJSON(resp)
+	taskResponse, err := responseJSON(resp)
 	if err != nil {
 		return "", err
 	}
@@ -675,11 +675,11 @@ func (c *Client) CreateLxcContainer(ctx context.Context, node string, vmParams m
 
 // Deprecated: use VmRef.CloneLxc() instead
 func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
-	reqbody := ParamsToBody(vmParams)
+	reqbody := paramsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/lxc/%s/clone", vmr.node, vmParams["vmid"])
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return "", err
 		}
@@ -693,11 +693,11 @@ func (c *Client) CloneLxcContainer(ctx context.Context, vmr *VmRef, vmParams map
 
 // Deprecated: use VmRef.CloneQemu() instead
 func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus string, err error) {
-	reqbody := ParamsToBody(vmParams)
+	reqbody := paramsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/clone", vmr.node, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return "", err
 		}
@@ -716,14 +716,14 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 	snapshotParams := map[string]interface{}{
 		"snapname": snapshotName,
 	}
-	reqbody := ParamsToBody(snapshotParams)
+	reqbody := paramsToBody(snapshotParams)
 	if err != nil {
 		return "", err
 	}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return "", err
 		}
@@ -748,9 +748,9 @@ func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface
 		return nil, "", err
 	}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/snapshot/", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Get(ctx, url, nil, nil)
+	resp, err := c.session.get(ctx, url, nil, nil)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, "", err
 		}
@@ -771,11 +771,11 @@ func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitSta
 
 // SetLxcConfig - send config options
 func (c *Client) SetLxcConfig(ctx context.Context, vmr *VmRef, vmParams map[string]interface{}) (exitStatus interface{}, err error) {
-	reqbody := ParamsToBody(vmParams)
+	reqbody := paramsToBody(vmParams)
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.put(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -790,11 +790,11 @@ func (c *Client) SetLxcConfig(ctx context.Context, vmr *VmRef, vmParams map[stri
 // MigrateNode - Migrate a VM
 // Deprecated: use VmRef.Migrate() instead
 func (c *Client) MigrateNode(ctx context.Context, vmr *VmRef, newTargetNode NodeName, online bool) (exitStatus interface{}, err error) {
-	reqbody := ParamsToBody(map[string]interface{}{"target": newTargetNode, "online": online, "with-local-disks": true})
+	reqbody := paramsToBody(map[string]interface{}{"target": newTargetNode, "online": online, "with-local-disks": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/migrate", vmr.node.String(), vmr.vmType, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -824,11 +824,11 @@ func (c *Client) ResizeQemuDiskRaw(ctx context.Context, vmr *VmRef, disk string,
 	if disk == "" {
 		disk = "virtio0"
 	}
-	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "size": size})
+	reqbody := paramsToBody(map[string]interface{}{"disk": disk, "size": size})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.put(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -841,11 +841,11 @@ func (c *Client) ResizeQemuDiskRaw(ctx context.Context, vmr *VmRef, disk string,
 }
 
 func (c *Client) MoveLxcDisk(ctx context.Context, vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
-	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
+	reqbody := paramsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/move_volume", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -864,11 +864,11 @@ func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStat
 	if disk == "" {
 		disk = "virtio0"
 	}
-	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
+	reqbody := paramsToBody(map[string]interface{}{"disk": disk, "storage": storage, "delete": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -882,11 +882,11 @@ func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStat
 
 // MoveQemuDiskToVM - Move a disk to a different VM, using the same storage
 func (c *Client) MoveQemuDiskToVM(ctx context.Context, vmrSource *VmRef, disk string, vmrTarget *VmRef) (exitStatus interface{}, err error) {
-	reqbody := ParamsToBody(map[string]interface{}{"disk": disk, "target-vmid": vmrTarget.vmId, "delete": true})
+	reqbody := paramsToBody(map[string]interface{}{"disk": disk, "target-vmid": vmrTarget.vmId, "delete": true})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmrSource.node, vmrSource.vmType, vmrSource.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -902,22 +902,22 @@ func (c *Client) MoveQemuDiskToVM(ctx context.Context, vmrSource *VmRef, disk st
 // Reference: https://pve.proxmox.com/pve-docs/api-viewer/index.html#/nodes/{node}/qemu/{vmid}/unlink
 func (c *Client) Unlink(ctx context.Context, node string, ID GuestID, diskIds string, forceRemoval bool) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/unlink", node, ID)
-	data := ParamsToBody(map[string]interface{}{
+	data := paramsToBody(map[string]interface{}{
 		"idlist": diskIds,
 		"force":  forceRemoval,
 	})
-	resp, err := c.session.Put(ctx, url, nil, nil, &data)
+	resp, err := c.session.put(ctx, url, nil, nil, &data)
 	if err != nil {
 		return c.HandleTaskError(resp), err
 	}
-	json, err := ResponseJSON(resp)
+	json, err := responseJSON(resp)
 	if err != nil {
 		return "", err
 	}
 	return c.WaitForCompletion(ctx, json)
 }
 
-// GetNextID - Get next free GuestID
+// GetNextID - get next free GuestID
 func (c *Client) GetNextID(ctx context.Context, currentID *GuestID) (GuestID, error) {
 	if currentID != nil {
 		if err := currentID.Validate(); err != nil {
@@ -927,7 +927,7 @@ func (c *Client) GetNextID(ctx context.Context, currentID *GuestID) (GuestID, er
 	return c.GetNextIdNoCheck(ctx, currentID)
 }
 
-// GetNextIdNoCheck - Get next free GuestID without validating the input
+// GetNextIdNoCheck - get next free GuestID without validating the input
 func (c *Client) GetNextIdNoCheck(ctx context.Context, startID *GuestID) (GuestID, error) {
 	var url string
 	if startID != nil {
@@ -967,11 +967,11 @@ func (c *Client) CreateVMDisk(
 	fullDiskName string,
 	diskParams map[string]interface{},
 ) error {
-	reqbody := ParamsToBody(diskParams)
+	reqbody := paramsToBody(diskParams)
 	url := fmt.Sprintf("/nodes/%s/storage/%s/content", nodeName, storageName)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return err
 		}
@@ -1023,11 +1023,11 @@ func (c *Client) createVMDisks(
 // CreateNewDisk - This method allows simpler disk creation for direct client users
 // It should work for any existing container and virtual machine
 func (c *Client) CreateNewDisk(ctx context.Context, vmr *VmRef, disk string, volume string) (exitStatus interface{}, err error) {
-	reqbody := ParamsToBody(map[string]interface{}{disk: volume})
+	reqbody := paramsToBody(map[string]interface{}{disk: volume})
 	url := fmt.Sprintf("/nodes/%s/%s/%d/config", vmr.node, vmr.vmType, vmr.vmId)
-	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.put(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1050,7 +1050,7 @@ func (c *Client) DeleteVMDisks(
 	for _, fullDiskName := range disks {
 		storageName, volumeName := getStorageAndVolumeName(fullDiskName, ":")
 		url := fmt.Sprintf("/nodes/%s/storage/%s/content/%s", node, storageName, volumeName)
-		_, err := c.session.Post(ctx, url, nil, nil, nil)
+		_, err := c.session.post(ctx, url, nil, nil, nil)
 		if err != nil {
 			return err
 		}
@@ -1065,11 +1065,11 @@ func (c *Client) VzDump(ctx context.Context, vmr *VmRef, params map[string]inter
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(params)
+	reqbody := paramsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/vzdump", vmr.node)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1088,9 +1088,9 @@ func (c *Client) DeleteVolume(ctx context.Context, vmr *VmRef, storageName strin
 		return nil, err
 	}
 	url := fmt.Sprintf("/nodes/%s/storage/%s/content/%s", vmr.node, storageName, volumeName)
-	resp, err := c.session.Delete(ctx, url, nil, nil)
+	resp, err := c.session.delete(ctx, url, nil, nil)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1108,13 +1108,13 @@ func (c *Client) CreateVNCProxy(ctx context.Context, vmr *VmRef, params map[stri
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(params)
+	reqbody := paramsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/vncproxy", vmr.node, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err != nil {
 		return nil, err
 	}
-	vncProxyRes, err = ResponseJSON(resp)
+	vncProxyRes, err = responseJSON(resp)
 	if err != nil {
 		return nil, err
 	}
@@ -1132,9 +1132,9 @@ func (c *Client) QemuAgentPing(ctx context.Context, vmr *VmRef) (pingRes map[str
 		return nil, err
 	}
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/ping", vmr.node, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, nil)
+	resp, err := c.session.post(ctx, url, nil, nil, nil)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1152,9 +1152,9 @@ func (c *Client) QemuAgentFileWrite(ctx context.Context, vmr *VmRef, params map[
 	if err != nil {
 		return err
 	}
-	reqbody := ParamsToBody(params)
+	reqbody := paramsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/file-write", vmr.node, vmr.vmId)
-	_, err = c.session.Post(ctx, url, nil, nil, &reqbody)
+	_, err = c.session.post(ctx, url, nil, nil, &reqbody)
 	return
 }
 
@@ -1164,11 +1164,11 @@ func (c *Client) QemuAgentSetUserPassword(ctx context.Context, vmr *VmRef, param
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(params)
+	reqbody := paramsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/set-user-password", vmr.node, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1186,11 +1186,11 @@ func (c *Client) QemuAgentExec(ctx context.Context, vmr *VmRef, params map[strin
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(params)
+	reqbody := paramsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/exec", vmr.node, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1221,11 +1221,11 @@ func (c *Client) SetQemuFirewallOptions(ctx context.Context, vmr *VmRef, fwOptio
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(fwOptions)
+	reqbody := paramsToBody(fwOptions)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", vmr.node, vmr.vmId)
-	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.put(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1237,16 +1237,16 @@ func (c *Client) SetQemuFirewallOptions(ctx context.Context, vmr *VmRef, fwOptio
 	return
 }
 
-// GetQemuFirewallOptions - Get VM firewall options.
+// GetQemuFirewallOptions - get VM firewall options.
 func (c *Client) GetQemuFirewallOptions(ctx context.Context, vmr *VmRef) (firewallOptions map[string]interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
 		return nil, err
 	}
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", vmr.node, vmr.vmId)
-	resp, err := c.session.Get(ctx, url, nil, nil)
+	resp, err := c.session.get(ctx, url, nil, nil)
 	if err == nil {
-		firewallOptions, err := ResponseJSON(resp)
+		firewallOptions, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1261,11 +1261,11 @@ func (c *Client) CreateQemuIPSet(ctx context.Context, vmr *VmRef, params map[str
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(params)
+	reqbody := paramsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", vmr.node, vmr.vmId)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1283,11 +1283,11 @@ func (c *Client) AddQemuIPSet(ctx context.Context, vmr *VmRef, name string, para
 	if err != nil {
 		return nil, err
 	}
-	reqbody := ParamsToBody(params)
+	reqbody := paramsToBody(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, name)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1306,9 +1306,9 @@ func (c *Client) GetQemuIPSet(ctx context.Context, vmr *VmRef) (ipsets map[strin
 		return nil, err
 	}
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset", vmr.node, vmr.vmId)
-	resp, err := c.session.Get(ctx, url, nil, nil)
+	resp, err := c.session.get(ctx, url, nil, nil)
 	if err == nil {
-		ipsets, err := ResponseJSON(resp)
+		ipsets, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1324,9 +1324,9 @@ func (c *Client) DeleteQemuIPSet(ctx context.Context, vmr *VmRef, IPSetName stri
 		return nil, err
 	}
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s", vmr.node, vmr.vmId, IPSetName)
-	resp, err := c.session.Delete(ctx, url, nil, nil)
+	resp, err := c.session.delete(ctx, url, nil, nil)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1344,11 +1344,11 @@ func (c *Client) DeleteQemuIPSetNetwork(ctx context.Context, vmr *VmRef, IPSetNa
 	if err != nil {
 		return nil, err
 	}
-	values := ParamsToValues(params)
+	values := paramsToValues(params)
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/ipset/%s/%s", vmr.node, vmr.vmId, IPSetName, network)
-	resp, err := c.session.Delete(ctx, url, &values, nil)
+	resp, err := c.session.delete(ctx, url, &values, nil)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1400,12 +1400,12 @@ func (c *Client) Upload(ctx context.Context, node string, storage string, conten
 		req.ContentLength = contentLength
 	}
 
-	resp, err := c.session.Do(req)
+	resp, err := c.session.do(req)
 	if err != nil {
 		return err
 	}
 
-	taskResponse, err := ResponseJSON(resp)
+	taskResponse, err := responseJSON(resp)
 	if err != nil {
 		return err
 	}
@@ -1441,12 +1441,12 @@ func (c *Client) UploadLargeFile(ctx context.Context, node string, storage strin
 
 	req.ContentLength = contentLength
 
-	resp, err := c.session.Do(req)
+	resp, err := c.session.do(req)
 	if err != nil {
 		return err
 	}
 
-	taskResponse, err := ResponseJSON(resp)
+	taskResponse, err := responseJSON(resp)
 	if err != nil {
 		return err
 	}
@@ -1550,11 +1550,11 @@ func (c *Client) UpdateVMPool(ctx context.Context, vmr *VmRef, pool string) (exi
 			"vms":    vmr.vmId,
 			"delete": 1,
 		}
-		reqbody := ParamsToBody(paramMap)
+		reqbody := paramsToBody(paramMap)
 		url := fmt.Sprintf("/pools/%s", vmr.pool)
-		resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+		resp, err := c.session.put(ctx, url, nil, nil, &reqbody)
 		if err == nil {
-			taskResponse, err := ResponseJSON(resp)
+			taskResponse, err := responseJSON(resp)
 			if err != nil {
 				return nil, err
 			}
@@ -1570,11 +1570,11 @@ func (c *Client) UpdateVMPool(ctx context.Context, vmr *VmRef, pool string) (exi
 		paramMap := map[string]interface{}{
 			"vms": vmr.vmId,
 		}
-		reqbody := ParamsToBody(paramMap)
+		reqbody := paramsToBody(paramMap)
 		url := fmt.Sprintf("/pools/%s", pool)
-		resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+		resp, err := c.session.put(ctx, url, nil, nil, &reqbody)
 		if err == nil {
-			taskResponse, err := ResponseJSON(resp)
+			taskResponse, err := responseJSON(resp)
 			if err != nil {
 				return nil, err
 			}
@@ -1616,9 +1616,9 @@ func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haG
 	// Remove HA
 	if haState == "" {
 		url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
-		resp, err := c.session.Delete(ctx, url, nil, nil)
+		resp, err := c.session.delete(ctx, url, nil, nil)
 		if err == nil {
-			taskResponse, err := ResponseJSON(resp)
+			taskResponse, err := responseJSON(resp)
 			if err != nil {
 				return nil, err
 			}
@@ -1638,10 +1638,10 @@ func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haG
 		if haGroup != "" {
 			paramMap["group"] = haGroup
 		}
-		reqbody := ParamsToBody(paramMap)
-		resp, err := c.session.Post(ctx, "/cluster/ha/resources", nil, nil, &reqbody)
+		reqbody := paramsToBody(paramMap)
+		resp, err := c.session.post(ctx, "/cluster/ha/resources", nil, nil, &reqbody)
 		if err == nil {
-			taskResponse, err := ResponseJSON(resp)
+			taskResponse, err := responseJSON(resp)
 			if err != nil {
 				return nil, err
 			}
@@ -1658,11 +1658,11 @@ func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haG
 		"state": haState,
 		"group": haGroup,
 	}
-	reqbody := ParamsToBody(paramMap)
+	reqbody := paramsToBody(paramMap)
 	url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
-	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+	resp, err := c.session.put(ctx, url, nil, nil, &reqbody)
 	if err == nil {
-		taskResponse, err := ResponseJSON(resp)
+		taskResponse, err := responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
@@ -1865,7 +1865,7 @@ func (c *Client) GetNetworkList(ctx context.Context, node string, typeFilter str
 	if typeFilter != "" {
 		url += fmt.Sprintf("?type=%s", typeFilter)
 	}
-	resp, err := c.session.Get(ctx, url, nil, nil)
+	resp, err := c.session.get(ctx, url, nil, nil)
 	exitStatus = c.HandleTaskError(resp)
 	return
 }
@@ -1875,7 +1875,7 @@ func (c *Client) GetNetworkList(ctx context.Context, node string, typeFilter str
 // It returns the body from the API response and any HTTP error the API returns.
 func (c *Client) GetNetworkInterface(ctx context.Context, node string, iface string) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
-	resp, err := c.session.Get(ctx, url, nil, nil)
+	resp, err := c.session.get(ctx, url, nil, nil)
 	exitStatus = c.HandleTaskError(resp)
 	return
 }
@@ -1900,7 +1900,7 @@ func (c *Client) UpdateNetwork(ctx context.Context, node string, iface string, p
 // It returns the body from the API response and any HTTP error the API returns.
 func (c *Client) DeleteNetwork(ctx context.Context, node string, iface string) (exitStatus string, err error) {
 	url := fmt.Sprintf("/nodes/%s/network/%s", node, iface)
-	resp, err := c.session.Delete(ctx, url, nil, nil)
+	resp, err := c.session.delete(ctx, url, nil, nil)
 	exitStatus = c.HandleTaskError(resp)
 	return
 }
@@ -2125,16 +2125,16 @@ func (c *Client) GetItemConfig(ctx context.Context, url, text, message string, e
 // Makes a POST request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
 func (c *Client) Post(ctx context.Context, Params map[string]interface{}, url string) (err error) {
-	reqbody := ParamsToBody(Params)
-	_, err = c.session.Post(ctx, url, nil, nil, &reqbody)
+	reqbody := paramsToBody(Params)
+	_, err = c.session.post(ctx, url, nil, nil, &reqbody)
 	return
 }
 
 // CreateItemReturnStatus creates an item on the Proxmox API.
 // It returns the body of the HTTP response and any HTTP error occurred during the request.
 func (c *Client) CreateItemReturnStatus(ctx context.Context, params map[string]interface{}, url string) (exitStatus string, err error) {
-	reqbody := ParamsToBody(params)
-	resp, err := c.session.Post(ctx, url, nil, nil, &reqbody)
+	reqbody := paramsToBody(params)
+	resp, err := c.session.post(ctx, url, nil, nil, &reqbody)
 	exitStatus = c.HandleTaskError(resp)
 	return
 }
@@ -2142,9 +2142,9 @@ func (c *Client) CreateItemReturnStatus(ctx context.Context, params map[string]i
 // Makes a POST request and waits on proxmox for the task to complete.
 // It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
 func (c *Client) PostWithTask(ctx context.Context, Params map[string]interface{}, url string) (exitStatus string, err error) {
-	reqbody := ParamsToBody(Params)
+	reqbody := paramsToBody(Params)
 	var resp *http.Response
-	resp, err = c.session.Post(ctx, url, nil, nil, &reqbody)
+	resp, err = c.session.post(ctx, url, nil, nil, &reqbody)
 	if err != nil {
 		return c.HandleTaskError(resp), err
 	}
@@ -2154,16 +2154,16 @@ func (c *Client) PostWithTask(ctx context.Context, Params map[string]interface{}
 // Makes a PUT request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
 func (c *Client) Put(ctx context.Context, Params map[string]interface{}, url string) (err error) {
-	reqbody := ParamsToBodyWithAllEmpty(Params)
-	_, err = c.session.Put(ctx, url, nil, nil, &reqbody)
+	reqbody := paramsToBodyWithAllEmpty(Params)
+	_, err = c.session.put(ctx, url, nil, nil, &reqbody)
 	return
 }
 
 // UpdateItemReturnStatus updates an item on the Proxmox API.
 // It returns the body of the HTTP response and any HTTP error occurred during the request.
 func (c *Client) UpdateItemReturnStatus(ctx context.Context, params map[string]interface{}, url string) (exitStatus string, err error) {
-	reqbody := ParamsToBody(params)
-	resp, err := c.session.Put(ctx, url, nil, nil, &reqbody)
+	reqbody := paramsToBody(params)
+	resp, err := c.session.put(ctx, url, nil, nil, &reqbody)
 	exitStatus = c.HandleTaskError(resp)
 	return
 }
@@ -2171,9 +2171,9 @@ func (c *Client) UpdateItemReturnStatus(ctx context.Context, params map[string]i
 // Makes a PUT request and waits on proxmox for the task to complete.
 // It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
 func (c *Client) PutWithTask(ctx context.Context, Params map[string]interface{}, url string) (exitStatus string, err error) {
-	reqbody := ParamsToBodyWithAllEmpty(Params)
+	reqbody := paramsToBodyWithAllEmpty(Params)
 	var resp *http.Response
-	resp, err = c.session.Put(ctx, url, nil, nil, &reqbody)
+	resp, err = c.session.put(ctx, url, nil, nil, &reqbody)
 	if err != nil {
 		return c.HandleTaskError(resp), err
 	}
@@ -2183,7 +2183,7 @@ func (c *Client) PutWithTask(ctx context.Context, Params map[string]interface{},
 // Makes a DELETE request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
 func (c *Client) Delete(ctx context.Context, url string) (err error) {
-	_, err = c.session.Delete(ctx, url, nil, nil)
+	_, err = c.session.delete(ctx, url, nil, nil)
 	return
 }
 
@@ -2191,7 +2191,7 @@ func (c *Client) Delete(ctx context.Context, url string) (err error) {
 // It returns the status of the test as 'exitStatus' and the HTTP error as 'err'.
 func (c *Client) DeleteWithTask(ctx context.Context, url string) (exitStatus string, err error) {
 	var resp *http.Response
-	resp, err = c.session.Delete(ctx, url, nil, nil)
+	resp, err = c.session.delete(ctx, url, nil, nil)
 	if err != nil {
 		return c.HandleTaskError(resp), err
 	}
@@ -2234,7 +2234,7 @@ func (c *Client) HandleTaskError(resp *http.Response) (exitStatus string) {
 // CheckTask polls the API to check if the Proxmox task has been completed.
 // It returns the body of the HTTP response and any HTTP error occurred during the request.
 func (c *Client) CheckTask(ctx context.Context, resp *http.Response) (exitStatus string, err error) {
-	taskResponse, err := ResponseJSON(resp)
+	taskResponse, err := responseJSON(resp)
 	if err != nil {
 		return "", err
 	}

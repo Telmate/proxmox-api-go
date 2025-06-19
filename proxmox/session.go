@@ -19,9 +19,9 @@ import (
 
 var Debug = new(bool)
 
-const DebugLargeBodyThreshold = 5 * 1024 * 1024
+const debugLargeBodyThreshold = 5 * 1024 * 1024
 
-type Response struct {
+type response struct {
 	Resp *http.Response
 	Body []byte
 }
@@ -72,34 +72,34 @@ func NewSession(apiUrl string, hclient *http.Client, proxyString string, tls *tl
 	return session, nil
 }
 
-func ParamsToBody(params map[string]interface{}) (body []byte) {
-	vals := ParamsToValuesWithEmpty(params, []string{})
+func paramsToBody(params map[string]interface{}) (body []byte) {
+	vals := paramsToValuesWithEmpty(params, []string{})
 	body = bytes.NewBufferString(vals.Encode()).Bytes()
 	return
 }
 
-func ParamsToValues(params map[string]interface{}) (vals url.Values) {
-	vals = ParamsToValuesWithEmpty(params, []string{})
+func paramsToValues(params map[string]interface{}) (vals url.Values) {
+	vals = paramsToValuesWithEmpty(params, []string{})
 	return
 }
 
-func ParamsToBodyWithEmpty(params map[string]interface{}, allowedEmpty []string) (body []byte) {
-	vals := ParamsToValuesWithEmpty(params, allowedEmpty)
+func paramsToBodyWithEmpty(params map[string]interface{}, allowedEmpty []string) (body []byte) {
+	vals := paramsToValuesWithEmpty(params, allowedEmpty)
 	body = bytes.NewBufferString(vals.Encode()).Bytes()
 	return
 }
 
-func ParamsToBodyWithAllEmpty(params map[string]interface{}) (body []byte) {
-	vals := ParamsToValuesWithAllEmpty(params, []string{}, true)
+func paramsToBodyWithAllEmpty(params map[string]interface{}) (body []byte) {
+	vals := paramsToValuesWithAllEmpty(params, []string{}, true)
 	body = bytes.NewBufferString(vals.Encode()).Bytes()
 	return
 }
 
-func ParamsToValuesWithEmpty(params map[string]interface{}, allowedEmpty []string) (vals url.Values) {
-	return ParamsToValuesWithAllEmpty(params, allowedEmpty, false)
+func paramsToValuesWithEmpty(params map[string]interface{}, allowedEmpty []string) (vals url.Values) {
+	return paramsToValuesWithAllEmpty(params, allowedEmpty, false)
 }
 
-func ParamsToValuesWithAllEmpty(params map[string]interface{}, allowedEmpty []string, allowEmpty bool) (vals url.Values) {
+func paramsToValuesWithAllEmpty(params map[string]interface{}, allowedEmpty []string, allowEmpty bool) (vals url.Values) {
 	vals = url.Values{}
 	for k, intrV := range params {
 		var v string
@@ -142,13 +142,13 @@ func decodeResponse(resp *http.Response, v interface{}) error {
 	return nil
 }
 
-func ResponseJSON(resp *http.Response) (jbody map[string]interface{}, err error) {
+func responseJSON(resp *http.Response) (jbody map[string]interface{}, err error) {
 	err = decodeResponse(resp, &jbody)
 	return jbody, err
 }
 
 // Is this needed?
-func TypedResponse(resp *http.Response, v interface{}) error {
+func typedResponse(resp *http.Response, v interface{}) error {
 	var intermediate struct {
 		Data struct {
 			Result json.RawMessage `json:"result"`
@@ -164,7 +164,7 @@ func TypedResponse(resp *http.Response, v interface{}) error {
 	return nil
 }
 
-func (s *Session) SetAPIToken(userID, token string) {
+func (s *Session) setAPIToken(userID, token string) {
 	auth := fmt.Sprintf("%s=%s", userID, token)
 	s.AuthToken = auth
 }
@@ -174,24 +174,24 @@ func (s *Session) setTicket(ticket, csrfPreventionToken string) {
 	s.CsrfToken = csrfPreventionToken
 }
 
-func (s *Session) Login(ctx context.Context, username string, password string, otp string) (err error) {
+func (s *Session) login(ctx context.Context, username string, password string, otp string) (err error) {
 	reqUser := map[string]interface{}{"username": username, "password": password}
 	if otp != "" {
 		reqUser["otp"] = otp
 	}
-	reqbody := ParamsToBody(reqUser)
+	reqbody := paramsToBody(reqUser)
 	olddebug := *Debug
 	*Debug = false // don't share passwords in debug log
-	resp, err := s.Post(ctx, "/access/ticket", nil, &s.Headers, &reqbody)
+	resp, err := s.post(ctx, "/access/ticket", nil, &s.Headers, &reqbody)
 	*Debug = olddebug
 	if err != nil {
 		return err
 	}
 	if resp == nil {
-		return fmt.Errorf("Login error reading response")
+		return fmt.Errorf("login error reading response")
 	}
 	dr, _ := httputil.DumpResponse(resp, true)
-	jbody, err := ResponseJSON(resp)
+	jbody, err := responseJSON(resp)
 	if err != nil {
 		return err
 	}
@@ -225,14 +225,14 @@ func (s *Session) NewRequest(ctx context.Context, method, url string, headers *h
 	return
 }
 
-func (s *Session) Do(req *http.Request) (*http.Response, error) {
+func (s *Session) do(req *http.Request) (*http.Response, error) {
 	// Add session headers
 	for k, v := range s.Headers {
 		req.Header[k] = v
 	}
 
 	if *Debug {
-		includeBody := req.ContentLength < DebugLargeBodyThreshold
+		includeBody := req.ContentLength < debugLargeBodyThreshold
 		d, _ := httputil.DumpRequestOut(req, includeBody)
 		if !includeBody {
 			d = append(d, fmt.Sprintf("<request body of %d bytes not shown>\n\n", req.ContentLength)...)
@@ -246,7 +246,7 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	// The response body reader needs to be closed, but lots of places call
-	// session.Do, and they might not be able to reliably close it themselves.
+	// session.do, and they might not be able to reliably close it themselves.
 	// Therefore, read the body out, close the original, then replace it with
 	// a NopCloser over the bytes, which does not need to be closed downsteam.
 	respBody, err := io.ReadAll(resp.Body)
@@ -257,7 +257,7 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 	resp.Body = io.NopCloser(bytes.NewReader(respBody))
 
 	if *Debug {
-		includeBody := resp.ContentLength < DebugLargeBodyThreshold
+		includeBody := resp.ContentLength < debugLargeBodyThreshold
 		dr, _ := httputil.DumpResponse(resp, includeBody)
 		if !includeBody {
 			dr = append(dr, fmt.Sprintf("<response body of %d bytes not shown>\n\n", resp.ContentLength)...)
@@ -273,7 +273,7 @@ func (s *Session) Do(req *http.Request) (*http.Response, error) {
 }
 
 // Perform a simple get to an endpoint
-func (s *Session) Request(
+func (s *Session) request(
 	ctx context.Context,
 	method string,
 	url string,
@@ -287,7 +287,7 @@ func (s *Session) Request(
 		url = url + "?" + params.Encode()
 	}
 
-	// Get the body if one is present
+	// get the body if one is present
 	var buf io.Reader
 	if body != nil {
 		buf = bytes.NewReader(*body)
@@ -300,11 +300,11 @@ func (s *Session) Request(
 
 	req.Header.Set("Accept", "application/json")
 
-	return s.Do(req)
+	return s.do(req)
 }
 
 // Perform a simple get to an endpoint and unmarshal returned JSON
-func (s *Session) RequestJSON(
+func (s *Session) requestJSON(
 	ctx context.Context,
 	method string,
 	url string,
@@ -326,7 +326,7 @@ func (s *Session) RequestJSON(
 	// 	headers.Add("Content-Type", "application/json")
 	// }
 
-	resp, err = s.Request(ctx, method, url, params, headers, &bodyjson)
+	resp, err = s.request(ctx, method, url, params, headers, &bodyjson)
 	if err != nil {
 		return resp, err
 	}
@@ -347,44 +347,44 @@ func (s *Session) RequestJSON(
 	return resp, nil
 }
 
-func (s *Session) Delete(
+func (s *Session) delete(
 	ctx context.Context,
 	url string,
 	params *url.Values,
 	headers *http.Header,
 ) (resp *http.Response, err error) {
-	return s.Request(ctx, "DELETE", url, params, headers, nil)
+	return s.request(ctx, "DELETE", url, params, headers, nil)
 }
 
-func (s *Session) Get(
+func (s *Session) get(
 	ctx context.Context,
 	url string,
 	params *url.Values,
 	headers *http.Header,
 ) (resp *http.Response, err error) {
-	return s.Request(ctx, "GET", url, params, headers, nil)
+	return s.request(ctx, "GET", url, params, headers, nil)
 }
 
-func (s *Session) GetJSON(
+func (s *Session) getJSON(
 	ctx context.Context,
 	url string,
 	params *url.Values,
 	headers *http.Header,
 	responseContainer interface{},
 ) (resp *http.Response, err error) {
-	return s.RequestJSON(ctx, "GET", url, params, headers, nil, responseContainer)
+	return s.requestJSON(ctx, "GET", url, params, headers, nil, responseContainer)
 }
 
-func (s *Session) Head(
+func (s *Session) head(
 	ctx context.Context,
 	url string,
 	params *url.Values,
 	headers *http.Header,
 ) (resp *http.Response, err error) {
-	return s.Request(ctx, "HEAD", url, params, headers, nil)
+	return s.request(ctx, "HEAD", url, params, headers, nil)
 }
 
-func (s *Session) Post(
+func (s *Session) post(
 	ctx context.Context,
 	url string,
 	params *url.Values,
@@ -395,10 +395,10 @@ func (s *Session) Post(
 		headers = &http.Header{}
 		headers.Add("Content-Type", "application/x-www-form-urlencoded")
 	}
-	return s.Request(ctx, "POST", url, params, headers, body)
+	return s.request(ctx, "POST", url, params, headers, body)
 }
 
-func (s *Session) PostJSON(
+func (s *Session) postJSON(
 	ctx context.Context,
 	url string,
 	params *url.Values,
@@ -406,10 +406,10 @@ func (s *Session) PostJSON(
 	body interface{},
 	responseContainer interface{},
 ) (resp *http.Response, err error) {
-	return s.RequestJSON(ctx, "POST", url, params, headers, body, responseContainer)
+	return s.requestJSON(ctx, "POST", url, params, headers, body, responseContainer)
 }
 
-func (s *Session) Put(
+func (s *Session) put(
 	ctx context.Context,
 	url string,
 	params *url.Values,
@@ -420,5 +420,5 @@ func (s *Session) Put(
 		headers = &http.Header{}
 		headers.Add("Content-Type", "application/x-www-form-urlencoded")
 	}
-	return s.Request(ctx, "PUT", url, params, headers, body)
+	return s.request(ctx, "PUT", url, params, headers, body)
 }
