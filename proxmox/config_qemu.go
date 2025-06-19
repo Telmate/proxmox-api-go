@@ -513,6 +513,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 }
 
 func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
+	// TODO add digest during update to check if the config has changed
 	// currentConfig will be mutated
 	currentConfig, err := NewConfigQemuFromApi(ctx, vmr, client)
 	if err != nil {

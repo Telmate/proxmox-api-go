@@ -147,6 +147,7 @@ func (config ConfigPool) SetNoCheck(ctx context.Context, c *Client) error {
 }
 
 func (config ConfigPool) Update(ctx context.Context, c *Client) error {
+	// TODO add digest during update to check if the config has changed
 	if c == nil {
 		return errors.New(Client_Error_Nil)
 	}
