@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"strconv"
@@ -25,6 +26,7 @@ type ConfigLXC struct {
 	CreateOptions   *LxcCreateOptions `json:"create,omitempty"` // only used during creation, never returned
 	DNS             *GuestDNS         `json:"dns,omitempty"`
 	Description     *string           `json:"description,omitempty"`
+	Digest          [sha1.Size]byte   `json:"digest,omitempty"` // only returned.
 	Features        *LxcFeatures      `json:"features,omitempty"`
 	ID              *GuestID          `json:"id"`               // only used during creation
 	Memory          *LxcMemory        `json:"memory,omitempty"` // Never nil when returned
@@ -36,6 +38,7 @@ type ConfigLXC struct {
 	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, defaults to false ,never nil when returned
 	Swap            *LxcSwap          `json:"swap,omitempty"`       // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
+	rawDigest       digest            `json:"-"`
 }
 
 const (
@@ -142,6 +145,7 @@ func (config ConfigLXC) mapToApiShared() map[string]any {
 
 func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	params := config.mapToApiShared()
+	params[lxcApiKeyDigest] = current.rawDigest.String()
 	var delete string
 	if config.BootMount != nil && current.BootMount != nil {
 		config.BootMount.mapToApiUpdate(*current.BootMount, params)
@@ -319,6 +323,12 @@ func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 type RawConfigLXC map[string]any
 
 func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
+	config := raw.all(vmr)
+	config.Digest = config.rawDigest.sha1()
+	return config
+}
+
+func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
 	config := ConfigLXC{
 		Architecture:    raw.Architecture(),
 		BootMount:       raw.BootMount(),
@@ -334,7 +344,8 @@ func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 		OperatingSystem: raw.OperatingSystem(),
 		Privileged:      raw.Privileged(),
 		Swap:            raw.Swap(),
-		Tags:            raw.Tags()}
+		Tags:            raw.Tags(),
+		rawDigest:       raw.digest()}
 	if vmr.pool != "" {
 		config.Pool = util.Pointer(PoolName(vmr.pool))
 	}
@@ -353,6 +364,17 @@ func (raw RawConfigLXC) Description() *string {
 		return util.Pointer(v.(string))
 	}
 	return nil
+}
+
+func (raw RawConfigLXC) Digest() [sha1.Size]byte {
+	return raw.digest().sha1()
+}
+
+func (raw RawConfigLXC) digest() digest {
+	if v, isSet := raw[lxcApiKeyDigest]; isSet {
+		return digest(v.(string))
+	}
+	return ""
 }
 
 func (raw RawConfigLXC) DNS() *GuestDNS {
@@ -417,6 +439,7 @@ const (
 	lxcApiKeyCpuUnits        string = "cpuunits"
 	lxcApiKeyDelete          string = "delete"
 	lxcApiKeyDescription     string = "description"
+	lxcApiKeyDigest          string = "digest"
 	lxcApiKeyFeatures        string = "features"
 	lxcApiKeyGuestID         string = "vmid"
 	lxcApiKeyMemory          string = "memory"

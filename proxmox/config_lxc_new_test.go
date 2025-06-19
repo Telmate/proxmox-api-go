@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"crypto/sha1"
 	"errors"
 	"maps"
 	"net"
@@ -429,6 +430,13 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config:        ConfigLXC{Description: util.Pointer("test")},
 					currentConfig: ConfigLXC{Description: util.Pointer("test")},
 					output:        map[string]any{}}}},
+		{category: `Digest`,
+			update: []test{
+				{name: `set`,
+					config:        ConfigLXC{},
+					currentConfig: ConfigLXC{rawDigest: "af064923bbf2301596aac4c273ba32178ebc4a96"},
+					output: map[string]any{
+						"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}}}},
 		{category: `DNS`,
 			createUpdate: []test{
 				{name: `all`,
@@ -1125,7 +1133,13 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			name := test.category + "/Update/" + subTest.name
 			t.Run(name, func(*testing.T) {
 				tmpParams := subTest.config.mapToApiUpdate(subTest.currentConfig)
-				require.Equal(t, subTest.output, tmpParams, name)
+				clone := maps.Clone(subTest.output)
+				if !subTest.omitDefaults {
+					if _, isSet := clone["digest"]; !isSet {
+						clone["digest"] = "" // set empty digest
+					}
+				}
+				require.Equal(t, clone, tmpParams, name)
 			})
 		}
 	}
@@ -1826,6 +1840,15 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `""`,
 					input:  RawConfigLXC{"description": ""},
 					output: baseConfig(ConfigLXC{Description: util.Pointer("")})}}},
+		{category: `Digest`,
+			tests: []test{
+				{name: `set`,
+					input: RawConfigLXC{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"},
+					output: baseConfig(ConfigLXC{
+						Digest: [sha1.Size]byte{
+							0xaf, 0x06, 0x49, 0x23, 0xbb, 0xf2, 0x30, 0x15, 0x96, 0xaa,
+							0xc4, 0xc2, 0x73, 0xba, 0x32, 0x17, 0x8e, 0xbc, 0x4a, 0x96},
+						rawDigest: "af064923bbf2301596aac4c273ba32178ebc4a96"})}}},
 		{category: `DNS`,
 			tests: []test{
 				{name: `all`,
@@ -2123,6 +2146,14 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 			})
 		}
 	}
+}
+
+func Test_RawConfigLXC_Digest(t *testing.T) {
+	require.Equal(t,
+		[sha1.Size]byte{
+			0xaf, 0x06, 0x49, 0x23, 0xbb, 0xf2, 0x30, 0x15, 0x96, 0xaa,
+			0xc4, 0xc2, 0x73, 0xba, 0x32, 0x17, 0x8e, 0xbc, 0x4a, 0x96},
+		RawConfigLXC{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}.Digest(), "")
 }
 
 func Test_LxcMemory_String(t *testing.T) {
