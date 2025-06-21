@@ -21,11 +21,6 @@ var Debug = new(bool)
 
 const debugLargeBodyThreshold = 5 * 1024 * 1024
 
-type response struct {
-	Resp *http.Response
-	Body []byte
-}
-
 type Session struct {
 	httpClient *http.Client
 	ApiUrl     string
@@ -145,23 +140,6 @@ func decodeResponse(resp *http.Response, v interface{}) error {
 func responseJSON(resp *http.Response) (jbody map[string]interface{}, err error) {
 	err = decodeResponse(resp, &jbody)
 	return jbody, err
-}
-
-// Is this needed?
-func typedResponse(resp *http.Response, v interface{}) error {
-	var intermediate struct {
-		Data struct {
-			Result json.RawMessage `json:"result"`
-		} `json:"data"`
-	}
-	err := decodeResponse(resp, &intermediate)
-	if err != nil {
-		return fmt.Errorf("error reading response envelope: %v", err)
-	}
-	if err = json.Unmarshal(intermediate.Data.Result, v); err != nil {
-		return fmt.Errorf("error unmarshalling result %v", err)
-	}
-	return nil
 }
 
 func (s *Session) setAPIToken(userID, token string) {
@@ -373,15 +351,6 @@ func (s *Session) getJSON(
 	responseContainer interface{},
 ) (resp *http.Response, err error) {
 	return s.requestJSON(ctx, "GET", url, params, headers, nil, responseContainer)
-}
-
-func (s *Session) head(
-	ctx context.Context,
-	url string,
-	params *url.Values,
-	headers *http.Header,
-) (resp *http.Response, err error) {
-	return s.request(ctx, "HEAD", url, params, headers, nil)
 }
 
 func (s *Session) post(
