@@ -40,7 +40,7 @@ func TestParamsTo(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			output := string(ParamsToBody(test.input))
+			output := string(paramsToBody(test.input))
 			if !slices.Contains(test.output, output) {
 				t.Errorf("%s: expected `%+v`, got `%+v`",
 					test.name, test.output, output)
@@ -87,7 +87,7 @@ func TestParamsToWithEmpty(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			output := string(ParamsToBodyWithEmpty(test.input, test.allowedEmpty))
+			output := string(paramsToBodyWithEmpty(test.input, test.allowedEmpty))
 			if !slices.Contains(test.output, output) {
 				t.Errorf("%s: expected `%+v`, got `%+v`",
 					test.name, test.output, output)

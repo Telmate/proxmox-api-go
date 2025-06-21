@@ -796,7 +796,7 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 
 /*
 CloneVm
-Example: Request
+Example: request
 
 nodes/proxmox1-xx/qemu/1012/clone
 
