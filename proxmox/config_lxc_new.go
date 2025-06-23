@@ -329,20 +329,21 @@ func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
 }
 
 func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
+	privileged := raw.isPrivileged()
 	config := ConfigLXC{
 		Architecture:    raw.Architecture(),
 		BootMount:       raw.BootMount(),
 		CPU:             raw.CPU(),
 		DNS:             raw.DNS(),
 		Description:     raw.Description(),
-		Features:        raw.Features(),
+		Features:        raw.features(privileged),
 		ID:              util.Pointer(vmr.vmId),
 		Memory:          raw.Memory(),
 		Name:            raw.Name(),
 		Networks:        raw.Networks(),
 		Node:            util.Pointer(vmr.node),
 		OperatingSystem: raw.OperatingSystem(),
-		Privileged:      raw.Privileged(),
+		Privileged:      &privileged,
 		Swap:            raw.Swap(),
 		Tags:            raw.Tags(),
 		rawDigest:       raw.digest()}
