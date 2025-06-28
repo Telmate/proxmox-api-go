@@ -406,9 +406,8 @@ func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
 }
 
 // Privileged returns true if the container is privileged, false if it is unprivileged.
-// Pointer is never nil.
-func (raw RawConfigLXC) Privileged() *bool {
-	return util.Pointer(raw.isPrivileged())
+func (raw RawConfigLXC) Privileged() bool {
+	return raw.isPrivileged()
 }
 
 func (raw RawConfigLXC) isPrivileged() bool {

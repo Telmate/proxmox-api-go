@@ -2156,6 +2156,10 @@ func Test_RawConfigLXC_Digest(t *testing.T) {
 		RawConfigLXC{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}.Digest(), "")
 }
 
+func Test_RawConfigLXC_Privileged(t *testing.T) {
+	require.Equal(t, true, RawConfigLXC{}.Privileged())
+}
+
 func Test_LxcMemory_String(t *testing.T) {
 	require.Equal(t, "583421", LxcMemory(583421).String())
 }
