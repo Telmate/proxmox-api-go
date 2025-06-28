@@ -339,7 +339,7 @@ func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
 		Features:        raw.features(privileged),
 		ID:              util.Pointer(vmr.vmId),
 		Memory:          raw.Memory(),
-		Name:            raw.Name(),
+		Name:            util.Pointer(raw.Name()),
 		Networks:        raw.Networks(),
 		Node:            util.Pointer(vmr.node),
 		OperatingSystem: raw.OperatingSystem(),
@@ -390,12 +390,11 @@ func (raw RawConfigLXC) Memory() *LxcMemory {
 	return &memory
 }
 
-func (raw RawConfigLXC) Name() *GuestName {
-	var name GuestName
+func (raw RawConfigLXC) Name() GuestName {
 	if v, isSet := raw[lxcApiKeyName]; isSet {
-		name = GuestName(v.(string))
+		return GuestName(v.(string))
 	}
-	return &name
+	return ""
 }
 
 func (raw RawConfigLXC) OperatingSystem() OperatingSystem {
