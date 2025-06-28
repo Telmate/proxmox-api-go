@@ -344,7 +344,7 @@ func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
 		Node:            util.Pointer(vmr.node),
 		OperatingSystem: raw.OperatingSystem(),
 		Privileged:      &privileged,
-		Swap:            raw.Swap(),
+		Swap:            util.Pointer(raw.Swap()),
 		Tags:            raw.Tags(),
 		rawDigest:       raw.digest()}
 	if vmr.pool != "" {
@@ -416,12 +416,11 @@ func (raw RawConfigLXC) isPrivileged() bool {
 	return true // when privileged the API does not return the key at all, so we assume it is privileged
 }
 
-func (raw RawConfigLXC) Swap() *LxcSwap {
-	var swap LxcSwap
+func (raw RawConfigLXC) Swap() LxcSwap {
 	if v, isSet := raw[lxcApiKeySwap]; isSet {
-		swap = LxcSwap(v.(float64))
+		return LxcSwap(v.(float64))
 	}
-	return &swap
+	return 0
 }
 
 func (raw RawConfigLXC) Tags() *Tags {
