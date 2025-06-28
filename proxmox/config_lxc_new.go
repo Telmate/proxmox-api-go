@@ -338,7 +338,7 @@ func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
 		Description:     raw.Description(),
 		Features:        raw.features(privileged),
 		ID:              util.Pointer(vmr.vmId),
-		Memory:          raw.Memory(),
+		Memory:          util.Pointer(raw.Memory()),
 		Name:            util.Pointer(raw.Name()),
 		Networks:        raw.Networks(),
 		Node:            util.Pointer(vmr.node),
@@ -382,12 +382,11 @@ func (raw RawConfigLXC) DNS() *GuestDNS {
 	return GuestDNS{}.mapToSDK(raw)
 }
 
-func (raw RawConfigLXC) Memory() *LxcMemory {
-	var memory LxcMemory
+func (raw RawConfigLXC) Memory() LxcMemory {
 	if v, isSet := raw[lxcApiKeyMemory]; isSet {
-		memory = LxcMemory(v.(float64))
+		return LxcMemory(v.(float64))
 	}
-	return &memory
+	return 0
 }
 
 func (raw RawConfigLXC) Name() GuestName {
