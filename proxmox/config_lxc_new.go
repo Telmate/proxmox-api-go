@@ -86,7 +86,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		vmId:   id,
 		pool:   pool,
 		vmType: vmRefLXC}
-	if config.PowerState != nil && *config.PowerState == PowerStateRunning {
+	if config.State != nil && *config.State == PowerStateRunning {
 		if err := GuestStart(ctx, vmRef, c); err != nil {
 			return nil, err
 		}
@@ -247,11 +247,21 @@ func (config ConfigLXC) updateNoCheck(
 	currentState PowerState,
 	c *Client) error {
 
-	var getRootMount, getMounts bool
+	var move []lxcMountMove
+	var resize []lxcMountResize
+	var getRootMount bool
 
 	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String()
 
 	targetState := config.State.combine(currentState)
+
+	// Check if we have to move or resize any mounts
+	if config.BootMount != nil && current.BootMount != nil {
+		getRootMount = true
+		markedMounts := config.BootMount.markMountChanges_Unsafe(current.BootMount)
+		move = markedMounts.move
+		resize = markedMounts.resize
+	}
 
 	if targetState == PowerStateStopped && currentState != PowerStateStopped { // We want the vm to be stopped, better to do this before we start making other api calls
 		if !allowRestart {
@@ -261,6 +271,44 @@ func (config ConfigLXC) updateNoCheck(
 			return err
 		}
 		currentState = PowerStateStopped // We assume the guest is stopped now
+	}
+
+	if len(resize) > 0 || len(move) > 0 {
+
+		if len(move) > 0 { // Move mounts
+			if currentState == PowerStateRunning || currentState == PowerStateUnknown { // Stop guest before moving disks
+				if !allowRestart {
+					return errors.New("guest has to be stopped before moving disks")
+				}
+				if err := GuestShutdown(ctx, vmr, c, true); err != nil { // We have to stop the guest before moving disks
+					return err
+				}
+				currentState = PowerStateStopped // We assume the guest is stopped now
+			}
+			for i := range move {
+				if _, err := move[i].move(ctx, true, vmr, c); err != nil {
+					return err
+				}
+			}
+		}
+
+		for i := range resize { // Resize mounts
+			if _, err := resize[i].resize(ctx, vmr, c); err != nil {
+				return err
+			}
+		}
+
+		newCurrent, err := NewConfigLXCFromApi(ctx, vmr, c) // We have to refetch part of the current config
+		if err != nil {
+			return err
+		}
+		current.rawDigest = newCurrent.digest()
+
+		if len(move) > 0 {
+			if getRootMount {
+				current.BootMount = newCurrent.BootMount()
+			}
+		}
 	}
 
 	if params := config.mapToApiUpdate(*current); len(params) > 0 {

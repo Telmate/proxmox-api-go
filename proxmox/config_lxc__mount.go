@@ -90,6 +90,21 @@ func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, params map[strin
 	params[lxcApiKeyRootFS] = rootFs
 }
 
+func (config LxcBootMount) markMountChanges_Unsafe(current *LxcBootMount) lxcUpdateChanges {
+	changes := lxcUpdateChanges{}
+	if config.SizeInKibibytes != nil && *config.SizeInKibibytes > *current.SizeInKibibytes { // Resize
+		changes.resize = []lxcMountResize{{
+			sizeInKibibytes: *config.SizeInKibibytes,
+			id:              "rootfs"}}
+	}
+	if config.Storage != nil && *config.Storage != *current.Storage { // Move
+		changes.move = []lxcMountMove{{
+			storage: *config.Storage,
+			id:      "rootfs"}}
+	}
+	return changes
+}
+
 func (config LxcBootMount) string() (rootFs string) {
 	// zfs  // local-zfs:subvol-101-disk-0
 	// ext4 // local-ext4:101/vm-101-disk-0.raw
