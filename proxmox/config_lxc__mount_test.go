@@ -66,6 +66,37 @@ func Test_LxcMountSize_String(t *testing.T) {
 	}
 }
 
+func Test_lxcMountMove_mapToAPI(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  lxcMountMove
+		delete bool
+		output map[string]any
+	}{
+		{name: `delete false`,
+			input: lxcMountMove{
+				id:      "100",
+				storage: "local-ext4"},
+			output: map[string]any{
+				"storage": string("local-ext4"),
+				"volume":  string("100")}},
+		{name: `delete true`,
+			input: lxcMountMove{
+				id:      "100",
+				storage: "local-ext4"},
+			delete: true,
+			output: map[string]any{
+				"storage": string("local-ext4"),
+				"volume":  string("100"),
+				"delete":  string("1")}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.mapToAPI(test.delete))
+		})
+	}
+}
+
 func Test_RawConfigLXC_BootMount(t *testing.T) {
 	require.Equal(t,
 		&LxcBootMount{
