@@ -324,7 +324,7 @@ func (config ConfigLXC) updateNoCheck(
 		if err := c.Put(ctx, params, url+"/config"); err != nil {
 			return err
 		}
-		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the gest is running, we have to check if it has pending changes
+		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes
 			pendingChanges, err := GuestHasPendingChanges(ctx, vmr, c)
 			if err != nil {
 				return fmt.Errorf("error checking for pending changes: %w", err)
