@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
@@ -60,8 +61,8 @@ func (mount LxcBootMount) combine(usedConfig LxcBootMount) LxcBootMount {
 	return usedConfig
 }
 
-func (config LxcBootMount) mapToApiCreate() string {
-	rootFs := config.string()
+func (config LxcBootMount) mapToApiCreate(privileged bool) string {
+	rootFs := config.string(privileged)
 	if config.Storage != nil && config.SizeInKibibytes != nil {
 		var size float64
 		if *config.SizeInKibibytes < gibiByteLxc { // only approximate if the size is less than 1 GiB
@@ -74,11 +75,11 @@ func (config LxcBootMount) mapToApiCreate() string {
 	return rootFs
 }
 
-func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, params map[string]any) {
-	currentRootFs := current.string()
+func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, privileged bool, params map[string]any) {
+	currentRootFs := current.string(privileged)
 	var usedConfig LxcBootMount
 	usedConfig = config.combine(current.combine(usedConfig))
-	rootFs := usedConfig.string()
+	rootFs := usedConfig.string(privileged)
 	if currentRootFs == rootFs { // No changes
 		return
 	}
@@ -87,7 +88,7 @@ func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, params map[strin
 	}
 	if usedConfig.Storage != nil {
 		rootFs = *usedConfig.Storage + ":" + current.rawDisk + rootFs
-		if current.Storage != nil && rootFs == *current.Storage+":"+current.rawDisk+current.string() {
+		if current.Storage != nil && rootFs == *current.Storage+":"+current.rawDisk+current.string(privileged) {
 			return
 		}
 	}
@@ -109,7 +110,7 @@ func (config LxcBootMount) markMountChanges_Unsafe(current *LxcBootMount) lxcUpd
 	return changes
 }
 
-func (config LxcBootMount) string() (rootFs string) {
+func (config LxcBootMount) string(privileged bool) (rootFs string) {
 	// zfs  // local-zfs:subvol-101-disk-0
 	// ext4 // local-ext4:101/vm-101-disk-0.raw
 	// lvm  // local-lvm:vm-101-disk-0
@@ -139,7 +140,7 @@ func (config LxcBootMount) string() (rootFs string) {
 			rootFs += ",mountoptions=" + options[1:]
 		}
 	}
-	if config.Quota != nil && *config.Quota {
+	if privileged && config.Quota != nil && *config.Quota {
 		rootFs += ",quota=1"
 	}
 	if config.Replicate != nil && !*config.Replicate {

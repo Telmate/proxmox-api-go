@@ -120,7 +120,34 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						SizeInKibibytes: util.Pointer(LxcMountSize(1179648)),
 						Storage:         util.Pointer("local-lvm")}},
-					output: map[string]any{"rootfs": "local-lvm:1"}}},
+					output: map[string]any{"rootfs": "local-lvm:1"}},
+				{name: `Quota false, Privileged false`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(false)},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Quota false, Privileged true`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(true)},
+					omitDefaults: all,
+					output:       map[string]any{"rootfs": ""}},
+				{name: `Quota true, Privileged false`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(false)},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Quota true, Privileged true`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(true)},
+					omitDefaults: all,
+					output:       map[string]any{"rootfs": ",quota=1"}},
+			},
 			createUpdate: []test{
 				{name: `ACL true`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
@@ -188,18 +215,6 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
 						NoSuid: util.Pointer(true)}}},
 					output: map[string]any{"rootfs": ""}},
-				{name: `Quota false`,
-					config: ConfigLXC{BootMount: &LxcBootMount{
-						Quota: util.Pointer(false)}},
-					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
-						Quota: util.Pointer(true)}},
-					output: map[string]any{"rootfs": ""}},
-				{name: `Quota true`,
-					config: ConfigLXC{BootMount: &LxcBootMount{
-						Quota: util.Pointer(true)}},
-					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
-						Quota: util.Pointer(false)}},
-					output: map[string]any{"rootfs": ",quota=1"}},
 				{name: `Replication false`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						Replicate: util.Pointer(false)}},
@@ -266,6 +281,48 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						NoATime:  util.Pointer(true),
 						NoSuid:   util.Pointer(false)}}},
 					output: map[string]any{"rootfs": ",mountoptions=discard;lazytime;noatime;nosuid"}},
+				{name: `Quota false, Privileged false`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(false)},
+					currentConfig: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(false)},
+					omitDefaults: all,
+					output:       map[string]any{}},
+				{name: `Quota false, Privileged true`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(true)},
+					currentConfig: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(true)},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Quota true, Privileged false`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(false)},
+					currentConfig: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(false)},
+					omitDefaults: all,
+					output:       map[string]any{}},
+				{name: `Quota true, Privileged true`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(true)},
+					currentConfig: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(true)},
+					output: map[string]any{"rootfs": ",quota=1"}},
 				{name: `Storage & size, no api change`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						SizeInKibibytes: util.Pointer(LxcMountSize(2621440)),

@@ -97,10 +97,10 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 
 func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	params := config.mapToApiShared()
-	priviledged := true
+	privileged := true
 	if config.Privileged == nil || !*config.Privileged {
 		params[lxcApiKeyUnprivileged] = 1
-		priviledged = false
+		privileged = false
 	}
 	var pool PoolName
 	if config.BootMount != nil {
@@ -153,14 +153,14 @@ func (config ConfigLXC) mapToApiShared() map[string]any {
 }
 
 func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
-	var priviledged bool = lxcDefaultPrivilege
+	var privileged bool = lxcDefaultPrivilege
 	if current.Privileged != nil {
-		priviledged = *current.Privileged
+		privileged = *current.Privileged
 	}
 	params := config.mapToApiShared()
 	var delete string
 	if config.BootMount != nil && current.BootMount != nil {
-		config.BootMount.mapToApiUpdate(*current.BootMount, params)
+		config.BootMount.mapToApiUpdate(*current.BootMount, privileged, params)
 	}
 	if config.CPU != nil {
 		if current.CPU != nil {
