@@ -104,7 +104,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	}
 	var pool PoolName
 	if config.BootMount != nil {
-		params[lxcApiKeyRootFS] = config.BootMount.mapToApiCreate()
+		params[lxcApiKeyRootFS] = config.BootMount.mapToApiCreate(privileged)
 	}
 	if config.CPU != nil {
 		config.CPU.mapToApiCreate(params)
