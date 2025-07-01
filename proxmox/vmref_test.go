@@ -444,9 +444,9 @@ func Test_RawGuestStatus_ALL(t *testing.T) {
 			input:  RawGuestStatus{},
 			output: GuestStatus{}},
 	}
-	for i := range tests {
-		t.Run(tests[i].name, func(*testing.T) {
-			require.Equal(t, tests[i].output, tests[i].input.ALL(), tests[i].name)
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, test.input.ALL(), test.name)
 		})
 	}
 }
