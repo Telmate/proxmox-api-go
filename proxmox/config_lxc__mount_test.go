@@ -65,3 +65,20 @@ func Test_LxcMountSize_String(t *testing.T) {
 		})
 	}
 }
+
+func Test_RawConfigLXC_BootMount(t *testing.T) {
+	require.Equal(t,
+		&LxcBootMount{
+			ACL:   util.Pointer(TriBoolTrue),
+			Quota: util.Pointer(true),
+			Options: &LxcBootMountOptions{
+				Discard:  util.Pointer(true),
+				LazyTime: util.Pointer(true),
+				NoATime:  util.Pointer(true),
+				NoSuid:   util.Pointer(true)},
+			Replicate:       util.Pointer(true),
+			Storage:         util.Pointer("local-ext4"),
+			SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+			rawDisk:         "local-ext4:subvol-101-disk-0"},
+		RawConfigLXC{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G,quota=1,replicate=1"}.BootMount())
+}

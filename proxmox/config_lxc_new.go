@@ -97,6 +97,11 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 
 func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	params := config.mapToApiShared()
+	priviledged := true
+	if config.Privileged == nil || !*config.Privileged {
+		params[lxcApiKeyUnprivileged] = 1
+		priviledged = false
+	}
 	var pool PoolName
 	if config.BootMount != nil {
 		params[lxcApiKeyRootFS] = config.BootMount.mapToApiCreate()
@@ -132,9 +137,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		pool = *config.Pool
 		params[lxcApiKeyPool] = string(pool)
 	}
-	if config.Privileged == nil || !*config.Privileged {
-		params[lxcApiKeyUnprivileged] = 1
-	}
+
 	if config.Swap != nil {
 		params[lxcApiKeySwap] = int(*config.Swap)
 	}
@@ -150,8 +153,11 @@ func (config ConfigLXC) mapToApiShared() map[string]any {
 }
 
 func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
+	var priviledged bool = lxcDefaultPrivilege
+	if current.Privileged != nil {
+		priviledged = *current.Privileged
+	}
 	params := config.mapToApiShared()
-	params[lxcApiKeyDigest] = current.rawDigest.String()
 	var delete string
 	if config.BootMount != nil && current.BootMount != nil {
 		config.BootMount.mapToApiUpdate(*current.BootMount, params)
@@ -207,6 +213,9 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	}
 	if delete != "" {
 		params[lxcApiKeyDelete] = strings.TrimPrefix(delete, ",")
+	}
+	if len(params) > 0 {
+		params[lxcApiKeyDigest] = current.rawDigest.String()
 	}
 	return params
 }
@@ -344,7 +353,11 @@ func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
 	if current != nil { // Update
 		err = config.validateUpdate(*current)
 	} else { // Create
-		err = config.validateCreate()
+		var privileged bool = lxcDefaultPrivilege
+		if config.Privileged != nil {
+			privileged = *config.Privileged
+		}
+		err = config.validateCreate(privileged)
 	}
 	if err != nil {
 		return
@@ -387,11 +400,11 @@ func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
 	return
 }
 
-func (config ConfigLXC) validateCreate() (err error) {
+func (config ConfigLXC) validateCreate(privileged bool) (err error) {
 	if config.BootMount == nil {
 		return errors.New(ConfigLXC_Error_BootMountMissing)
 	}
-	if err = config.BootMount.Validate(nil); err != nil {
+	if err = config.BootMount.Validate(nil, privileged); err != nil {
 		return
 	}
 	if config.CreateOptions == nil {
@@ -414,7 +427,11 @@ func (config ConfigLXC) validateCreate() (err error) {
 
 func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 	if config.BootMount != nil {
-		if err = config.BootMount.Validate(current.BootMount); err != nil {
+		var privileged bool = lxcDefaultPrivilege
+		if current.Privileged != nil {
+			privileged = *current.Privileged
+		}
+		if err = config.BootMount.Validate(current.BootMount, privileged); err != nil {
 			return
 		}
 	}
@@ -441,7 +458,7 @@ func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
 	privileged := raw.isPrivileged()
 	config := ConfigLXC{
 		Architecture:    raw.Architecture(),
-		BootMount:       raw.BootMount(),
+		BootMount:       raw.bootMount(privileged),
 		CPU:             raw.CPU(),
 		DNS:             raw.DNS(),
 		Description:     raw.Description(),
