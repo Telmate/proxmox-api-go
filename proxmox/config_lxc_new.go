@@ -36,7 +36,8 @@ type ConfigLXC struct {
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
 	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, defaults to false ,never nil when returned
-	Swap            *LxcSwap          `json:"swap,omitempty"`       // Never nil when returned
+	State           *PowerState       `json:"state,omitempty"`
+	Swap            *LxcSwap          `json:"swap,omitempty"` // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
 	rawDigest       digest            `json:"-"`
 }
@@ -48,7 +49,6 @@ const (
 const (
 	ConfigLXC_Error_BootMountMissing     = "boot mount is required during creation"
 	ConfigLXC_Error_CreateOptionsMissing = "create options are required during creation"
-	ConfigLXC_Error_NoSettingsSpecified  = "no settings specified"
 )
 
 func (config ConfigLXC) Create(ctx context.Context, c *Client) (*VmRef, error) {
@@ -81,12 +81,18 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		}
 	}
 
-	return &VmRef{
+	vmRef := &VmRef{
 		node:   node,
 		vmId:   id,
 		pool:   pool,
-		vmType: vmRefLXC,
-	}, nil
+		vmType: vmRefLXC}
+	if config.PowerState != nil && *config.PowerState == PowerStateRunning {
+		if err := GuestStart(ctx, vmRef, c); err != nil {
+			return nil, err
+		}
+	}
+
+	return vmRef, nil
 }
 
 func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
@@ -205,33 +211,85 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	return params
 }
 
-func (config ConfigLXC) Update(ctx context.Context, vmr *VmRef, c *Client) error {
+func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
+	rawStatus, err := vmr.GetRawGuestStatus(ctx, c)
+	if err != nil {
+		return err
+	}
 	raw, err := NewConfigLXCFromApi(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
-	current := raw.ALL(*vmr)
+	current := raw.all(*vmr)
 	if err := config.Validate(current); err != nil {
 		return err
 	}
-	return config.updateNoCheck(ctx, vmr, current, c)
+	return config.updateNoCheck(ctx, allowRestart, vmr, current, rawStatus.State(), c)
 }
 
-func (config ConfigLXC) UpdateNoCheck(ctx context.Context, vmr *VmRef, c *Client) error {
+func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
+	rawStatus, err := vmr.GetRawGuestStatus(ctx, c)
+	if err != nil {
+		return err
+	}
 	raw, err := NewConfigLXCFromApi(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
-	return config.updateNoCheck(ctx, vmr, raw.ALL(*vmr), c)
+	return config.updateNoCheck(ctx, allowRestart, vmr, raw.all(*vmr), rawStatus.State(), c)
 }
 
-func (config ConfigLXC) updateNoCheck(ctx context.Context, vmr *VmRef, current *ConfigLXC, c *Client) error {
-	params := config.mapToApiUpdate(*current)
-	if len(params) == 0 {
-		return errors.New(ConfigLXC_Error_NoSettingsSpecified)
+func (config ConfigLXC) updateNoCheck(
+	ctx context.Context,
+	allowRestart bool,
+	vmr *VmRef,
+	current *ConfigLXC,
+	currentState PowerState,
+	c *Client) error {
+
+	var getRootMount, getMounts bool
+
+	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String()
+
+	targetState := config.State.combine(currentState)
+
+	if targetState == PowerStateStopped && currentState != PowerStateStopped { // We want the vm to be stopped, better to do this before we start making other api calls
+		if !allowRestart {
+			return errors.New("guest has to be stopped before applying changes")
+		}
+		if _, err := c.ShutdownVm(ctx, vmr); err != nil {
+			return err
+		}
+		currentState = PowerStateStopped // We assume the guest is stopped now
 	}
-	// TODO add disk migration code here
-	return c.Put(ctx, params, "/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/config")
+
+	if params := config.mapToApiUpdate(*current); len(params) > 0 {
+		if err := c.Put(ctx, params, url+"/config"); err != nil {
+			return err
+		}
+		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the gest is running, we have to check if it has pending changes
+			pendingChanges, err := GuestHasPendingChanges(ctx, vmr, c)
+			if err != nil {
+				return fmt.Errorf("error checking for pending changes: %w", err)
+			}
+			if pendingChanges {
+				if !allowRestart {
+					// TODO revert pending changes
+					return errors.New("guest has to be restarted to apply changes")
+				}
+				if err := GuestReboot(ctx, vmr, c); err != nil {
+					return fmt.Errorf("error restarting guest: %w", err)
+				}
+				currentState = PowerStateRunning // We assume the guest is running now
+			}
+		}
+	}
+	if currentState != PowerStateRunning && targetState == PowerStateRunning { // We want the guest to be running, so we start it now
+		if err := GuestStart(ctx, vmr, c); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
@@ -322,9 +380,12 @@ func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 
 type RawConfigLXC map[string]any
 
-func (raw RawConfigLXC) ALL(vmr VmRef) *ConfigLXC {
+func (raw RawConfigLXC) ALL(vmr VmRef, state PowerState) *ConfigLXC {
 	config := raw.all(vmr)
 	config.Digest = config.rawDigest.sha1()
+	if state != PowerStateUnknown {
+		config.State = &state
+	}
 	return config
 }
 

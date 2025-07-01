@@ -181,26 +181,26 @@ func (rate GuestNetworkRate) Validate() error {
 }
 
 type GuestResource struct {
-	CpuCores           uint      `json:"cpu_cores"`
-	CpuUsage           float64   `json:"cpu_usage"`
-	DiskReadTotal      uint      `json:"disk_read"`
-	DiskSizeInBytes    uint      `json:"disk_size"`
-	DiskUsedInBytes    uint      `json:"disk_used"`
-	DiskWriteTotal     uint      `json:"disk_write"`
-	HaState            string    `json:"hastate"` // TODO custom type?
-	Id                 uint      `json:"id"`
-	MemoryTotalInBytes uint      `json:"memory_total"`
-	MemoryUsedInBytes  uint      `json:"memory_used"`
-	Name               GuestName `json:"name"`
-	NetworkIn          uint      `json:"network_in"`
-	NetworkOut         uint      `json:"network_out"`
-	Node               string    `json:"node"` // TODO custom type
-	Pool               PoolName  `json:"pool"`
-	Status             string    `json:"status"` // TODO custom type?
-	Tags               Tags      `json:"tags"`
-	Template           bool      `json:"template"`
-	Type               GuestType `json:"type"`
-	UptimeInSeconds    uint      `json:"uptime"`
+	CpuCores           uint       `json:"cpu_cores"`
+	CpuUsage           float64    `json:"cpu_usage"`
+	DiskReadTotal      uint       `json:"disk_read"`
+	DiskSizeInBytes    uint       `json:"disk_size"`
+	DiskUsedInBytes    uint       `json:"disk_used"`
+	DiskWriteTotal     uint       `json:"disk_write"`
+	HaState            string     `json:"hastate"` // TODO custom type?
+	Id                 uint       `json:"id"`
+	MemoryTotalInBytes uint       `json:"memory_total"`
+	MemoryUsedInBytes  uint       `json:"memory_used"`
+	Name               GuestName  `json:"name"`
+	NetworkIn          uint       `json:"network_in"`
+	NetworkOut         uint       `json:"network_out"`
+	Node               string     `json:"node"` // TODO custom type
+	Pool               PoolName   `json:"pool"`
+	Status             PowerState `json:"status"`
+	Tags               Tags       `json:"tags"`
+	Template           bool       `json:"template"`
+	Type               GuestType  `json:"type"`
+	UptimeInSeconds    uint       `json:"uptime"`
 }
 
 const (
@@ -258,7 +258,7 @@ func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
 			resources[i].Node = tmpParams["node"].(string)
 		}
 		if _, isSet := tmpParams["status"]; isSet {
-			resources[i].Status = tmpParams["status"].(string)
+			resources[i].Status = PowerState(0).parse(tmpParams["status"].(string))
 		}
 		if _, isSet := tmpParams["tags"]; isSet {
 			resources[i].Tags = Tags{}.mapToSDK(tmpParams["tags"].(string))

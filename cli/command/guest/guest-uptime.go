@@ -15,9 +15,9 @@ var guest_uptimeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateGuestIDset(args, "GuestID"))
 		c := cli.NewClient()
-		vmState, err := c.GetVmState(cli.Context(), vmr)
+		raw, err := vmr.GetRawGuestStatus(cli.Context(), c)
 		if err == nil {
-			fmt.Fprintf(GuestCmd.OutOrStdout(), "Uptime of guest with id (%d) is %d\n", vmr.VmId(), int(vmState["uptime"].(float64)))
+			fmt.Fprintf(GuestCmd.OutOrStdout(), "Uptime of guest with id (%d) is %d\n", vmr.VmId(), raw.Uptime())
 		}
 		return
 	},

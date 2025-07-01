@@ -334,6 +334,7 @@ func (c *Client) GetVmRefById(ctx context.Context, ID GuestID) (vmr *VmRef, err 
 	}
 }
 
+// Deprecated: *VmRef.GetRawGuestStatus() instead
 func (c *Client) GetVmState(ctx context.Context, vmr *VmRef) (vmState map[string]interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {

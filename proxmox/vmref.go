@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 const (
@@ -88,6 +89,14 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 		node:   node,
 		pool:   pool,
 		vmType: vmRefQemu}, nil
+}
+
+func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestStatus, error) {
+	err := c.CheckVmRef(ctx, vmr)
+	if err != nil {
+		return nil, err
+	}
+	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
 }
 
 func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
@@ -352,4 +361,47 @@ func (clone cloneSettings) mapToAPI() (GuestID, NodeName, PoolName, map[string]i
 		params["format"] = clone.StorageFormat.String()
 	}
 	return id, clone.Node, pool, params
+}
+
+// TODO add more properites to GuestStatus
+type GuestStatus struct {
+	Name   GuestName     `json:"name"`
+	State  PowerState    `json:"state"`
+	Uptime time.Duration `json:"uptime"`
+}
+
+type RawGuestStatus map[string]any
+
+func (raw RawGuestStatus) Name() GuestName {
+	if v, isSet := raw["name"]; isSet {
+		if name, ok := v.(string); ok {
+			return GuestName(name)
+		}
+	}
+	return ""
+}
+
+func (raw RawGuestStatus) ALL() GuestStatus {
+	return GuestStatus{
+		Name:   raw.Name(),
+		State:  raw.State(),
+		Uptime: raw.Uptime()}
+}
+
+func (raw RawGuestStatus) State() PowerState {
+	if v, isSet := raw["status"]; isSet {
+		if state, ok := v.(string); ok {
+			return PowerState(0).parse(state)
+		}
+	}
+	return PowerStateUnknown
+}
+
+func (raw RawGuestStatus) Uptime() time.Duration {
+	if v, isSet := raw["uptime"]; isSet {
+		if uptime, ok := v.(float64); ok {
+			return time.Duration(uptime) * time.Second
+		}
+	}
+	return 0
 }

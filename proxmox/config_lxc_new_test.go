@@ -1708,6 +1708,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		name   string
 		input  RawConfigLXC
 		vmr    VmRef
+		state  PowerState
 		output *ConfigLXC
 	}
 	tests := []struct {
@@ -2129,6 +2130,11 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `set 0`,
 					input:  RawConfigLXC{"swap": float64(0)},
 					output: baseConfig(ConfigLXC{Swap: util.Pointer(LxcSwap(0))})}}},
+		{category: `State`,
+			tests: []test{
+				{name: `set`,
+					state:  PowerStateRunning,
+					output: baseConfig(ConfigLXC{State: util.Pointer(PowerStateRunning)})}}},
 		{category: `Tags`,
 			tests: []test{
 				{name: `set`,
@@ -2142,7 +2148,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.output, subTest.input.ALL(subTest.vmr), name)
+				require.Equal(t, subTest.output, subTest.input.ALL(subTest.vmr, subTest.state), name)
 			})
 		}
 	}
