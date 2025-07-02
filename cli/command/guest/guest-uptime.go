@@ -2,6 +2,7 @@ package guest
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/Telmate/proxmox-api-go/proxmox"
@@ -17,7 +18,7 @@ var guest_uptimeCmd = &cobra.Command{
 		c := cli.NewClient()
 		raw, err := vmr.GetRawGuestStatus(cli.Context(), c)
 		if err == nil {
-			fmt.Fprintf(GuestCmd.OutOrStdout(), "Uptime of guest with id (%d) is %d\n", vmr.VmId(), raw.Uptime())
+			fmt.Fprintln(GuestCmd.OutOrStdout(), "Uptime of guest with id "+vmr.VmId().String()+" is "+strconv.Itoa(int(raw.Uptime().Seconds())))
 		}
 		return
 	},
