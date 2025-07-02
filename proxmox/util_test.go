@@ -129,6 +129,14 @@ func Test_floatToTrimmedString(t *testing.T) {
 	}
 }
 
+func Benchmark_splitStringOfSettings(b *testing.B) {
+	input := "mode=fast,debug=true,threads=8,logFile=/var/log/app.log,timeout=30,retries=5,featureX=enabled"
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = splitStringOfSettings(input)
+	}
+}
+
 func Test_splitStringOfSettings(t *testing.T) {
 	testData := []struct {
 		Input  string

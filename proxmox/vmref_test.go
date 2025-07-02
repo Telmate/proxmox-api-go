@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/stretchr/testify/require"
@@ -411,6 +412,41 @@ func Test_VmRef_MigrateNoCheck(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			require.NotPanics(t, func() { test.input.vmr.MigrateNoCheck(test.input.ctx, test.input.c, "valid", false) })
 			require.Error(t, test.input.vmr.MigrateNoCheck(test.input.ctx, test.input.c, "valid", false))
+		})
+	}
+}
+
+func Test_RawGuestStatus_ALL(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  RawGuestStatus
+		output GuestStatus
+	}{
+		{name: `Name`,
+			input:  RawGuestStatus{"name": "test"},
+			output: GuestStatus{Name: "test"}},
+		{name: `State`,
+			input:  RawGuestStatus{"status": "running"},
+			output: GuestStatus{State: PowerStateRunning}},
+		{name: `Uptime`,
+			input:  RawGuestStatus{"uptime": float64(12345)},
+			output: GuestStatus{Uptime: time.Duration(12345) * time.Second}},
+		{name: `All`,
+			input: RawGuestStatus{
+				"name":   "guest100",
+				"status": "stopped",
+				"uptime": float64(95673)},
+			output: GuestStatus{
+				Name:   "guest100",
+				State:  PowerStateStopped,
+				Uptime: time.Duration(95673) * time.Second}},
+		{name: `Empty`,
+			input:  RawGuestStatus{},
+			output: GuestStatus{}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, test.input.ALL(), test.name)
 		})
 	}
 }

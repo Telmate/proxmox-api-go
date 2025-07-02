@@ -911,11 +911,11 @@ func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (conf
 // Useful waiting for ISO install to complete
 func WaitForShutdown(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	for ii := 0; ii < 100; ii++ {
-		vmState, err := client.GetVmState(ctx, vmr)
+		raw, err := vmr.GetRawGuestStatus(ctx, client)
 		if err != nil {
 			log.Print("Wait error:")
 			log.Println(err)
-		} else if vmState["status"] == "stopped" {
+		} else if raw.State() == PowerStateStopped {
 			return nil
 		}
 		time.Sleep(5 * time.Second)
@@ -925,11 +925,11 @@ func WaitForShutdown(ctx context.Context, vmr *VmRef, client *Client) (err error
 
 // This is because proxmox create/config API won't let us make usernet devices
 func SshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (sshPort string, err error) {
-	vmState, err := client.GetVmState(ctx, vmr)
+	raw, err := vmr.GetRawGuestStatus(ctx, client)
 	if err != nil {
 		return "", err
 	}
-	if vmState["status"] == "stopped" {
+	if raw.State() == PowerStateStopped {
 		return "", fmt.Errorf("VM must be running first")
 	}
 	sshPort = strconv.Itoa(int(vmr.VmId()) + 22000)
@@ -947,11 +947,11 @@ func SshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (sshPort
 // device_del net1
 // netdev_del net1
 func RemoveSshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (err error) {
-	vmState, err := client.GetVmState(ctx, vmr)
+	raw, err := vmr.GetRawGuestStatus(ctx, client)
 	if err != nil {
 		return err
 	}
-	if vmState["status"] == "stopped" {
+	if raw.State() == PowerStateStopped {
 		return fmt.Errorf("VM must be running first")
 	}
 	_, err = client.MonitorCmd(ctx, vmr, "device_del net1")
@@ -979,11 +979,11 @@ func MaxVmId(ctx context.Context, client *Client) (max int, err error) {
 }
 
 func SendKeysString(ctx context.Context, vmr *VmRef, client *Client, keys string) (err error) {
-	vmState, err := client.GetVmState(ctx, vmr)
+	raw, err := vmr.GetRawGuestStatus(ctx, client)
 	if err != nil {
 		return err
 	}
-	if vmState["status"] == "stopped" {
+	if raw.State() == PowerStateStopped {
 		return fmt.Errorf("VM must be running first")
 	}
 	for _, r := range keys {

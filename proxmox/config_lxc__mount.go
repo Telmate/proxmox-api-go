@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
@@ -11,7 +12,7 @@ import (
 type LxcBootMount struct {
 	ACL             *TriBool // Never nil when returned
 	Options         *LxcBootMountOptions
-	Quota           *bool         // Never nil when returned
+	Quota           *bool         // Only for privileged guests.
 	Replicate       *bool         // Never nil when returned
 	SizeInKibibytes *LxcMountSize // Required during creation, never nil when returned
 	Storage         *string       // Required during creation, never nil when returned
@@ -21,6 +22,7 @@ type LxcBootMount struct {
 const (
 	LxcBootMount_Error_NoSizeDuringCreation    = "size must be set during creation"
 	LxcBootMount_Error_NoStorageDuringCreation = "storage must be set during creation"
+	LxcBootMount_Error_QuotaNotPrivileged      = "quota can only be set for privileged guest"
 )
 
 func (mount LxcBootMount) combine(usedConfig LxcBootMount) LxcBootMount {
@@ -59,8 +61,8 @@ func (mount LxcBootMount) combine(usedConfig LxcBootMount) LxcBootMount {
 	return usedConfig
 }
 
-func (config LxcBootMount) mapToApiCreate() string {
-	rootFs := config.string()
+func (config LxcBootMount) mapToApiCreate(privileged bool) string {
+	rootFs := config.string(privileged)
 	if config.Storage != nil && config.SizeInKibibytes != nil {
 		var size float64
 		if *config.SizeInKibibytes < gibiByteLxc { // only approximate if the size is less than 1 GiB
@@ -73,24 +75,42 @@ func (config LxcBootMount) mapToApiCreate() string {
 	return rootFs
 }
 
-func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, params map[string]any) {
+func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, privileged bool, params map[string]any) {
+	currentRootFs := current.string(privileged)
 	var usedConfig LxcBootMount
 	usedConfig = config.combine(current.combine(usedConfig))
-	var rootFs string
+	rootFs := usedConfig.string(privileged)
+	if currentRootFs == rootFs { // No changes
+		return
+	}
 	if usedConfig.SizeInKibibytes != nil {
 		rootFs += ",size=" + usedConfig.SizeInKibibytes.String()
 	}
-	rootFs += usedConfig.string()
 	if usedConfig.Storage != nil {
 		rootFs = *usedConfig.Storage + ":" + current.rawDisk + rootFs
-		if current.Storage != nil && rootFs == *current.Storage+":"+current.rawDisk+current.string() {
+		if current.Storage != nil && rootFs == *current.Storage+":"+current.rawDisk+current.string(privileged) {
 			return
 		}
 	}
 	params[lxcApiKeyRootFS] = rootFs
 }
 
-func (config LxcBootMount) string() (rootFs string) {
+func (config LxcBootMount) markMountChanges_Unsafe(current *LxcBootMount) lxcUpdateChanges {
+	changes := lxcUpdateChanges{}
+	if config.SizeInKibibytes != nil && *config.SizeInKibibytes > *current.SizeInKibibytes { // Resize
+		changes.resize = []lxcMountResize{{
+			sizeInKibibytes: *config.SizeInKibibytes,
+			id:              "rootfs"}}
+	}
+	if config.Storage != nil && *config.Storage != *current.Storage { // Move
+		changes.move = []lxcMountMove{{
+			storage: *config.Storage,
+			id:      "rootfs"}}
+	}
+	return changes
+}
+
+func (config LxcBootMount) string(privileged bool) (rootFs string) {
 	// zfs  // local-zfs:subvol-101-disk-0
 	// ext4 // local-ext4:101/vm-101-disk-0.raw
 	// lvm  // local-lvm:vm-101-disk-0
@@ -120,7 +140,7 @@ func (config LxcBootMount) string() (rootFs string) {
 			rootFs += ",mountoptions=" + options[1:]
 		}
 	}
-	if config.Quota != nil && *config.Quota {
+	if privileged && config.Quota != nil && *config.Quota {
 		rootFs += ",quota=1"
 	}
 	if config.Replicate != nil && !*config.Replicate {
@@ -129,7 +149,7 @@ func (config LxcBootMount) string() (rootFs string) {
 	return
 }
 
-func (config LxcBootMount) Validate(current *LxcBootMount) error {
+func (config LxcBootMount) Validate(current *LxcBootMount, privileged bool) error {
 	var err error
 	if config.ACL != nil {
 		if err = config.ACL.Validate(); err != nil {
@@ -146,6 +166,9 @@ func (config LxcBootMount) Validate(current *LxcBootMount) error {
 	}
 	if config.SizeInKibibytes != nil {
 		err = config.SizeInKibibytes.Validate()
+	}
+	if config.Quota != nil && !privileged {
+		return errors.New(LxcBootMount_Error_QuotaNotPrivileged)
 	}
 	return err
 }
@@ -185,7 +208,48 @@ func (size LxcMountSize) Validate() error {
 	return nil
 }
 
+type lxcUpdateChanges struct {
+	move   []lxcMountMove
+	resize []lxcMountResize
+}
+
+type lxcMountMove struct {
+	id      string
+	storage string
+}
+
+func (disk lxcMountMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) (exitStatus any, err error) {
+	return client.PostWithTask(ctx, disk.mapToAPI(delete),
+		"/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/move_volume")
+}
+
+func (disk lxcMountMove) mapToAPI(delete bool) map[string]any {
+	params := map[string]any{
+		"volume":  disk.id,
+		"storage": disk.storage}
+	if delete {
+		params["delete"] = "1"
+	}
+	return params
+}
+
+type lxcMountResize struct {
+	id              string
+	sizeInKibibytes LxcMountSize
+}
+
+// Increase the disk size to the specified amount.
+// Decrease of disk size is not permitted.
+func (disk lxcMountResize) resize(ctx context.Context, vmr *VmRef, client *Client) (exitStatus string, err error) {
+	return client.PutWithTask(ctx, map[string]any{"disk": disk.id, "size": disk.sizeInKibibytes.String()},
+		"/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/resize")
+}
+
 func (raw RawConfigLXC) BootMount() *LxcBootMount {
+	return raw.bootMount(raw.isPrivileged())
+}
+
+func (raw RawConfigLXC) bootMount(privileged bool) *LxcBootMount {
 	var acl TriBool
 	var quota bool
 	var size LxcMountSize
@@ -193,19 +257,20 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 	replicate := true
 	config := LxcBootMount{
 		ACL:             &acl,
-		Quota:           &quota,
 		Replicate:       &replicate,
 		SizeInKibibytes: &size,
 		Storage:         &storage}
+	if privileged {
+		config.Quota = &quota
+	}
 	var settings map[string]string
 	if v, isSet := raw[lxcApiKeyRootFS].(string); isSet {
-		tmpString := strings.SplitN(v, ",", 2)
-		if index := strings.IndexRune(tmpString[0], ':'); index != -1 {
-			storage = tmpString[0][:index]
-			config.rawDisk = tmpString[0][index+1:]
-		}
-		if len(tmpString) == 2 {
-			settings = splitStringOfSettings(tmpString[1])
+		storage = v[:strings.IndexRune(v, ':')]
+		if index := strings.IndexRune(v, ','); index != -1 {
+			config.rawDisk = v[:index]
+			settings = splitStringOfSettings(v[index:])
+		} else {
+			config.rawDisk = v
 		}
 	} else {
 		return nil
@@ -223,11 +288,7 @@ func (raw RawConfigLXC) BootMount() *LxcBootMount {
 		config.ACL = util.Pointer(TriBoolNone)
 	}
 	if v, isSet := settings["mountoptions"]; isSet {
-		tmpOptions := strings.Split(v, ";")
-		options := make(map[string]struct{}, len(tmpOptions))
-		for i := range tmpOptions {
-			options[tmpOptions[i]] = struct{}{}
-		}
+		options := splitStringOfOptions(v)
 		var discard, lazyTime, noATime, noSuid bool
 		mountOptions := LxcBootMountOptions{
 			Discard:  &discard,

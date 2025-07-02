@@ -270,16 +270,25 @@ func isIPv6(address string) bool {
 	return strings.Count(address, ":") > 2
 }
 
+func splitStringOfOptions(options string) map[string]struct{} {
+	tmpOptions := strings.Split(options, ";")
+	optionMap := make(map[string]struct{}, len(tmpOptions))
+	for i := range tmpOptions {
+		optionMap[tmpOptions[i]] = struct{}{}
+	}
+	return optionMap
+}
+
 func splitStringOfSettings(settings string) map[string]string {
 	settingValuePairs := strings.Split(settings, ",")
 	settingMap := map[string]string{}
-	for _, e := range settingValuePairs {
-		keyValuePair := strings.SplitN(e, "=", 2)
-		var value string
-		if len(keyValuePair) == 2 {
-			value = keyValuePair[1]
+	for i := range settingValuePairs {
+		index := strings.IndexRune(settingValuePairs[i], '=')
+		if index != -1 {
+			settingMap[settingValuePairs[i][:index]] = settingValuePairs[i][index+1:]
+		} else {
+			settingMap[settingValuePairs[i]] = "" // No value provided, only key is set
 		}
-		settingMap[keyValuePair[0]] = value
 	}
 	return settingMap
 }

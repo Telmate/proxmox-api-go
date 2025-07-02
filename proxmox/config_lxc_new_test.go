@@ -71,12 +71,19 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		}
 		return keys
 	}
+	type defaults uint8
+	const (
+		none defaults = iota
+		create
+		update
+		all
+	)
 	type test struct {
 		name          string
 		config        ConfigLXC
 		currentConfig ConfigLXC
 		output        map[string]any
-		omitDefaults  bool // opt out of default values in returned map
+		omitDefaults  defaults // opt out of default values in returned map
 		pool          PoolName
 	}
 	tests := []struct {
@@ -113,7 +120,34 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						SizeInKibibytes: util.Pointer(LxcMountSize(1179648)),
 						Storage:         util.Pointer("local-lvm")}},
-					output: map[string]any{"rootfs": "local-lvm:1"}}},
+					output: map[string]any{"rootfs": "local-lvm:1"}},
+				{name: `Quota false, Privileged false`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(false)},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Quota false, Privileged true`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(true)},
+					omitDefaults: all,
+					output:       map[string]any{"rootfs": ""}},
+				{name: `Quota true, Privileged false`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(false)},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Quota true, Privileged true`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(true)},
+					omitDefaults: all,
+					output:       map[string]any{"rootfs": ",quota=1"}},
+			},
 			createUpdate: []test{
 				{name: `ACL true`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
@@ -181,18 +215,6 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					currentConfig: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
 						NoSuid: util.Pointer(true)}}},
 					output: map[string]any{"rootfs": ""}},
-				{name: `Quota false`,
-					config: ConfigLXC{BootMount: &LxcBootMount{
-						Quota: util.Pointer(false)}},
-					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
-						Quota: util.Pointer(false)}},
-					output: map[string]any{"rootfs": ""}},
-				{name: `Quota true`,
-					config: ConfigLXC{BootMount: &LxcBootMount{
-						Quota: util.Pointer(true)}},
-					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
-						Quota: util.Pointer(false)}},
-					output: map[string]any{"rootfs": ",quota=1"}},
 				{name: `Replication false`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						Replicate: util.Pointer(false)}},
@@ -206,7 +228,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						Replicate: util.Pointer(false)}},
 					output: map[string]any{"rootfs": ""}}},
 			update: []test{
-				{name: `all storage change`,
+				{name: `all storage change, no api `,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						Storage: util.Pointer("local-zfs")}},
 					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
@@ -220,8 +242,9 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 							NoATime:  util.Pointer(true),
 							NoSuid:   util.Pointer(true)},
 						Replicate: util.Pointer(false),
-						rawDisk:   "subvol-101-disk-0"}},
-					output: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,size=1G,acl=1,mountoptions=discard;lazytime;noatime;nosuid,quota=1,replicate=0"}},
+						rawDisk:   "local-ext4:subvol-101-disk-0"}},
+					omitDefaults: all,
+					output:       map[string]any{}},
 				{name: `Options Discard in-place true`,
 					config: ConfigLXC{BootMount: &LxcBootMount{Options: &LxcBootMountOptions{
 						Discard: util.Pointer(true)}}},
@@ -258,7 +281,49 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						NoATime:  util.Pointer(true),
 						NoSuid:   util.Pointer(false)}}},
 					output: map[string]any{"rootfs": ",mountoptions=discard;lazytime;noatime;nosuid"}},
-				{name: `Storage & size`,
+				{name: `Quota false, Privileged false`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(false)},
+					currentConfig: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(false)},
+					omitDefaults: all,
+					output:       map[string]any{}},
+				{name: `Quota false, Privileged true`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(true)},
+					currentConfig: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(true)},
+					output: map[string]any{"rootfs": ""}},
+				{name: `Quota true, Privileged false`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(false)},
+					currentConfig: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(false)},
+					omitDefaults: all,
+					output:       map[string]any{}},
+				{name: `Quota true, Privileged true`,
+					config: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(true)},
+						Privileged: util.Pointer(true)},
+					currentConfig: ConfigLXC{
+						BootMount: &LxcBootMount{
+							Quota: util.Pointer(false)},
+						Privileged: util.Pointer(true)},
+					output: map[string]any{"rootfs": ",quota=1"}},
+				{name: `Storage & size, no api change`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						SizeInKibibytes: util.Pointer(LxcMountSize(2621440)),
 						Storage:         util.Pointer("local-ext4")}},
@@ -266,7 +331,8 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						SizeInKibibytes: util.Pointer(LxcMountSize(2097152)),
 						Storage:         util.Pointer("local-zfs"),
 						rawDisk:         "subvol-101-disk-0"}},
-					output: map[string]any{"rootfs": "local-ext4:subvol-101-disk-0,size=2560M"}},
+					omitDefaults: all,
+					output:       map[string]any{}},
 				{name: `no change`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						ACL: util.Pointer(TriBoolTrue),
@@ -287,7 +353,8 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 							NoSuid:   util.Pointer(true)},
 						Replicate: util.Pointer(true),
 						Storage:   util.Pointer("local-zfs")}},
-					output: map[string]any{}}}},
+					omitDefaults: all,
+					output:       map[string]any{}}}},
 		{category: `CPU`,
 			createUpdate: []test{
 				{name: `Cores`,
@@ -305,14 +372,17 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `Cores delete no effect`,
 					config:        ConfigLXC{CPU: &LxcCPU{Cores: util.Pointer(LxcCpuCores(0))}},
 					currentConfig: ConfigLXC{CPU: &LxcCPU{}},
+					omitDefaults:  update,
 					output:        map[string]any{}},
 				{name: `Limit delete no effect`,
 					config:        ConfigLXC{CPU: &LxcCPU{Limit: util.Pointer(LxcCpuLimit(0))}},
 					currentConfig: ConfigLXC{CPU: &LxcCPU{}},
+					omitDefaults:  update,
 					output:        map[string]any{}},
 				{name: `Units delete no effect`,
 					config:        ConfigLXC{CPU: &LxcCPU{Units: util.Pointer(LxcCpuUnits(0))}},
 					currentConfig: ConfigLXC{CPU: &LxcCPU{}},
+					omitDefaults:  update,
 					output:        map[string]any{}}},
 			update: []test{
 				{name: `Cores delete`,
@@ -330,14 +400,17 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `Cores same`,
 					config:        ConfigLXC{CPU: &LxcCPU{Cores: util.Pointer(LxcCpuCores(1))}},
 					currentConfig: ConfigLXC{CPU: &LxcCPU{Cores: util.Pointer(LxcCpuCores(1))}},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `Limit same`,
 					config:        ConfigLXC{CPU: &LxcCPU{Limit: util.Pointer(LxcCpuLimit(2))}},
 					currentConfig: ConfigLXC{CPU: &LxcCPU{Limit: util.Pointer(LxcCpuLimit(2))}},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `Units same`,
 					config:        ConfigLXC{CPU: &LxcCPU{Units: util.Pointer(LxcCpuUnits(3))}},
 					currentConfig: ConfigLXC{CPU: &LxcCPU{Units: util.Pointer(LxcCpuUnits(3))}},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `Cores set`,
 					config:        ConfigLXC{CPU: &LxcCPU{Cores: util.Pointer(LxcCpuCores(1))}},
@@ -354,14 +427,17 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `Cores delete no current`,
 					config:        ConfigLXC{CPU: &LxcCPU{Cores: util.Pointer(LxcCpuCores(0))}},
 					currentConfig: ConfigLXC{},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `Limit delete no current`,
 					config:        ConfigLXC{CPU: &LxcCPU{Limit: util.Pointer(LxcCpuLimit(0))}},
 					currentConfig: ConfigLXC{},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `Units delete no current`,
 					config:        ConfigLXC{CPU: &LxcCPU{Units: util.Pointer(LxcCpuUnits(0))}},
 					currentConfig: ConfigLXC{},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `CreateOptions`,
 			create: []test{
@@ -410,7 +486,8 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 							File:    "test-template"},
 						UserPassword:  util.Pointer("myPassword!"),
 						PublicSSHkeys: publicKeys()}},
-					output: map[string]any{}}}},
+					omitDefaults: all,
+					output:       map[string]any{}}}},
 		{category: `Description`,
 			createUpdate: []test{
 				{name: `set`,
@@ -420,6 +497,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `delete no effect`,
 					config:        ConfigLXC{Description: util.Pointer("")},
 					currentConfig: ConfigLXC{Description: util.Pointer("")},
+					omitDefaults:  update,
 					output:        map[string]any{}}},
 			update: []test{
 				{name: `delete`,
@@ -429,14 +507,22 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `same`,
 					config:        ConfigLXC{Description: util.Pointer("test")},
 					currentConfig: ConfigLXC{Description: util.Pointer("test")},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `Digest`,
 			update: []test{
-				{name: `set`,
+				{name: `not set when only setting`,
 					config:        ConfigLXC{},
 					currentConfig: ConfigLXC{rawDigest: "af064923bbf2301596aac4c273ba32178ebc4a96"},
+					omitDefaults:  update,
+					output:        map[string]any{}},
+				{name: `set`,
+					config:        ConfigLXC{Description: util.Pointer("test")},
+					currentConfig: ConfigLXC{rawDigest: "af064923bbf2301596aac4c273ba32178ebc4a96"},
+					omitDefaults:  update,
 					output: map[string]any{
-						"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}}}},
+						"digest":      "af064923bbf2301596aac4c273ba32178ebc4a96",
+						"description": "test"}}}},
 		{category: `DNS`,
 			createUpdate: []test{
 				{name: `all`,
@@ -485,7 +571,8 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					currentConfig: ConfigLXC{DNS: &GuestDNS{
 						NameServers:  util.Pointer([]netip.Addr{parseIP("1.1.1.1"), parseIP("8.8.8.8")}),
 						SearchDomain: util.Pointer("example.com")}},
-					output: map[string]any{}}}},
+					omitDefaults: all,
+					output:       map[string]any{}}}},
 		{category: `Features`,
 			create: []test{
 				{name: `all false Privileged`,
@@ -538,14 +625,17 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `delete no effect false Privileged`,
 					config:        ConfigLXC{Features: featuresPrivileged(false)},
 					currentConfig: ConfigLXC{Features: featuresPrivileged(false)},
+					omitDefaults:  update,
 					output:        map[string]any{}},
 				{name: `delete no effect false Unprivileged`,
 					config:        ConfigLXC{Features: featuresUnprivileged(false)},
 					currentConfig: ConfigLXC{Features: featuresUnprivileged(false)},
+					omitDefaults:  update,
 					output:        map[string]any{}},
 				{name: `only top-level set, no effect`,
 					config:        ConfigLXC{Features: &LxcFeatures{}},
 					currentConfig: ConfigLXC{Features: &LxcFeatures{}},
+					omitDefaults:  update,
 					output:        map[string]any{}},
 			},
 			update: []test{
@@ -614,26 +704,32 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `delete no effect nil Privileged`,
 					config:        ConfigLXC{Features: featuresPrivileged(false)},
 					currentConfig: ConfigLXC{Features: nil},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `delete no effect nil Unprivileged`,
 					config:        ConfigLXC{Features: featuresUnprivileged(false)},
 					currentConfig: ConfigLXC{Features: nil},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `same false Privileged`,
 					config:        ConfigLXC{Features: featuresPrivileged(false)},
 					currentConfig: ConfigLXC{Features: featuresPrivileged(false)},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `same false Unprivileged`,
 					config:        ConfigLXC{Features: featuresUnprivileged(false)},
 					currentConfig: ConfigLXC{Features: featuresUnprivileged(false)},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `same true Privileged`,
 					config:        ConfigLXC{Features: featuresPrivileged(true)},
 					currentConfig: ConfigLXC{Features: featuresPrivileged(true)},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `same true Unprivileged`,
 					config:        ConfigLXC{Features: featuresUnprivileged(true)},
 					currentConfig: ConfigLXC{Features: featuresUnprivileged(true)},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `ID`,
 			create: []test{
@@ -644,6 +740,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `do nothing`,
 					config:        ConfigLXC{ID: util.Pointer(GuestID(15))},
 					currentConfig: ConfigLXC{ID: util.Pointer(GuestID(0))},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `Memory`,
 			createUpdate: []test{
@@ -655,6 +752,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `same`,
 					config:        ConfigLXC{Memory: util.Pointer(LxcMemory(512))},
 					currentConfig: ConfigLXC{Memory: util.Pointer(LxcMemory(512))},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `Name`,
 			createUpdate: []test{
@@ -666,6 +764,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `do nothing`,
 					config:        ConfigLXC{Name: util.Pointer(GuestName("test"))},
 					currentConfig: ConfigLXC{Name: util.Pointer(GuestName("test"))},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `Networks`,
 			create: []test{
@@ -685,7 +784,8 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						LxcNetworkID1: LxcNetwork{Delete: true}}},
 					currentConfig: ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID5: LxcNetwork{Bridge: util.Pointer("vmbr0")}}},
-					output: map[string]any{}},
+					omitDefaults: update,
+					output:       map[string]any{}},
 				{name: `Bridge`,
 					config: ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID0: LxcNetwork{Bridge: util.Pointer("vmbr0")}}},
@@ -927,6 +1027,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `no change`,
 					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: network()}},
 					currentConfig: ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: network()}},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `Bridge replace`,
 					config:        ConfigLXC{Networks: LxcNetworks{LxcNetworkID0: LxcNetwork{Bridge: util.Pointer("vmbr3")}}},
@@ -1050,12 +1151,14 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `do nothing`,
 					config:        ConfigLXC{Node: util.Pointer(NodeName("test"))},
 					currentConfig: ConfigLXC{Node: util.Pointer(NodeName("text"))},
+					omitDefaults:  update,
 					output:        map[string]any{}}}},
 		{category: `OperatingSystem`,
 			createUpdate: []test{
 				{name: `do nothing`,
 					config:        ConfigLXC{OperatingSystem: "test"},
 					currentConfig: ConfigLXC{OperatingSystem: "text"},
+					omitDefaults:  update,
 					output:        map[string]any{}}}},
 		{category: `Pool`,
 			create: []test{
@@ -1068,12 +1171,13 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `do nothing`,
 					config:        ConfigLXC{Pool: util.Pointer(PoolName("test"))},
 					currentConfig: ConfigLXC{Pool: util.Pointer(PoolName("text"))},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `Privileged`,
 			create: []test{
 				{name: `true`,
 					config:       ConfigLXC{Privileged: util.Pointer(true)},
-					omitDefaults: true,
+					omitDefaults: all,
 					output:       map[string]any{}},
 				{name: `false`,
 					config: ConfigLXC{Privileged: util.Pointer(false)},
@@ -1082,10 +1186,12 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `true no effect`,
 					config:        ConfigLXC{Privileged: util.Pointer(true)},
 					currentConfig: ConfigLXC{Privileged: util.Pointer(false)},
+					omitDefaults:  all,
 					output:        map[string]any{}},
 				{name: `false no effect`,
 					config:        ConfigLXC{Privileged: util.Pointer(false)},
 					currentConfig: ConfigLXC{Privileged: util.Pointer(true)},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `Swap`,
 			createUpdate: []test{
@@ -1101,6 +1207,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `do nothing`,
 					config:        ConfigLXC{Swap: util.Pointer(LxcSwap(256))},
 					currentConfig: ConfigLXC{Swap: util.Pointer(LxcSwap(256))},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 		{category: `Tags`,
 			createUpdate: []test{
@@ -1112,6 +1219,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `do nothing`,
 					config:        ConfigLXC{Tags: &Tags{"bbb", "aaa", "ccc"}},
 					currentConfig: ConfigLXC{Tags: &Tags{"aaa", "ccc", "bbb"}},
+					omitDefaults:  all,
 					output:        map[string]any{}}}},
 	}
 	for _, test := range tests {
@@ -1120,7 +1228,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			t.Run(name, func(*testing.T) {
 				tmpParams, pool := subTest.config.mapToApiCreate()
 				clone := maps.Clone(subTest.output)
-				if !subTest.omitDefaults {
+				if !(subTest.omitDefaults == all || subTest.omitDefaults == create) {
 					if _, isSet := clone["unprivileged"]; !isSet {
 						clone["unprivileged"] = int(1) // Default to unprivileged
 					}
@@ -1134,7 +1242,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			t.Run(name, func(*testing.T) {
 				tmpParams := subTest.config.mapToApiUpdate(subTest.currentConfig)
 				clone := maps.Clone(subTest.output)
-				if !subTest.omitDefaults {
+				if !(subTest.omitDefaults == all || subTest.omitDefaults == update) {
 					if _, isSet := clone["digest"]; !isSet {
 						clone["digest"] = "" // set empty digest
 					}
@@ -1191,7 +1299,17 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
 							SizeInKibibytes: util.Pointer(LxcMountSize(150000)),
 							Storage:         util.Pointer("test")}}),
-						current: &ConfigLXC{BootMount: &LxcBootMount{Storage: util.Pointer("text")}}}}},
+						current: &ConfigLXC{BootMount: &LxcBootMount{Storage: util.Pointer("text")}}},
+					{name: `Quota`,
+						input: baseConfig(ConfigLXC{
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(150000)),
+								Storage:         util.Pointer("test"),
+								Quota:           util.Pointer(true)},
+							Privileged: util.Pointer(true)}),
+						current: &ConfigLXC{
+							BootMount:  &LxcBootMount{Storage: util.Pointer("text")},
+							Privileged: util.Pointer(true)}}}},
 			invalid: testType{
 				create: []test{
 					{name: `errors.New(ConfigLXC_Error_BootMountMissing)`,
@@ -1217,7 +1335,26 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 							SizeInKibibytes: util.Pointer(lxcMountSize_Minimum - 1)}}),
 						current: &ConfigLXC{BootMount: &LxcBootMount{
 							SizeInKibibytes: util.Pointer(LxcMountSize(131071))}},
-						err: errors.New(LxcMountSize_Error_Minimum)}}}},
+						err: errors.New(LxcMountSize_Error_Minimum)},
+					{name: `error.New(LxcBootMount_Error_QuotaNotPrivileged) default`,
+						input: baseConfig(ConfigLXC{
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(150000)),
+								Storage:         util.Pointer("test"),
+								Quota:           util.Pointer(true)}}),
+						current: &ConfigLXC{BootMount: &LxcBootMount{Storage: util.Pointer("text")}},
+						err:     errors.New(LxcBootMount_Error_QuotaNotPrivileged)},
+					{name: `error.New(LxcBootMount_Error_QuotaNotPrivileged) false`,
+						input: baseConfig(ConfigLXC{
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(150000)),
+								Storage:         util.Pointer("test"),
+								Quota:           util.Pointer(true)},
+							Privileged: util.Pointer(false)}),
+						current: &ConfigLXC{
+							BootMount:  &LxcBootMount{Storage: util.Pointer("text")},
+							Privileged: util.Pointer(false)},
+						err: errors.New(LxcBootMount_Error_QuotaNotPrivileged)}}}},
 		{category: `CPU`,
 			valid: testType{
 				createUpdate: []test{
@@ -1708,6 +1845,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		name   string
 		input  RawConfigLXC
 		vmr    VmRef
+		state  PowerState
 		output *ConfigLXC
 	}
 	tests := []struct {
@@ -1729,13 +1867,13 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						ACL:     util.Pointer(TriBoolTrue),
 						Storage: util.Pointer("local-zfs"),
-						rawDisk: "subvol-101-disk-0"})})},
+						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `ACL false`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,acl=0"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						ACL:     util.Pointer(TriBoolFalse),
 						Storage: util.Pointer("local-zfs"),
-						rawDisk: "subvol-101-disk-0"})})},
+						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Options Discard true`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=discard"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
@@ -1745,7 +1883,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 							NoATime:  util.Pointer(false),
 							NoSuid:   util.Pointer(false)},
 						Storage: util.Pointer("local-zfs"),
-						rawDisk: "subvol-101-disk-0"})})},
+						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Options LazyTime true`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=lazytime"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
@@ -1755,7 +1893,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 							NoATime:  util.Pointer(false),
 							NoSuid:   util.Pointer(false)},
 						Storage: util.Pointer("local-zfs"),
-						rawDisk: "subvol-101-disk-0"})})},
+						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Options NoATime true`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=noatime"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
@@ -1765,7 +1903,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 							NoATime:  util.Pointer(true),
 							NoSuid:   util.Pointer(false)},
 						Storage: util.Pointer("local-zfs"),
-						rawDisk: "subvol-101-disk-0"})})},
+						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Options NoSuid true`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=nosuid"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
@@ -1776,37 +1914,37 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 							NoATime:  util.Pointer(false),
 							NoSuid:   util.Pointer(true)},
 						Storage: util.Pointer("local-zfs"),
-						rawDisk: "subvol-101-disk-0"})})},
+						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Quota false`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Quota:   util.Pointer(false),
 						Storage: util.Pointer("local-zfs"),
-						rawDisk: "subvol-101-disk-0"})})},
+						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Quota true`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,quota=1"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Quota:   util.Pointer(true),
 						Storage: util.Pointer("local-zfs"),
-						rawDisk: "subvol-101-disk-0"})})},
+						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Replicate false`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,replicate=0"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Replicate: util.Pointer(false),
 						Storage:   util.Pointer("local-zfs"),
-						rawDisk:   "subvol-101-disk-0"})})},
+						rawDisk:   "local-zfs:subvol-101-disk-0"})})},
 				{name: `Replicate true`,
 					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,replicate=1"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Replicate: util.Pointer(true),
 						Storage:   util.Pointer("local-zfs"),
-						rawDisk:   "subvol-101-disk-0"})})},
+						rawDisk:   "local-zfs:subvol-101-disk-0"})})},
 				{name: `SizeInKibibytes`,
 					input: RawConfigLXC{"rootfs": "local-ext4:subvol-101-disk-0,size=999M"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Storage:         util.Pointer("local-ext4"),
 						SizeInKibibytes: util.Pointer(LxcMountSize(1022976)),
-						rawDisk:         "subvol-101-disk-0"})})},
+						rawDisk:         "local-ext4:subvol-101-disk-0"})})},
 				{name: `all`,
 					input: RawConfigLXC{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G,quota=1,replicate=1"},
 					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
@@ -1820,7 +1958,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 						Replicate:       util.Pointer(true),
 						Storage:         util.Pointer("local-ext4"),
 						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
-						rawDisk:         "subvol-101-disk-0"}})}}},
+						rawDisk:         "local-ext4:subvol-101-disk-0"}})}}},
 		{category: `CPU`,
 			tests: []test{
 				{name: `Cores`,
@@ -2129,6 +2267,11 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `set 0`,
 					input:  RawConfigLXC{"swap": float64(0)},
 					output: baseConfig(ConfigLXC{Swap: util.Pointer(LxcSwap(0))})}}},
+		{category: `State`,
+			tests: []test{
+				{name: `set`,
+					state:  PowerStateRunning,
+					output: baseConfig(ConfigLXC{State: util.Pointer(PowerStateRunning)})}}},
 		{category: `Tags`,
 			tests: []test{
 				{name: `set`,
@@ -2142,7 +2285,7 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.output, subTest.input.ALL(subTest.vmr), name)
+				require.Equal(t, subTest.output, subTest.input.ALL(subTest.vmr, subTest.state), name)
 			})
 		}
 	}
@@ -2154,6 +2297,10 @@ func Test_RawConfigLXC_Digest(t *testing.T) {
 			0xaf, 0x06, 0x49, 0x23, 0xbb, 0xf2, 0x30, 0x15, 0x96, 0xaa,
 			0xc4, 0xc2, 0x73, 0xba, 0x32, 0x17, 0x8e, 0xbc, 0x4a, 0x96},
 		RawConfigLXC{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}.Digest(), "")
+}
+
+func Test_RawConfigLXC_Privileged(t *testing.T) {
+	require.Equal(t, true, RawConfigLXC{}.Privileged())
 }
 
 func Test_LxcMemory_String(t *testing.T) {
