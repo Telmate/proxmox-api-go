@@ -244,6 +244,8 @@ const (
 	cpuType_AmdEPYCIBPB_Lower                 CpuType = "epycibpb"
 	CpuType_AmdEPYCMilan                      CpuType = "EPYC-Milan"
 	cpuType_AmdEPYCMilan_Lower                CpuType = "epycmilan"
+	CpuType_AmdEPYCMilanV2                    CpuType = "EPYC-Milan-v2"
+	cpuType_AmdEPYCMilanV2_Lower              CpuType = "epycmilanv2"
 	CpuType_AmdEPYCRome                       CpuType = "EPYC-Rome"
 	cpuType_AmdEPYCRome_Lower                 CpuType = "epycrome"
 	CpuType_AmdEPYCRomeV2                     CpuType = "EPYC-Rome-v2"
@@ -409,6 +411,7 @@ func (CpuType) cpuV8(cpus map[CpuType]CpuType) {
 	cpus[cpuType_IntelCascadelakeServerV5_Lower] = CpuType_IntelCascadelakeServerV5
 	cpus[cpuType_IntelCooperlake_Lower] = CpuType_IntelCooperlake
 	cpus[cpuType_IntelCooperlakeV2_Lower] = CpuType_IntelCooperlakeV2
+	cpus[cpuType_AmdEPYCMilanV2_Lower] = CpuType_AmdEPYCMilanV2
 	cpus[cpuType_AmdEPYCRomeV2_Lower] = CpuType_AmdEPYCRomeV2
 	cpus[cpuType_AmdEPYCV3_Lower] = CpuType_AmdEPYCV3
 	cpus[cpuType_IntelIcelakeServerV3_Lower] = CpuType_IntelIcelakeServerV3
