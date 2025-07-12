@@ -41,8 +41,9 @@ type Client struct {
 }
 
 const (
-	Client_Error_Nil            string = "client may not be nil"
-	Client_Error_NotInitialized string = "client not initialized"
+	Client_Error_Nil            = "client may not be nil"
+	Client_Error_NotInitialized = "client not initialized"
+	CLient_Error_UnableVersion  = "unable to get version"
 )
 
 // Checks if the client is initialized and returns an error if not
@@ -170,12 +171,19 @@ func (c *Client) Login(ctx context.Context, username string, password string, ot
 }
 
 // Updates the client's cached version information and returns it.
-func (c *Client) GetVersion(ctx context.Context) (version Version, err error) {
+func (c *Client) GetVersion(ctx context.Context) (Version, error) {
 	if c == nil {
 		return Version{}, errors.New(Client_Error_Nil)
 	}
 	params, err := c.GetItemConfigMapStringInterface(ctx, "/version", "version", "data")
-	version = version.mapToSDK(params)
+	if err != nil {
+		return Version{}, err
+	}
+	var version Version
+	version, err = version.mapToSDK(params)
+	if err != nil {
+		return Version{}, err
+	}
 	cachedVersion := Version{ // clones the struct
 		Major: version.Major,
 		Minor: version.Minor,
@@ -184,7 +192,7 @@ func (c *Client) GetVersion(ctx context.Context) (version Version, err error) {
 	c.versionMutex.Lock()
 	c.version = &cachedVersion
 	c.versionMutex.Unlock()
-	return
+	return version, nil
 }
 
 func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[string]interface{}, tries int, errorString ...string) error {
@@ -2366,8 +2374,9 @@ func (v Version) Greater(other Version) bool {
 	return uint32(v.Major)*256*256+uint32(v.Minor)*256+uint32(v.Patch) > uint32(other.Major)*256*256+uint32(other.Minor)*256+uint32(other.Patch)
 }
 
-func (Version) mapToSDK(params map[string]interface{}) (version Version) {
+func (Version) mapToSDK(params map[string]any) (Version, error) {
 	if itemValue, isSet := params["version"]; isSet {
+		var version Version
 		rawVersion := strings.Split(itemValue.(string), ".")
 		if len(rawVersion) > 0 {
 			tmpMajor, _ := strconv.ParseUint(rawVersion[0], 10, 8)
@@ -2381,8 +2390,9 @@ func (Version) mapToSDK(params map[string]interface{}) (version Version) {
 			tmpPatch, _ := strconv.ParseUint(rawVersion[2], 10, 8)
 			version.Patch = uint8(tmpPatch)
 		}
+		return version, nil
 	}
-	return
+	return Version{}, errors.New(CLient_Error_UnableVersion)
 }
 
 // return the maximum version, used during testing
