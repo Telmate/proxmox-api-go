@@ -43,7 +43,7 @@ type Client struct {
 const (
 	Client_Error_Nil            = "client may not be nil"
 	Client_Error_NotInitialized = "client not initialized"
-	CLient_Error_UnableVersion  = "unable to get version"
+	Client_Error_UnableVersion  = "unable to get version"
 )
 
 // Checks if the client is initialized and returns an error if not
@@ -2392,7 +2392,7 @@ func (Version) mapToSDK(params map[string]any) (Version, error) {
 		}
 		return version, nil
 	}
-	return Version{}, errors.New(CLient_Error_UnableVersion)
+	return Version{}, errors.New(Client_Error_UnableVersion)
 }
 
 // return the maximum version, used during testing

@@ -102,7 +102,7 @@ func Test_Version_mapToSDK(t *testing.T) {
 	}{
 		{name: "unset",
 			input: map[string]any{},
-			err:   errors.New(CLient_Error_UnableVersion)},
+			err:   errors.New(Client_Error_UnableVersion)},
 		{name: "full",
 			input:  map[string]any{"version": "1.2.3"},
 			output: Version{1, 2, 3}},
