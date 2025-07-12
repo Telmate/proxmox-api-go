@@ -96,18 +96,30 @@ func Test_Version_Greater(t *testing.T) {
 func Test_Version_mapToSDK(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  map[string]interface{}
+		input  map[string]any
 		output Version
+		err    error
 	}{
-		{"empty", map[string]interface{}{}, Version{}},
-		{"full", map[string]interface{}{"version": "1.2.3"}, Version{1, 2, 3}},
-		{"invalid", map[string]interface{}{"version": ""}, Version{}},
-		{"major", map[string]interface{}{"version": "1"}, Version{1, 0, 0}},
-		{"partial", map[string]interface{}{"version": "1.2"}, Version{1, 2, 0}},
+		{name: "unset",
+			input: map[string]any{},
+			err:   errors.New(Client_Error_UnableVersion)},
+		{name: "full",
+			input:  map[string]any{"version": "1.2.3"},
+			output: Version{1, 2, 3}},
+		{name: "invalid",
+			input: map[string]any{"version": ""}},
+		{name: "major",
+			input:  map[string]any{"version": "1"},
+			output: Version{1, 0, 0}},
+		{name: "partial",
+			input:  map[string]any{"version": "1.2"},
+			output: Version{1, 2, 0}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, Version{}.mapToSDK(test.input))
+			v, err := Version{}.mapToSDK(test.input)
+			require.Equal(t, test.output, v)
+			require.Equal(t, test.err, err)
 		})
 	}
 }
