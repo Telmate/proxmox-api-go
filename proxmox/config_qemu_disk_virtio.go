@@ -7,22 +7,22 @@ import (
 
 type QemuVirtIODisk struct {
 	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup          bool              `json:"backup"`
 	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache           QemuDiskCache     `json:"cache,omitempty"`
-	Discard         bool              `json:"discard"`
 	Format          QemuDiskFormat    `json:"format"`
-	Id              uint              `json:"id"` //Id is only returned and setting it has no effect
-	IOThread        bool              `json:"iothread"`
+	Id              uint              `json:"id"`     //Id is only returned and setting it has no effect
 	LinkedDiskId    *GuestID          `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
-	ReadOnly        bool              `json:"readonly"`
-	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
 	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Storage         string            `json:"storage"`
 	syntax          diskSyntaxEnum
 	WorldWideName   QemuWorldWideName `json:"wwn"`
 	ImportFrom      string            `json:"import_from,omitempty"`
+	Backup          bool              `json:"backup"`
+	Discard         bool              `json:"discard"`
+	IOThread        bool              `json:"iothread"`
+	ReadOnly        bool              `json:"readonly"`
+	Replicate       bool              `json:"replicate"`
 }
 
 func (disk *QemuVirtIODisk) convertDataStructure() *qemuDisk {
@@ -247,17 +247,17 @@ func (disks QemuVirtIODisks) validate() (numberOfCloudInitDevices uint8, err err
 
 type QemuVirtIOPassthrough struct {
 	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup          bool              `json:"backup"`
 	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache           QemuDiskCache     `json:"cache,omitempty"`
-	Discard         bool              `json:"discard"`
 	File            string            `json:"file"`
-	IOThread        bool              `json:"iothread"`
-	ReadOnly        bool              `json:"readonly"`
-	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
 	SizeInKibibytes QemuDiskSize      `json:"size"` //size is only returned and setting it has no effect
 	WorldWideName   QemuWorldWideName `json:"wwn"`
+	Backup          bool              `json:"backup"`
+	Discard         bool              `json:"discard"`
+	IOThread        bool              `json:"iothread"`
+	ReadOnly        bool              `json:"readonly"`
+	Replicate       bool              `json:"replicate"`
 }
 
 func (passthrough *QemuVirtIOPassthrough) convertDataStructure() *qemuDisk {

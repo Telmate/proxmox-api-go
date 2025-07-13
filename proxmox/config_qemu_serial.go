@@ -28,9 +28,9 @@ func (id SerialID) Validate() error {
 }
 
 type SerialInterface struct {
-	Delete bool       `json:"delete,omitempty"` // If true, the serial adapter will be removed.
 	Path   SerialPath `json:"path,omitempty"`   // Path to the serial device. Mutually exclusive with socket.
 	Socket bool       `json:"socket,omitempty"` // If true, the serial device is a socket. Mutually exclusive with path.
+	Delete bool       `json:"delete,omitempty"` // If true, the serial adapter will be removed.
 }
 
 const (

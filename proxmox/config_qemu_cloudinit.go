@@ -308,8 +308,8 @@ func (config CloudInitIPv4Config) Validate() error {
 
 type CloudInitIPv6Config struct {
 	Address *IPv6CIDR    `json:"address,omitempty"`
-	DHCP    bool         `json:"dhcp,omitempty"`
 	Gateway *IPv6Address `json:"gateway,omitempty"`
+	DHCP    bool         `json:"dhcp,omitempty"`
 	SLAAC   bool         `json:"slaac,omitempty"`
 }
 
