@@ -34,9 +34,9 @@ type ConfigQemu struct {
 	Bios            string                `json:"bios,omitempty"`
 	Boot            string                `json:"boot,omitempty"`     // TODO should be an array of custom enums
 	BootDisk        string                `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
-	CPU             *QemuCPU              `json:"cpu,omitempty"`
+	CPU             *QemuCPU              `json:"cpu,omitempty"`      // never nil when returned
 	CloudInit       *CloudInit            `json:"cloudinit,omitempty"`
-	Description     *string               `json:"description,omitempty"`
+	Description     *string               `json:"description,omitempty"` // never nil when returned
 	Disks           *QemuStorages         `json:"disks,omitempty"`
 	EFIDisk         QemuDevice            `json:"efidisk,omitempty"`   // TODO should be a struct
 	FullClone       *int                  `json:"fullclone,omitempty"` // Deprecated
@@ -45,16 +45,16 @@ type ConfigQemu struct {
 	Hookscript      string                `json:"hookscript,omitempty"`
 	Hotplug         string                `json:"hotplug,omitempty"`   // TODO should be a struct
 	Iso             *IsoFile              `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
-	LinkedVmId      GuestID               `json:"linked_id,omitempty"` // Only returned setting it has no effect
+	LinkedID        *GuestID              `json:"linked_id,omitempty"` // Only returned setting it has no effect
 	Machine         string                `json:"machine,omitempty"`   // TODO should be custom type with enum
 	Memory          *QemuMemory           `json:"memory,omitempty"`
-	Name            *GuestName            `json:"name,omitempty"`
+	Name            *GuestName            `json:"name,omitempty"` // never nil when returned
 	Networks        QemuNetworkInterfaces `json:"networks,omitempty"`
 	Onboot          *bool                 `json:"onboot,omitempty"`
 	Pool            *PoolName             `json:"pool,omitempty"`
-	Protection      *bool                 `json:"protection,omitempty"`
-	QemuDisks       QemuDevices           `json:"disk,omitempty"`    // Deprecated use Disks *QemuStorages instead
-	QemuIso         string                `json:"qemuiso,omitempty"` // Deprecated use Iso *IsoFile instead
+	Protection      *bool                 `json:"protection,omitempty"` // never nil when returned
+	QemuDisks       QemuDevices           `json:"disk,omitempty"`       // Deprecated use Disks *QemuStorages instead
+	QemuIso         string                `json:"qemuiso,omitempty"`    // Deprecated use Iso *IsoFile instead
 	QemuKVM         *bool                 `json:"kvm,omitempty"`
 	QemuOs          string                `json:"ostype,omitempty"`
 	PciDevices      QemuPciDevices        `json:"pci_devices,omitempty"`
@@ -69,7 +69,7 @@ type ConfigQemu struct {
 	Startup         string                `json:"startup,omitempty"` // TODO should be a struct?
 	Storage         string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
 	TPM             *TpmState             `json:"tpm,omitempty"`
-	Tablet          *bool                 `json:"tablet,omitempty"`
+	Tablet          *bool                 `json:"tablet,omitempty"` // never nil when returned
 	Tags            *Tags                 `json:"tags,omitempty"`
 }
 
@@ -78,10 +78,6 @@ const (
 	ConfigQemu_Error_CpuRequired                 string = "cpu is required during creation"
 	ConfigQemu_Error_MemoryRequired              string = "memory is required during creation"
 	ConfigQemu_Error_NodeRequired                string = "node is required during creation"
-)
-
-const (
-	qemuApiKeyName string = "name"
 )
 
 // Create - Tell Proxmox API to make the VM
@@ -142,6 +138,7 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	return vmr, err
 }
 
+// TODO this should not be done here, but should be done in the unmarshaling of eache respective field
 func (config *ConfigQemu) defaults() {
 	if config == nil {
 		return
@@ -164,9 +161,6 @@ func (config *ConfigQemu) defaults() {
 	if config.Hotplug == "" {
 		config.Hotplug = "network,disk,usb"
 	}
-	if config.Protection == nil {
-		config.Protection = util.Pointer(false)
-	}
 	if config.QemuDisks == nil {
 		config.QemuDisks = QemuDevices{}
 	}
@@ -185,16 +179,13 @@ func (config *ConfigQemu) defaults() {
 	if config.Scsihw == "" {
 		config.Scsihw = "lsi"
 	}
-	if config.Tablet == nil {
-		config.Tablet = util.Pointer(true)
-	}
 }
 
 func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (rebootRequired bool, params map[string]interface{}, err error) {
 	// TODO check if cloudInit settings changed, they require a reboot to take effect.
 	var itemsToDelete string
 
-	params = map[string]interface{}{}
+	params = map[string]any{}
 
 	var guestID GuestID
 	if config.ID != nil {
@@ -204,7 +195,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		params["args"] = config.Args
 	}
 	if config.Agent != nil {
-		params["agent"] = config.Agent.mapToAPI(currentConfig.Agent)
+		params[qemuApiKeyGuestAgent] = config.Agent.mapToAPI(currentConfig.Agent)
 	}
 	if config.Bios != "" {
 		params["bios"] = config.Bios
@@ -213,7 +204,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		params["boot"] = config.Boot
 	}
 	if config.Description != nil && (*config.Description != "" || currentConfig.Description != nil) {
-		params["description"] = *config.Description
+		params[qemuApiKeyDescription] = *config.Description
 	}
 	if config.Hookscript != "" {
 		params["hookscript"] = config.Hookscript
@@ -248,11 +239,11 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		params["startup"] = config.Startup
 	}
 	if config.Tablet != nil {
-		params["tablet"] = *config.Tablet
+		params[qemuApiKeyTablet] = *config.Tablet
 	}
 	if config.Tags != nil {
 		if v, ok := config.Tags.mapToApiUpdate(currentConfig.Tags); ok {
-			params["tags"] = v
+			params[qemuApiKeyTags] = v
 		}
 	}
 	if config.Smbios1 != "" {
@@ -282,7 +273,11 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	if currentConfig.Disks != nil {
 		if config.Disks != nil {
 			// Create,Update,Delete
-			delete := config.Disks.mapToApiValues(*currentConfig.Disks, guestID, currentConfig.LinkedVmId, params)
+			var linkedID GuestID
+			if currentConfig.LinkedID != nil {
+				linkedID = *currentConfig.LinkedID
+			}
+			delete := config.Disks.mapToApiValues(*currentConfig.Disks, guestID, linkedID, params)
 			if delete != "" {
 				itemsToDelete = AddToList(itemsToDelete, delete)
 			}
@@ -337,7 +332,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 	return
 }
 
-func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*ConfigQemu, error) {
+func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) error {
 	// vmConfig Sample: map[ cpu:host
 	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
 	// ide2:local:iso/xxx-xx.iso,media=cdrom memory:2048
@@ -346,12 +341,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	// virtio0:ProxmoxxxxISCSI:vm-1014-disk-2,size=4G
 	// description:Base image
 	// cores:2 ostype:l26
-
-	config := ConfigQemu{
-		CPU:       QemuCPU{}.mapToSDK(params),
-		CloudInit: CloudInit{}.mapToSDK(params),
-		Memory:    QemuMemory{}.mapToSDK(params),
-	}
 
 	if vmr != nil {
 		if vmr.node != "" {
@@ -368,9 +357,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		}
 	}
 
-	if v, isSet := params["agent"]; isSet {
-		config.Agent = QemuGuestAgent{}.mapToSDK(v.(string))
-	}
 	if _, isSet := params["args"]; isSet {
 		config.Args = strings.TrimSpace(params["args"].(string))
 	}
@@ -384,10 +370,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	if _, isSet := params["bios"]; isSet {
 		config.Bios = params["bios"].(string)
 	}
-	if _, isSet := params["description"]; isSet {
-		tmp := params["description"].(string)
-		config.Description = &tmp
-	}
 	//Can be network,disk,cpu,memory,usb
 	if _, isSet := params["hotplug"]; isSet {
 		config.Hotplug = params["hotplug"].(string)
@@ -397,9 +379,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	}
 	if _, isSet := params["machine"]; isSet {
 		config.Machine = params["machine"].(string)
-	}
-	if v, isSet := params[qemuApiKeyName]; isSet {
-		config.Name = util.Pointer(GuestName(v.(string)))
 	}
 	if _, isSet := params["onboot"]; isSet {
 		config.Onboot = util.Pointer(Itob(int(params["onboot"].(float64))))
@@ -413,30 +392,14 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 	if _, isSet := params["ostype"]; isSet {
 		config.QemuOs = params["ostype"].(string)
 	}
-	if _, isSet := params["protection"]; isSet {
-		config.Protection = util.Pointer(Itob(int(params["protection"].(float64))))
-	}
 	if _, isSet := params["scsihw"]; isSet {
 		config.Scsihw = params["scsihw"].(string)
 	}
 	if _, isSet := params["startup"]; isSet {
 		config.Startup = params["startup"].(string)
 	}
-	if _, isSet := params["tablet"]; isSet {
-		config.Tablet = util.Pointer(Itob(int(params["tablet"].(float64))))
-	}
-	if _, isSet := params["tags"]; isSet {
-		tmpTags := Tags{}.mapToSDK(params["tags"].(string))
-		config.Tags = &tmpTags
-	}
 	if _, isSet := params["smbios1"]; isSet {
 		config.Smbios1 = params["smbios1"].(string)
-	}
-
-	var linkedVmId GuestID
-	config.Disks = QemuStorages{}.mapToStruct(params, &linkedVmId)
-	if linkedVmId != 0 {
-		config.LinkedVmId = linkedVmId
 	}
 
 	if config.Disks != nil && config.Disks.Ide != nil && config.Disks.Ide.Disk_2 != nil && config.Disks.Ide.Disk_2.CdRom != nil {
@@ -466,7 +429,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 			id := rxDeviceID.FindStringSubmatch(unusedDiskName)
 			diskID, err := strconv.Atoi(id[0])
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse unused disk id from input string '%v' tried to convert '%v' to integer", unusedDiskName, diskID)
+				return fmt.Errorf("unable to parse unused disk id from input string '%v' tried to convert '%v' to integer", unusedDiskName, diskID)
 			}
 			finalDiskConfMap["slot"] = diskID
 
@@ -494,12 +457,6 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		}
 	}
 
-	config.Networks = QemuNetworkInterfaces{}.mapToSDK(params)
-	config.PciDevices = QemuPciDevices{}.mapToSDK(params)
-	config.Serials = SerialInterfaces{}.mapToSDK(params)
-
-	config.USBs = QemuUSBs{}.mapToSDK(params)
-
 	// efidisk
 	if efidisk, isSet := params["efidisk0"].(string); isSet {
 		efiDiskConfMap := ParsePMConf(efidisk, "volume")
@@ -509,7 +466,7 @@ func (ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) (*Confi
 		config.EFIDisk = efiDiskConfMap
 	}
 
-	return &config, nil
+	return nil
 }
 
 func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
@@ -860,54 +817,6 @@ var (
 	rxMpName         = regexp.MustCompile(`mp\d+`)
 )
 
-func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
-	var vmConfig map[string]interface{}
-	var vmInfo map[string]interface{}
-	for ii := 0; ii < 3; ii++ {
-		vmConfig, err = client.GetVmConfig(ctx, vmr)
-		if err != nil {
-			log.Fatal(err)
-			return nil, err
-		}
-		// TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
-		vmInfo, err = client.GetVmInfo(ctx, vmr)
-		if err != nil {
-			return nil, err
-		}
-		// this can happen:
-		// {"data":{"lock":"clone","digest":"eb54fb9d9f120ba0c3bdf694f73b10002c375c38","description":" qmclone temporary file\n"}})
-		if vmInfo["lock"] == nil {
-			break
-		} else {
-			time.Sleep(8 * time.Second)
-		}
-	}
-
-	if vmInfo["lock"] != nil {
-		return nil, fmt.Errorf("vm locked, could not obtain config")
-	}
-	if v, isSet := vmInfo["pool"]; isSet { // TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
-		vmr.pool = PoolName(v.(string))
-	}
-	config, err = ConfigQemu{}.mapToStruct(vmr, vmConfig)
-	if err != nil {
-		return
-	}
-
-	config.defaults()
-
-	// HAstate is return by the api for a vm resource type but not the HAgroup
-	err = client.ReadVMHA(ctx, vmr) // TODO: can be optimized, uses same API call as GetVmConfig and GetVmInfo
-	if err == nil {
-		config.HaState = vmr.HaState()
-		config.HaGroup = vmr.HaGroup()
-	} else {
-		//log.Printf("[DEBUG] VM %d(%s) has no HA config", vmr.vmId, vmConfig["hostname"])
-		return config, nil
-	}
-	return
-}
-
 // Useful waiting for ISO install to complete
 func WaitForShutdown(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	for ii := 0; ii < 100; ii++ {
@@ -1184,4 +1093,162 @@ func (confMap QemuDevice) readDeviceConfig(confList []string) {
 func (c ConfigQemu) String() string {
 	jsConf, _ := json.Marshal(c)
 	return string(jsConf)
+}
+
+type RawConfigQemu map[string]any
+
+func (raw RawConfigQemu) ALL(vmr *VmRef) (*ConfigQemu, error) {
+	config, err := raw.all(vmr)
+	if err != nil {
+		return nil, err
+	}
+	config.defaults()
+	return config, nil
+}
+
+func (raw RawConfigQemu) all(vmr *VmRef) (*ConfigQemu, error) {
+	config := ConfigQemu{
+		Agent:       raw.Agent(),
+		CPU:         raw.CPU(),
+		CloudInit:   raw.CloudInit(),
+		Description: util.Pointer(raw.Description()),
+		Memory:      raw.Memory(),
+		Name:        util.Pointer(raw.Name()),
+		Networks:    raw.Networks(),
+		PciDevices:  raw.PciDevices(),
+		Protection:  util.Pointer(raw.Protection()),
+		Serials:     raw.Serials(),
+		Tablet:      util.Pointer(raw.Tablet()),
+		Tags:        raw.Tags(),
+		USBs:        raw.USBs(),
+	}
+	config.Disks, config.LinkedID = raw.Disks()
+	if err := config.mapToStruct(vmr, raw); err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
+func (raw RawConfigQemu) Description() string {
+	if v, isSet := raw[qemuApiKeyDescription]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func (raw RawConfigQemu) Name() GuestName {
+	if v, isSet := raw[qemuApiKeyName]; isSet {
+		return GuestName(v.(string))
+	}
+	return ""
+}
+
+func (raw RawConfigQemu) Protection() bool {
+	if v, isSet := raw[qemuApiKeyProtection]; isSet {
+		return int(v.(float64)) == 1
+	}
+	return false
+}
+
+func (raw RawConfigQemu) Tablet() bool {
+	if v, isSet := raw[qemuApiKeyTablet]; isSet {
+		return int(v.(float64)) == 1
+	}
+	return true
+}
+
+func (raw RawConfigQemu) Tags() *Tags {
+	if v, isSet := raw[qemuApiKeyTags]; isSet {
+		return util.Pointer(Tags{}.mapToSDK(v.(string)))
+	}
+	return nil
+}
+
+const (
+	qemuApiKeyCloudInitCustom   string = "cicustom"
+	qemuApiKeyCloudInitPassword string = "cipassword"
+	qemuApiKeyCloudInitSshKeys  string = "sshkeys"
+	qemuApiKeyCloudInitUpgrade  string = "ciupgrade"
+	qemuApiKeyCloudInitUser     string = "ciuser"
+	qemuApiKeyCpuAffinity       string = "affinity"
+	qemuApiKeyCpuCores          string = "cores"
+	qemuApiKeyCpuLimit          string = "cpulimit"
+	qemuApiKeyCpuNuma           string = "numa"
+	qemuApiKeyCpuSockets        string = "sockets"
+	qemuApiKeyCpuType           string = "cpu"
+	qemuApiKeyCpuUnits          string = "cpuunits"
+	qemuApiKeyCpuVirtual        string = "vcpus"
+	qemuApiKeyDescription       string = "description"
+	qemuApiKeyGuestAgent        string = "agent"
+	qemuApiKeyMemoryBallooning  string = "balloon"
+	qemuApiKeyMemoryCapacity    string = "memory"
+	qemuApiKeyMemoryShares      string = "shares"
+	qemuApiKeyName              string = "name"
+	qemuApiKeyProtection        string = "protection"
+	qemuApiKeyTablet            string = "tablet"
+	qemuApiKeyTags              string = "tags"
+	qemuPrefixApiKeyDiskIde     string = "ide"
+	qemuPrefixApiKeyDiskSCSI    string = "scsi"
+	qemuPrefixApiKeyDiskSata    string = "sata"
+	qemuPrefixApiKeyDiskVirtIO  string = "virtio"
+	qemuPrefixApiKeyNetwork     string = "net"
+	qemuPrefixApiKeyPCI         string = "hostpci"
+	qemuPrefixApiKeySerial      string = "serial"
+	qemuPrefixApiKeyUSB         string = "usb"
+)
+
+func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
+	rawConfig, err := client.GetVmConfig(ctx, vmr)
+	if err != nil {
+		return nil, err
+	}
+	return rawConfig, nil
+}
+
+func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
+	var raw RawConfigQemu
+	var vmInfo map[string]interface{}
+	for ii := 0; ii < 3; ii++ {
+		raw, err = NewRawConfigQemuFromApi(ctx, vmr, client)
+		if err != nil {
+			return nil, err
+		}
+		// TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
+		vmInfo, err = client.GetVmInfo(ctx, vmr)
+		if err != nil {
+			return nil, err
+		}
+		// this can happen:
+		// {"data":{"lock":"clone","digest":"eb54fb9d9f120ba0c3bdf694f73b10002c375c38","description":" qmclone temporary file\n"}})
+		if vmInfo["lock"] == nil {
+			break
+		} else {
+			time.Sleep(8 * time.Second)
+		}
+	}
+
+	if vmInfo["lock"] != nil {
+		return nil, fmt.Errorf("vm locked, could not obtain config")
+	}
+	if v, isSet := vmInfo["pool"]; isSet { // TODO: this is a workaround for the issue that GetVmConfig will not always return the guest info
+		vmr.pool = PoolName(v.(string))
+	}
+
+	config, err = raw.ALL(vmr)
+	if err != nil {
+		return
+	}
+
+	config.defaults()
+
+	// HAstate is return by the api for a vm resource type but not the HAgroup
+	err = client.ReadVMHA(ctx, vmr) // TODO: can be optimized, uses same API call as GetVmConfig and GetVmInfo
+	if err == nil {
+		config.HaState = vmr.HaState()
+		config.HaGroup = vmr.HaGroup()
+	} else {
+		//log.Printf("[DEBUG] VM %d(%s) has no HA config", vmr.vmId, vmConfig["hostname"])
+		return config, nil
+	}
+	return
 }

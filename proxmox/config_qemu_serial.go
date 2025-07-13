@@ -28,9 +28,9 @@ func (id SerialID) Validate() error {
 }
 
 type SerialInterface struct {
-	Delete bool       `json:"delete,omitempty"` // If true, the serial adapter will be removed.
 	Path   SerialPath `json:"path,omitempty"`   // Path to the serial device. Mutually exclusive with socket.
 	Socket bool       `json:"socket,omitempty"` // If true, the serial device is a socket. Mutually exclusive with path.
+	Delete bool       `json:"delete,omitempty"` // If true, the serial adapter will be removed.
 }
 
 const (
@@ -45,7 +45,7 @@ func (port SerialInterface) mapToAPI(id SerialID, params map[string]interface{})
 	if !port.Socket {
 		tmpPath = string(port.Path)
 	}
-	params["serial"+id.String()] = tmpPath
+	params[qemuPrefixApiKeySerial+id.String()] = tmpPath
 }
 
 func (SerialInterface) mapToSDK(v string) SerialInterface {
@@ -83,7 +83,7 @@ func (config SerialInterfaces) mapToAPI(current SerialInterfaces, params map[str
 		for id, port := range config {
 			if _, ok := current[id]; ok {
 				if port.Delete {
-					delete += ",serial" + id.String()
+					delete += "," + qemuPrefixApiKeySerial + id.String()
 					continue
 				}
 				if current[id].Path != port.Path || current[id].Socket != port.Socket {
@@ -104,18 +104,18 @@ func (config SerialInterfaces) mapToAPI(current SerialInterfaces, params map[str
 	return
 }
 
-func (SerialInterfaces) mapToSDK(params map[string]interface{}) SerialInterfaces {
+func (raw RawConfigQemu) Serials() SerialInterfaces {
 	Serials := SerialInterfaces{}
-	if v, isSet := params["serial0"]; isSet {
+	if v, isSet := raw[qemuPrefixApiKeySerial+"0"]; isSet {
 		Serials[SerialID0] = SerialInterface{}.mapToSDK(v.(string))
 	}
-	if v, isSet := params["serial1"]; isSet {
+	if v, isSet := raw[qemuPrefixApiKeySerial+"1"]; isSet {
 		Serials[SerialID1] = SerialInterface{}.mapToSDK(v.(string))
 	}
-	if v, isSet := params["serial2"]; isSet {
+	if v, isSet := raw[qemuPrefixApiKeySerial+"2"]; isSet {
 		Serials[SerialID2] = SerialInterface{}.mapToSDK(v.(string))
 	}
-	if v, isSet := params["serial3"]; isSet {
+	if v, isSet := raw[qemuPrefixApiKeySerial+"3"]; isSet {
 		Serials[SerialID3] = SerialInterface{}.mapToSDK(v.(string))
 	}
 	if len(Serials) > 0 {

@@ -24,18 +24,18 @@ const CloudInit_Error_UpgradePackagesPre8 = "upgradePackages is only available i
 func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface{}, version Version) (delete string) {
 	if current != nil { // Update
 		if config.Custom != nil {
-			params["cicustom"] = config.Custom.mapToAPI(current.Custom)
+			params[qemuApiKeyCloudInitCustom] = config.Custom.mapToAPI(current.Custom)
 		}
 		if config.Username != nil {
 			tmp := *config.Username
 			if tmp != "" {
-				params["ciuser"] = *config.Username
+				params[qemuApiKeyCloudInitUser] = *config.Username
 			} else {
-				delete += ",ciuser"
+				delete += "," + qemuApiKeyCloudInitUser
 			}
 		}
 		if config.UserPassword != nil && *config.UserPassword == "" {
-			delete += ",cipassword"
+			delete += "," + qemuApiKeyCloudInitPassword
 		}
 		if config.DNS != nil {
 			if current.DNS != nil {
@@ -49,20 +49,20 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 			if len(*config.PublicSSHkeys) > 0 {
 				tmpKey := sshKeyUrlEncode(*config.PublicSSHkeys)
 				if tmpKey != "" {
-					params["sshkeys"] = tmpKey
+					params[qemuApiKeyCloudInitSshKeys] = tmpKey
 				} else {
-					delete += ",sshkeys"
+					delete += "," + qemuApiKeyCloudInitSshKeys
 				}
 			} else {
-				delete += ",sshkeys"
+				delete += "," + qemuApiKeyCloudInitSshKeys
 			}
 		}
 	} else { // Create
 		if config.Custom != nil {
-			params["cicustom"] = config.Custom.mapToAPI(nil)
+			params[qemuApiKeyCloudInitCustom] = config.Custom.mapToAPI(nil)
 		}
 		if config.Username != nil && *config.Username != "" {
-			params["ciuser"] = *config.Username
+			params[qemuApiKeyCloudInitUser] = *config.Username
 		}
 		if config.DNS != nil {
 			config.DNS.mapToApiCreate(params)
@@ -70,51 +70,51 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 		config.NetworkInterfaces.mapToAPI(nil, params)
 		if config.PublicSSHkeys != nil && len(*config.PublicSSHkeys) > 0 {
 			if tmpKey := sshKeyUrlEncode(*config.PublicSSHkeys); tmpKey != "" {
-				params["sshkeys"] = tmpKey
+				params[qemuApiKeyCloudInitSshKeys] = tmpKey
 			}
 		}
 	}
 	// Shared
 	if config.UpgradePackages != nil && !version.Smaller(Version{Major: 8}) {
-		params["ciupgrade"] = Btoi(*config.UpgradePackages)
+		params[qemuApiKeyCloudInitUpgrade] = Btoi(*config.UpgradePackages)
 	}
 	if config.UserPassword != nil && *config.UserPassword != "" {
-		params["cipassword"] = *config.UserPassword
+		params[qemuApiKeyCloudInitPassword] = *config.UserPassword
 	}
 	return
 }
 
-func (CloudInit) mapToSDK(params map[string]interface{}) *CloudInit {
+func (raw RawConfigQemu) CloudInit() *CloudInit {
 	ci := CloudInit{}
 	var set bool
-	if v, isSet := params["cicustom"]; isSet {
+	if v, isSet := raw[qemuApiKeyCloudInitCustom]; isSet {
 		ci.Custom = CloudInitCustom{}.mapToSDK(v.(string))
 		set = true
 	}
-	if v, isSet := params["cipassword"]; isSet {
+	if v, isSet := raw[qemuApiKeyCloudInitPassword]; isSet {
 		ci.UserPassword = util.Pointer(v.(string))
 		set = true
 	}
-	if v, isSet := params["ciupgrade"]; isSet {
+	if v, isSet := raw[qemuApiKeyCloudInitUpgrade]; isSet {
 		ci.UpgradePackages = util.Pointer(Itob(int(v.(float64))))
 		set = true
 	}
-	if v, isSet := params["ciuser"]; isSet {
+	if v, isSet := raw[qemuApiKeyCloudInitUser]; isSet {
 		tmp := v.(string)
 		if tmp != "" && tmp != " " {
 			ci.Username = &tmp
 			set = true
 		}
 	}
-	if v, isSet := params["sshkeys"]; isSet {
+	if v, isSet := raw[qemuApiKeyCloudInitSshKeys]; isSet {
 		ci.PublicSSHkeys = util.Pointer(sshKeyUrlDecode(v.(string)))
 		set = true
 	}
-	if v := (GuestDNS{}.mapToSDK(params)); v != nil {
+	if v := (GuestDNS{}.mapToSDK(raw)); v != nil {
 		ci.DNS = v
 		set = true
 	}
-	ci.NetworkInterfaces = CloudInitNetworkInterfaces{}.mapToSDK(params)
+	ci.NetworkInterfaces = CloudInitNetworkInterfaces{}.mapToSDK(raw)
 	if set || len(ci.NetworkInterfaces) > 0 {
 		return &ci
 	}
@@ -308,8 +308,8 @@ func (config CloudInitIPv4Config) Validate() error {
 
 type CloudInitIPv6Config struct {
 	Address *IPv6CIDR    `json:"address,omitempty"`
-	DHCP    bool         `json:"dhcp,omitempty"`
 	Gateway *IPv6Address `json:"gateway,omitempty"`
+	DHCP    bool         `json:"dhcp,omitempty"`
 	SLAAC   bool         `json:"slaac,omitempty"`
 }
 

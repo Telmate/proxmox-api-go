@@ -17,24 +17,24 @@ func (config QemuPciDevices) mapToAPI(current QemuPciDevices, params map[string]
 	for i, e := range config {
 		if v, isSet := current[i]; isSet {
 			if e.Delete {
-				builder.WriteString(",hostpci" + i.String())
+				builder.WriteString("," + qemuPrefixApiKeyPCI + i.String())
 				continue
 			}
-			params["hostpci"+i.String()] = e.mapToAPI(&v)
+			params[qemuPrefixApiKeyPCI+i.String()] = e.mapToAPI(&v)
 		} else {
 			if e.Delete {
 				continue
 			}
-			params["hostpci"+i.String()] = e.mapToAPI(nil)
+			params[qemuPrefixApiKeyPCI+i.String()] = e.mapToAPI(nil)
 		}
 	}
 	return builder.String()
 }
 
-func (QemuPciDevices) mapToSDK(params map[string]interface{}) QemuPciDevices {
+func (raw RawConfigQemu) PciDevices() QemuPciDevices {
 	pciList := make(QemuPciDevices)
 	for i := QemuPciID(0); i < QemuPciID(QemuPciDevicesAmount); i++ {
-		if v, isSet := params["hostpci"+i.String()]; isSet {
+		if v, isSet := raw[qemuPrefixApiKeyPCI+i.String()]; isSet {
 			pciList[i] = QemuPci{}.mapToSDK(v.(string))
 		}
 	}

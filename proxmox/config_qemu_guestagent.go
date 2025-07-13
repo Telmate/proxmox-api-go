@@ -47,23 +47,27 @@ func (newSetting QemuGuestAgent) mapToAPI(currentSettings *QemuGuestAgent) strin
 	return tmpEnable + params
 }
 
-func (QemuGuestAgent) mapToSDK(params string) *QemuGuestAgent {
-	config := QemuGuestAgent{}
-	tmpEnable, _ := strconv.ParseBool(params[0:1])
-	config.Enable = &tmpEnable
-	tmpParams := splitStringOfSettings(params)
-	if v, isSet := tmpParams["freeze-fs-on-backup"]; isSet {
-		tmpBool, _ := strconv.ParseBool(v)
-		config.Freeze = &tmpBool
+func (raw RawConfigQemu) Agent() *QemuGuestAgent {
+	if v, isSet := raw[qemuApiKeyGuestAgent]; isSet {
+		params := v.(string)
+		config := QemuGuestAgent{}
+		tmpEnable, _ := strconv.ParseBool(params[0:1])
+		config.Enable = &tmpEnable
+		tmpParams := splitStringOfSettings(params)
+		if v, isSet := tmpParams["freeze-fs-on-backup"]; isSet {
+			tmpBool, _ := strconv.ParseBool(v)
+			config.Freeze = &tmpBool
+		}
+		if v, isSet := tmpParams["fstrim_cloned_disks"]; isSet {
+			tmpBool, _ := strconv.ParseBool(v)
+			config.FsTrim = &tmpBool
+		}
+		if v, isSet := tmpParams["type"]; isSet {
+			config.Type = util.Pointer(QemuGuestAgentType(v))
+		}
+		return &config
 	}
-	if v, isSet := tmpParams["fstrim_cloned_disks"]; isSet {
-		tmpBool, _ := strconv.ParseBool(v)
-		config.FsTrim = &tmpBool
-	}
-	if v, isSet := tmpParams["type"]; isSet {
-		config.Type = util.Pointer(QemuGuestAgentType(v))
-	}
-	return &config
+	return nil
 }
 
 func (setting QemuGuestAgent) Validate() error {

@@ -21,57 +21,57 @@ const (
 func (config QemuMemory) mapToAPI(current *QemuMemory, params map[string]interface{}) string {
 	if current == nil { // create
 		if config.CapacityMiB != nil {
-			params["memory"] = *config.CapacityMiB
+			params[qemuApiKeyMemoryCapacity] = *config.CapacityMiB
 		}
 		if config.MinimumCapacityMiB != nil {
-			params["balloon"] = *config.MinimumCapacityMiB
+			params[qemuApiKeyMemoryBallooning] = *config.MinimumCapacityMiB
 			if config.CapacityMiB == nil {
-				params["memory"] = *config.MinimumCapacityMiB
+				params[qemuApiKeyMemoryCapacity] = *config.MinimumCapacityMiB
 			}
 		}
 		if config.Shares != nil {
 			if *config.Shares > 0 {
-				params["shares"] = *config.Shares
+				params[qemuApiKeyMemoryShares] = *config.Shares
 			}
 		}
 		return ""
 	}
 	// update
 	if config.CapacityMiB != nil {
-		params["memory"] = *config.CapacityMiB
+		params[qemuApiKeyMemoryCapacity] = *config.CapacityMiB
 		if config.MinimumCapacityMiB == nil && current.MinimumCapacityMiB != nil && uint32(*current.MinimumCapacityMiB) > uint32(*config.CapacityMiB) {
-			params["balloon"] = *config.CapacityMiB
-			return ",shares"
+			params[qemuApiKeyMemoryBallooning] = *config.CapacityMiB
+			return "," + qemuApiKeyMemoryShares
 		}
 	}
 	if config.MinimumCapacityMiB != nil {
-		params["balloon"] = *config.MinimumCapacityMiB
+		params[qemuApiKeyMemoryBallooning] = *config.MinimumCapacityMiB
 		if *config.MinimumCapacityMiB == 0 {
-			return ",shares"
+			return "," + qemuApiKeyMemoryShares
 		}
 	}
 	if config.Shares != nil {
 		if *config.Shares == 0 {
-			return ",shares"
+			return "," + qemuApiKeyMemoryShares
 		}
-		params["shares"] = *config.Shares
+		params[qemuApiKeyMemoryShares] = *config.Shares
 	}
 	return ""
 }
 
-func (QemuMemory) mapToSDK(params map[string]interface{}) *QemuMemory {
+func (raw RawConfigQemu) Memory() *QemuMemory {
 	config := QemuMemory{}
-	if v, isSet := params["memory"]; isSet {
+	if v, isSet := raw[qemuApiKeyMemoryCapacity]; isSet {
 		tmp, _ := parse.Uint(v)
 		tmpIntermediate := QemuMemoryCapacity(tmp)
 		config.CapacityMiB = &tmpIntermediate
 	}
-	if v, isSet := params["balloon"]; isSet {
+	if v, isSet := raw[qemuApiKeyMemoryBallooning]; isSet {
 		tmp, _ := parse.Uint(v)
 		tmpIntermediate := QemuMemoryBalloonCapacity(tmp)
 		config.MinimumCapacityMiB = &tmpIntermediate
 	}
-	if v, isSet := params["shares"]; isSet {
+	if v, isSet := raw[qemuApiKeyMemoryShares]; isSet {
 		tmp, _ := parse.Uint(v)
 		tmpIntermediate := QemuMemoryShares(tmp)
 		config.Shares = &tmpIntermediate

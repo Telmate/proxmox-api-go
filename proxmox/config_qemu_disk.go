@@ -186,22 +186,15 @@ func (cloudInit QemuCloudInitDisk) Validate() error {
 }
 
 type qemuDisk struct {
-	AsyncIO    QemuDiskAsyncIO
-	Backup     bool
-	Bandwidth  QemuDiskBandwidth
-	Cache      QemuDiskCache
-	Discard    bool
-	Disk       bool // true = disk, false = passthrough
-	EmulateSSD bool // Only set for ide,sata,scsi
+	AsyncIO   QemuDiskAsyncIO
+	Bandwidth QemuDiskBandwidth
+	Cache     QemuDiskCache
 	// TODO custom type
 	File            string         // Only set for Passthrough.
 	fileSyntax      diskSyntaxEnum // private enum to determine the syntax of the file path, as this changes depending on the type of backing storage. ie nfs, lvm, local, etc.
 	Format          QemuDiskFormat // Only set for Disk
 	Id              uint           // Only set for Disk
-	IOThread        bool           // Only set for scsi,virtio
 	LinkedDiskId    *GuestID       // Only set for Disk
-	ReadOnly        bool           // Only set for scsi,virtio
-	Replicate       bool
 	Serial          QemuDiskSerial
 	SizeInKibibytes QemuDiskSize
 	// TODO custom type
@@ -209,6 +202,13 @@ type qemuDisk struct {
 	Type          qemuDiskType
 	WorldWideName QemuWorldWideName
 	ImportFrom    string
+	Backup        bool
+	Discard       bool
+	Disk          bool // true = disk, false = passthrough
+	EmulateSSD    bool // Only set for ide,sata,scsi
+	IOThread      bool // Only set for scsi,virtio
+	ReadOnly      bool // Only set for scsi,virtio
+	Replicate     bool
 }
 
 const (
@@ -1073,17 +1073,21 @@ func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, vmID, 
 	return delete
 }
 
-func (QemuStorages) mapToStruct(params map[string]interface{}, linkedVmId *GuestID) *QemuStorages {
+func (raw RawConfigQemu) Disks() (disks *QemuStorages, linkedID *GuestID) {
+	tmpLinkedID := util.Pointer(GuestID(0))
 	storage := QemuStorages{
-		Ide:    QemuIdeDisks{}.mapToStruct(params, linkedVmId),
-		Sata:   QemuSataDisks{}.mapToStruct(params, linkedVmId),
-		Scsi:   QemuScsiDisks{}.mapToStruct(params, linkedVmId),
-		VirtIO: QemuVirtIODisks{}.mapToStruct(params, linkedVmId),
+		Ide:    raw.disksIde(tmpLinkedID),
+		Sata:   raw.disksSata(tmpLinkedID),
+		Scsi:   raw.disksSCSI(tmpLinkedID),
+		VirtIO: raw.disksVirtIO(tmpLinkedID),
+	}
+	if *tmpLinkedID != 0 {
+		linkedID = tmpLinkedID
 	}
 	if storage.Ide != nil || storage.Sata != nil || storage.Scsi != nil || storage.VirtIO != nil {
-		return &storage
+		return &storage, linkedID
 	}
-	return nil
+	return nil, nil
 }
 
 // mark disk that need to be moved or resized

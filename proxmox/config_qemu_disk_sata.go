@@ -7,21 +7,21 @@ import (
 
 type QemuSataDisk struct {
 	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup          bool              `json:"backup"`
 	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache           QemuDiskCache     `json:"cache,omitempty"`
-	Discard         bool              `json:"discard"`
-	EmulateSSD      bool              `json:"emulatessd"`
 	Format          QemuDiskFormat    `json:"format"`
 	Id              uint              `json:"id"`     //Id is only returned and setting it has no effect
 	LinkedDiskId    *GuestID          `json:"linked"` //LinkedClone is only returned and setting it has no effect
-	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
 	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Storage         string            `json:"storage"`
 	syntax          diskSyntaxEnum
 	WorldWideName   QemuWorldWideName `json:"wwn"`
 	ImportFrom      string            `json:"import_from,omitempty"`
+	Backup          bool              `json:"backup"`
+	Discard         bool              `json:"discard"`
+	EmulateSSD      bool              `json:"emulatessd"`
+	Replicate       bool              `json:"replicate"`
 }
 
 func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
@@ -64,7 +64,7 @@ func (q QemuSataDisks) listCloudInitDisk() string {
 	diskMap := q.mapToIntMap()
 	for i := range diskMap {
 		if diskMap[i] != nil && diskMap[i].CloudInit != nil {
-			return "sata" + strconv.Itoa(int(i))
+			return qemuPrefixApiKeyDiskSata + strconv.Itoa(int(i))
 		}
 	}
 	return ""
@@ -97,31 +97,31 @@ func (disks QemuSataDisks) mapToIntMap() map[uint8]*QemuSataStorage {
 	}
 }
 
-func (QemuSataDisks) mapToStruct(params map[string]interface{}, linkedVmId *GuestID) *QemuSataDisks {
+func (raw RawConfigQemu) disksSata(linkedVmId *GuestID) *QemuSataDisks {
 	disks := QemuSataDisks{}
 	var structPopulated bool
-	if _, isSet := params["sata0"]; isSet {
-		disks.Disk_0 = QemuSataStorage{}.mapToStruct(params["sata0"].(string), linkedVmId)
+	if v, isSet := raw[qemuPrefixApiKeyDiskSata+"0"]; isSet {
+		disks.Disk_0 = QemuSataStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if _, isSet := params["sata1"]; isSet {
-		disks.Disk_1 = QemuSataStorage{}.mapToStruct(params["sata1"].(string), linkedVmId)
+	if v, isSet := raw[qemuPrefixApiKeyDiskSata+"1"]; isSet {
+		disks.Disk_1 = QemuSataStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if _, isSet := params["sata2"]; isSet {
-		disks.Disk_2 = QemuSataStorage{}.mapToStruct(params["sata2"].(string), linkedVmId)
+	if v, isSet := raw[qemuPrefixApiKeyDiskSata+"2"]; isSet {
+		disks.Disk_2 = QemuSataStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if _, isSet := params["sata3"]; isSet {
-		disks.Disk_3 = QemuSataStorage{}.mapToStruct(params["sata3"].(string), linkedVmId)
+	if v, isSet := raw[qemuPrefixApiKeyDiskSata+"3"]; isSet {
+		disks.Disk_3 = QemuSataStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if _, isSet := params["sata4"]; isSet {
-		disks.Disk_4 = QemuSataStorage{}.mapToStruct(params["sata4"].(string), linkedVmId)
+	if v, isSet := raw[qemuPrefixApiKeyDiskSata+"4"]; isSet {
+		disks.Disk_4 = QemuSataStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if _, isSet := params["sata5"]; isSet {
-		disks.Disk_5 = QemuSataStorage{}.mapToStruct(params["sata5"].(string), linkedVmId)
+	if v, isSet := raw[qemuPrefixApiKeyDiskSata+"5"]; isSet {
+		disks.Disk_5 = QemuSataStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
 	if structPopulated {
@@ -185,16 +185,16 @@ func (disks QemuSataDisks) validate() (numberOfCloudInitDevices uint8, err error
 
 type QemuSataPassthrough struct {
 	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Backup          bool              `json:"backup"`
 	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache           QemuDiskCache     `json:"cache,omitempty"`
-	Discard         bool              `json:"discard"`
-	EmulateSSD      bool              `json:"emulatessd"`
 	File            string            `json:"file"`
-	Replicate       bool              `json:"replicate"`
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
 	SizeInKibibytes QemuDiskSize      `json:"size"` //size is only returned and setting it has no effect
 	WorldWideName   QemuWorldWideName `json:"wwn"`
+	Backup          bool              `json:"backup"`
+	Discard         bool              `json:"discard"`
+	EmulateSSD      bool              `json:"emulatessd"`
+	Replicate       bool              `json:"replicate"`
 }
 
 func (passthrough *QemuSataPassthrough) convertDataStructure() *qemuDisk {
