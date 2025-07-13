@@ -516,26 +516,26 @@ const (
 func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, version Version) (delete string) {
 	if cpu.Affinity != nil {
 		if len(*cpu.Affinity) != 0 {
-			params["affinity"] = cpu.mapToApiAffinity(*cpu.Affinity)
+			params[qemuApiKeyCpuAffinity] = cpu.mapToApiAffinity(*cpu.Affinity)
 		} else if current != nil && current.Affinity != nil {
-			delete += ",affinity"
+			delete += "," + qemuApiKeyCpuAffinity
 		}
 	}
 	if cpu.Cores != nil {
-		params["cores"] = int(*cpu.Cores)
+		params[qemuApiKeyCpuCores] = int(*cpu.Cores)
 	}
 	if cpu.Limit != nil {
 		if *cpu.Limit != 0 {
-			params["cpulimit"] = int(*cpu.Limit)
+			params[qemuApiKeyCpuLimit] = int(*cpu.Limit)
 		} else if current != nil && current.Limit != nil {
-			delete += ",cpulimit"
+			delete += "," + qemuApiKeyCpuLimit
 		}
 	}
 	if cpu.Numa != nil {
-		params["numa"] = Btoi(*cpu.Numa)
+		params[qemuApiKeyCpuNuma] = Btoi(*cpu.Numa)
 	}
 	if cpu.Sockets != nil {
-		params["sockets"] = int(*cpu.Sockets)
+		params[qemuApiKeyCpuSockets] = int(*cpu.Sockets)
 	}
 	if cpu.Flags != nil || cpu.Type != nil {
 		var cpuType, flags string
@@ -559,23 +559,23 @@ func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, ver
 			}
 		}
 		if len(flags) != 0 {
-			params["cpu"] = cpuType + ",flags=" + flags[1:]
+			params[qemuApiKeyCpuType] = cpuType + ",flags=" + flags[1:]
 		} else if cpuType != "" {
-			params["cpu"] = cpuType
+			params[qemuApiKeyCpuType] = cpuType
 		}
 	}
 	if cpu.Units != nil {
 		if *cpu.Units != 0 {
-			params["cpuunits"] = int(*cpu.Units)
+			params[qemuApiKeyCpuUnits] = int(*cpu.Units)
 		} else if current != nil {
-			delete += ",cpuunits"
+			delete += "," + qemuApiKeyCpuUnits
 		}
 	}
 	if cpu.VirtualCores != nil {
 		if *cpu.VirtualCores != 0 {
-			params["vcpus"] = int(*cpu.VirtualCores)
+			params[qemuApiKeyCpuVirtual] = int(*cpu.VirtualCores)
 		} else if current != nil && current.VirtualCores != nil {
-			delete += ",vcpus"
+			delete += "," + qemuApiKeyCpuVirtual
 		}
 	}
 	return
@@ -613,19 +613,19 @@ func (QemuCPU) mapToApiAffinity(affinity []uint) string {
 	return builder.String()
 }
 
-func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
+func (raw RawConfigQemu) CPU() *QemuCPU {
 	var cpu QemuCPU
-	if v, isSet := params["affinity"]; isSet {
+	if v, isSet := raw[qemuApiKeyCpuAffinity]; isSet {
 		if v.(string) != "" {
 			cpu.Affinity = util.Pointer(QemuCPU{}.mapToSdkAffinity(v.(string)))
 		} else {
 			cpu.Affinity = util.Pointer(make([]uint, 0))
 		}
 	}
-	if v, isSet := params["cores"]; isSet {
+	if v, isSet := raw[qemuApiKeyCpuCores]; isSet {
 		cpu.Cores = util.Pointer(QemuCpuCores(v.(float64)))
 	}
-	if v, isSet := params["cpu"]; isSet {
+	if v, isSet := raw[qemuApiKeyCpuType]; isSet {
 		cpuParams := strings.SplitN(v.(string), ",", 2)
 		cpu.Type = util.Pointer((CpuType)(cpuParams[0]))
 		if len(cpuParams) > 1 && len(cpuParams[1]) > 6 {
@@ -633,21 +633,21 @@ func (QemuCPU) mapToSDK(params map[string]interface{}) *QemuCPU {
 			cpu.Flags = CpuFlags{}.mapToSDK(strings.Split(cpuParams[1][6:], ";"))
 		}
 	}
-	if v, isSet := params["cpulimit"]; isSet {
+	if v, isSet := raw[qemuApiKeyCpuLimit]; isSet {
 		tmp, _ := parse.Uint(v)
 		cpu.Limit = util.Pointer(CpuLimit(tmp))
 	}
-	if v, isSet := params["cpuunits"]; isSet {
+	if v, isSet := raw[qemuApiKeyCpuUnits]; isSet {
 		cpu.Units = util.Pointer(CpuUnits((v.(float64))))
 	}
-	if v, isSet := params["numa"]; isSet {
+	if v, isSet := raw[qemuApiKeyCpuNuma]; isSet {
 		cpu.Numa = util.Pointer(v.(float64) == 1)
 	}
-	if v, isSet := params["sockets"]; isSet {
+	if v, isSet := raw[qemuApiKeyCpuSockets]; isSet {
 		cpu.Sockets = util.Pointer(QemuCpuSockets(v.(float64)))
 	}
-	if value, isSet := params["vcpus"]; isSet {
-		cpu.VirtualCores = util.Pointer(CpuVirtualCores((value.(float64))))
+	if v, isSet := raw[qemuApiKeyCpuVirtual]; isSet {
+		cpu.VirtualCores = util.Pointer(CpuVirtualCores((v.(float64))))
 	}
 	return &cpu
 }

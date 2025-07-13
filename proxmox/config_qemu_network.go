@@ -361,24 +361,24 @@ func (config QemuNetworkInterfaces) mapToAPI(current QemuNetworkInterfaces, para
 	for i, e := range config {
 		if v, isSet := current[i]; isSet { // Update
 			if e.Delete {
-				delete += ",net" + i.String()
+				delete += "," + qemuPrefixApiKeyNetwork + i.String()
 				continue
 			}
-			params["net"+i.String()] = e.mapToApi(&v)
+			params[qemuPrefixApiKeyNetwork+i.String()] = e.mapToApi(&v)
 		} else { // Create
 			if e.Delete {
 				continue
 			}
-			params["net"+i.String()] = e.mapToApi(nil)
+			params[qemuPrefixApiKeyNetwork+i.String()] = e.mapToApi(nil)
 		}
 	}
 	return
 }
 
-func (QemuNetworkInterfaces) mapToSDK(params map[string]interface{}) QemuNetworkInterfaces {
+func (raw RawConfigQemu) Networks() QemuNetworkInterfaces {
 	interfaces := QemuNetworkInterfaces{}
 	for i := uint8(0); i < QemuNetworkInterfacesAmount; i++ {
-		if rawInterface, isSet := params["net"+strconv.Itoa(int(i))]; isSet {
+		if rawInterface, isSet := raw[qemuPrefixApiKeyNetwork+strconv.Itoa(int(i))]; isSet {
 			interfaces[QemuNetworkInterfaceID(i)] = QemuNetworkInterface{}.mapToSDK(rawInterface.(string))
 		}
 	}

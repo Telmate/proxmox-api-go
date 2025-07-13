@@ -45,10 +45,10 @@ type QemuUSBs map[QemuUsbID]QemuUSB
 
 const QemuUSBsAmount = uint8(QemuUsbIDMaximum) + 1
 
-func (QemuUSBs) mapToSDK(params map[string]interface{}) QemuUSBs {
+func (raw RawConfigQemu) USBs() QemuUSBs {
 	usbList := make(QemuUSBs)
 	for i := QemuUsbID(0); i < QemuUsbID(QemuUSBsAmount); i++ {
-		if v, isSet := params["usb"+i.String()]; isSet {
+		if v, isSet := raw[qemuPrefixApiKeyUSB+i.String()]; isSet {
 			usbList[i] = QemuUSB{}.mapToSDK(v.(string))
 		}
 	}
@@ -63,15 +63,15 @@ func (config QemuUSBs) mapToAPI(current QemuUSBs, params map[string]interface{})
 	for i, e := range config {
 		if v, isSet := current[i]; isSet {
 			if e.Delete {
-				builder.WriteString(",usb" + i.String())
+				builder.WriteString("," + qemuPrefixApiKeyUSB + i.String())
 				continue
 			}
-			params["usb"+i.String()] = e.mapToAPI(&v)
+			params[qemuPrefixApiKeyUSB+i.String()] = e.mapToAPI(&v)
 		} else {
 			if e.Delete {
 				continue
 			}
-			params["usb"+i.String()] = e.mapToAPI(nil)
+			params[qemuPrefixApiKeyUSB+i.String()] = e.mapToAPI(nil)
 		}
 	}
 	return builder.String()

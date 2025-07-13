@@ -1073,17 +1073,21 @@ func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, vmID, 
 	return delete
 }
 
-func (QemuStorages) mapToStruct(params map[string]interface{}, linkedVmId *GuestID) *QemuStorages {
+func (raw RawConfigQemu) Disks() (disks *QemuStorages, linkedID *GuestID) {
+	tmpLinkedID := util.Pointer(GuestID(0))
 	storage := QemuStorages{
-		Ide:    QemuIdeDisks{}.mapToStruct(params, linkedVmId),
-		Sata:   QemuSataDisks{}.mapToStruct(params, linkedVmId),
-		Scsi:   QemuScsiDisks{}.mapToStruct(params, linkedVmId),
-		VirtIO: QemuVirtIODisks{}.mapToStruct(params, linkedVmId),
+		Ide:    raw.disksIde(tmpLinkedID),
+		Sata:   raw.disksSata(tmpLinkedID),
+		Scsi:   raw.disksSCSI(tmpLinkedID),
+		VirtIO: raw.disksVirtIO(tmpLinkedID),
+	}
+	if *tmpLinkedID != 0 {
+		linkedID = tmpLinkedID
 	}
 	if storage.Ide != nil || storage.Sata != nil || storage.Scsi != nil || storage.VirtIO != nil {
-		return &storage
+		return &storage, linkedID
 	}
-	return nil
+	return nil, nil
 }
 
 // mark disk that need to be moved or resized
