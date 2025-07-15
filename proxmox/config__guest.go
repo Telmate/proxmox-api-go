@@ -387,7 +387,7 @@ func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID uint, newPool P
 		}
 	} else {
 		if currentPool == nil || *currentPool == "" { // join pool
-			if version.Smaller(Version{8, 0, 0}) {
+			if version.Encode() < version_8_0_0 {
 				if err = newPool.addGuestsNoCheckV7(ctx, c, []uint{guestID}); err != nil {
 					return
 				}
@@ -395,7 +395,7 @@ func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID uint, newPool P
 				newPool.addGuestsNoCheckV8(ctx, c, []uint{guestID})
 			}
 		} else if newPool != *currentPool { // change pool
-			if version.Smaller(Version{8, 0, 0}) {
+			if version.Encode() < version_8_0_0 {
 				if err = (*currentPool).removeGuestsNoCheck(ctx, c, []uint{guestID}, version); err != nil {
 					return
 				}

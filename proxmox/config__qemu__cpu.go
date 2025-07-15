@@ -431,7 +431,7 @@ func (CpuType) cpuV8(cpus map[CpuType]CpuType) {
 func (CpuType) Error(version Version) error {
 	// v7
 	cpus := CpuType("").cpuBase()
-	if !version.Smaller(Version{Major: 8}) { // v8
+	if version.Encode() >= version_8_0_0 { // v8
 		CpuType("").cpuV8(cpus)
 	}
 	cpusConverted := make([]string, len(cpus))
@@ -446,7 +446,7 @@ func (CpuType) Error(version Version) error {
 
 func (cpu CpuType) mapToApi(version Version) string {
 	cpus := CpuType("").cpuBase()
-	if !version.Smaller(Version{Major: 8}) {
+	if version.Encode() >= version_8_0_0 {
 		cpu.cpuV8(cpus)
 	}
 	if v, ok := cpus[CpuType(strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", "")))]; ok {
