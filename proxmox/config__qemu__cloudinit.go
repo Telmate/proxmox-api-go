@@ -75,7 +75,7 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 		}
 	}
 	// Shared
-	if config.UpgradePackages != nil && !version.Smaller(Version{Major: 8}) {
+	if config.UpgradePackages != nil && version.Encode() >= version_8_0_0 {
 		params[qemuApiKeyCloudInitUpgrade] = Btoi(*config.UpgradePackages)
 	}
 	if config.UserPassword != nil && *config.UserPassword != "" {
@@ -127,7 +127,7 @@ func (ci CloudInit) Validate(version Version) error {
 			return err
 		}
 	}
-	if ci.UpgradePackages != nil && *ci.UpgradePackages && version.Smaller(Version{Major: 8}) {
+	if ci.UpgradePackages != nil && *ci.UpgradePackages && version.Encode() < version_8_0_0 {
 		return errors.New(CloudInit_Error_UpgradePackagesPre8)
 	}
 	return ci.NetworkInterfaces.Validate()

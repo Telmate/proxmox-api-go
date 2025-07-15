@@ -2369,9 +2369,13 @@ type Version struct {
 	Patch uint8
 }
 
+func (v Version) Encode() EncodedVersion {
+	return EncodedVersion(v.Major)*256*256 + EncodedVersion(v.Minor)*256 + EncodedVersion(v.Patch)
+}
+
 // Greater returns true if the version is greater than the other version.
 func (v Version) Greater(other Version) bool {
-	return uint32(v.Major)*256*256+uint32(v.Minor)*256+uint32(v.Patch) > uint32(other.Major)*256*256+uint32(other.Minor)*256+uint32(other.Patch)
+	return v.Encode() > other.Encode()
 }
 
 func (Version) mapToSDK(params map[string]any) (Version, error) {
@@ -2416,9 +2420,15 @@ func (version Version) max() Version {
 
 // Smaller returns true if the version is less than the other version.
 func (v Version) Smaller(other Version) bool {
-	return uint32(v.Major)*256*256+uint32(v.Minor)*256+uint32(v.Patch) < uint32(other.Major)*256*256+uint32(other.Minor)*256+uint32(other.Patch)
+	return v.Encode() < other.Encode()
 }
 
 func (v Version) String() string {
 	return strconv.FormatInt(int64(v.Major), 10) + "." + strconv.FormatInt(int64(v.Minor), 10) + "." + strconv.FormatInt(int64(v.Patch), 10)
 }
+
+type EncodedVersion uint32
+
+const (
+	version_8_0_0 EncodedVersion = 524288
+)

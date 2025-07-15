@@ -212,7 +212,7 @@ func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs
 	if len(guestsToAdd) == 0 {
 		return nil
 	}
-	if !version.Smaller(Version{8, 0, 0}) {
+	if version.Encode() >= version_8_0_0 {
 		return config.addGuestsNoCheckV8(ctx, c, guestsToAdd)
 	}
 	guests, err := ListGuests(ctx, c)
@@ -360,7 +360,7 @@ func (PoolName) mapToString(guestID []uint) (vms string) {
 }
 
 func (pool PoolName) put(ctx context.Context, c *Client, params map[string]interface{}, version Version) error {
-	if version.Smaller(Version{8, 0, 0}) {
+	if version.Encode() < version_8_0_0 {
 		return pool.putV7(ctx, c, params)
 	}
 	return pool.putV8(ctx, c, params)
