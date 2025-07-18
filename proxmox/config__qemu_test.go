@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/netip"
 	"testing"
+	"time"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_guest"
@@ -4025,6 +4026,86 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						QemuPciID5: QemuPci{}}},
 					output: map[string]interface{}{"delete": "hostpci5"}}},
 		},
+		{category: `RandomnessDevice`,
+			create: []test{
+				{name: `Period round down 0.999ms`,
+					config:        &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(1)*time.Millisecond - time.Nanosecond)}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
+					output:        map[string]any{"rng0": string("")}}},
+			createUpdate: []test{
+				{name: `create Source`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Source: util.Pointer(EntropySourceHwRNG)}},
+					output: map[string]any{"rng0": string("source=/dev/hwrng")}},
+				{name: `create Limit`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Limit: util.Pointer(uint(2742))}},
+					output: map[string]any{"rng0": string(",max_bytes=2742")}},
+				{name: `create Period`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					output: map[string]any{"rng0": string(",period=863")}},
+				{name: `delete non existing`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Delete: true}},
+					output: map[string]any{}},
+				{name: `Period round down 14.999ms`,
+					config:        &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(15)*time.Millisecond - time.Nanosecond)}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
+					output:        map[string]any{"rng0": string(",period=14")}}},
+			update: []test{
+				{name: `replace Source`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Source: util.Pointer(EntropySourceRandom)}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(2742)),
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					output: map[string]any{"rng0": string("source=/dev/random,max_bytes=2742,period=863")}},
+				{name: `replace Limit`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Limit: util.Pointer(uint(954))}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(2742)),
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					output: map[string]any{"rng0": string("source=/dev/urandom,max_bytes=954,period=863")}},
+				{name: `replace Period`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(3) * time.Millisecond)}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(2742)),
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					output: map[string]any{"rng0": string("source=/dev/urandom,max_bytes=2742,period=3")}},
+				{name: `unset Limit`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Limit: util.Pointer(uint(0))}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(2742)),
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					output: map[string]any{"rng0": string("source=/dev/urandom,period=863")}},
+				{name: `unset Period`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(0))}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(2742)),
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					output: map[string]any{"rng0": string("source=/dev/urandom,max_bytes=2742")}},
+				{name: `delete existing`,
+					config:        &ConfigQemu{RandomnessDevice: &VirtIoRNG{Delete: true}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
+					output:        map[string]any{"delete": string("rng0")}},
+				{name: `same all`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(2742)),
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(2742)),
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					output: map[string]any{}},
+				{name: `same none`,
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
+					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(2742)),
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
+					output: map[string]any{}}}},
 		{category: `Serials`,
 			createUpdate: []test{
 				{name: `delete non existing`,
@@ -7150,6 +7231,36 @@ func Test_ConfigQemu_all(t *testing.T) {
 								VendorID:   util.Pointer(PciVendorID("0x4003"))}}}})},
 			},
 		},
+		{category: `RandomnessDevice`,
+			tests: []test{
+				{name: `Source /dev/random`,
+					input: map[string]any{"rng0": "source=/dev/random"},
+					output: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceRandom)}})},
+				{name: `Source /dev/urandom`,
+					input: map[string]any{"rng0": "source=/dev/urandom"},
+					output: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom)}})},
+				{name: `Source /dev/hwrng`,
+					input: map[string]any{"rng0": "source=/dev/hwrng"},
+					output: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceHwRNG)}})},
+				{name: `Limit`,
+					input: map[string]any{"rng0": "max_bytes=1000"},
+					output: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(entropySourceInvalid),
+						Limit:  util.Pointer(uint(1000))}})},
+				{name: `Period`,
+					input: map[string]any{"rng0": "period=1000"},
+					output: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(entropySourceInvalid),
+						Period: util.Pointer(time.Duration(1000) * time.Millisecond)}})},
+				{name: `all`,
+					input: map[string]any{"rng0": "period=1024,max_bytes=1000,source=/dev/urandom"},
+					output: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+						Source: util.Pointer(EntropySourceURandom),
+						Limit:  util.Pointer(uint(1000)),
+						Period: util.Pointer(time.Duration(1024) * time.Millisecond)}})}}},
 		{category: `Serials`,
 			tests: []test{
 				{name: `All`,
@@ -9075,6 +9186,34 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 									VendorID: util.Pointer(PciVendorID("a0%^#"))}}}}),
 						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID0: QemuPci{}}},
 						err:     errors.New(PciVendorID_Error_Invalid)}}}},
+		{category: `RandomnessDevice`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `all`,
+						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+							Source: util.Pointer(EntropySourceRandom),
+							Limit:  util.Pointer(uint(1000)),
+							Period: util.Pointer(time.Duration(1024) * time.Millisecond)}}),
+						current: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}}}},
+				update: []test{
+					{name: `minimum`,
+						input:   baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{}}),
+						current: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}}},
+					{name: `create`,
+						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+							Source: util.Pointer(EntropySourceHwRNG)}}),
+						current: &ConfigQemu{}}}},
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(VirtIoRNG_Error_SourceNotSet)`,
+						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{}}),
+						err:   errors.New(VirtIoRNGErrorSourceNotSet)}},
+				createUpdate: []test{
+					{name: `errors.New(EntropySource_Error_Invalid)`,
+						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+							Source: util.Pointer(EntropySource(0))}}),
+						current: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
+						err:     errors.New(EntropySourceErrorInvalid)}}}},
 		{category: `Serials`,
 			valid: testType{
 				createUpdate: []test{

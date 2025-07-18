@@ -27,50 +27,50 @@ type (
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
-	ID              *GuestID              `json:"id,omitempty"`   // Required for creation, cannot be changed
-	Node            *NodeName             `json:"node,omitempty"` // Required for creation
-	Agent           *QemuGuestAgent       `json:"agent,omitempty"`
-	Args            string                `json:"args,omitempty"`
-	Bios            string                `json:"bios,omitempty"`
-	Boot            string                `json:"boot,omitempty"`     // TODO should be an array of custom enums
-	BootDisk        string                `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
-	CPU             *QemuCPU              `json:"cpu,omitempty"`      // never nil when returned
-	CloudInit       *CloudInit            `json:"cloudinit,omitempty"`
-	Description     *string               `json:"description,omitempty"` // never nil when returned
-	Disks           *QemuStorages         `json:"disks,omitempty"`
-	EFIDisk         QemuDevice            `json:"efidisk,omitempty"`   // TODO should be a struct
-	FullClone       *int                  `json:"fullclone,omitempty"` // Deprecated
-	HaGroup         string                `json:"hagroup,omitempty"`
-	HaState         string                `json:"hastate,omitempty"` // TODO should be custom type with enum
-	Hookscript      string                `json:"hookscript,omitempty"`
-	Hotplug         string                `json:"hotplug,omitempty"`   // TODO should be a struct
-	Iso             *IsoFile              `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
-	LinkedID        *GuestID              `json:"linked_id,omitempty"` // Only returned setting it has no effect
-	Machine         string                `json:"machine,omitempty"`   // TODO should be custom type with enum
-	Memory          *QemuMemory           `json:"memory,omitempty"`
-	Name            *GuestName            `json:"name,omitempty"` // never nil when returned
-	Networks        QemuNetworkInterfaces `json:"networks,omitempty"`
-	Onboot          *bool                 `json:"onboot,omitempty"`
-	Pool            *PoolName             `json:"pool,omitempty"`
-	Protection      *bool                 `json:"protection,omitempty"` // never nil when returned
-	QemuDisks       QemuDevices           `json:"disk,omitempty"`       // Deprecated use Disks *QemuStorages instead
-	QemuIso         string                `json:"qemuiso,omitempty"`    // Deprecated use Iso *IsoFile instead
-	QemuKVM         *bool                 `json:"kvm,omitempty"`
-	QemuOs          string                `json:"ostype,omitempty"`
-	PciDevices      QemuPciDevices        `json:"pci_devices,omitempty"`
-	QemuPxe         bool                  `json:"pxe,omitempty"`
-	QemuUnusedDisks QemuDevices           `json:"unused,omitempty"` // TODO should be a struct
-	USBs            QemuUSBs              `json:"usbs,omitempty"`
-	QemuVga         QemuDevice            `json:"vga,omitempty"`    // TODO should be a struct
-	RNGDrive        QemuDevice            `json:"rng0,omitempty"`   // TODO should be a struct
-	Scsihw          string                `json:"scsihw,omitempty"` // TODO should be custom type with enum
-	Serials         SerialInterfaces      `json:"serials,omitempty"`
-	Smbios1         string                `json:"smbios1,omitempty"` // TODO should be custom type with enum?
-	Startup         string                `json:"startup,omitempty"` // TODO should be a struct?
-	Storage         string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
-	TPM             *TpmState             `json:"tpm,omitempty"`
-	Tablet          *bool                 `json:"tablet,omitempty"` // never nil when returned
-	Tags            *Tags                 `json:"tags,omitempty"`
+	ID               *GuestID              `json:"id,omitempty"`   // Required for creation, cannot be changed
+	Node             *NodeName             `json:"node,omitempty"` // Required for creation
+	Agent            *QemuGuestAgent       `json:"agent,omitempty"`
+	Args             string                `json:"args,omitempty"`
+	Bios             string                `json:"bios,omitempty"`
+	Boot             string                `json:"boot,omitempty"`     // TODO should be an array of custom enums
+	BootDisk         string                `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
+	CPU              *QemuCPU              `json:"cpu,omitempty"`      // never nil when returned
+	CloudInit        *CloudInit            `json:"cloudinit,omitempty"`
+	Description      *string               `json:"description,omitempty"` // never nil when returned
+	Disks            *QemuStorages         `json:"disks,omitempty"`
+	EFIDisk          QemuDevice            `json:"efidisk,omitempty"`   // TODO should be a struct
+	FullClone        *int                  `json:"fullclone,omitempty"` // Deprecated
+	HaGroup          string                `json:"hagroup,omitempty"`
+	HaState          string                `json:"hastate,omitempty"` // TODO should be custom type with enum
+	Hookscript       string                `json:"hookscript,omitempty"`
+	Hotplug          string                `json:"hotplug,omitempty"`   // TODO should be a struct
+	Iso              *IsoFile              `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
+	LinkedID         *GuestID              `json:"linked_id,omitempty"` // Only returned setting it has no effect
+	Machine          string                `json:"machine,omitempty"`   // TODO should be custom type with enum
+	Memory           *QemuMemory           `json:"memory,omitempty"`
+	Name             *GuestName            `json:"name,omitempty"` // never nil when returned
+	Networks         QemuNetworkInterfaces `json:"networks,omitempty"`
+	Onboot           *bool                 `json:"onboot,omitempty"`
+	Pool             *PoolName             `json:"pool,omitempty"`
+	Protection       *bool                 `json:"protection,omitempty"` // never nil when returned
+	QemuDisks        QemuDevices           `json:"disk,omitempty"`       // Deprecated use Disks *QemuStorages instead
+	QemuIso          string                `json:"qemuiso,omitempty"`    // Deprecated use Iso *IsoFile instead
+	QemuKVM          *bool                 `json:"kvm,omitempty"`
+	QemuOs           string                `json:"ostype,omitempty"`
+	PciDevices       QemuPciDevices        `json:"pci_devices,omitempty"`
+	QemuPxe          bool                  `json:"pxe,omitempty"`
+	QemuUnusedDisks  QemuDevices           `json:"unused,omitempty"` // TODO should be a struct
+	USBs             QemuUSBs              `json:"usbs,omitempty"`
+	QemuVga          QemuDevice            `json:"vga,omitempty"`    // TODO should be a struct
+	Scsihw           string                `json:"scsihw,omitempty"` // TODO should be custom type with enum
+	Serials          SerialInterfaces      `json:"serials,omitempty"`
+	Smbios1          string                `json:"smbios1,omitempty"` // TODO should be custom type with enum?
+	Startup          string                `json:"startup,omitempty"` // TODO should be a struct?
+	Storage          string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
+	TPM              *TpmState             `json:"tpm,omitempty"`
+	Tablet           *bool                 `json:"tablet,omitempty"` // never nil when returned
+	Tags             *Tags                 `json:"tags,omitempty"`
+	RandomnessDevice *VirtIoRNG            `json:"randomness_device,omitempty"`
 }
 
 const (
@@ -148,9 +148,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.Bios == "" {
 		config.Bios = "seabios"
-	}
-	if config.RNGDrive == nil {
-		config.RNGDrive = QemuDevice{}
 	}
 	if config.EFIDisk == nil {
 		config.EFIDisk = QemuDevice{}
@@ -302,11 +299,16 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (re
 		itemsToDelete += config.Serials.mapToAPI(currentConfig.Serials, params)
 	}
 
+	if config.RandomnessDevice != nil {
+		if currentConfig.RandomnessDevice != nil {
+			itemsToDelete += config.RandomnessDevice.mapToAPIUpdateUnsafe(currentConfig.RandomnessDevice, params)
+		} else {
+			config.RandomnessDevice.mapToAPICreate(params)
+		}
+	}
+
 	// Create EFI disk
 	config.CreateQemuEfiParams(params)
-
-	// Create VirtIO RNG
-	config.CreateQemuRngParams(params)
 
 	// Create networks config.
 	itemsToDelete += config.Networks.mapToAPI(currentConfig.Networks, params)
@@ -664,6 +666,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
+		if config.RandomnessDevice != nil {
+			if err = config.RandomnessDevice.validateCreate(); err != nil {
+				return
+			}
+		}
 		if config.TPM != nil {
 			if err = config.TPM.Validate(nil); err != nil {
 				return
@@ -697,6 +704,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 		if config.PciDevices != nil {
 			if err = config.PciDevices.Validate(current.PciDevices); err != nil {
+				return
+			}
+		}
+		if config.RandomnessDevice != nil {
+			if err = config.RandomnessDevice.Validate(current.RandomnessDevice); err != nil {
 				return
 			}
 		}
@@ -1011,25 +1023,6 @@ func FormatDiskParam(disk QemuDevice) string {
 	return strings.Join(diskConfParam, ",")
 }
 
-// Create RNG parameter.
-func (c ConfigQemu) CreateQemuRngParams(params map[string]interface{}) {
-	rngParam := QemuDeviceParam{}
-	rngParam = rngParam.createDeviceParam(c.RNGDrive, nil)
-
-	if len(rngParam) > 0 {
-		rng_info := []string{}
-		rng := ""
-		for _, param := range rngParam {
-			key := strings.Split(param, "=")
-			rng_info = append(rng_info, fmt.Sprintf("%s=%s", key[0], key[1]))
-		}
-		if len(rng_info) > 0 {
-			rng = strings.Join(rng_info, ",")
-			params["rng0"] = rng
-		}
-	}
-}
-
 // Create efi parameter.
 func (c ConfigQemu) CreateQemuEfiParams(params map[string]interface{}) {
 	efiParam := QemuDeviceParam{}
@@ -1108,19 +1101,20 @@ func (raw RawConfigQemu) ALL(vmr *VmRef) (*ConfigQemu, error) {
 
 func (raw RawConfigQemu) all(vmr *VmRef) (*ConfigQemu, error) {
 	config := ConfigQemu{
-		Agent:       raw.Agent(),
-		CPU:         raw.CPU(),
-		CloudInit:   raw.CloudInit(),
-		Description: util.Pointer(raw.Description()),
-		Memory:      raw.Memory(),
-		Name:        util.Pointer(raw.Name()),
-		Networks:    raw.Networks(),
-		PciDevices:  raw.PciDevices(),
-		Protection:  util.Pointer(raw.Protection()),
-		Serials:     raw.Serials(),
-		Tablet:      util.Pointer(raw.Tablet()),
-		Tags:        raw.Tags(),
-		USBs:        raw.USBs(),
+		Agent:            raw.Agent(),
+		CPU:              raw.CPU(),
+		CloudInit:        raw.CloudInit(),
+		Description:      util.Pointer(raw.Description()),
+		Memory:           raw.Memory(),
+		Name:             util.Pointer(raw.Name()),
+		Networks:         raw.Networks(),
+		PciDevices:       raw.PciDevices(),
+		Protection:       util.Pointer(raw.Protection()),
+		RandomnessDevice: raw.RandomnessDevice(),
+		Serials:          raw.Serials(),
+		Tablet:           util.Pointer(raw.Tablet()),
+		Tags:             raw.Tags(),
+		USBs:             raw.USBs(),
 	}
 	config.Disks, config.LinkedID = raw.Disks()
 	if err := config.mapToStruct(vmr, raw); err != nil {
@@ -1185,6 +1179,7 @@ const (
 	qemuApiKeyMemoryShares      string = "shares"
 	qemuApiKeyName              string = "name"
 	qemuApiKeyProtection        string = "protection"
+	qemuApiKeyRandomnessDevice  string = "rng0"
 	qemuApiKeyTablet            string = "tablet"
 	qemuApiKeyTags              string = "tags"
 	qemuPrefixApiKeyDiskIde     string = "ide"
