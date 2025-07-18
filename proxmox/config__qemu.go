@@ -20,8 +20,11 @@ import (
 // const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
 
 type (
-	QemuDevices     map[int]map[string]interface{}
-	QemuDevice      map[string]interface{}
+	// TODO phase this out
+	QemuDevices map[int]map[string]interface{}
+	// TODO phase this out
+	QemuDevice map[string]interface{}
+	// TODO phase this out
 	QemuDeviceParam []string
 )
 
