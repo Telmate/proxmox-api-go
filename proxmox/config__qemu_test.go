@@ -9194,6 +9194,10 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							Source: util.Pointer(EntropySourceRandom),
 							Limit:  util.Pointer(uint(1000)),
 							Period: util.Pointer(time.Duration(1024) * time.Millisecond)}}),
+						current: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}}},
+					{name: `delete`,
+						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
+							Delete: true}}),
 						current: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}}}},
 				update: []test{
 					{name: `minimum`,

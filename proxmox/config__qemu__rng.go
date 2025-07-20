@@ -72,6 +72,9 @@ func (config VirtIoRNG) Validate(current *VirtIoRNG) error {
 }
 
 func (config VirtIoRNG) validateCreate() error {
+	if config.Delete {
+		return nil // Deletion is always valid, as it does't do anything during creation.
+	}
 	if config.Source == nil {
 		return errors.New(VirtIoRNGErrorSourceNotSet)
 	}
