@@ -1556,7 +1556,7 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 					{name: `empty`,
 						input:   baseConfig(ConfigLXC{Name: util.Pointer(GuestName(""))}),
 						current: &ConfigLXC{Name: util.Pointer(GuestName("text"))},
-						err:     errors.New(GuestName_Error_Empty)}}}},
+						err:     errors.New(GuestNameErrorEmpty)}}}},
 		{category: `Networks`,
 			valid: testType{
 				create: []test{

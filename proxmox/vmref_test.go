@@ -136,7 +136,7 @@ func Test_CloneLxcTarget_Validate(t *testing.T) {
 			input: CloneLxcTarget{Full: &CloneLxcFull{
 				Node: "test",
 				Name: util.Pointer(GuestName(""))}},
-			output: errors.New(GuestName_Error_Empty)},
+			output: errors.New(GuestNameErrorEmpty)},
 		{name: `Invalid Full Pool errors.New(PoolName_Error_Empty)`,
 			input: CloneLxcTarget{Full: &CloneLxcFull{
 				Pool: util.Pointer(PoolName(""))}},
@@ -157,7 +157,7 @@ func Test_CloneLxcTarget_Validate(t *testing.T) {
 			input: CloneLxcTarget{Linked: &CloneLinked{
 				Node: "test",
 				Name: util.Pointer(GuestName(""))}},
-			output: errors.New(GuestName_Error_Empty)},
+			output: errors.New(GuestNameErrorEmpty)},
 		{name: `Invalid Linked Pool errors.New(PoolName_Error_Empty)`,
 			input: CloneLxcTarget{Linked: &CloneLinked{
 				Pool: util.Pointer(PoolName(""))}},
@@ -310,7 +310,7 @@ func Test_CloneQemuTarget_Validate(t *testing.T) {
 			input: CloneQemuTarget{Full: &CloneQemuFull{
 				Node: "test",
 				Name: util.Pointer(GuestName(""))}},
-			output: errors.New(GuestName_Error_Empty)},
+			output: errors.New(GuestNameErrorEmpty)},
 		{name: `Invalid Full Pool errors.New(PoolName_Error_Empty)`,
 			input: CloneQemuTarget{Full: &CloneQemuFull{
 				Pool: util.Pointer(PoolName(""))}},
@@ -335,7 +335,7 @@ func Test_CloneQemuTarget_Validate(t *testing.T) {
 			input: CloneQemuTarget{Linked: &CloneLinked{
 				Node: "test",
 				Name: util.Pointer(GuestName(""))}},
-			output: errors.New(GuestName_Error_Empty)},
+			output: errors.New(GuestNameErrorEmpty)},
 		{name: `Invalid Linked Pool errors.New(PoolName_Error_Empty)`,
 			input: CloneQemuTarget{Linked: &CloneLinked{
 				Pool: util.Pointer(PoolName(""))}},

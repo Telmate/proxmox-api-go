@@ -96,16 +96,17 @@ const (
 	guestApiKeySearchDomain string = "searchdomain"
 )
 
-// Length 128, first character must be a letter or number, the rest can be letters, numbers or hyphens.
+// GuestName has a maximum length of 128 characters.
+// First character must be a letter or number, the rest can be letters, numbers or hyphens.
 // Regex: ^([a-z]|[A-Z]|[0-9])([a-z]|[A-Z]|[0-9]|-){127,}$
 type GuestName string
 
 const (
-	guestNameMaxLength      = 128
-	GuestName_Error_Empty   = "name cannot be empty"
-	GuestName_Error_Invalid = "name can only contain the following characters: - a-z A-Z 0-9"
-	GuestName_Error_Length  = "name has a maximum length of 128"
-	GuestName_Error_Start   = "name cannot start with a hyphen (-)"
+	guestNameMaxLength    = 128
+	GuestNameErrorEmpty   = "name cannot be empty"
+	GuestNameErrorInvalid = "name can only contain the following characters: - a-z A-Z 0-9"
+	GuestNameErrorLength  = "name has a maximum length of 128"
+	GuestNameErrorStart   = "name cannot start with a hyphen (-)"
 )
 
 var guestNameRegex = regexp.MustCompile("^([a-z]|[A-Z]|[0-9]|-)+$")
@@ -114,16 +115,16 @@ func (name GuestName) String() string { return string(name) } // String is for f
 
 func (name GuestName) Validate() error {
 	if len(name) == 0 {
-		return errors.New(GuestName_Error_Empty)
+		return errors.New(GuestNameErrorEmpty)
 	}
 	if len(name) > guestNameMaxLength {
-		return errors.New(GuestName_Error_Length)
+		return errors.New(GuestNameErrorLength)
 	}
 	if name[0:1] == "-" {
-		return errors.New(GuestName_Error_Start)
+		return errors.New(GuestNameErrorStart)
 	}
 	if !guestNameRegex.MatchString(string(name)) {
-		return errors.New(GuestName_Error_Invalid)
+		return errors.New(GuestNameErrorInvalid)
 	}
 	return nil
 }

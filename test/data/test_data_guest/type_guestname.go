@@ -1,6 +1,7 @@
+// Package test_data_guest provides test data.
 package test_data_guest
 
-func GuestName_Legal() []string {
+func GuestNameLegal() []string {
 	return []string{
 
 		"B-cdE",
@@ -32,10 +33,10 @@ func GuestName_Legal() []string {
 		"T-u-vw",
 		"9-0-abc",
 		"a-1-b2",
-		GuestName_Max_Legal()}
+		GuestNameMaxLegal()}
 }
 
-func GuestName_Character_Illegal() []string {
+func GuestNameCharacterIllegal() []string {
 	return []string{
 		"a bc",         // contains space
 		"B_cd",         // contains underscore
@@ -63,18 +64,18 @@ func GuestName_Character_Illegal() []string {
 	}
 }
 
-func GuestName_Empty() string {
+func GuestNameEmpty() string {
 	return ""
 }
 
-func GuestName_Max_Illegal() string {
-	return GuestName_Max_Legal() + "x"
+func GuestNameMaxIllegal() string {
+	return GuestNameMaxLegal() + "x"
 }
 
-func GuestName_Max_Legal() string {
+func GuestNameMaxLegal() string {
 	return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-ab"
 }
 
-func GuestName_Start_Illegal() string {
-	return "-" + GuestName_Legal()[0]
+func GuestNameStartIllegal() string {
+	return "-" + GuestNameLegal()[0]
 }
