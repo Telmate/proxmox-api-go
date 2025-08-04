@@ -97,8 +97,10 @@ const (
 )
 
 // GuestName has a maximum length of 128 characters.
-// First character must be a letter or number, the rest can be letters, numbers or hyphens.
-// Regex: ^([a-z]|[A-Z]|[0-9])([a-z]|[A-Z]|[0-9]|-){127,}$
+// Has the same syntax as a DNS name.
+// Domain sections may not start or end with a hyphen (-) or dot (.).
+// Valid characters are letters, numbers, hyphens (-) and dots (.).
+// Regex: ^(?=.{1,127}$)(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)\.)*(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)$
 type GuestName string
 
 const (
