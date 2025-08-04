@@ -15,24 +15,27 @@ func Test_GuestName_Validate(t *testing.T) {
 		output error
 	}{
 		{name: `Valid GuestName`,
-			input:  test_data_guest.GuestName_Legal(),
+			input:  test_data_guest.GuestNameLegal(),
 			output: nil},
 		{name: `Invalid GuestName Empty`,
-			input:  []string{test_data_guest.GuestName_Empty()},
-			output: errors.New(GuestName_Error_Empty)},
+			input:  []string{test_data_guest.GuestNameEmpty()},
+			output: errors.New(GuestNameErrorEmpty)},
 		{name: `Invalid GuestName Invalid`,
-			input:  test_data_guest.GuestName_Character_Illegal(),
-			output: errors.New(GuestName_Error_Invalid)},
+			input:  test_data_guest.GuestNameCharacterIllegal(),
+			output: errors.New(GuestNameErrorInvalid)},
 		{name: `Invalid GuestName Max Length`,
-			input:  []string{test_data_guest.GuestName_Max_Illegal()},
-			output: errors.New(GuestName_Error_Length)},
-		{name: `Invalid GuestName begin with illegal character`,
-			input:  []string{test_data_guest.GuestName_Start_Illegal()},
-			output: errors.New(GuestName_Error_Start)},
+			input:  []string{test_data_guest.GuestNameMaxIllegal()},
+			output: errors.New(GuestNameErrorLength)},
+		{name: `Invalid GuestName begin with illegal end character`,
+			input:  test_data_guest.GuestNameEndIllegal(),
+			output: errors.New(GuestNameErrorEnd)},
+		{name: `Invalid GuestName begin with illegal start character`,
+			input:  test_data_guest.GuestNameStartIllegal(),
+			output: errors.New(GuestNameErrorStart)},
 	}
 	for _, test := range tests {
 		for _, e := range test.input {
-			t.Run(test.name+": "+e, func(t *testing.T) {
+			t.Run(test.name+"/"+e, func(t *testing.T) {
 				require.Equal(t, test.output, (GuestName(e)).Validate())
 			})
 		}

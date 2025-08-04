@@ -1,41 +1,46 @@
+// Package test_data_guest provides test data.
 package test_data_guest
 
-func GuestName_Legal() []string {
-	return []string{
-
-		"B-cdE",
-		"7xyz-abc",
-		"zYx1",
-		"Q-w-e-r",
-		"8abcd-efgh-ijkl",
-		"1xYz9",
-		"p-qr-st-uv",
-		"m-noPq-rS",
-		"0Z1-2a",
-		"fghij-klmno",
-		"wXy-7z",
-		"uVw-123",
-		"9-lmnop-qrst",
-		"Zabc-defg-hijk",
-		"N0p-qrS",
-		"3-abCDeF",
-		"6gh-ijkl",
-		"Yz12-3456",
-		"7lmn-opqr",
-		"4-5678",
-		"Xy-z12",
-		"a-bc-123",
-		"1z-abc-de",
-		"mno-pqr",
-		"Z-abc-def",
-		"7-yz-12",
-		"T-u-vw",
-		"9-0-abc",
-		"a-1-b2",
-		GuestName_Max_Legal()}
+func GuestNameLegal() []string {
+	return append(guestNameLegal(), GuestNameMaxLegal())
 }
 
-func GuestName_Character_Illegal() []string {
+func guestNameLegal() []string {
+	return []string{
+		"0Z1-2a",
+		"1xYz9",
+		"1z-abc-de",
+		"3-abCDeF",
+		"4-5678",
+		"6gh-ijkl",
+		"7.yz-12",
+		"7lmn-p.op.qr",
+		"7xyz-abc",
+		"8abcd-efgh.ijkl",
+		"9-0.abc",
+		"9-lmnop.qrst",
+		"B-cdE",
+		"N0p-qrS",
+		"Q-w-e-r",
+		"T-u-vw",
+		"Xy-z12",
+		"Yz12-3456",
+		"Z-abc-def",
+		"Zabc-defg-hijk",
+		"a-1-b2",
+		"a-bc.123",
+		"a.b.c-c.e-a.f",
+		"fghij-klmno",
+		"m-noPq-rS",
+		"mno-pqr",
+		"p-qr.st.uv",
+		"uVw-123",
+		"wXy.7z",
+		"zYx1",
+	}
+}
+
+func GuestNameCharacterIllegal() []string {
 	return []string{
 		"a bc",         // contains space
 		"B_cd",         // contains underscore
@@ -46,7 +51,6 @@ func GuestName_Character_Illegal() []string {
 		"p-qr=st",      // contains =
 		"m+noPq-rS",    // contains +
 		"0Z1~2a",       // contains ~
-		"fghij.klmno",  // contains dot
 		"wXy?7z",       // contains ?
 		"uVw^123",      // contains ^
 		"9{lmnop}qrst", // contains {}
@@ -63,18 +67,36 @@ func GuestName_Character_Illegal() []string {
 	}
 }
 
-func GuestName_Empty() string {
+func GuestNameEmpty() string {
 	return ""
 }
 
-func GuestName_Max_Illegal() string {
-	return GuestName_Max_Legal() + "x"
+func GuestNameMaxIllegal() string {
+	return GuestNameMaxLegal() + "x"
 }
 
-func GuestName_Max_Legal() string {
+func GuestNameMaxLegal() string {
 	return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-ab"
 }
 
-func GuestName_Start_Illegal() string {
-	return "-" + GuestName_Legal()[0]
+func GuestNameEndIllegal() []string {
+	names := guestNameLegal()
+	namesDot := make([]string, len(names))
+	namesHyphen := make([]string, len(names))
+	for i := range names {
+		namesDot[i] = names[i] + "."
+		namesHyphen[i] = names[i] + "-"
+	}
+	return append(namesDot, namesHyphen...)
+}
+
+func GuestNameStartIllegal() []string {
+	names := guestNameLegal()
+	namesDot := make([]string, len(names))
+	namesHyphen := make([]string, len(names))
+	for i := range names {
+		namesDot[i] = "." + names[i]
+		namesHyphen[i] = "-" + names[i]
+	}
+	return append(namesDot, namesHyphen...)
 }

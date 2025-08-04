@@ -8901,7 +8901,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `empty`,
 						input:   baseConfig(ConfigQemu{Name: util.Pointer(GuestName(""))}),
 						current: &ConfigQemu{Name: util.Pointer(GuestName("test"))},
-						err:     errors.New(GuestName_Error_Empty)}}}},
+						err:     errors.New(GuestNameErrorEmpty)}}}},
 		{category: `Network`,
 			valid: testType{
 				createUpdate: []test{

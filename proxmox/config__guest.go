@@ -96,34 +96,43 @@ const (
 	guestApiKeySearchDomain string = "searchdomain"
 )
 
-// Length 128, first character must be a letter or number, the rest can be letters, numbers or hyphens.
-// Regex: ^([a-z]|[A-Z]|[0-9])([a-z]|[A-Z]|[0-9]|-){127,}$
+// GuestName has a maximum length of 128 characters.
+// Has the same syntax as a DNS name.
+// Domain sections may not start or end with a hyphen (-) or dot (.).
+// Valid characters are letters, numbers, hyphens (-) and dots (.).
+// Regex: ^(?=.{1,127}$)(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)\.)*(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)$
 type GuestName string
 
 const (
-	guestNameMaxLength      = 128
-	GuestName_Error_Empty   = "name cannot be empty"
-	GuestName_Error_Invalid = "name can only contain the following characters: - a-z A-Z 0-9"
-	GuestName_Error_Length  = "name has a maximum length of 128"
-	GuestName_Error_Start   = "name cannot start with a hyphen (-)"
+	guestNameMaxLength    = 128
+	GuestNameErrorEmpty   = `name cannot be empty`
+	GuestNameErrorInvalid = `name did not match the following regex '^(?=.{1,127}$)(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)\.)*(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)$'`
+	GuestNameErrorLength  = `name has a maximum length of 128`
+	GuestNameErrorStart   = `name cannot start with a hyphen (-) or dot (.)`
+	GuestNameErrorEnd     = `name cannot end with a hyphen (-) or dot (.)`
 )
 
-var guestNameRegex = regexp.MustCompile("^([a-z]|[A-Z]|[0-9]|-)+$")
+var guestNameRegex = regexp.MustCompile(`^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)\.)*(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)$`)
 
 func (name GuestName) String() string { return string(name) } // String is for fmt.Stringer.
 
 func (name GuestName) Validate() error {
 	if len(name) == 0 {
-		return errors.New(GuestName_Error_Empty)
+		return errors.New(GuestNameErrorEmpty)
 	}
 	if len(name) > guestNameMaxLength {
-		return errors.New(GuestName_Error_Length)
+		return errors.New(GuestNameErrorLength)
 	}
-	if name[0:1] == "-" {
-		return errors.New(GuestName_Error_Start)
+	switch name[0] {
+	case '-', '.':
+		return errors.New(GuestNameErrorStart)
+	}
+	switch name[len(name)-1] {
+	case '-', '.':
+		return errors.New(GuestNameErrorEnd)
 	}
 	if !guestNameRegex.MatchString(string(name)) {
-		return errors.New(GuestName_Error_Invalid)
+		return errors.New(GuestNameErrorInvalid)
 	}
 	return nil
 }
