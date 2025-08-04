@@ -103,13 +103,14 @@ type GuestName string
 
 const (
 	guestNameMaxLength    = 128
-	GuestNameErrorEmpty   = "name cannot be empty"
-	GuestNameErrorInvalid = "name can only contain the following characters: - a-z A-Z 0-9"
-	GuestNameErrorLength  = "name has a maximum length of 128"
-	GuestNameErrorStart   = "name cannot start with a hyphen (-)"
+	GuestNameErrorEmpty   = `name cannot be empty`
+	GuestNameErrorInvalid = `name did not match the following regex '^(?=.{1,127}$)(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)\.)*(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)$'`
+	GuestNameErrorLength  = `name has a maximum length of 128`
+	GuestNameErrorStart   = `name cannot start with a hyphen (-) or dot (.)`
+	GuestNameErrorEnd     = `name cannot end with a hyphen (-) or dot (.)`
 )
 
-var guestNameRegex = regexp.MustCompile("^([a-z]|[A-Z]|[0-9]|-)+$")
+var guestNameRegex = regexp.MustCompile(`^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)\.)*(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?)$`)
 
 func (name GuestName) String() string { return string(name) } // String is for fmt.Stringer.
 
@@ -120,8 +121,13 @@ func (name GuestName) Validate() error {
 	if len(name) > guestNameMaxLength {
 		return errors.New(GuestNameErrorLength)
 	}
-	if name[0:1] == "-" {
+	switch name[0] {
+	case '-', '.':
 		return errors.New(GuestNameErrorStart)
+	}
+	switch name[len(name)-1] {
+	case '-', '.':
+		return errors.New(GuestNameErrorEnd)
 	}
 	if !guestNameRegex.MatchString(string(name)) {
 		return errors.New(GuestNameErrorInvalid)

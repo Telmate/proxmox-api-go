@@ -26,13 +26,16 @@ func Test_GuestName_Validate(t *testing.T) {
 		{name: `Invalid GuestName Max Length`,
 			input:  []string{test_data_guest.GuestNameMaxIllegal()},
 			output: errors.New(GuestNameErrorLength)},
-		{name: `Invalid GuestName begin with illegal character`,
-			input:  []string{test_data_guest.GuestNameStartIllegal()},
+		{name: `Invalid GuestName begin with illegal end character`,
+			input:  test_data_guest.GuestNameEndIllegal(),
+			output: errors.New(GuestNameErrorEnd)},
+		{name: `Invalid GuestName begin with illegal start character`,
+			input:  test_data_guest.GuestNameStartIllegal(),
 			output: errors.New(GuestNameErrorStart)},
 	}
 	for _, test := range tests {
 		for _, e := range test.input {
-			t.Run(test.name+": "+e, func(t *testing.T) {
+			t.Run(test.name+"/"+e, func(t *testing.T) {
 				require.Equal(t, test.output, (GuestName(e)).Validate())
 			})
 		}
