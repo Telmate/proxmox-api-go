@@ -330,6 +330,13 @@ const (
 )
 
 func (id GuestID) Exists(ctx context.Context, c *Client) (bool, error) {
+	if err := id.Validate(); err != nil {
+		return false, err
+	}
+	return id.ExistsNoCheck(ctx, c)
+}
+
+func (id GuestID) ExistsNoCheck(ctx context.Context, c *Client) (bool, error) {
 	guests, err := c.GetResourceList(ctx, resourceListGuest)
 	if err != nil {
 		return false, err
