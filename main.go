@@ -389,7 +389,7 @@ func main() {
 		}
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
-		exists, err := c.VMIdExists(ctx, proxmox.GuestID(i))
+		exists, err := proxmox.GuestID(i).Exists(ctx, c)
 		failError(err)
 		if exists {
 			log.Printf("Selected ID is in use: %d\n", i)
