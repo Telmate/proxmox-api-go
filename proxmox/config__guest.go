@@ -329,6 +329,20 @@ const (
 	GuestIdMinimum        GuestID = 100
 )
 
+func (id GuestID) Exists(ctx context.Context, c *Client) (bool, error) {
+	guests, err := c.GetResourceList(ctx, resourceListGuest)
+	if err != nil {
+		return false, err
+	}
+	for i := range guests {
+		guest := guests[i].(map[string]any)
+		if id == GuestID(guest["vmid"].(float64)) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (id GuestID) String() string {
 	return strconv.Itoa(int(id))
 }

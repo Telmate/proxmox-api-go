@@ -953,7 +953,9 @@ func (c *Client) GetNextIdNoCheck(ctx context.Context, startID *GuestID) (GuestI
 	return GuestID(id), err
 }
 
-// VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false
+// VMIdExists - If you pass an VMID that exists it will return true, otherwise it wil return false.
+//
+// Deprecated: use GuestID.Exists() instead.
 func (c *Client) VMIdExists(ctx context.Context, guestID GuestID) (exists bool, err error) {
 	vms, err := c.GetResourceList(ctx, resourceListGuest)
 	if err != nil {
