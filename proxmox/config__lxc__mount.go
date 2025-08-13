@@ -404,7 +404,7 @@ func (config LxcMounts) validateCreate(privileged bool) error {
 func (config LxcMounts) validateUpdate(current LxcMounts, privileged bool) error {
 	for k, v := range config {
 		if v.Detach {
-			return nil
+			continue
 		}
 		if _, isSet := current[k]; isSet {
 			if err := v.validateUpdate(privileged); err != nil {
