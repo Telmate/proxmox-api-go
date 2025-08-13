@@ -30,7 +30,8 @@ type ConfigLXC struct {
 	Features        *LxcFeatures      `json:"features,omitempty"`
 	ID              *GuestID          `json:"id"`               // only used during creation
 	Memory          *LxcMemory        `json:"memory,omitempty"` // Never nil when returned
-	Name            *GuestName        `json:"name,omitempty"`   // Never nil when returned
+	Mounts          LxcMounts         `json:"mounts,omitempty"`
+	Name            *GuestName        `json:"name,omitempty"` // Never nil when returned
 	Networks        LxcNetworks       `json:"networks,omitempty"`
 	Node            *NodeName         `json:"node,omitempty"` // only used during creation
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
@@ -130,6 +131,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.Name != nil {
 		params[lxcApiKeyName] = (*config.Name).String()
 	}
+	if config.Mounts != nil {
+		config.Mounts.mapToAPICreate(privileged, params)
+	}
 	if config.Networks != nil {
 		config.Networks.mapToApiCreate(params)
 	}
@@ -153,7 +157,7 @@ func (config ConfigLXC) mapToApiShared() map[string]any {
 }
 
 func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
-	var privileged bool = lxcDefaultPrivilege
+	privileged := lxcDefaultPrivilege
 	if current.Privileged != nil {
 		privileged = *current.Privileged
 	}
@@ -196,7 +200,14 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	if config.Name != nil && (current.Name == nil || *config.Name != *current.Name) {
 		params[lxcApiKeyName] = (*config.Name).String()
 	}
-	if config.Networks != nil {
+	if len(config.Mounts) > 0 {
+		if len(current.Mounts) > 0 {
+			delete += config.Mounts.mapToAPIUpdate(current.Mounts, privileged, params)
+		} else {
+			config.Mounts.mapToAPICreate(privileged, params)
+		}
+	}
+	if len(config.Networks) > 0 {
 		if len(current.Networks) > 0 {
 			delete += config.Networks.mapToApiUpdate(current.Networks, params)
 		} else {
@@ -258,7 +269,7 @@ func (config ConfigLXC) updateNoCheck(
 
 	var move []lxcMountMove
 	var resize []lxcMountResize
-	var getRootMount bool
+	var getRootMount, getMounts, requiresOffStateForMountActions bool
 
 	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String()
 
@@ -271,6 +282,13 @@ func (config ConfigLXC) updateNoCheck(
 		move = markedMounts.move
 		resize = markedMounts.resize
 	}
+	if config.Mounts != nil && current.Mounts != nil {
+		getMounts = true
+		markedMounts := config.Mounts.markMountChanges(current.Mounts)
+		move = append(move, markedMounts.move...)
+		resize = append(resize, markedMounts.resize...)
+		requiresOffStateForMountActions = markedMounts.offState
+	}
 
 	if targetState == PowerStateStopped && currentState != PowerStateStopped { // We want the vm to be stopped, better to do this before we start making other api calls
 		if !allowRestart {
@@ -282,22 +300,23 @@ func (config ConfigLXC) updateNoCheck(
 		currentState = PowerStateStopped // We assume the guest is stopped now
 	}
 
+	if requiresOffStateForMountActions || len(move) > 0 { // turn the guest off
+		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // Stop guest before moving disks
+			if !allowRestart {
+				return errors.New("guest has to be stopped before moving disks")
+			}
+			if err := GuestShutdown(ctx, vmr, c, true); err != nil { // We have to stop the guest before moving disks
+				return err
+			}
+			currentState = PowerStateStopped // We assume the guest is stopped now
+		}
+	}
+
 	if len(resize) > 0 || len(move) > 0 {
 
-		if len(move) > 0 { // Move mounts
-			if currentState == PowerStateRunning || currentState == PowerStateUnknown { // Stop guest before moving disks
-				if !allowRestart {
-					return errors.New("guest has to be stopped before moving disks")
-				}
-				if err := GuestShutdown(ctx, vmr, c, true); err != nil { // We have to stop the guest before moving disks
-					return err
-				}
-				currentState = PowerStateStopped // We assume the guest is stopped now
-			}
-			for i := range move {
-				if _, err := move[i].move(ctx, true, vmr, c); err != nil {
-					return err
-				}
+		for i := range move { // Move mounts
+			if _, err := move[i].move(ctx, true, vmr, c); err != nil {
+				return err
 			}
 		}
 
@@ -316,6 +335,9 @@ func (config ConfigLXC) updateNoCheck(
 		if len(move) > 0 {
 			if getRootMount {
 				current.BootMount = newCurrent.BootMount()
+			}
+			if getMounts {
+				current.Mounts = newCurrent.Mounts()
 			}
 		}
 	}
@@ -353,7 +375,7 @@ func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
 	if current != nil { // Update
 		err = config.validateUpdate(*current)
 	} else { // Create
-		var privileged bool = lxcDefaultPrivilege
+		privileged := lxcDefaultPrivilege
 		if config.Privileged != nil {
 			privileged = *config.Privileged
 		}
@@ -413,12 +435,17 @@ func (config ConfigLXC) validateCreate(privileged bool) (err error) {
 	if err = config.CreateOptions.Validate(); err != nil {
 		return
 	}
+	privilege := lxcDefaultPrivilege
+	if config.Privileged != nil {
+		privilege = *config.Privileged
+	}
 	if config.Features != nil {
-		privilege := lxcDefaultPrivilege
-		if config.Privileged != nil {
-			privilege = *config.Privileged
-		}
 		if err = config.Features.Validate(privilege); err != nil {
+			return
+		}
+	}
+	if config.Mounts != nil {
+		if err = config.Mounts.validateCreate(privileged); err != nil {
 			return
 		}
 	}
@@ -426,11 +453,11 @@ func (config ConfigLXC) validateCreate(privileged bool) (err error) {
 }
 
 func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
+	privileged := lxcDefaultPrivilege
+	if current.Privileged != nil {
+		privileged = *current.Privileged
+	}
 	if config.BootMount != nil {
-		var privileged bool = lxcDefaultPrivilege
-		if current.Privileged != nil {
-			privileged = *current.Privileged
-		}
 		if err = config.BootMount.Validate(current.BootMount, privileged); err != nil {
 			return
 		}
@@ -438,6 +465,17 @@ func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 	if config.Features != nil {
 		if err = config.Features.Validate(*current.Privileged); err != nil {
 			return
+		}
+	}
+	if config.Mounts != nil {
+		if current.Mounts != nil {
+			if err := config.Mounts.validateUpdate(current.Mounts, privileged); err != nil {
+				return err
+			}
+		} else {
+			if err := config.Mounts.validateCreate(privileged); err != nil {
+				return err
+			}
 		}
 	}
 	return config.Networks.Validate(current.Networks)
@@ -465,6 +503,7 @@ func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
 		Features:        raw.features(privileged),
 		ID:              util.Pointer(vmr.vmId),
 		Memory:          util.Pointer(raw.Memory()),
+		Mounts:          raw.mounts(privileged),
 		Name:            util.Pointer(raw.Name()),
 		Networks:        raw.Networks(),
 		Node:            util.Pointer(vmr.node),
@@ -576,6 +615,7 @@ const (
 	lxcApiKeySwap            string = "swap"
 	lxcApiKeyTags            string = "tags"
 	lxcApiKeyUnprivileged    string = "unprivileged"
+	lxcPrefixApiKeyMount     string = "mp"
 	lxcPrefixApiKeyNetwork   string = "net"
 )
 
