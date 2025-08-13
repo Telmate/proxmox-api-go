@@ -269,7 +269,7 @@ func (config ConfigLXC) updateNoCheck(
 
 	var move []lxcMountMove
 	var resize []lxcMountResize
-	var getRootMount, getMounts, offForMountActions bool
+	var getRootMount, getMounts, requiresOffStateForMountActions bool
 
 	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String()
 
@@ -287,7 +287,7 @@ func (config ConfigLXC) updateNoCheck(
 		markedMounts := config.Mounts.markMountChanges(current.Mounts)
 		move = append(move, markedMounts.move...)
 		resize = append(resize, markedMounts.resize...)
-		offForMountActions = markedMounts.offState
+		requiresOffStateForMountActions = markedMounts.offState
 	}
 
 	if targetState == PowerStateStopped && currentState != PowerStateStopped { // We want the vm to be stopped, better to do this before we start making other api calls
@@ -300,7 +300,7 @@ func (config ConfigLXC) updateNoCheck(
 		currentState = PowerStateStopped // We assume the guest is stopped now
 	}
 
-	if offForMountActions || len(move) > 0 { // turn the guest off
+	if requiresOffStateForMountActions || len(move) > 0 { // turn the guest off
 		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // Stop guest before moving disks
 			if !allowRestart {
 				return errors.New("guest has to be stopped before moving disks")
