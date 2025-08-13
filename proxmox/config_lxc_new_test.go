@@ -18,6 +18,11 @@ func Test_CpuArchitecture_String(t *testing.T) {
 }
 
 func Test_ConfigLXC_mapToAPI(t *testing.T) {
+	baseDataMount := func(m LxcDataMount) *LxcDataMount {
+		m.Storage = util.Pointer("local-zfs")
+		m.SizeInKibibytes = util.Pointer(LxcMountSize(1048576))
+		return &m
+	}
 	featuresPrivileged := func(value bool) *LxcFeatures {
 		return &LxcFeatures{Privileged: &PrivilegedFeatures{
 			CreateDeviceNodes: util.Pointer(value),
@@ -42,6 +47,34 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 		mac, err := net.ParseMAC(rawMAC)
 		failPanic(err)
 		return mac
+	}
+	bindMount := func() *LxcBindMount {
+		return &LxcBindMount{
+			HostPath:  util.Pointer(LxcHostPath("/mnt/data")),
+			GuestPath: util.Pointer(LxcMountPath("/mnt/bind")),
+			Options: &LxcMountOptions{
+				NoATime:  util.Pointer(true),
+				NoDevice: util.Pointer(true),
+				NoExec:   util.Pointer(true),
+				NoSuid:   util.Pointer(true)},
+			ReadOnly:  util.Pointer(true),
+			Replicate: util.Pointer(false)}
+	}
+	dataMount := func() *LxcDataMount {
+		return &LxcDataMount{
+			ACL:    util.Pointer(TriBoolFalse),
+			Backup: util.Pointer(true),
+			Options: &LxcMountOptions{
+				Discard:  util.Pointer(true),
+				LazyTime: util.Pointer(true),
+				NoATime:  util.Pointer(true),
+				NoSuid:   util.Pointer(true)},
+			Path:            util.Pointer(LxcMountPath("/mnt/data")),
+			ReadOnly:        util.Pointer(true),
+			Replicate:       util.Pointer(false),
+			SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+			Storage:         util.Pointer("local-zfs"),
+			rawDisk:         "local-zfs:subvol-101-disk-0"}
 	}
 	network := func() LxcNetwork {
 		return LxcNetwork{
@@ -754,6 +787,626 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					currentConfig: ConfigLXC{Memory: util.Pointer(LxcMemory(512))},
 					omitDefaults:  all,
 					output:        map[string]any{}}}},
+		{category: `Mount`,
+			create: []test{
+				{name: `BindMount minimal`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID0: LxcMount{BindMount: &LxcBindMount{
+							GuestPath: util.Pointer(LxcMountPath("/mnt/test-dest")),
+							HostPath:  util.Pointer(LxcHostPath("/mnt/test"))}}}},
+					output: map[string]any{
+						"mp0": string("/mnt/test,mp=/mnt/test-dest")}},
+				{name: `BindMount.Options nil`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID1: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{}}}}},
+					output: map[string]any{
+						"mp1": string("")}},
+				{name: `BindMount.Options.Discard true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID2: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								Discard: util.Pointer(true)}}}}},
+					output: map[string]any{
+						"mp2": string(",mountoptions=discard")}},
+				{name: `BindMount.Options.LazyTime true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID3: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								LazyTime: util.Pointer(true)}}}}},
+					output: map[string]any{
+						"mp3": string(",mountoptions=lazytime")}},
+				{name: `BindMount.Options.NoATime true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID4: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								NoATime: util.Pointer(true)}}}}},
+					output: map[string]any{
+						"mp4": string(",mountoptions=noatime")}},
+				{name: `BindMount.Options.NoDevice true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID5: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								NoDevice: util.Pointer(true)}}}}},
+					output: map[string]any{
+						"mp5": string(",mountoptions=nodev")}},
+				{name: `BindMount.Options.NoExec true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID6: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								NoExec: util.Pointer(true)}}}}},
+					output: map[string]any{
+						"mp6": string(",mountoptions=noexec")}},
+				{name: `BindMount.Options.NoSuid true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID7: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{NoSuid: util.Pointer(true)}}}}},
+					output: map[string]any{
+						"mp7": string(",mountoptions=nosuid")}},
+				{name: `BindMount.ReadOnly false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID8: LxcMount{BindMount: &LxcBindMount{
+							ReadOnly: util.Pointer(false)}}}},
+					output: map[string]any{
+						"mp8": string("")}},
+				{name: `BindMount.ReadOnly true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID9: LxcMount{BindMount: &LxcBindMount{
+							ReadOnly: util.Pointer(true)}}}},
+					output: map[string]any{
+						"mp9": string(",ro=1")}},
+				{name: `BindMount.Replicate false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID10: LxcMount{BindMount: &LxcBindMount{
+							Replicate: util.Pointer(false)}}}},
+					output: map[string]any{
+						"mp10": string(",replicate=0")}},
+				{name: `BindMount.Replicate true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID11: LxcMount{BindMount: &LxcBindMount{
+							Replicate: util.Pointer(true)}}}},
+					output: map[string]any{
+						"mp11": string("")}},
+				{name: `DataMount Minimal 1G`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID0: LxcMount{DataMount: &LxcDataMount{
+							Storage:         util.Pointer("local-zfs"),
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576))}}}},
+					output: map[string]any{
+						"mp0": string("local-zfs:1")}},
+				{name: `DataMount Minimal < 1G`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID1: LxcMount{DataMount: &LxcDataMount{
+							Storage:         util.Pointer("local-zfs"),
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048000))}}}},
+					output: map[string]any{
+						"mp1": string("local-zfs:0.001")}},
+				{name: `DataMount Minimal round down`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID2: LxcMount{DataMount: &LxcDataMount{
+							Storage:         util.Pointer("local-zfs"),
+							SizeInKibibytes: util.Pointer(LxcMountSize(2100000))}}}},
+					output: map[string]any{
+						"mp2": string("local-zfs:2")}},
+				{name: `DataMount.ACL false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID5: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ACL: util.Pointer(TriBoolFalse)})}}},
+					output: map[string]any{
+						"mp5": string("local-zfs:1,acl=0")}},
+				{name: `DataMount.ACL none`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID3: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ACL: util.Pointer(TriBoolNone)})}}},
+					output: map[string]any{
+						"mp3": string("local-zfs:1")}},
+				{name: `DataMount.ACL true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID4: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ACL: util.Pointer(TriBoolTrue)})}}},
+					output: map[string]any{
+						"mp4": string("local-zfs:1,acl=1")}},
+				{name: `DataMount.Backup false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID7: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Backup: util.Pointer(false)})}}},
+					output: map[string]any{
+						"mp7": string("local-zfs:1")}},
+				{name: `DataMount.Backup true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID6: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Backup: util.Pointer(true)})}}},
+					output: map[string]any{
+						"mp6": string("local-zfs:1,backup=1")}},
+				{name: `DataMount.Options nil`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID8: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{}})}}},
+					output: map[string]any{
+						"mp8": string("local-zfs:1")}},
+				{name: `DataMount.Options true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID9: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{
+								Discard:  util.Pointer(true),
+								LazyTime: util.Pointer(true),
+								NoATime:  util.Pointer(true),
+								NoDevice: util.Pointer(true),
+								NoExec:   util.Pointer(true),
+								NoSuid:   util.Pointer(true)}})}}},
+					output: map[string]any{
+						"mp9": string("local-zfs:1,mountoptions=discard;lazytime;noatime;nodev;noexec;nosuid")}},
+				{name: `DataMount.Options false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID10: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{
+								Discard:  util.Pointer(false),
+								LazyTime: util.Pointer(false),
+								NoATime:  util.Pointer(false),
+								NoDevice: util.Pointer(false),
+								NoExec:   util.Pointer(false),
+								NoSuid:   util.Pointer(false)}})}}},
+					output: map[string]any{
+						"mp10": string("local-zfs:1")}},
+				{name: `DataMount.Options.Discard true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID11: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{Discard: util.Pointer(true)}})}}},
+					output: map[string]any{
+						"mp11": string("local-zfs:1,mountoptions=discard")}},
+				{name: `DataMount.Options.LazyTime true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID12: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{LazyTime: util.Pointer(true)}})}}},
+					output: map[string]any{
+						"mp12": string("local-zfs:1,mountoptions=lazytime")}},
+				{name: `DataMount.Options.NoATime true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID13: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{NoATime: util.Pointer(true)}})}}},
+					output: map[string]any{
+						"mp13": string("local-zfs:1,mountoptions=noatime")}},
+				{name: `DataMount.Options.NoDevice true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID14: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{NoDevice: util.Pointer(true)}})}}},
+					output: map[string]any{
+						"mp14": string("local-zfs:1,mountoptions=nodev")}},
+				{name: `DataMount.Options.NoExec true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID15: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{NoExec: util.Pointer(true)}})}}},
+					output: map[string]any{
+						"mp15": string("local-zfs:1,mountoptions=noexec")}},
+				{name: `DataMount.Options.NoSuid true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID16: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{NoSuid: util.Pointer(true)}})}}},
+					output: map[string]any{
+						"mp16": string("local-zfs:1,mountoptions=nosuid")}},
+				{name: `DataMount.Path`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID17: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Path: util.Pointer(LxcMountPath("/mnt/test"))})}}},
+					output: map[string]any{
+						"mp17": string("local-zfs:1,mp=/mnt/test")}},
+				{name: `DataMount.Quota false Privileged false`,
+					omitDefaults: all,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID19: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota: util.Pointer(false)})}},
+						Privileged: util.Pointer(false)},
+					output: map[string]any{
+						"mp19":         string("local-zfs:1"),
+						"unprivileged": int(1)}},
+				{name: `DataMount.Quota false Privileged true`,
+					omitDefaults: all,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID20: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota: util.Pointer(false)})}},
+						Privileged: util.Pointer(true)},
+					output: map[string]any{
+						"mp20": string("local-zfs:1")}},
+				{name: `DataMount.Quota false Privileged unset`,
+					omitDefaults: all,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID18: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota: util.Pointer(false)})}}},
+					output: map[string]any{
+						"mp18":         string("local-zfs:1"),
+						"unprivileged": int(1)}},
+				{name: `DataMount.Quota true Privileged false`,
+					omitDefaults: all,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID22: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota: util.Pointer(true)})}},
+						Privileged: util.Pointer(false)},
+					output: map[string]any{
+						"mp22":         string("local-zfs:1"),
+						"unprivileged": int(1)}},
+				{name: `DataMount.Quota true Privileged true`,
+					omitDefaults: all,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID23: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota: util.Pointer(true)})}},
+						Privileged: util.Pointer(true)},
+					output: map[string]any{
+						"mp23": string("local-zfs:1,quota=1")}},
+				{name: `DataMount.Quota true Privileged unset`,
+					omitDefaults: all,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID24: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota: util.Pointer(true)})}}},
+					output: map[string]any{
+						"mp24":         string("local-zfs:1"),
+						"unprivileged": int(1)}},
+				{name: `DataMount.ReadOnly false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID25: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ReadOnly: util.Pointer(false)})}}},
+					output: map[string]any{
+						"mp25": string("local-zfs:1")}},
+				{name: `DataMount.ReadOnly true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID26: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ReadOnly: util.Pointer(true)})}}},
+					output: map[string]any{
+						"mp26": string("local-zfs:1,ro=1")}},
+				{name: `DataMount.Replicate false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID27: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Replicate: util.Pointer(false)})}}},
+					output: map[string]any{
+						"mp27": string("local-zfs:1,replicate=0")}},
+				{name: `DataMount.Replicate true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID28: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Replicate: util.Pointer(true)})}}},
+					output: map[string]any{
+						"mp28": string("local-zfs:1")}}},
+			createUpdate: []test{
+				{name: `Detach non-existing`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID29: LxcMount{Detach: true}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID30: LxcMount{}}},
+					omitDefaults: update,
+					output:       map[string]any{}}},
+			update: []test{
+				{name: `BindMount Detach existing`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID49: LxcMount{Detach: true}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID49: LxcMount{BindMount: &LxcBindMount{}}}},
+					output: map[string]any{"delete": string("mp49")}},
+				{name: `BindMount.GuestPath replace`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID50: LxcMount{BindMount: &LxcBindMount{
+							GuestPath: util.Pointer(LxcMountPath("/mnt/test-dest"))}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID50: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp50": string("/mnt/data,mp=/mnt/test-dest,mountoptions=noatime;nodev;noexec;nosuid,ro=1,replicate=0")}},
+				{name: `BindMount.HostPath replace`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID51: LxcMount{BindMount: &LxcBindMount{
+							HostPath: util.Pointer(LxcHostPath("/mnt/new-data"))}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID51: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp51": string("/mnt/new-data,mp=/mnt/bind,mountoptions=noatime;nodev;noexec;nosuid,ro=1,replicate=0")}},
+				{name: `BindMount.Options.Discard replace true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID52: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								Discard: util.Pointer(true)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID52: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp52": string("/mnt/data,mp=/mnt/bind,mountoptions=discard;noatime;nodev;noexec;nosuid,ro=1,replicate=0")}},
+				{name: `BindMount.Options.LazyTime replace true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID53: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								LazyTime: util.Pointer(true)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID53: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp53": string("/mnt/data,mp=/mnt/bind,mountoptions=lazytime;noatime;nodev;noexec;nosuid,ro=1,replicate=0")}},
+				{name: `BindMount.Options.NoATime replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID54: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								NoATime: util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID54: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp54": string("/mnt/data,mp=/mnt/bind,mountoptions=nodev;noexec;nosuid,ro=1,replicate=0")}},
+				{name: `BindMount.Options.NoDevice replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID55: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								NoDevice: util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID55: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp55": string("/mnt/data,mp=/mnt/bind,mountoptions=noatime;noexec;nosuid,ro=1,replicate=0")}},
+				{name: `BindMount.Options.NoExec replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID56: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								NoExec: util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID56: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp56": string("/mnt/data,mp=/mnt/bind,mountoptions=noatime;nodev;nosuid,ro=1,replicate=0")}},
+				{name: `BindMount.Options.NoSuid replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID57: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								NoSuid: util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID57: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp57": string("/mnt/data,mp=/mnt/bind,mountoptions=noatime;nodev;noexec,ro=1,replicate=0")}},
+				{name: `BindMount.Options all true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID96: LxcMount{BindMount: &LxcBindMount{
+							Options: &LxcMountOptions{
+								Discard:  util.Pointer(true),
+								LazyTime: util.Pointer(true),
+								NoATime:  util.Pointer(true),
+								NoDevice: util.Pointer(true),
+								NoExec:   util.Pointer(true),
+								NoSuid:   util.Pointer(true)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID96: LxcMount{BindMount: &LxcBindMount{}}}},
+					output: map[string]any{
+						"mp96": string(",mountoptions=discard;lazytime;noatime;nodev;noexec;nosuid")}},
+				{name: `BindMount.ReadOnly replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID58: LxcMount{BindMount: &LxcBindMount{
+							ReadOnly: util.Pointer(false)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID58: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp58": string("/mnt/data,mp=/mnt/bind,mountoptions=noatime;nodev;noexec;nosuid,replicate=0")}},
+				{name: `BindMount.Replicate replace true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID59: LxcMount{BindMount: &LxcBindMount{
+							Replicate: util.Pointer(true)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID59: LxcMount{BindMount: bindMount()}}},
+					output: map[string]any{"mp59": string("/mnt/data,mp=/mnt/bind,mountoptions=noatime;nodev;noexec;nosuid,ro=1")}},
+				{name: `BindMount no change`,
+					config:        ConfigLXC{Mounts: LxcMounts{LxcMountID110: LxcMount{BindMount: bindMount()}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID110: LxcMount{BindMount: bindMount()}}},
+					omitDefaults:  all,
+					output:        map[string]any{}},
+				{name: `BindMount over DataMount`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID130: LxcMount{BindMount: &LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/mnt/data")),
+							GuestPath: util.Pointer(LxcMountPath("/mnt/test-dest"))}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID130: LxcMount{DataMount: &LxcDataMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+							Storage:         util.Pointer("local-zfs")}}}},
+					output: map[string]any{"mp130": string("/mnt/data,mp=/mnt/test-dest")}},
+				{name: `BindMount create`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID131: LxcMount{BindMount: &LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/mnt/data")),
+							GuestPath: util.Pointer(LxcMountPath("/mnt/test-dest"))}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID135: LxcMount{}}},
+					output: map[string]any{"mp131": string("/mnt/data,mp=/mnt/test-dest")}},
+				{name: `DataMount Detach existing`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID50: LxcMount{Detach: true}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID50: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{"delete": string("mp50")}},
+				{name: `DataMount.ACL replace true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID60: LxcMount{DataMount: &LxcDataMount{
+							ACL: util.Pointer(TriBoolTrue)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID60: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp60": string("local-zfs:subvol-101-disk-0,size=1G,acl=1,backup=1,mountoptions=discard;lazytime;noatime;nosuid,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Backup replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID61: LxcMount{DataMount: &LxcDataMount{
+							Backup: util.Pointer(false)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID61: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp61": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,mountoptions=discard;lazytime;noatime;nosuid,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Options.Discard replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID62: LxcMount{DataMount: &LxcDataMount{
+							Options: &LxcMountOptions{
+								Discard: util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID62: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp62": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=lazytime;noatime;nosuid,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Options.LazyTime replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID63: LxcMount{DataMount: &LxcDataMount{
+							Options: &LxcMountOptions{
+								LazyTime: util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID63: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp63": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=discard;noatime;nosuid,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Options.NoATime replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID64: LxcMount{DataMount: &LxcDataMount{
+							Options: &LxcMountOptions{
+								NoATime: util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID64: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp64": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=discard;lazytime;nosuid,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Options.NoDevice replace true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID65: LxcMount{DataMount: &LxcDataMount{
+							Options: &LxcMountOptions{
+								NoDevice: util.Pointer(true)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID65: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp65": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=discard;lazytime;noatime;nodev;nosuid,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Options.NoExec replace true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID66: LxcMount{DataMount: &LxcDataMount{
+							Options: &LxcMountOptions{
+								NoExec: util.Pointer(true)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID66: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp66": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=discard;lazytime;noatime;noexec;nosuid,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Options.NoSuid replace true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID67: LxcMount{DataMount: &LxcDataMount{
+							Options: &LxcMountOptions{
+								NoSuid: util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID67: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp67": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=discard;lazytime;noatime,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Options all false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID68: LxcMount{DataMount: &LxcDataMount{
+							Options: &LxcMountOptions{
+								Discard:  util.Pointer(false),
+								LazyTime: util.Pointer(false),
+								NoATime:  util.Pointer(false),
+								NoDevice: util.Pointer(false),
+								NoExec:   util.Pointer(false),
+								NoSuid:   util.Pointer(false)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID68: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp68": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mp=/mnt/data,ro=1,replicate=0")}},
+				{name: `DataMount.Options all true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID90: LxcMount{DataMount: &LxcDataMount{
+							Options: &LxcMountOptions{
+								Discard:  util.Pointer(true),
+								LazyTime: util.Pointer(true),
+								NoATime:  util.Pointer(true),
+								NoDevice: util.Pointer(true),
+								NoExec:   util.Pointer(true),
+								NoSuid:   util.Pointer(true)}}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID90: LxcMount{DataMount: &LxcDataMount{
+						SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+						rawDisk:         "local-zfs:subvol-101-disk-0"}}}},
+					output: map[string]any{
+						"mp90": string("local-zfs:subvol-101-disk-0,size=1G,mountoptions=discard;lazytime;noatime;nodev;noexec;nosuid")}},
+				{name: `DataMount.Path replace`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID69: LxcMount{DataMount: &LxcDataMount{
+							Path: util.Pointer(LxcMountPath("/opt/test"))}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID69: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp69": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=discard;lazytime;noatime;nosuid,mp=/opt/test,ro=1,replicate=0")}},
+				{name: `DataMount.Quota replace false Privileged false`,
+					omitDefaults: all,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID80: LxcMount{DataMount: &LxcDataMount{
+							Quota: util.Pointer(false)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID80: LxcMount{DataMount: dataMount()}}},
+					output:        map[string]any{}},
+				{name: `DataMount.Quota replace false Privileged true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID81: LxcMount{DataMount: &LxcDataMount{
+							Quota: util.Pointer(false)}}}},
+					currentConfig: ConfigLXC{
+						Privileged: util.Pointer(true),
+						Mounts: LxcMounts{LxcMountID81: LxcMount{DataMount: &LxcDataMount{
+							Storage:         util.Pointer("local-zfs"),
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+							ACL:             util.Pointer(TriBoolFalse),
+							Backup:          util.Pointer(true),
+							Quota:           util.Pointer(true),
+							rawDisk:         "local-zfs:subvol-101-disk-0"}}}},
+					output: map[string]any{
+						"mp81": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1")}},
+				{name: `DataMount.Quota replace true Privileged false`,
+					omitDefaults: all,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID82: LxcMount{DataMount: &LxcDataMount{
+							Quota: util.Pointer(true)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID82: LxcMount{DataMount: dataMount()}}},
+					output:        map[string]any{}},
+				{name: `DataMount.Quota replace true Privileged true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID83: LxcMount{DataMount: &LxcDataMount{
+							Quota: util.Pointer(true)}}}},
+					currentConfig: ConfigLXC{
+						Privileged: util.Pointer(true),
+						Mounts: LxcMounts{LxcMountID83: LxcMount{DataMount: &LxcDataMount{
+							Storage:         util.Pointer("local-zfs"),
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+							ACL:             util.Pointer(TriBoolFalse),
+							Backup:          util.Pointer(true),
+							Quota:           util.Pointer(false),
+							rawDisk:         "local-zfs:subvol-101-disk-0"}}}},
+					output: map[string]any{
+						"mp83": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,quota=1")}},
+				{name: `DataMount.ReadOnly replace false`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID70: LxcMount{DataMount: &LxcDataMount{
+							ReadOnly: util.Pointer(false)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID70: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp70": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=discard;lazytime;noatime;nosuid,mp=/mnt/data,replicate=0")}},
+				{name: `DataMount.Replicate replace true`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID71: LxcMount{DataMount: &LxcDataMount{
+							Replicate: util.Pointer(true)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID71: LxcMount{DataMount: dataMount()}}},
+					output: map[string]any{
+						"mp71": string("local-zfs:subvol-101-disk-0,size=1G,acl=0,backup=1,mountoptions=discard;lazytime;noatime;nosuid,mp=/mnt/data,ro=1")}},
+				{name: `DataMount.SizeInKibibytes increase, all other unchanged`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID72: LxcMount{DataMount: &LxcDataMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(7340032))}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID72: LxcMount{DataMount: dataMount()}}},
+					omitDefaults:  all,
+					output:        map[string]any{}},
+				{name: `DataMount.Storage change, all other unchanged`, // this is manaaged by other mechanisms
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID73: LxcMount{DataMount: &LxcDataMount{
+							Storage: util.Pointer("test-storage")}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{LxcMountID73: LxcMount{DataMount: dataMount()}}},
+					omitDefaults:  all,
+					output:        map[string]any{}},
+				{name: `DataMount over BindMount`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID131: LxcMount{DataMount: &LxcDataMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+							Storage:         util.Pointer("local-zfs"),
+						}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID131: LxcMount{BindMount: &LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/mnt/data")),
+							GuestPath: util.Pointer(LxcMountPath("/mnt/test-dest"))}}}},
+					output: map[string]any{"mp131": string("local-zfs:1")}},
+				{name: `DataMount create`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID132: LxcMount{DataMount: &LxcDataMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+							Storage:         util.Pointer("local-zfs"),
+							ACL:             util.Pointer(TriBoolFalse),
+							Path:            util.Pointer(LxcMountPath("/mnt/test-dest")),
+							Backup:          util.Pointer(true)}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID135: LxcMount{}}},
+					output: map[string]any{"mp132": string("local-zfs:1,acl=0,backup=1,mp=/mnt/test-dest")}},
+				{name: `DataMount recreate`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID133: LxcMount{DataMount: &LxcDataMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+							Storage:         util.Pointer("local-zfs")}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID133: LxcMount{DataMount: &LxcDataMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(5242880)),
+							Storage:         util.Pointer("local-lvm")}}}},
+					output: map[string]any{"mp133": string("local-zfs:1")}},
+				{name: `DataMount recreate inherit Storage`,
+					config: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID134: LxcMount{DataMount: &LxcDataMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576))}}}},
+					currentConfig: ConfigLXC{Mounts: LxcMounts{
+						LxcMountID134: LxcMount{DataMount: &LxcDataMount{
+							SizeInKibibytes: util.Pointer(LxcMountSize(5242880)),
+							Storage:         util.Pointer("local-lvm")}}}},
+					output: map[string]any{"mp134": string("local-lvm:1")}}}},
 		{category: `Name`,
 			createUpdate: []test{
 				{name: `set`,
@@ -1268,6 +1921,18 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 		}
 		return config
 	}
+	baseDataMount := func(config LxcDataMount) *LxcDataMount {
+		if config.Path == nil {
+			config.Path = util.Pointer(LxcMountPath("/mnt/test"))
+		}
+		if config.SizeInKibibytes == nil {
+			config.SizeInKibibytes = util.Pointer(LxcMountSize(lxcMountSizeMinimum))
+		}
+		if config.Storage == nil {
+			config.Storage = util.Pointer(string("test"))
+		}
+		return &config
+	}
 	publicKeys := func() []AuthorizedKey {
 		data := test_data_guest.AuthorizedKey_Decoded_Input()
 		keys := make([]AuthorizedKey, len(data))
@@ -1332,10 +1997,10 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 					{name: `errors.New(LxcMountSize_Error_Minimum)`,
 						input: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
 							Storage:         util.Pointer("local-lvm"),
-							SizeInKibibytes: util.Pointer(lxcMountSize_Minimum - 1)}}),
+							SizeInKibibytes: util.Pointer(lxcMountSizeMinimum - 1)}}),
 						current: &ConfigLXC{BootMount: &LxcBootMount{
 							SizeInKibibytes: util.Pointer(LxcMountSize(131071))}},
-						err: errors.New(LxcMountSize_Error_Minimum)},
+						err: errors.New(LxcMountSizeErrorMinimum)},
 					{name: `error.New(LxcBootMount_Error_QuotaNotPrivileged) default`,
 						input: baseConfig(ConfigLXC{
 							BootMount: &LxcBootMount{
@@ -1545,6 +2210,184 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 						input:   baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(LxcMemoryMinimum - 1))}),
 						current: &ConfigLXC{Memory: util.Pointer(LxcMemory(256))},
 						err:     errors.New(LxcMemory_Error_Minimum)}}}},
+		{category: `Mount`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `detach == true`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID200: LxcMount{
+								BindMount: &LxcBindMount{},
+								DataMount: &LxcDataMount{},
+								Detach:    true}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{LxcMountID200: LxcMount{}}}}}},
+			invalid: testType{
+				createUpdate: []test{
+					{name: `errors.New(LxcMountErrorMutuallyExclusive)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID100: LxcMount{
+								BindMount: &LxcBindMount{},
+								DataMount: &LxcDataMount{}}}}),
+						current: &ConfigLXC{
+							Mounts: LxcMounts{
+								LxcMountID100: LxcMount{}}},
+						err: errors.New(LxcMountErrorMutuallyExclusive)}}}},
+		{category: `Mount.BindMount`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `minimal`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID230: LxcMount{BindMount: &LxcBindMount{
+								HostPath:  util.Pointer(LxcHostPath("/mnt/test")),
+								GuestPath: util.Pointer(LxcMountPath("/mnt/opt"))}}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID230: LxcMount{BindMount: &LxcBindMount{
+								HostPath:  util.Pointer(LxcHostPath("/mnt/aaa")),
+								GuestPath: util.Pointer(LxcMountPath("/mnt/bla"))}}}}}}},
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(LxcBindMountErrorHostPathRequired)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID200: LxcMount{BindMount: &LxcBindMount{}}},
+						}),
+						err: errors.New(LxcBindMountErrorHostPathRequired)},
+					{name: `errors.New(LxcBindMountErrorGuestPathRequired)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID200: LxcMount{BindMount: &LxcBindMount{
+								HostPath: util.Pointer(LxcHostPath("/mnt/test"))}}}}),
+						err: errors.New(LxcBindMountErrorGuestPathRequired)}},
+				createUpdate: []test{
+					{name: `errors.New(LxcHostPathErrorInvalid)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID201: LxcMount{BindMount: &LxcBindMount{
+								HostPath:  util.Pointer(LxcHostPath("")),
+								GuestPath: util.Pointer(LxcMountPath("/mnt/test"))}}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID201: LxcMount{BindMount: &LxcBindMount{}}}},
+						err: errors.New(LxcHostPathErrorInvalid)},
+					{name: `errors.New(LxcHostPathErrorRelative)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID201: LxcMount{BindMount: &LxcBindMount{
+								HostPath:  util.Pointer(LxcHostPath("./mnt/test")),
+								GuestPath: util.Pointer(LxcMountPath("/mnt/test"))}}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID201: LxcMount{BindMount: &LxcBindMount{}}}},
+						err: errors.New(LxcHostPathErrorRelative)},
+					{name: `errors.New(LxcHostPathErrorInvalidCharacter)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID201: LxcMount{BindMount: &LxcBindMount{
+								HostPath:  util.Pointer(LxcHostPath("/mnt/,test")),
+								GuestPath: util.Pointer(LxcMountPath("/mnt/test"))}}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID201: LxcMount{BindMount: &LxcBindMount{}}}},
+						err: errors.New(LxcHostPathErrorInvalidCharacter)},
+					{name: `errors.New(LxcMountPathErrorInvalid)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID202: LxcMount{BindMount: &LxcBindMount{
+								HostPath:  util.Pointer(LxcHostPath("/mnt/test")),
+								GuestPath: util.Pointer(LxcMountPath(""))}}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID202: LxcMount{BindMount: &LxcBindMount{}}}},
+						err: errors.New(LxcMountPathErrorInvalid)},
+					{name: `errors.New(LxcMountPathErrorInvalidCharacter)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID202: LxcMount{BindMount: &LxcBindMount{
+								HostPath:  util.Pointer(LxcHostPath("/mnt/test")),
+								GuestPath: util.Pointer(LxcMountPath("mnt/test/aaa"))}}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID202: LxcMount{BindMount: &LxcBindMount{}}}},
+						err: errors.New(LxcMountPathErrorRelative)},
+					{name: `errors.New(LxcMountPathErrorInvalidCharacter)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID202: LxcMount{BindMount: &LxcBindMount{
+								HostPath:  util.Pointer(LxcHostPath("/mnt/test")),
+								GuestPath: util.Pointer(LxcMountPath("/mnt/test,/aaa"))}}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID202: LxcMount{BindMount: &LxcBindMount{}}}},
+						err: errors.New(LxcMountPathErrorInvalidCharacter)},
+				},
+			},
+		},
+		{category: `Mount.DataMount`,
+			valid: testType{
+				createUpdate: []test{
+					{name: `Quota == true`,
+						input: baseConfig(ConfigLXC{
+							Privileged: util.Pointer(true),
+							Mounts: LxcMounts{
+								LxcMountID130: LxcMount{
+									DataMount: baseDataMount(LxcDataMount{
+										Quota: util.Pointer(true)})}}}),
+						current: &ConfigLXC{
+							Privileged: util.Pointer(true),
+							Mounts: LxcMounts{LxcMountID130: LxcMount{
+								DataMount: &LxcDataMount{}}}}},
+				},
+			},
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(LxcDataMountErrorPathRequired)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID215: LxcMount{DataMount: &LxcDataMount{}}}}),
+						err: errors.New(LxcDataMountErrorPathRequired)},
+					{name: `errors.New(LxcDataMountErrorSizeRequired)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID216: LxcMount{DataMount: &LxcDataMount{
+								Path: util.Pointer(LxcMountPath(""))}}}}),
+						err: errors.New(LxcDataMountErrorSizeRequired)},
+					{name: `errors.New(LxcDataMountErrorStorageRequired)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID5: LxcMount{DataMount: &LxcDataMount{
+								Path:            util.Pointer(LxcMountPath("")),
+								SizeInKibibytes: util.Pointer(LxcMountSize(0))}}}}),
+						err: errors.New(LxcDataMountErrorStorageRequired)},
+				},
+				createUpdate: []test{
+					{name: `errors.New(TriBool_Error_Invalid)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID101: LxcMount{DataMount: baseDataMount(LxcDataMount{
+								ACL: util.Pointer(TriBool(5))})}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID101: LxcMount{}}},
+						err: errors.New(TriBool_Error_Invalid)},
+					{name: `Quote == false, errors.New(LxcDataMountErrorQuotaUnprivileged)`,
+						input: baseConfig(ConfigLXC{
+							Mounts: LxcMounts{
+								LxcMountID102: LxcMount{DataMount: baseDataMount(LxcDataMount{
+									Quota: util.Pointer(false)})}},
+							Privileged: util.Pointer(false)}),
+						current: &ConfigLXC{
+							Mounts: LxcMounts{
+								LxcMountID102: LxcMount{DataMount: &LxcDataMount{}}},
+							Privileged: util.Pointer(false)},
+						err: errors.New(LxcDataMountErrorQuotaUnprivileged)},
+					{name: `Quote == true, errors.New(LxcDataMountErrorQuotaUnprivileged)`,
+						input: baseConfig(ConfigLXC{
+							Mounts: LxcMounts{
+								LxcMountID102: LxcMount{DataMount: baseDataMount(LxcDataMount{
+									Quota: util.Pointer(true)})}},
+							Privileged: util.Pointer(false)}),
+						current: &ConfigLXC{
+							Mounts: LxcMounts{
+								LxcMountID102: LxcMount{DataMount: &LxcDataMount{}}},
+							Privileged: util.Pointer(false)},
+						err: errors.New(LxcDataMountErrorQuotaUnprivileged)},
+					{name: `errors.New(LxcMountPathErrorInvalid)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID103: LxcMount{DataMount: baseDataMount(LxcDataMount{
+								Path: util.Pointer(LxcMountPath(""))})}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID103: LxcMount{DataMount: &LxcDataMount{}}}},
+						err: errors.New(LxcMountPathErrorInvalid)},
+					{name: `errors.New(lxcMountSizeMinimum)`,
+						input: baseConfig(ConfigLXC{Mounts: LxcMounts{
+							LxcMountID104: LxcMount{DataMount: baseDataMount(LxcDataMount{
+								SizeInKibibytes: util.Pointer(LxcMountSize(10))})}}}),
+						current: &ConfigLXC{Mounts: LxcMounts{
+							LxcMountID104: LxcMount{DataMount: &LxcDataMount{}}}},
+						err: errors.New(LxcMountSizeErrorMinimum)},
+				},
+			},
+		},
 		{category: `Name`,
 			valid: testType{
 				createUpdate: []test{
@@ -1819,6 +2662,63 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		}
 		if config.SizeInKibibytes == nil {
 			config.SizeInKibibytes = util.Pointer(LxcMountSize(0))
+		}
+		return &config
+	}
+	baseBindMount := func(config LxcBindMount) *LxcBindMount {
+		if config.GuestPath == nil {
+			config.GuestPath = util.Pointer(LxcMountPath(""))
+		}
+		if config.HostPath == nil {
+			config.HostPath = util.Pointer(LxcHostPath(""))
+		}
+		if config.ReadOnly == nil {
+			config.ReadOnly = util.Pointer(false)
+		}
+		if config.Replicate == nil {
+			config.Replicate = util.Pointer(true)
+		}
+		return &config
+	}
+	baseDataMount := func(config LxcDataMount) *LxcDataMount {
+		if config.ACL == nil {
+			config.ACL = util.Pointer(TriBoolNone)
+		}
+		if config.Backup == nil {
+			config.Backup = util.Pointer(false)
+		}
+		if config.Path == nil {
+			config.Path = util.Pointer(LxcMountPath(""))
+		}
+		if config.ReadOnly == nil {
+			config.ReadOnly = util.Pointer(false)
+		}
+		if config.Replicate == nil {
+			config.Replicate = util.Pointer(true)
+		}
+		if config.SizeInKibibytes == nil {
+			config.SizeInKibibytes = util.Pointer(LxcMountSize(0))
+		}
+		return &config
+	}
+	baseMountOptions := func(config LxcMountOptions) *LxcMountOptions {
+		if config.Discard == nil {
+			config.Discard = util.Pointer(false)
+		}
+		if config.LazyTime == nil {
+			config.LazyTime = util.Pointer(false)
+		}
+		if config.NoATime == nil {
+			config.NoATime = util.Pointer(false)
+		}
+		if config.NoDevice == nil {
+			config.NoDevice = util.Pointer(false)
+		}
+		if config.NoExec == nil {
+			config.NoExec = util.Pointer(false)
+		}
+		if config.NoSuid == nil {
+			config.NoSuid = util.Pointer(false)
 		}
 		return &config
 	}
@@ -2128,6 +3028,348 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `set`,
 					input:  RawConfigLXC{"hostname": "test"},
 					output: baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))})}}},
+		{category: `Mounts`,
+			tests: []test{
+				{name: `BindMount minimal`,
+					input: RawConfigLXC{"mp0": "/host/path,mp=/guest/path"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID0: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path"))})}}})},
+				{name: `BindMount.ReadOnly false`,
+					input: RawConfigLXC{"mp1": "/host/path,mp=/guest/path"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID1: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							ReadOnly:  util.Pointer(false)})}}})},
+				{name: `BindMount.ReadOnly true`,
+					input: RawConfigLXC{"mp2": "/host/path,mp=/guest/path,ro=1"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID2: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							ReadOnly:  util.Pointer(true)})}}})},
+				{name: `BindMount.Replicate false`,
+					input: RawConfigLXC{"mp3": "/host/path,mp=/guest/path,replicate=0"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID3: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Replicate: util.Pointer(false)})}}})},
+				{name: `BindMount.Replicate true`,
+					input: RawConfigLXC{"mp4": "/host/path,mp=/guest/path"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID4: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Replicate: util.Pointer(true)})}}})},
+				{name: `BindMount.Options.Discard true`,
+					input: RawConfigLXC{"mp5": "/host/path,mp=/guest/path,mountoptions=discard"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID5: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Options: baseMountOptions(LxcMountOptions{
+								Discard: util.Pointer(true)})})}}})},
+				{name: `BindMount.Options.LazyTime true`,
+					input: RawConfigLXC{"mp6": "/host/path,mp=/guest/path,mountoptions=lazytime"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID6: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Options: baseMountOptions(LxcMountOptions{
+								LazyTime: util.Pointer(true)})})}}})},
+				{name: `BindMount.Options.NoATime true`,
+					input: RawConfigLXC{"mp7": "/host/path,mp=/guest/path,mountoptions=noatime"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID7: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Options: baseMountOptions(LxcMountOptions{
+								NoATime: util.Pointer(true)})})}}})},
+				{name: `BindMount.Options.NoDevice true`,
+					input: RawConfigLXC{"mp8": "/host/path,mp=/guest/path,mountoptions=nodev"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID8: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Options: baseMountOptions(LxcMountOptions{
+								NoDevice: util.Pointer(true)})})}}})},
+				{name: `BindMount.Options.NoExec true`,
+					input: RawConfigLXC{"mp9": "/host/path,mp=/guest/path,mountoptions=noexec"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID9: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Options: baseMountOptions(LxcMountOptions{
+								NoExec: util.Pointer(true)})})}}})},
+				{name: `BindMount.Options.NoSuid true`,
+					input: RawConfigLXC{"mp10": "/host/path,mp=/guest/path,mountoptions=nosuid"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID10: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Options: baseMountOptions(LxcMountOptions{
+								NoSuid: util.Pointer(true)})})}}})},
+				{name: `BindMount.Options all true`,
+					input: RawConfigLXC{"mp11": "/host/path,mp=/guest/path,mountoptions=discard;lazytime;noatime;nodev;noexec;nosuid"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID11: LxcMount{BindMount: baseBindMount(LxcBindMount{
+							HostPath:  util.Pointer(LxcHostPath("/host/path")),
+							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
+							Options: &LxcMountOptions{
+								Discard:  util.Pointer(true),
+								LazyTime: util.Pointer(true),
+								NoATime:  util.Pointer(true),
+								NoDevice: util.Pointer(true),
+								NoExec:   util.Pointer(true),
+								NoSuid:   util.Pointer(true)}})}}})},
+				{name: `DataMount minimal ext4 (privileged`,
+					input: RawConfigLXC{"mp100": "local-ext4:100/vm-100-disk-0.raw"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID100: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-ext4"),
+							rawDisk: "local-ext4:100/vm-100-disk-0.raw"})}}})},
+				{name: `DataMount minimal zfs (privileged`,
+					input: RawConfigLXC{"mp101": "local-zfs:subvol-100-disk-1"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID101: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.ACL false (privileged`,
+					input: RawConfigLXC{
+						"mp102": "local-zfs:subvol-100-disk-1,acl=0"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID102: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ACL:     util.Pointer(TriBoolFalse),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.ACL true (privileged)`,
+					input: RawConfigLXC{"mp103": "local-zfs:subvol-100-disk-1,acl=1"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID103: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ACL:     util.Pointer(TriBoolTrue),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Backup false (privileged)`,
+					input: RawConfigLXC{"mp104": "local-zfs:subvol-100-disk-1,backup=0"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID104: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Backup:  util.Pointer(false),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Backup true (privileged)`,
+					input: RawConfigLXC{"mp105": "local-zfs:subvol-100-disk-1,backup=1"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID105: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Backup:  util.Pointer(true),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Options.Discard true`,
+					input: RawConfigLXC{"mp201": "local-zfs:subvol-100-disk-1,mountoptions=discard"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID201: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: baseMountOptions(LxcMountOptions{
+								Discard: util.Pointer(true)}),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Options.LazyTime true`,
+					input: RawConfigLXC{"mp203": "local-zfs:subvol-100-disk-1,mountoptions=lazytime"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID203: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: baseMountOptions(LxcMountOptions{
+								LazyTime: util.Pointer(true)}),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Options.NoATime true`,
+					input: RawConfigLXC{"mp204": "local-zfs:subvol-100-disk-1,mountoptions=noatime"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID204: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: baseMountOptions(LxcMountOptions{
+								NoATime: util.Pointer(true)}),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Options.NoDevice true`,
+					input: RawConfigLXC{"mp205": "local-zfs:subvol-100-disk-1,mountoptions=nodev"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID205: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: baseMountOptions(LxcMountOptions{
+								NoDevice: util.Pointer(true)}),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Options.NoExec true`,
+					input: RawConfigLXC{"mp206": "local-zfs:subvol-100-disk-1,mountoptions=noexec"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID206: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: baseMountOptions(LxcMountOptions{
+								NoExec: util.Pointer(true)}),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Options.NoSuid true`,
+					input: RawConfigLXC{"mp207": "local-zfs:subvol-100-disk-1,mountoptions=nosuid"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID207: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: baseMountOptions(LxcMountOptions{
+								NoSuid: util.Pointer(true)}),
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Options all true`,
+					input: RawConfigLXC{"mp208": "local-zfs:subvol-100-disk-1,mountoptions=noexec;nosuid;lazytime;discard;noatime;nodev"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID208: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Options: &LxcMountOptions{
+								Discard:  util.Pointer(true),
+								LazyTime: util.Pointer(true),
+								NoATime:  util.Pointer(true),
+								NoDevice: util.Pointer(true),
+								NoExec:   util.Pointer(true),
+								NoSuid:   util.Pointer(true)},
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Path (privileged)`,
+					input: RawConfigLXC{"mp106": "local-zfs:subvol-100-disk-1,mp=/mnt/test"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID106: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:   util.Pointer(false),
+							Path:    util.Pointer(LxcMountPath("/mnt/test")),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Quota false Privilege false`,
+					input: RawConfigLXC{
+						"mp107":        "local-zfs:subvol-100-disk-1,quota=0",
+						"unprivileged": float64(1)},
+					output: baseConfig(ConfigLXC{
+						Privileged: util.Pointer(false),
+						Mounts: LxcMounts{
+							LxcMountID107: LxcMount{DataMount: baseDataMount(LxcDataMount{
+								Storage: util.Pointer("local-zfs"),
+								rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Quota false Privilege true`,
+					input: RawConfigLXC{
+						"mp108":        "local-zfs:subvol-100-disk-1,quota=0",
+						"unprivileged": float64(0)},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID108: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:   util.Pointer(false),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Quota true Privilege false`,
+					input: RawConfigLXC{
+						"mp109":        "local-zfs:subvol-100-disk-1,quota=1",
+						"unprivileged": float64(1)},
+					output: baseConfig(ConfigLXC{
+						Privileged: util.Pointer(false),
+						Mounts: LxcMounts{
+							LxcMountID109: LxcMount{DataMount: baseDataMount(LxcDataMount{
+								Storage: util.Pointer("local-zfs"),
+								rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Quota true Privilege true`,
+					input: RawConfigLXC{
+						"mp110":        "local-zfs:subvol-100-disk-1,quota=1",
+						"unprivileged": float64(0)},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID110: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:   util.Pointer(true),
+							Storage: util.Pointer("local-zfs"),
+							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.ReadOnly false (privileged)`,
+					input: RawConfigLXC{"mp111": "local-zfs:subvol-100-disk-1,ro=0"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID111: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ReadOnly: util.Pointer(false),
+							Quota:    util.Pointer(false),
+							Storage:  util.Pointer("local-zfs"),
+							rawDisk:  "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.ReadOnly true (privileged)`,
+					input: RawConfigLXC{"mp112": "local-zfs:subvol-100-disk-1,ro=1"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID112: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ReadOnly: util.Pointer(true),
+							Quota:    util.Pointer(false),
+							Storage:  util.Pointer("local-zfs"),
+							rawDisk:  "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Replicate false (privileged)`,
+					input: RawConfigLXC{"mp113": "local-zfs:subvol-100-disk-1,replicate=0"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID113: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Replicate: util.Pointer(false),
+							Quota:     util.Pointer(false),
+							Storage:   util.Pointer("local-zfs"),
+							rawDisk:   "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.Replicate true (privileged)`,
+					input: RawConfigLXC{"mp114": "local-zfs:subvol-100-disk-1,replicate=1"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID114: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Replicate: util.Pointer(true),
+							Quota:     util.Pointer(false),
+							Storage:   util.Pointer("local-zfs"),
+							rawDisk:   "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.SizeInKibibytes 1T (privileged)`,
+					input: RawConfigLXC{"mp115": "local-zfs:subvol-100-disk-1,size=1T"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID115: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:           util.Pointer(false),
+							SizeInKibibytes: util.Pointer(LxcMountSize(1073741824)),
+							Storage:         util.Pointer("local-zfs"),
+							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.SizeInKibibytes 1G (privileged)`,
+					input: RawConfigLXC{"mp116": "local-zfs:subvol-100-disk-1,size=1G"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID116: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:           util.Pointer(false),
+							SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
+							Storage:         util.Pointer("local-zfs"),
+							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.SizeInKibibytes 12M (priviledged)`,
+					input: RawConfigLXC{"mp117": "local-zfs:subvol-100-disk-1,size=12M"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID117: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:           util.Pointer(false),
+							SizeInKibibytes: util.Pointer(LxcMountSize(12288)),
+							Storage:         util.Pointer("local-zfs"),
+							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount.SizeInKibibytes 18K  (priviledged)`,
+					input: RawConfigLXC{"mp118": "local-zfs:subvol-100-disk-1,size=18K"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID118: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							Quota:           util.Pointer(false),
+							SizeInKibibytes: util.Pointer(LxcMountSize(18)),
+							Storage:         util.Pointer("local-zfs"),
+							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})},
+				{name: `DataMount all (priviledged)`,
+					input: RawConfigLXC{"mp150": "local-zfs:subvol-100-disk-1,size=18K,acl=0,backup=1,quota=1,mountoptions=lazytime;noexec;discard,mp=/opt/test,replicate=1,ro=1"},
+					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
+						LxcMountID150: LxcMount{DataMount: baseDataMount(LxcDataMount{
+							ACL:    util.Pointer(TriBoolFalse),
+							Backup: util.Pointer(true),
+							Options: &LxcMountOptions{
+								Discard:  util.Pointer(true),
+								LazyTime: util.Pointer(true),
+								NoATime:  util.Pointer(false),
+								NoDevice: util.Pointer(false),
+								NoExec:   util.Pointer(true),
+								NoSuid:   util.Pointer(false)},
+							Path:            util.Pointer(LxcMountPath("/opt/test")),
+							Quota:           util.Pointer(true),
+							ReadOnly:        util.Pointer(true),
+							Replicate:       util.Pointer(true),
+							SizeInKibibytes: util.Pointer(LxcMountSize(18)),
+							Storage:         util.Pointer("local-zfs"),
+							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})}}},
 		{category: `Networks`,
 			tests: []test{
 				{name: `all`,
