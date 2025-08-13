@@ -179,8 +179,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 							Quota: util.Pointer(true)},
 						Privileged: util.Pointer(true)},
 					omitDefaults: all,
-					output:       map[string]any{"rootfs": ",quota=1"}},
-			},
+					output:       map[string]any{"rootfs": ",quota=1"}}},
 			createUpdate: []test{
 				{name: `ACL true`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
@@ -669,8 +668,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config:        ConfigLXC{Features: &LxcFeatures{}},
 					currentConfig: ConfigLXC{Features: &LxcFeatures{}},
 					omitDefaults:  update,
-					output:        map[string]any{}},
-			},
+					output:        map[string]any{}}},
 			update: []test{
 				{name: `CreateDeviceNodes false Privileged`,
 					config: ConfigLXC{Features: &LxcFeatures{Privileged: &PrivilegedFeatures{
@@ -1846,6 +1844,41 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					currentConfig: ConfigLXC{Privileged: util.Pointer(true)},
 					omitDefaults:  all,
 					output:        map[string]any{}}}},
+		{category: `Protection`,
+			create: []test{
+				{name: `set false`,
+					config:        ConfigLXC{Protection: util.Pointer(false)},
+					currentConfig: ConfigLXC{},
+					output:        map[string]any{}}},
+			createUpdate: []test{
+				{name: `set true`,
+					config:        ConfigLXC{Protection: util.Pointer(true)},
+					currentConfig: ConfigLXC{},
+					output:        map[string]any{"protection": string("1")}}},
+			update: []test{
+				{name: `do nothing false`,
+					config:        ConfigLXC{Protection: util.Pointer(false)},
+					currentConfig: ConfigLXC{Protection: util.Pointer(false)},
+					omitDefaults:  all,
+					output:        map[string]any{}},
+				{name: `do nothing true`,
+					config:        ConfigLXC{Protection: util.Pointer(true)},
+					currentConfig: ConfigLXC{Protection: util.Pointer(true)},
+					omitDefaults:  all,
+					output:        map[string]any{}},
+				{name: `replace false`,
+					config:        ConfigLXC{Protection: util.Pointer(false)},
+					currentConfig: ConfigLXC{Protection: util.Pointer(true)},
+					output:        map[string]any{"delete": string("protection")}},
+				{name: `replace true`,
+					config:        ConfigLXC{Protection: util.Pointer(true)},
+					currentConfig: ConfigLXC{Protection: util.Pointer(false)},
+					output:        map[string]any{"protection": string("1")}},
+				{name: `set false`,
+					config:        ConfigLXC{Protection: util.Pointer(false)},
+					currentConfig: ConfigLXC{},
+					output:        map[string]any{"delete": string("protection")}},
+			}},
 		{category: `Swap`,
 			createUpdate: []test{
 				{name: `set`,
@@ -2632,6 +2665,9 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 		}
 		if config.Privileged == nil {
 			config.Privileged = util.Pointer(true)
+		}
+		if config.Protection == nil {
+			config.Protection = util.Pointer(false)
 		}
 		if config.Swap == nil {
 			config.Swap = util.Pointer(LxcSwap(0))
@@ -3492,6 +3528,14 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				{name: `default true`,
 					input:  RawConfigLXC{},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(true)})}}},
+		{category: `Protection`,
+			tests: []test{
+				{name: `false`,
+					input:  RawConfigLXC{},
+					output: baseConfig(ConfigLXC{Protection: util.Pointer(false)})},
+				{name: `true`,
+					input:  RawConfigLXC{"protection": float64(1)},
+					output: baseConfig(ConfigLXC{Protection: util.Pointer(true)})}}},
 		{category: `Swap`,
 			tests: []test{
 				{name: `set`,

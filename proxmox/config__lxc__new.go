@@ -37,6 +37,7 @@ type ConfigLXC struct {
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
 	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, defaults to false ,never nil when returned
+	Protection      *bool             `json:"protection,omitempty"` // Never nil when returned
 	State           *PowerState       `json:"state,omitempty"`
 	Swap            *LxcSwap          `json:"swap,omitempty"` // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
@@ -141,7 +142,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		pool = *config.Pool
 		params[lxcApiKeyPool] = string(pool)
 	}
-
+	if config.Protection != nil && *config.Protection {
+		params[lxcAPIKeyProtection] = "1"
+	}
 	if config.Swap != nil {
 		params[lxcApiKeySwap] = int(*config.Swap)
 	}
@@ -212,6 +215,13 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 			delete += config.Networks.mapToApiUpdate(current.Networks, params)
 		} else {
 			config.Networks.mapToApiCreate(params)
+		}
+	}
+	if config.Protection != nil && (current.Protection == nil || *config.Protection != *current.Protection) {
+		if *config.Protection {
+			params[lxcAPIKeyProtection] = "1"
+		} else {
+			delete += "," + lxcAPIKeyProtection
 		}
 	}
 	if config.Swap != nil && (current.Swap == nil || *config.Swap != *current.Swap) {
@@ -509,6 +519,7 @@ func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
 		Node:            util.Pointer(vmr.node),
 		OperatingSystem: raw.OperatingSystem(),
 		Privileged:      &privileged,
+		Protection:      util.Pointer(raw.Protection()),
 		Swap:            util.Pointer(raw.Swap()),
 		Tags:            raw.Tags(),
 		rawDigest:       raw.digest()}
@@ -580,6 +591,13 @@ func (raw RawConfigLXC) isPrivileged() bool {
 	return true // when privileged the API does not return the key at all, so we assume it is privileged
 }
 
+func (raw RawConfigLXC) Protection() bool {
+	if v, isSet := raw[lxcAPIKeyProtection]; isSet {
+		return int(v.(float64)) == 1
+	}
+	return false
+}
+
 func (raw RawConfigLXC) Swap() LxcSwap {
 	if v, isSet := raw[lxcApiKeySwap]; isSet {
 		return LxcSwap(v.(float64))
@@ -610,6 +628,7 @@ const (
 	lxcApiKeyOsTemplate      string = "ostemplate"
 	lxcApiKeyPassword        string = "password"
 	lxcApiKeyPool            string = "pool"
+	lxcAPIKeyProtection      string = "protection"
 	lxcApiKeyRootFS          string = "rootfs"
 	lxcApiKeySSHPublicKeys   string = "ssh-public-keys"
 	lxcApiKeySwap            string = "swap"
