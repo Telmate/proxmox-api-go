@@ -236,7 +236,7 @@ func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRe
 	if err != nil {
 		return err
 	}
-	raw, err := NewConfigLXCFromApi(ctx, vmr, c)
+	raw, err := NewRawConfigLXCFromAPI(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vm
 	if err != nil {
 		return err
 	}
-	raw, err := NewConfigLXCFromApi(ctx, vmr, c)
+	raw, err := NewRawConfigLXCFromAPI(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
@@ -326,7 +326,7 @@ func (config ConfigLXC) updateNoCheck(
 			}
 		}
 
-		newCurrent, err := NewConfigLXCFromApi(ctx, vmr, c) // We have to refetch part of the current config
+		newCurrent, err := NewRawConfigLXCFromAPI(ctx, vmr, c) // We have to refetch part of the current config
 		if err != nil {
 			return err
 		}
@@ -696,7 +696,7 @@ type LxcSwap uint
 
 func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String is for fmt.Stringer.
 
-func NewConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
+func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	rawConfig, err := c.GetVmConfig(ctx, vmr)
 	if err != nil {
 		return nil, err
