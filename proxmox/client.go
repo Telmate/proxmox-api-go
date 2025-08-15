@@ -224,11 +224,14 @@ func (c *Client) GetNodeList(ctx context.Context) (list map[string]interface{}, 
 
 const resourceListGuest string = "vm"
 
-// GetResourceList returns a list of all enabled proxmox resources.
-// For resource types that can be in a disabled state, disabled resources
-// will not be returned
 // TODO this func should not be exported
 func (c *Client) GetResourceList(ctx context.Context, resourceType string) (list []interface{}, err error) {
+	return c.getResourceList_Unsafe(ctx, resourceType)
+}
+
+// GetResourceList returns a list of all enabled proxmox resources.
+// For resource types that can be in a disabled state, disabled resources will not be returned.
+func (c *Client) getResourceList_Unsafe(ctx context.Context, resourceType string) ([]any, error) {
 	url := "/cluster/resources"
 	if resourceType != "" {
 		url = url + "?type=" + resourceType
