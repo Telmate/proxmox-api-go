@@ -589,7 +589,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	}
 
 	if config.Pool != nil { // update pool membership
-		guestSetPoolNoCheck(ctx, client, uint(vmr.vmId), *config.Pool, currentConfig.Pool, version)
+		guestSetPoolNoCheck(ctx, client, vmr.vmId, *config.Pool, currentConfig.Pool, version)
 	}
 
 	if stopped { // start vm if it was stopped

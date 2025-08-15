@@ -197,7 +197,7 @@ type GuestResource struct {
 	DiskUsedInBytes    uint       `json:"disk_used"`
 	DiskWriteTotal     uint       `json:"disk_write"`
 	HaState            string     `json:"hastate"` // TODO custom type?
-	Id                 uint       `json:"id"`
+	Id                 GuestID    `json:"id"`
 	MemoryTotalInBytes uint       `json:"memory_total"`
 	MemoryUsedInBytes  uint       `json:"memory_used"`
 	Name               GuestName  `json:"name"`
@@ -246,7 +246,7 @@ func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
 			resources[i].HaState = tmpParams["hastate"].(string)
 		}
 		if _, isSet := tmpParams["vmid"]; isSet {
-			resources[i].Id = uint(tmpParams["vmid"].(float64))
+			resources[i].Id = GuestID(tmpParams["vmid"].(float64))
 		}
 		if _, isSet := tmpParams["maxmem"]; isSet {
 			resources[i].MemoryTotalInBytes = uint(tmpParams["maxmem"].(float64))
@@ -408,32 +408,32 @@ func GuestReboot(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	return
 }
 
-func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID uint, newPool PoolName, currentPool *PoolName, version Version) (err error) {
+func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID GuestID, newPool PoolName, currentPool *PoolName, version Version) (err error) {
 	if newPool == "" {
 		if currentPool != nil && *currentPool != "" { // leave pool
-			if err = (*currentPool).removeGuestsNoCheck(ctx, c, []uint{guestID}, version); err != nil {
+			if err = (*currentPool).removeGuestsNoCheck(ctx, c, []GuestID{guestID}, version); err != nil {
 				return
 			}
 		}
 	} else {
 		if currentPool == nil || *currentPool == "" { // join pool
 			if version.Encode() < version_8_0_0 {
-				if err = newPool.addGuestsNoCheckV7(ctx, c, []uint{guestID}); err != nil {
+				if err = newPool.addGuestsNoCheckV7(ctx, c, []GuestID{guestID}); err != nil {
 					return
 				}
 			} else {
-				newPool.addGuestsNoCheckV8(ctx, c, []uint{guestID})
+				newPool.addGuestsNoCheckV8(ctx, c, []GuestID{guestID})
 			}
 		} else if newPool != *currentPool { // change pool
 			if version.Encode() < version_8_0_0 {
-				if err = (*currentPool).removeGuestsNoCheck(ctx, c, []uint{guestID}, version); err != nil {
+				if err = (*currentPool).removeGuestsNoCheck(ctx, c, []GuestID{guestID}, version); err != nil {
 					return
 				}
-				if err = newPool.addGuestsNoCheckV7(ctx, c, []uint{guestID}); err != nil {
+				if err = newPool.addGuestsNoCheckV7(ctx, c, []GuestID{guestID}); err != nil {
 					return
 				}
 			} else {
-				if err = newPool.addGuestsNoCheckV8(ctx, c, []uint{guestID}); err != nil {
+				if err = newPool.addGuestsNoCheckV8(ctx, c, []GuestID{guestID}); err != nil {
 					return
 				}
 			}

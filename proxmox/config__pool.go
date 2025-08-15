@@ -46,9 +46,9 @@ func listPools(ctx context.Context, c *Client) ([]interface{}, error) {
 }
 
 type ConfigPool struct {
-	Name    PoolName `json:"name"`
-	Comment *string  `json:"comment"`
-	Guests  *[]uint  `json:"guests"` // TODO: Change type once we have a type for guestID
+	Name    PoolName   `json:"name"`
+	Comment *string    `json:"comment"`
+	Guests  *[]GuestID `json:"guests"`
 }
 
 func (config ConfigPool) mapToApi(currentConfig *ConfigPool) map[string]interface{} {
@@ -75,11 +75,11 @@ func (ConfigPool) mapToSDK(params map[string]interface{}) (config ConfigPool) {
 		config.Comment = util.Pointer(v.(string))
 	}
 	if v, isSet := params["members"]; isSet {
-		guests := make([]uint, 0)
+		guests := make([]GuestID, 0)
 		for _, e := range v.([]interface{}) {
 			param := e.(map[string]interface{})
 			if v, isSet := param["vmid"]; isSet {
-				guests = append(guests, uint(v.(float64)))
+				guests = append(guests, GuestID(v.(float64)))
 			}
 		}
 		if len(guests) > 0 {
@@ -185,7 +185,14 @@ func (config ConfigPool) UpdateNoCheck(ctx context.Context, c *Client) error {
 }
 
 func (config ConfigPool) Validate() error {
-	// TODO: Add validation for Guests and Comment
+	if config.Guests != nil && len(*config.Guests) != 0 {
+		for _, e := range *config.Guests {
+			if err := e.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+	// TODO: Add validation for Comment
 	return config.Name.Validate()
 }
 
@@ -202,8 +209,8 @@ const (
 
 var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
 
-func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
-	var guestsToAdd []uint
+func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, currentGuests *[]GuestID, version Version) error {
+	var guestsToAdd []GuestID
 	if currentGuests != nil && len(*currentGuests) > 0 {
 		guestsToAdd = subtractArray(guestIDs, *currentGuests)
 	} else {
@@ -227,18 +234,18 @@ func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs
 	return config.addGuestsNoCheckV7(ctx, c, guestsToAdd)
 }
 
-func (pool PoolName) addGuestsNoCheckV7(ctx context.Context, c *Client, guestIDs []uint) error {
+func (pool PoolName) addGuestsNoCheckV7(ctx context.Context, c *Client, guestIDs []GuestID) error {
 	return pool.putV7(ctx, c, map[string]interface{}{"vms": PoolName("").mapToString(guestIDs)})
 }
 
 // from 8.0.0 on proxmox can move the guests to the pool while they are still in another pool
-func (pool PoolName) addGuestsNoCheckV8(ctx context.Context, c *Client, guestIDs []uint) error {
+func (pool PoolName) addGuestsNoCheckV8(ctx context.Context, c *Client, guestIDs []GuestID) error {
 	return pool.putV8(ctx, c, map[string]interface{}{
 		"vms":        PoolName("").mapToString(guestIDs),
 		"allow-move": "1"})
 }
 
-func (config PoolName) AddGuests(ctx context.Context, c *Client, guestIDs []uint) error {
+func (config PoolName) AddGuests(ctx context.Context, c *Client, guestIDs []GuestID) error {
 	if err := config.Validate(); err != nil {
 		return err
 	}
@@ -253,7 +260,7 @@ func (config PoolName) AddGuests(ctx context.Context, c *Client, guestIDs []uint
 	return config.AddGuestsNoCheck(ctx, c, guestIDs)
 }
 
-func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs []uint) error {
+func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
@@ -326,20 +333,20 @@ func (pool PoolName) GetNoCheck(ctx context.Context, c *Client) (*ConfigPool, er
 	return &config, nil
 }
 
-func (PoolName) guestsToRemoveFromPools(guests []GuestResource, guestsToAdd []uint) map[PoolName][]uint {
+func (PoolName) guestsToRemoveFromPools(guests []GuestResource, guestsToAdd []GuestID) map[PoolName][]GuestID {
 	// map[guestID]PoolName
-	guestsMap := make(map[uint]PoolName)
+	guestsMap := make(map[GuestID]PoolName)
 	for _, e := range guests {
 		if e.Pool != "" {
 			guestsMap[e.Id] = e.Pool
 			continue
 		}
 	}
-	poolMap := make(map[PoolName][]uint)
+	poolMap := make(map[PoolName][]GuestID)
 	for _, e := range guestsToAdd {
 		if pool, isSet := guestsMap[e]; isSet {
 			if _, isSet := poolMap[pool]; !isSet {
-				poolMap[pool] = []uint{e}
+				poolMap[pool] = []GuestID{e}
 			} else {
 				poolMap[pool] = append(poolMap[pool], e)
 			}
@@ -349,7 +356,7 @@ func (PoolName) guestsToRemoveFromPools(guests []GuestResource, guestsToAdd []ui
 }
 
 // TODO replace once we have a type for guestID
-func (PoolName) mapToString(guestID []uint) (vms string) {
+func (PoolName) mapToString(guestID []GuestID) (vms string) {
 	for _, e := range guestID {
 		vms += "," + strconv.FormatInt(int64(e), 10)
 	}
@@ -374,7 +381,7 @@ func (pool PoolName) putV8(ctx context.Context, c *Client, params map[string]int
 	return c.Put(ctx, params, "/pools?poolid="+string(pool))
 }
 
-func (pool PoolName) RemoveGuests(ctx context.Context, c *Client, guestID []uint) error {
+func (pool PoolName) RemoveGuests(ctx context.Context, c *Client, guestID []GuestID) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
@@ -394,7 +401,7 @@ func (pool PoolName) RemoveGuests(ctx context.Context, c *Client, guestID []uint
 	return pool.removeGuestsNoCheck(ctx, c, guestID, version)
 }
 
-func (pool PoolName) RemoveGuestsNoChecks(ctx context.Context, c *Client, guestID []uint) error {
+func (pool PoolName) RemoveGuestsNoChecks(ctx context.Context, c *Client, guestID []GuestID) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
@@ -402,14 +409,14 @@ func (pool PoolName) RemoveGuestsNoChecks(ctx context.Context, c *Client, guestI
 	return pool.removeGuestsNoCheck(ctx, c, guestID, version)
 }
 
-func (pool PoolName) removeGuestsNoCheck(ctx context.Context, c *Client, guestID []uint, version Version) error {
+func (pool PoolName) removeGuestsNoCheck(ctx context.Context, c *Client, guestID []GuestID, version Version) error {
 	return pool.put(ctx, c, map[string]interface{}{
 		"vms":    PoolName("").mapToString(guestID),
 		"delete": "1"},
 		version)
 }
 
-func (pool PoolName) SetGuests(ctx context.Context, c *Client, guestID []uint) error {
+func (pool PoolName) SetGuests(ctx context.Context, c *Client, guestID []GuestID) error {
 	if c == nil {
 		return errors.New(Client_Error_Nil)
 	}
@@ -425,7 +432,7 @@ func (pool PoolName) SetGuests(ctx context.Context, c *Client, guestID []uint) e
 	return pool.SetGuestsNoChecks(ctx, c, guestID)
 }
 
-func (pool PoolName) SetGuestsNoChecks(ctx context.Context, c *Client, guestID []uint) error {
+func (pool PoolName) SetGuestsNoChecks(ctx context.Context, c *Client, guestID []GuestID) error {
 	version, err := c.GetVersion(ctx)
 	if err != nil {
 		return err
@@ -437,7 +444,7 @@ func (pool PoolName) SetGuestsNoChecks(ctx context.Context, c *Client, guestID [
 	return pool.setGuestsNoCheck(ctx, c, guestID, config.Guests, version)
 }
 
-func (pool PoolName) setGuestsNoCheck(ctx context.Context, c *Client, guestIDs []uint, currentGuests *[]uint, version Version) error {
+func (pool PoolName) setGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, currentGuests *[]GuestID, version Version) error {
 	if currentGuests != nil && len(*currentGuests) > 0 {
 		if err := pool.removeGuestsNoCheck(ctx, c, subtractArray(*currentGuests, guestIDs), version); err != nil {
 			return err
