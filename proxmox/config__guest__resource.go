@@ -35,6 +35,15 @@ func (r RawGuestResources) Get() []GuestResource {
 	return resources
 }
 
+func (r RawGuestResources) SelectID(id GuestID) (RawGuestResource, error) {
+	for i := range r {
+		if r[i].GetID() == id {
+			return r[i], nil
+		}
+	}
+	return nil, errorMsg{}.guestDoesNotExist(id)
+}
+
 type GuestResource struct {
 	CpuCores           uint          `json:"cpu_cores"`
 	CpuUsage           float64       `json:"cpu_usage"`

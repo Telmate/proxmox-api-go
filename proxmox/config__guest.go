@@ -233,6 +233,10 @@ const (
 	GuestIdMinimum        GuestID = 100
 )
 
+func (id GuestID) errorContext() string {
+	return "ID " + id.String()
+}
+
 func (id GuestID) Exists(ctx context.Context, c *Client) (bool, error) {
 	if err := id.Validate(); err != nil {
 		return false, err
