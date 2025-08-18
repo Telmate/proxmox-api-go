@@ -35,3 +35,15 @@ func (errorMsg) guestDoesNotExist(id GuestID) error {
 		err: Error.GuestDoesNotExist(),
 		id:  id}
 }
+
+var errGuestIsProtectedCantDelete = errors.New("cannot delete guest because it is protected")
+
+func (msg errorMsg) GuestIsProtectedCantDelete() error {
+	return errGuestIsProtectedCantDelete
+}
+
+func (errorMsg) guestIsProtectedCantDelete(id GuestID) error {
+	return &errorWrapper[GuestID]{
+		err: Error.GuestIsProtectedCantDelete(),
+		id:  id}
+}

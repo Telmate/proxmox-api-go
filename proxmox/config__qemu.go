@@ -1196,6 +1196,16 @@ const (
 )
 
 func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
+	if vmr == nil {
+		return nil, errors.New(VmRef_Error_Nil)
+	}
+	if client == nil {
+		return nil, errors.New(Client_Error_Nil)
+	}
+	return newRawConfigQemuFromAPI_Unsafe(ctx, vmr, client)
+}
+
+func newRawConfigQemuFromAPI_Unsafe(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
 	rawConfig, err := client.GetVmConfig(ctx, vmr)
 	if err != nil {
 		return nil, err

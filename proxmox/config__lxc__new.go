@@ -716,6 +716,16 @@ type LxcSwap uint
 func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String is for fmt.Stringer.
 
 func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
+	if vmr == nil {
+		return nil, errors.New(VmRef_Error_Nil)
+	}
+	if c == nil {
+		return nil, errors.New(Client_Error_Nil)
+	}
+	return newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
+}
+
+func newRawConfigLXCFromAPI_Unsafe(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	rawConfig, err := c.GetVmConfig(ctx, vmr)
 	if err != nil {
 		return nil, err
