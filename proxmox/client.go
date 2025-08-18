@@ -550,6 +550,7 @@ func (c *Client) StartVm(ctx context.Context, vmr *VmRef) (exitStatus string, er
 	return c.StatusChangeVm(ctx, vmr, nil, "start")
 }
 
+// Deprecated: use VmRef.Stop() instead.
 func (c *Client) StopVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "stop")
 }
@@ -581,6 +582,7 @@ func (c *Client) ResumeVm(ctx context.Context, vmr *VmRef) (exitStatus string, e
 	return c.StatusChangeVm(ctx, vmr, nil, "resume")
 }
 
+// Deprecated: use VmRef.Delete() instead.
 func (c *Client) DeleteVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.DeleteVmParams(ctx, vmr, nil)
 }

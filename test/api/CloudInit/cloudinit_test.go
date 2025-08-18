@@ -54,7 +54,7 @@ func Test_Cloud_Init_VM(t *testing.T) {
 				Address: util.Pointer(pxapi.IPv4CIDR("10.0.0.2/24")),
 				Gateway: util.Pointer(pxapi.IPv4Address("10.0.0.1"))}})
 
-	_, err = Test.GetClient().DeleteVm(context.Background(), vmref)
+	err = vmref.Delete(context.Background(), Test.GetClient())
 	require.NoError(t, err)
 
 	_, err = Test.GetClient().DeleteNetwork(context.Background(), "pve", "vmbr0")

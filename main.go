@@ -157,17 +157,10 @@ func main() {
 		failError(err)
 
 	case "stop":
-
-		vmr = proxmox.NewVmRef(vmid)
-		jbody, err = c.StopVm(ctx, vmr)
-		failError(err)
+		failError(proxmox.NewVmRef(vmid).Stop(ctx, c))
 
 	case "destroy":
-		vmr = proxmox.NewVmRef(vmid)
-		jbody, err = c.StopVm(ctx, vmr)
-		failError(err)
-		jbody, err = c.DeleteVm(ctx, vmr)
-		failError(err)
+		failError(proxmox.NewVmRef(vmid).Delete(ctx, c))
 
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)
