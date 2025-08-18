@@ -186,10 +186,6 @@ func Test_ConfigPool_Validate(t *testing.T) {
 	}{
 		{name: "Valid PoolName",
 			input: ConfigPool{Name: PoolName(test_data_pool.PoolName_Legal())}},
-		{name: "Valid PoolName with Guests",
-			input: ConfigPool{
-				Name:   PoolName(test_data_pool.PoolName_Legal()),
-				Guests: &[]GuestID{100, 300, 200}}},
 		{name: "Invalid PoolName Empty",
 			input:  ConfigPool{Name: ""},
 			output: errors.New(PoolName_Error_Empty)},
@@ -199,10 +195,6 @@ func Test_ConfigPool_Validate(t *testing.T) {
 		{name: "Invalid PoolName Characters",
 			input:  ConfigPool{Name: PoolName(test_data_pool.PoolName_Error_Characters()[0])},
 			output: errors.New(PoolName_Error_Characters)},
-		{name: "Invalid Guests",
-			input: ConfigPool{
-				Guests: &[]GuestID{100, 1, 200}},
-			output: errors.New(GuestID_Error_Minimum)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -261,7 +253,7 @@ func Test_PoolName_GetNoCheck(t *testing.T) {
 
 func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 	type testInput struct {
-		guests      []GuestResource
+		guests      RawGuestResources
 		guestsToAdd []GuestID
 	}
 	tests := []struct {
@@ -271,10 +263,10 @@ func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 	}{
 		{name: `'guestsToAdd' Not in 'guests'`,
 			input: testInput{
-				guests: []GuestResource{
-					{Id: 100, Pool: "test"},
-					{Id: 200, Pool: "poolA"},
-					{Id: 300, Pool: "test"}},
+				guests: RawGuestResources{
+					{"vmid": float64(100), "pool": "test"},
+					{"vmid": float64(200), "pool": "poolA"},
+					{"vmid": float64(300), "pool": "test"}},
 				guestsToAdd: []GuestID{700, 800, 900}},
 			output: map[PoolName][]GuestID{}},
 		{name: `Empty`,
@@ -285,17 +277,17 @@ func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 			output: map[PoolName][]GuestID{}},
 		{name: `Empty 'guestsToAdd'`,
 			input: testInput{
-				guests: []GuestResource{
-					{Id: 100, Pool: "test"},
-					{Id: 200, Pool: "poolA"},
-					{Id: 300, Pool: "test"}}},
+				guests: RawGuestResources{
+					{"vmid": float64(100), "pool": "test"},
+					{"vmid": float64(200), "pool": "poolA"},
+					{"vmid": float64(300), "pool": "test"}}},
 			output: map[PoolName][]GuestID{}},
 		{name: `Full`,
 			input: testInput{
-				guests: []GuestResource{
-					{Id: 100, Pool: "test"},
-					{Id: 200, Pool: "poolA"},
-					{Id: 300, Pool: "test"}},
+				guests: RawGuestResources{
+					{"vmid": float64(100), "pool": "test"},
+					{"vmid": float64(200), "pool": "poolA"},
+					{"vmid": float64(300), "pool": "test"}},
 				guestsToAdd: []GuestID{100, 300, 200}},
 			output: map[PoolName][]GuestID{
 				"test":  {100, 300},

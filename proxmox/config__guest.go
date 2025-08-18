@@ -189,102 +189,6 @@ func (rate GuestNetworkRate) Validate() error {
 	return nil
 }
 
-type GuestResource struct {
-	CpuCores           uint       `json:"cpu_cores"`
-	CpuUsage           float64    `json:"cpu_usage"`
-	DiskReadTotal      uint       `json:"disk_read"`
-	DiskSizeInBytes    uint       `json:"disk_size"`
-	DiskUsedInBytes    uint       `json:"disk_used"`
-	DiskWriteTotal     uint       `json:"disk_write"`
-	HaState            string     `json:"hastate"` // TODO custom type?
-	Id                 GuestID    `json:"id"`
-	MemoryTotalInBytes uint       `json:"memory_total"`
-	MemoryUsedInBytes  uint       `json:"memory_used"`
-	Name               GuestName  `json:"name"`
-	NetworkIn          uint       `json:"network_in"`
-	NetworkOut         uint       `json:"network_out"`
-	Node               string     `json:"node"` // TODO custom type
-	Pool               PoolName   `json:"pool"`
-	Status             PowerState `json:"status"`
-	Tags               Tags       `json:"tags"`
-	Template           bool       `json:"template"`
-	Type               GuestType  `json:"type"`
-	UptimeInSeconds    uint       `json:"uptime"`
-}
-
-const (
-	guestApiKeyName string = "name"
-)
-
-// https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/resources
-func (GuestResource) mapToStruct(params []interface{}) []GuestResource {
-	if len(params) == 0 {
-		return nil
-	}
-	resources := make([]GuestResource, len(params))
-	for i := range params {
-		tmpParams := params[i].(map[string]interface{})
-		if _, isSet := tmpParams["maxcpu"]; isSet {
-			resources[i].CpuCores = uint(tmpParams["maxcpu"].(float64))
-		}
-		if _, isSet := tmpParams["cpu"]; isSet {
-			resources[i].CpuUsage = tmpParams["cpu"].(float64)
-		}
-		if _, isSet := tmpParams["diskread"]; isSet {
-			resources[i].DiskReadTotal = uint(tmpParams["diskread"].(float64))
-		}
-		if _, isSet := tmpParams["maxdisk"]; isSet {
-			resources[i].DiskSizeInBytes = uint(tmpParams["maxdisk"].(float64))
-		}
-		if _, isSet := tmpParams["disk"]; isSet {
-			resources[i].DiskUsedInBytes = uint(tmpParams["disk"].(float64))
-		}
-		if _, isSet := tmpParams["diskwrite"]; isSet {
-			resources[i].DiskWriteTotal = uint(tmpParams["diskwrite"].(float64))
-		}
-		if _, isSet := tmpParams["hastate"]; isSet {
-			resources[i].HaState = tmpParams["hastate"].(string)
-		}
-		if _, isSet := tmpParams["vmid"]; isSet {
-			resources[i].Id = GuestID(tmpParams["vmid"].(float64))
-		}
-		if _, isSet := tmpParams["maxmem"]; isSet {
-			resources[i].MemoryTotalInBytes = uint(tmpParams["maxmem"].(float64))
-		}
-		if _, isSet := tmpParams["mem"]; isSet {
-			resources[i].MemoryUsedInBytes = uint(tmpParams["mem"].(float64))
-		}
-		if v, isSet := tmpParams[guestApiKeyName]; isSet {
-			resources[i].Name = GuestName(v.(string))
-		}
-		if _, isSet := tmpParams["netin"]; isSet {
-			resources[i].NetworkIn = uint(tmpParams["netin"].(float64))
-		}
-		if _, isSet := tmpParams["netout"]; isSet {
-			resources[i].NetworkOut = uint(tmpParams["netout"].(float64))
-		}
-		if _, isSet := tmpParams["node"]; isSet {
-			resources[i].Node = tmpParams["node"].(string)
-		}
-		if _, isSet := tmpParams["status"]; isSet {
-			resources[i].Status = PowerState(0).parse(tmpParams["status"].(string))
-		}
-		if _, isSet := tmpParams["tags"]; isSet {
-			resources[i].Tags = Tags{}.mapToSDK(tmpParams["tags"].(string))
-		}
-		if _, isSet := tmpParams["template"]; isSet {
-			resources[i].Template = Itob(int(tmpParams["template"].(float64)))
-		}
-		if _, isSet := tmpParams["type"]; isSet {
-			resources[i].Type = GuestType(tmpParams["type"].(string))
-		}
-		if _, isSet := tmpParams["uptime"]; isSet {
-			resources[i].UptimeInSeconds = uint(tmpParams["uptime"].(float64))
-		}
-	}
-	return resources
-}
-
 // Enum
 type GuestFeature string
 
@@ -475,15 +379,6 @@ func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (feature
 	}
 	features.Snapshot, err = guestHasFeature(ctx, vmr, client, GuestFeature_Snapshot)
 	return
-}
-
-// List all guest the user has viewing rights for in the cluster
-func ListGuests(ctx context.Context, client *Client) ([]GuestResource, error) {
-	list, err := client.GetResourceList(ctx, "vm")
-	if err != nil {
-		return nil, err
-	}
-	return GuestResource{}.mapToStruct(list), nil
 }
 
 func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) ([]interface{}, error) {
