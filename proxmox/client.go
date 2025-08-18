@@ -946,6 +946,10 @@ func (c *Client) GetNextIdNoCheck(ctx context.Context, startID *GuestID) (GuestI
 	}
 	tmpID, err := c.GetItemConfigString(ctx, url, "API", "cluster/nextid")
 	if err != nil {
+		if err.Error() == "400 Parameter verification failed." {
+			*startID++
+			return c.GetNextID(ctx, startID)
+		}
 		return 0, err
 	}
 	var id int
