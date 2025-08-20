@@ -20,6 +20,8 @@ func (w *errorWrapper[T]) Error() string {
 	return w.err.Error() + ": " + w.id.errorContext()
 }
 
+func (w *errorWrapper[T]) Unwrap() error { return w.err }
+
 type errorContext interface {
 	errorContext() string
 }
