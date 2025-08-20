@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"crypto/sha1"
 	"errors"
 	"maps"
@@ -2633,6 +2634,51 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current), name)
 			})
 		}
+	}
+}
+
+func Test_ConfigLXC_Update(t *testing.T) {
+	tests := []struct {
+		name   string
+		vmr    *VmRef
+		client *Client
+		err    error
+	}{
+		{name: `client nil`,
+			err: errors.New(Client_Error_Nil)},
+		{name: `client not initialized`,
+			client: util.Pointer(Client{}),
+			err:    errors.New(Client_Error_NotInitialized)},
+		{name: `vmr nil`,
+			client: fakeClient(),
+			err:    errors.New(VmRef_Error_Nil)},
+	}
+	for _, test := range tests {
+		var err error
+		require.NotPanics(t, func() { err = ConfigLXC{}.Update(context.Background(), true, test.vmr, test.client) })
+		require.Equal(t, test.err, err)
+	}
+}
+func Test_ConfigLXC_UpdateNoCheck(t *testing.T) {
+	tests := []struct {
+		name   string
+		vmr    *VmRef
+		client *Client
+		err    error
+	}{
+		{name: `client nil`,
+			err: errors.New(Client_Error_Nil)},
+		{name: `client not initialized`,
+			client: util.Pointer(Client{}),
+			err:    errors.New(Client_Error_NotInitialized)},
+		{name: `vmr nil`,
+			client: fakeClient(),
+			err:    errors.New(VmRef_Error_Nil)},
+	}
+	for _, test := range tests {
+		var err error
+		require.NotPanics(t, func() { err = ConfigLXC{}.Update(context.Background(), true, test.vmr, test.client) })
+		require.Equal(t, test.err, err)
 	}
 }
 

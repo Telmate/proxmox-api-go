@@ -242,11 +242,17 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 }
 
 func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
-	rawStatus, err := vmr.GetRawGuestStatus(ctx, c)
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+	if err := c.CheckVmRef(ctx, vmr); err != nil {
+		return err
+	}
+	rawStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
 	if err != nil {
 		return err
 	}
-	raw, err := NewRawConfigLXCFromAPI(ctx, vmr, c)
+	raw, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
@@ -254,22 +260,28 @@ func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRe
 	if err := config.Validate(current); err != nil {
 		return err
 	}
-	return config.updateNoCheck(ctx, allowRestart, vmr, current, rawStatus.State(), c)
+	return config.update_Unsafe(ctx, allowRestart, vmr, current, rawStatus.State(), c)
 }
 
 func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
-	rawStatus, err := vmr.GetRawGuestStatus(ctx, c)
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+	if vmr == nil {
+		return errors.New(VmRef_Error_Nil)
+	}
+	rawStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
 	if err != nil {
 		return err
 	}
-	raw, err := NewRawConfigLXCFromAPI(ctx, vmr, c)
+	raw, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
-	return config.updateNoCheck(ctx, allowRestart, vmr, raw.all(*vmr), rawStatus.State(), c)
+	return config.update_Unsafe(ctx, allowRestart, vmr, raw.all(*vmr), rawStatus.State(), c)
 }
 
-func (config ConfigLXC) updateNoCheck(
+func (config ConfigLXC) update_Unsafe(
 	ctx context.Context,
 	allowRestart bool,
 	vmr *VmRef,
@@ -336,7 +348,7 @@ func (config ConfigLXC) updateNoCheck(
 			}
 		}
 
-		newCurrent, err := NewRawConfigLXCFromAPI(ctx, vmr, c) // We have to refetch part of the current config
+		newCurrent, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c) // We have to refetch part of the current config
 		if err != nil {
 			return err
 		}
