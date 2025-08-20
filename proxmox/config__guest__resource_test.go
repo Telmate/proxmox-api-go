@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -68,7 +69,7 @@ func Test_RawGuestResources_Get(t *testing.T) {
 			output: []GuestResource{{Type: GuestQemu}}},
 		{name: "Uptime",
 			input:  RawGuestResources{map[string]any{"uptime": float64(72169)}},
-			output: []GuestResource{{Uptime: 72169}}},
+			output: []GuestResource{{Uptime: 72169 * time.Second}}},
 		{name: "[]GuestResource",
 			input: RawGuestResources{
 				map[string]any{
@@ -151,7 +152,7 @@ func Test_RawGuestResources_Get(t *testing.T) {
 					Tags:               []Tag{"tag1", "tag2", "tag3"},
 					Template:           false,
 					Type:               GuestQemu,
-					Uptime:             72169,
+					Uptime:             72169 * time.Second,
 				},
 				{
 					CpuCores:           50,
@@ -172,7 +173,7 @@ func Test_RawGuestResources_Get(t *testing.T) {
 					Tags:               []Tag{"dev"},
 					Template:           false,
 					Type:               GuestLXC,
-					Uptime:             88678345,
+					Uptime:             88678345 * time.Second,
 				},
 				{
 					CpuCores:           1,
