@@ -443,9 +443,7 @@ func (pool PoolName) setGuestsNoCheck(ctx context.Context, c *Client, guestIDs [
 	return pool.addGuestsNoCheck(ctx, c, guestIDs, currentGuests, version)
 }
 
-func (pool PoolName) String() string {
-	return string(pool)
-}
+func (pool PoolName) String() string { return string(pool) } // String is for fmt.Stringer.
 
 func (config PoolName) Validate() error {
 	if config == "" {

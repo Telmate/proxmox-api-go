@@ -15,7 +15,7 @@ type qemuUSB struct {
 	Mapping ResourceMappingUsbID
 }
 
-func (usb qemuUSB) String() (param string) {
+func (usb qemuUSB) String() (param string) { // String is for fmt.Stringer.
 	switch usb.enum {
 	case qemuUsbEnumSpice:
 		param = "spice"
@@ -114,9 +114,7 @@ const (
 	QemuUsbID4 QemuUsbID = 4
 )
 
-func (id QemuUsbID) String() string {
-	return strconv.Itoa(int(id))
-}
+func (id QemuUsbID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
 func (id QemuUsbID) Validate() error {
 	if id > QemuUsbIDMaximum {
@@ -318,9 +316,7 @@ func (id UsbDeviceID) Validate() error {
 	return nil
 }
 
-func (id UsbDeviceID) String() string {
-	return string(id)
-}
+func (id UsbDeviceID) String() string { return string(id) } // String is for fmt.Stringer.
 
 type UsbPortID string // regex: \d+-\d+
 
@@ -328,9 +324,7 @@ const (
 	UsbPortID_Error_Invalid string = "invalid usb port id. Expected expression of the form '<bus>-<port>(.<port>)*' where bus and port are integers"
 )
 
-func (id UsbPortID) String() string {
-	return string(id)
-}
+func (id UsbPortID) String() string { return string(id) } // String is for fmt.Stringer.
 
 func (id UsbPortID) Validate() error {
 	idArray := strings.Split(string(id), "-")

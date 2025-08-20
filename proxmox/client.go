@@ -2385,9 +2385,7 @@ func (v Version) Encode() EncodedVersion {
 }
 
 // Greater returns true if the version is greater than the other version.
-func (v Version) Greater(other Version) bool {
-	return v.Encode() > other.Encode()
-}
+func (v Version) Greater(other Version) bool { return v.Encode() > other.Encode() }
 
 func (Version) mapToSDK(params map[string]any) (Version, error) {
 	if itemValue, isSet := params["version"]; isSet {
@@ -2430,9 +2428,7 @@ func (version Version) max() Version {
 }
 
 // Smaller returns true if the version is less than the other version.
-func (v Version) Smaller(other Version) bool {
-	return v.Encode() < other.Encode()
-}
+func (v Version) Smaller(other Version) bool { return v.Encode() < other.Encode() }
 
 func (v Version) String() string {
 	return strconv.FormatInt(int64(v.Major), 10) + "." + strconv.FormatInt(int64(v.Minor), 10) + "." + strconv.FormatInt(int64(v.Patch), 10)

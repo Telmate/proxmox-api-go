@@ -1086,7 +1086,7 @@ func (confMap QemuDevice) readDeviceConfig(confList []string) {
 	}
 }
 
-func (c ConfigQemu) String() string {
+func (c ConfigQemu) String() string { // String is for fmt.Stringer.
 	jsConf, _ := json.Marshal(c)
 	return string(jsConf)
 }

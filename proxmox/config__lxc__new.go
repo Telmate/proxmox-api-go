@@ -13,9 +13,7 @@ import (
 
 type CpuArchitecture string
 
-func (arch CpuArchitecture) String() string { // String is for fmt.Stringer.
-	return string(arch)
-}
+func (arch CpuArchitecture) String() string { return string(arch) } // String is for fmt.Stringer.
 
 type OperatingSystem string
 

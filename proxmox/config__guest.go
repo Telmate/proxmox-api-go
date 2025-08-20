@@ -258,9 +258,7 @@ func (id GuestID) ExistsNoCheck(ctx context.Context, c *Client) (bool, error) {
 	return false, nil
 }
 
-func (id GuestID) String() string {
-	return strconv.Itoa(int(id))
-}
+func (id GuestID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
 func (id GuestID) Validate() error {
 	if id < GuestIdMinimum {

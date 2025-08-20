@@ -163,9 +163,7 @@ func (c PermissionCategory) path() permissionPath {
 	return ""
 }
 
-func (c PermissionCategory) String() string {
-	return string(c)
-}
+func (c PermissionCategory) String() string { return string(c) } // String is for fmt.Stringer.
 
 func (c PermissionCategory) Validate() error {
 	for _, e := range c.enumArray() {
@@ -261,7 +259,7 @@ type Privileges struct {
 	VMSnapshotRollback        bool `json:"VM.Snapshot.Rollback,omitempty"`
 }
 
-func (p Privileges) String() (privileges string) {
+func (p Privileges) String() (privileges string) { // String is for fmt.Stringer.
 	if p.DatastoreAllocate {
 		privileges += key_Privileges_DatastoreAllocate + ", "
 	}

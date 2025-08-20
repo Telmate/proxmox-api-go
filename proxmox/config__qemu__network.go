@@ -342,9 +342,7 @@ const (
 	QemuNetworkInterfaceIDMaximum QemuNetworkInterfaceID = QemuNetworkInterfaceID31
 )
 
-func (id QemuNetworkInterfaceID) String() string {
-	return strconv.Itoa(int(id))
-}
+func (id QemuNetworkInterfaceID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
 func (id QemuNetworkInterfaceID) Validate() error {
 	if id > QemuNetworkInterfaceIDMaximum {
@@ -459,7 +457,7 @@ func (QemuNetworkModel) Error() error {
 }
 
 // returns the model with proper dashes, underscores and capitalization
-func (model QemuNetworkModel) String() string {
+func (model QemuNetworkModel) String() string { // String is for fmt.Stringer.
 	models := QemuNetworkModel("").enumMap()
 	if v, ok := models[QemuNetworkModel(strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(model), "_", ""), "-", "")))]; ok {
 		return string(v)

@@ -14,9 +14,7 @@ const (
 	Vlan_Error_Invalid string = "vlan tag must be in the range 0-4095"
 )
 
-func (config Vlan) String() string {
-	return strconv.FormatInt(int64(config), 10)
-}
+func (config Vlan) String() string { return strconv.FormatInt(int64(config), 10) } // String is for fmt.Stringer.
 
 func (config Vlan) Validate() error {
 	if config > VlanMaximum {

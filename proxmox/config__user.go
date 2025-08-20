@@ -335,7 +335,7 @@ func (UserID) mapToStruct(userId string) UserID {
 
 // Converts the userID to "username@realm"
 // Returns an empty string when either the Name or Realm is empty
-func (id UserID) String() string {
+func (id UserID) String() string { // String is for fmt.Stringer.
 	if id.Name == "" || id.Realm == "" {
 		return ""
 	}
