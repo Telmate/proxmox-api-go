@@ -37,7 +37,7 @@ func Test_ConfigPool_mapToApi(t *testing.T) {
 				new: ConfigPool{
 					Name:    "test",
 					Comment: util.Pointer("test-comment"),
-					Guests:  &[]uint{100, 300, 200}}},
+					Guests:  &[]GuestID{100, 300, 200}}},
 			output: map[string]interface{}{
 				"poolid":  "test",
 				"comment": "test-comment"}},
@@ -53,18 +53,18 @@ func Test_ConfigPool_mapToApi(t *testing.T) {
 				"comment": "test-comment"}},
 		{name: `Create members`,
 			input: testInput{
-				new: ConfigPool{Guests: &[]uint{100, 300, 200}}},
+				new: ConfigPool{Guests: &[]GuestID{100, 300, 200}}},
 			output: map[string]interface{}{"poolid": ""}},
 		{name: `Update Full`,
 			input: testInput{
 				new: ConfigPool{
 					Name:    "test",
 					Comment: util.Pointer("test-comment"),
-					Guests:  &[]uint{100, 300, 200}},
+					Guests:  &[]GuestID{100, 300, 200}},
 				current: &ConfigPool{
 					Name:    "test",
 					Comment: util.Pointer("old-comment"),
-					Guests:  &[]uint{100, 300}}},
+					Guests:  &[]GuestID{100, 300}}},
 			output: map[string]interface{}{
 				"comment": "test-comment"}},
 		{name: `Update poolid`,
@@ -80,8 +80,8 @@ func Test_ConfigPool_mapToApi(t *testing.T) {
 				"comment": "test-comment"}},
 		{name: `Update members`,
 			input: testInput{
-				new:     ConfigPool{Guests: &[]uint{100, 300, 200}},
-				current: &ConfigPool{Guests: &[]uint{100, 300}}},
+				new:     ConfigPool{Guests: &[]GuestID{100, 300, 200}},
+				current: &ConfigPool{Guests: &[]GuestID{100, 300}}},
 			output: map[string]interface{}{}},
 	}
 	for _, test := range tests {
@@ -108,7 +108,7 @@ func Test_ConfigPool_mapToSDK(t *testing.T) {
 			output: ConfigPool{
 				Name:    "test",
 				Comment: util.Pointer("test"),
-				Guests:  &[]uint{100, 300, 200}}},
+				Guests:  &[]GuestID{100, 300, 200}}},
 		{name: "poolid",
 			input:  map[string]interface{}{"poolid": "test"},
 			output: ConfigPool{Name: "test"}},
@@ -121,7 +121,7 @@ func Test_ConfigPool_mapToSDK(t *testing.T) {
 					map[string]interface{}{"vmid": float64(100)},
 					map[string]interface{}{"vmid": float64(300)},
 					map[string]interface{}{"vmid": float64(200)}}},
-			output: ConfigPool{Guests: &[]uint{100, 300, 200}}},
+			output: ConfigPool{Guests: &[]GuestID{100, 300, 200}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -253,43 +253,43 @@ func Test_PoolName_GetNoCheck(t *testing.T) {
 
 func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 	type testInput struct {
-		guests      []GuestResource
-		guestsToAdd []uint
+		guests      RawGuestResources
+		guestsToAdd []GuestID
 	}
 	tests := []struct {
 		name   string
 		input  testInput
-		output map[PoolName][]uint
+		output map[PoolName][]GuestID
 	}{
 		{name: `'guestsToAdd' Not in 'guests'`,
 			input: testInput{
-				guests: []GuestResource{
-					{Id: 100, Pool: "test"},
-					{Id: 200, Pool: "poolA"},
-					{Id: 300, Pool: "test"}},
-				guestsToAdd: []uint{700, 800, 900}},
-			output: map[PoolName][]uint{}},
+				guests: RawGuestResources{
+					{"vmid": float64(100), "pool": "test"},
+					{"vmid": float64(200), "pool": "poolA"},
+					{"vmid": float64(300), "pool": "test"}},
+				guestsToAdd: []GuestID{700, 800, 900}},
+			output: map[PoolName][]GuestID{}},
 		{name: `Empty`,
-			output: map[PoolName][]uint{}},
+			output: map[PoolName][]GuestID{}},
 		{name: `Empty 'guests'`,
 			input: testInput{
-				guestsToAdd: []uint{100, 300, 200}},
-			output: map[PoolName][]uint{}},
+				guestsToAdd: []GuestID{100, 300, 200}},
+			output: map[PoolName][]GuestID{}},
 		{name: `Empty 'guestsToAdd'`,
 			input: testInput{
-				guests: []GuestResource{
-					{Id: 100, Pool: "test"},
-					{Id: 200, Pool: "poolA"},
-					{Id: 300, Pool: "test"}}},
-			output: map[PoolName][]uint{}},
+				guests: RawGuestResources{
+					{"vmid": float64(100), "pool": "test"},
+					{"vmid": float64(200), "pool": "poolA"},
+					{"vmid": float64(300), "pool": "test"}}},
+			output: map[PoolName][]GuestID{}},
 		{name: `Full`,
 			input: testInput{
-				guests: []GuestResource{
-					{Id: 100, Pool: "test"},
-					{Id: 200, Pool: "poolA"},
-					{Id: 300, Pool: "test"}},
-				guestsToAdd: []uint{100, 300, 200}},
-			output: map[PoolName][]uint{
+				guests: RawGuestResources{
+					{"vmid": float64(100), "pool": "test"},
+					{"vmid": float64(200), "pool": "poolA"},
+					{"vmid": float64(300), "pool": "test"}},
+				guestsToAdd: []GuestID{100, 300, 200}},
+			output: map[PoolName][]GuestID{
 				"test":  {100, 300},
 				"poolA": {200}}},
 	}
@@ -327,13 +327,13 @@ func Test_PoolName_SetGuestsNoCheck(t *testing.T) {
 func Test_PoolName_mapToString(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  []uint
+		input  []GuestID
 		output string
 	}{
 		{name: `empty`,
-			input: []uint{}},
+			input: []GuestID{}},
 		{name: `full`,
-			input:  []uint{100, 300, 200},
+			input:  []GuestID{100, 300, 200},
 			output: "100,300,200"},
 		{name: `nil`},
 	}

@@ -231,9 +231,7 @@ func (ci CloudInitCustom) Validate() (err error) {
 	return
 }
 
-func (ci CloudInitCustom) String() string {
-	return ci.mapToAPI(nil)
-}
+func (ci CloudInitCustom) String() string { return ci.mapToAPI(nil) } // String is for fmt.Stringer.
 
 type CloudInitIPv4Config struct {
 	Address *IPv4CIDR    `json:"address,omitempty"`
@@ -278,7 +276,7 @@ func (config CloudInitIPv4Config) mapToAPI(current *CloudInitIPv4Config) string 
 	return param
 }
 
-func (config CloudInitIPv4Config) String() string {
+func (config CloudInitIPv4Config) String() string { // String is for fmt.Stringer.
 	param := config.mapToAPI(nil)
 	if param != "" {
 		return param[1:]
@@ -349,7 +347,7 @@ func (config CloudInitIPv6Config) mapToAPI(current *CloudInitIPv6Config) string 
 	return param
 }
 
-func (config CloudInitIPv6Config) String() string {
+func (config CloudInitIPv6Config) String() string { // String is for fmt.Stringer.
 	param := config.mapToAPI(nil)
 	if param != "" {
 		return param[1:]
@@ -551,9 +549,7 @@ func (CloudInitSnippet) mapToSDK(param string) *CloudInitSnippet {
 	return nil
 }
 
-func (config CloudInitSnippet) String() string {
-	return config.Storage + ":" + string(config.FilePath)
-}
+func (config CloudInitSnippet) String() string { return config.Storage + ":" + string(config.FilePath) } // String is for fmt.Stringer.
 
 func (ci CloudInitSnippet) Validate() error {
 	if ci.FilePath != "" {

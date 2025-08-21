@@ -42,7 +42,7 @@ func (key AuthorizedKey) MarshalJSON() ([]byte, error) {
 	return json.Marshal(key.String())
 }
 
-func (key AuthorizedKey) String() string {
+func (key AuthorizedKey) String() string { // String is for fmt.Stringer.
 	if key.PublicKey == nil {
 		return ""
 	}

@@ -91,11 +91,104 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 		vmType: vmRefQemu}, nil
 }
 
+func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+	guestID := vmr.VmId()
+	if guestID == 0 {
+		return errors.New(VmRef_Error_IDnotSet)
+	}
+
+	rawGuests, err := listGuests_Unsafe(ctx, c)
+	if err != nil {
+		return err
+	}
+	rawGuest, err := rawGuests.SelectID(guestID)
+	if err != nil {
+		return err
+	}
+
+	guestType := rawGuest.GetType()
+	vmr.node = rawGuest.GetNode()
+	vmr.vmType = string(guestType)
+
+	var protection bool // Check if guest is protected
+	switch guestType {
+	case GuestQemu:
+		rawConfig, err := newRawConfigQemuFromAPI_Unsafe(ctx, &vmr, c)
+		if err != nil {
+			return err
+		}
+		protection = rawConfig.Protection()
+	case GuestLXC:
+		rawConfig, err := newRawConfigLXCFromAPI_Unsafe(ctx, &vmr, c)
+		if err != nil {
+			return err
+		}
+		protection = rawConfig.Protection()
+	}
+	if protection {
+		return errorMsg{}.guestIsProtectedCantDelete(guestID)
+	}
+
+	if rawGuest.GetStatus() != PowerStateStopped { // Check if guest is running
+		for {
+			guestStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
+			if err != nil {
+				return err
+			}
+			if guestStatus.State() == PowerStateStopped {
+				break
+			}
+			if err := vmr.forceStop_Unsafe(ctx, c); err != nil {
+				return err
+			}
+		}
+	}
+	return vmr.delete_Unsafe(ctx, c)
+}
+
+func (vmr VmRef) DeleteNoCheck(ctx context.Context, c *Client) error {
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+	return vmr.delete_Unsafe(ctx, c)
+}
+
+func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
+	_, err := c.DeleteVmParams(ctx, vmr, nil) // TODO use a more optimized version
+	return err
+}
+
+func (vmr *VmRef) ForceStop(ctx context.Context, c *Client) error {
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+	if err := c.CheckVmRef(ctx, vmr); err != nil {
+		return err
+	}
+	return vmr.forceStop_Unsafe(ctx, c)
+}
+
+func (vmr *VmRef) forceStop_Unsafe(ctx context.Context, c *Client) error {
+	_, err := c.StatusChangeVm(ctx, vmr, map[string]any{ // TODO use a more optimized version
+		"overrule-shutdown": int(1)}, "stop")
+	return err
+}
+
 func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestStatus, error) {
+	if err := c.checkInitialized(); err != nil {
+		return nil, err
+	}
 	err := c.CheckVmRef(ctx, vmr)
 	if err != nil {
 		return nil, err
 	}
+	return vmr.getRawGuestStatus_Unsafe(ctx, c)
+}
+
+func (vmr *VmRef) getRawGuestStatus_Unsafe(ctx context.Context, c *Client) (RawGuestStatus, error) {
 	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
 }
 
@@ -131,6 +224,21 @@ func (vmr *VmRef) migrate_Unsafe(ctx context.Context, c *Client, newNode NodeNam
 		params["online"] = 1
 	}
 	_, err := c.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/migrate")
+	return err
+}
+
+func (vmr *VmRef) Stop(ctx context.Context, c *Client) error {
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+	if err := c.CheckVmRef(ctx, vmr); err != nil {
+		return err
+	}
+	return vmr.stop_Unsafe(ctx, c)
+}
+
+func (vmr *VmRef) stop_Unsafe(ctx context.Context, c *Client) error {
+	_, err := c.StatusChangeVm(ctx, vmr, nil, "stop")
 	return err
 }
 

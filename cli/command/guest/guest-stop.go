@@ -13,8 +13,7 @@ var guest_stopCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		vmr := proxmox.NewVmRef(cli.ValidateGuestIDset(args, "GuestID"))
 		c := cli.NewClient()
-		_, err = c.StopVm(cli.Context(), vmr)
-		if err == nil {
+		if err = vmr.Stop(cli.Context(), c); err == nil {
 			cli.PrintGuestStatus(GuestCmd.OutOrStdout(), vmr.VmId(), "stopped")
 		}
 		return

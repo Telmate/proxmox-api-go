@@ -16,9 +16,7 @@ const (
 	SerialID_Errors_Invalid string   = "serial id must be one of 0,1,2,3"
 )
 
-func (id SerialID) String() string {
-	return strconv.Itoa(int(id))
-}
+func (id SerialID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
 func (id SerialID) Validate() error {
 	if id > 3 {

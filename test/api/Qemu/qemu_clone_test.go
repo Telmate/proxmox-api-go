@@ -70,6 +70,6 @@ func Test_Qemu_VM_Is_Cloned(t *testing.T) {
 func Test_Clone_Qemu_VM_Cleanup(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	Test.GetClient().DeleteVm(context.Background(), _create_clone_vmref())
-	Test.GetClient().DeleteVm(context.Background(), _create_vmref())
+	_create_clone_vmref().Delete(context.Background(), Test.GetClient())
+	_create_vmref().Delete(context.Background(), Test.GetClient())
 }

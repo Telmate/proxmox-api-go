@@ -119,9 +119,7 @@ const (
 	LxcCpuCores_Error_Invalid = "cpu cores should be in the range 0-8192"
 )
 
-func (cores LxcCpuCores) String() string {
-	return strconv.FormatUint(uint64(cores), 10)
-}
+func (cores LxcCpuCores) String() string { return strconv.FormatUint(uint64(cores), 10) } // String is for fmt.Stringer.
 
 func (cores LxcCpuCores) Validate() error {
 	if cores > LxcCpuCoresMaximum {
@@ -138,9 +136,7 @@ const (
 	LxcCpuLimit_Error_Invalid = "cpu limit should be in the range 0-8192"
 )
 
-func (limit LxcCpuLimit) String() string {
-	return strconv.FormatFloat(float64(limit), 'f', -1, 32)
-}
+func (limit LxcCpuLimit) String() string { return strconv.FormatFloat(float64(limit), 'f', -1, 32) } // String is for fmt.Stringer.
 
 func (limit LxcCpuLimit) Validate() error {
 	if limit > LxcCpuLimitMaximum {
@@ -159,9 +155,7 @@ const (
 	LxcCpuUnits_Error_Maximum = "cpu units has a maximum of 100000"
 )
 
-func (units LxcCpuUnits) String() string {
-	return strconv.FormatUint(uint64(units), 10)
-}
+func (units LxcCpuUnits) String() string { return strconv.FormatUint(uint64(units), 10) } // String is for fmt.Stringer.
 
 func (units LxcCpuUnits) Validate() error {
 	if units == LxcCpuUnitsDefault {

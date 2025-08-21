@@ -589,7 +589,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	}
 
 	if config.Pool != nil { // update pool membership
-		guestSetPoolNoCheck(ctx, client, uint(vmr.vmId), *config.Pool, currentConfig.Pool, version)
+		guestSetPoolNoCheck(ctx, client, vmr.vmId, *config.Pool, currentConfig.Pool, version)
 	}
 
 	if stopped { // start vm if it was stopped
@@ -1086,7 +1086,7 @@ func (confMap QemuDevice) readDeviceConfig(confList []string) {
 	}
 }
 
-func (c ConfigQemu) String() string {
+func (c ConfigQemu) String() string { // String is for fmt.Stringer.
 	jsConf, _ := json.Marshal(c)
 	return string(jsConf)
 }
@@ -1196,7 +1196,17 @@ const (
 )
 
 func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
-	rawConfig, err := client.GetVmConfig(ctx, vmr)
+	if vmr == nil {
+		return nil, errors.New(VmRef_Error_Nil)
+	}
+	if client == nil {
+		return nil, errors.New(Client_Error_Nil)
+	}
+	return newRawConfigQemuFromAPI_Unsafe(ctx, vmr, client)
+}
+
+func newRawConfigQemuFromAPI_Unsafe(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
+	rawConfig, err := client.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
 	if err != nil {
 		return nil, err
 	}

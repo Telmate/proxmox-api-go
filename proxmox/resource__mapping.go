@@ -21,9 +21,7 @@ const (
 	ResourceMappingUsbID_Error_Invalid   string = resourceMappingUsbKey + mappingID_Error_Invalid
 )
 
-func (id ResourceMappingUsbID) String() string {
-	return string(id)
-}
+func (id ResourceMappingUsbID) String() string { return string(id) } // String is for fmt.Stringer.
 
 func (id ResourceMappingUsbID) Validate() error {
 	return mappingID(id).Validate(resourceMappingUsbKey)
@@ -42,9 +40,7 @@ const (
 	ResourceMappingPciID_Error_Invalid   string = resourceMappingPciKey + mappingID_Error_Invalid
 )
 
-func (id ResourceMappingPciID) String() string {
-	return string(id)
-}
+func (id ResourceMappingPciID) String() string { return string(id) } // String is for fmt.Stringer.
 
 func (id ResourceMappingPciID) Validate() error {
 	return mappingID(id).Validate(resourceMappingPciKey)

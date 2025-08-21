@@ -28,12 +28,12 @@ func Test_Stop_Qemu_VM(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
 
-	_, err := Test.GetClient().StopVm(context.Background(), _create_vmref())
+	err := _create_vmref().Stop(context.Background(), Test.GetClient())
 	require.NoError(t, err)
 }
 
 func Test_Start_Stop_Qemu_VM_Cleanup(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	Test.GetClient().DeleteVm(context.Background(), _create_vmref())
+	_ = _create_vmref().Delete(context.Background(), Test.GetClient())
 }

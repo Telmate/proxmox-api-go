@@ -66,6 +66,10 @@ const (
 	VmRef_Error_Nil string = "vm reference may not be nil"
 )
 
+const (
+	VmRef_Error_IDnotSet = "vm reference id not set"
+)
+
 // VmRef - virtual machine ref parts
 // map[type:qemu node:proxmox1-xx id:qemu/132 diskread:5.57424738e+08 disk:0 netin:5.9297450593e+10 mem:3.3235968e+09 uptime:1.4567097e+07 vmid:132 template:0 maxcpu:2 netout:6.053310416e+09 maxdisk:3.4359738368e+10 maxmem:8.592031744e+09 diskwrite:1.49663619584e+12 status:running cpu:0.00386980694947209 name:appt-app1-dev.xxx.xx]
 type VmRef struct {
@@ -224,11 +228,14 @@ func (c *Client) GetNodeList(ctx context.Context) (list map[string]interface{}, 
 
 const resourceListGuest string = "vm"
 
-// GetResourceList returns a list of all enabled proxmox resources.
-// For resource types that can be in a disabled state, disabled resources
-// will not be returned
 // TODO this func should not be exported
 func (c *Client) GetResourceList(ctx context.Context, resourceType string) (list []interface{}, err error) {
+	return c.getResourceList_Unsafe(ctx, resourceType)
+}
+
+// GetResourceList returns a list of all enabled proxmox resources.
+// For resource types that can be in a disabled state, disabled resources will not be returned.
+func (c *Client) getResourceList_Unsafe(ctx context.Context, resourceType string) ([]any, error) {
 	url := "/cluster/resources"
 	if resourceType != "" {
 		url = url + "?type=" + resourceType
@@ -543,6 +550,7 @@ func (c *Client) StartVm(ctx context.Context, vmr *VmRef) (exitStatus string, er
 	return c.StatusChangeVm(ctx, vmr, nil, "start")
 }
 
+// Deprecated: use VmRef.Stop() instead.
 func (c *Client) StopVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "stop")
 }
@@ -574,6 +582,7 @@ func (c *Client) ResumeVm(ctx context.Context, vmr *VmRef) (exitStatus string, e
 	return c.StatusChangeVm(ctx, vmr, nil, "resume")
 }
 
+// Deprecated: use VmRef.Delete() instead.
 func (c *Client) DeleteVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.DeleteVmParams(ctx, vmr, nil)
 }
@@ -2376,9 +2385,7 @@ func (v Version) Encode() EncodedVersion {
 }
 
 // Greater returns true if the version is greater than the other version.
-func (v Version) Greater(other Version) bool {
-	return v.Encode() > other.Encode()
-}
+func (v Version) Greater(other Version) bool { return v.Encode() > other.Encode() }
 
 func (Version) mapToSDK(params map[string]any) (Version, error) {
 	if itemValue, isSet := params["version"]; isSet {
@@ -2421,9 +2428,7 @@ func (version Version) max() Version {
 }
 
 // Smaller returns true if the version is less than the other version.
-func (v Version) Smaller(other Version) bool {
-	return v.Encode() < other.Encode()
-}
+func (v Version) Smaller(other Version) bool { return v.Encode() < other.Encode() }
 
 func (v Version) String() string {
 	return strconv.FormatInt(int64(v.Major), 10) + "." + strconv.FormatInt(int64(v.Minor), 10) + "." + strconv.FormatInt(int64(v.Patch), 10)

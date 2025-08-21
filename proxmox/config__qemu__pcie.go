@@ -92,9 +92,7 @@ const (
 	QemuPciID15 QemuPciID = 15
 )
 
-func (id QemuPciID) String() string {
-	return strconv.Itoa(int(id))
-}
+func (id QemuPciID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
 func (id QemuPciID) Validate() error {
 	if id > QemuPciIDMaximum {
@@ -300,7 +298,7 @@ const (
 	qemuPci_Error_Maximum string = " must be in the range 0x0000-0xFFFF"
 )
 
-func (config qemuPci) String() string {
+func (config qemuPci) String() string { // String is for fmt.Stringer.
 	var builder strings.Builder
 	if config.pCIe {
 		builder.WriteString(",pcie=1")
@@ -444,7 +442,7 @@ type PciDeviceID string
 
 const PciDeviceID_Error_Invalid string = "device id" + qemuPci_Error_Maximum
 
-func (id PciDeviceID) String() string {
+func (id PciDeviceID) String() string { // String is for fmt.Stringer.
 	if id == "" {
 		return ""
 	}
@@ -470,9 +468,7 @@ const (
 	PciMediatedDevice_Error_Invalid string = "mediated device may not include " + pciMediatedDevice_Filter
 )
 
-func (mDev PciMediatedDevice) String() string {
-	return string(mDev)
-}
+func (mDev PciMediatedDevice) String() string { return string(mDev) } // String is for fmt.Stringer.
 
 func (mDev PciMediatedDevice) Validate() error {
 	if strings.ContainsAny(string(mDev), pciMediatedDevice_Filter) {
@@ -487,7 +483,7 @@ type PciSubDeviceID string
 
 const PciSubDeviceID_Error_Invalid string = "sub device id" + qemuPci_Error_Maximum
 
-func (id PciSubDeviceID) String() string {
+func (id PciSubDeviceID) String() string { // String is for fmt.Stringer.
 	if id == "" {
 		return ""
 	}
@@ -510,7 +506,7 @@ type PciSubVendorID string
 
 const PciSubVendorID_Error_Invalid string = "sub vendor id" + qemuPci_Error_Maximum
 
-func (id PciSubVendorID) String() string {
+func (id PciSubVendorID) String() string { // String is for fmt.Stringer.
 	if id == "" {
 		return ""
 	}
@@ -533,7 +529,7 @@ type PciVendorID string
 
 const PciVendorID_Error_Invalid string = "vendor id" + qemuPci_Error_Maximum
 
-func (id PciVendorID) String() string {
+func (id PciVendorID) String() string { // String is for fmt.Stringer.
 	if id == "" {
 		return ""
 	}
@@ -566,9 +562,7 @@ const (
 	PciID_Error_MaximumFunction string = "pci id function identifier should be in the range 0-7"
 )
 
-func (id PciID) String() string {
-	return string(id)
-}
+func (id PciID) String() string { return string(id) } // String is for fmt.Stringer.
 
 func (id PciID) Validate() error {
 	idParts := strings.Split(string(id), ":")

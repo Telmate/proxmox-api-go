@@ -8,9 +8,7 @@ import (
 // stores a SHA1 digest as a 40-character hexadecimal string
 type digest string
 
-func (d digest) String() string {
-	return string(d)
-}
+func (d digest) String() string { return string(d) } // String is for fmt.Stringer.
 
 func (d digest) sha1() [sha1.Size]byte {
 	if len(d) != sha1.Size*2 {

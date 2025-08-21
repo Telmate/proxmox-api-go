@@ -51,7 +51,7 @@ func Test_Qemu_VM_Is_Updated(t *testing.T) {
 func Test_Remove_Qemu_VM(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	_, err := Test.GetClient().DeleteVm(context.Background(), _create_vmref())
+	err := _create_vmref().Delete(context.Background(), Test.GetClient())
 
 	require.NoError(t, err)
 }

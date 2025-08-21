@@ -55,9 +55,7 @@ func (name NodeName) Validate() error {
 	return nil
 }
 
-func (name NodeName) String() string {
-	return string(name)
-}
+func (name NodeName) String() string { return string(name) } // String is for fmt.Stringer.
 
 func (c *Client) nodeStatusCommand(ctx context.Context, node, command string) (exitStatus string, err error) {
 	nodes, err := c.GetNodeList(ctx)

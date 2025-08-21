@@ -13,9 +13,7 @@ import (
 
 type CpuArchitecture string
 
-func (arch CpuArchitecture) String() string { // String is for fmt.Stringer.
-	return string(arch)
-}
+func (arch CpuArchitecture) String() string { return string(arch) } // String is for fmt.Stringer.
 
 type OperatingSystem string
 
@@ -37,6 +35,7 @@ type ConfigLXC struct {
 	OperatingSystem OperatingSystem   `json:"os"`             // only returned
 	Pool            *PoolName         `json:"pool,omitempty"`
 	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, defaults to false ,never nil when returned
+	Protection      *bool             `json:"protection,omitempty"` // Never nil when returned
 	State           *PowerState       `json:"state,omitempty"`
 	Swap            *LxcSwap          `json:"swap,omitempty"` // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
@@ -141,7 +140,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		pool = *config.Pool
 		params[lxcApiKeyPool] = string(pool)
 	}
-
+	if config.Protection != nil && *config.Protection {
+		params[lxcAPIKeyProtection] = "1"
+	}
 	if config.Swap != nil {
 		params[lxcApiKeySwap] = int(*config.Swap)
 	}
@@ -214,6 +215,13 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 			config.Networks.mapToApiCreate(params)
 		}
 	}
+	if config.Protection != nil && (current.Protection == nil || *config.Protection != *current.Protection) {
+		if *config.Protection {
+			params[lxcAPIKeyProtection] = "1"
+		} else {
+			delete += "," + lxcAPIKeyProtection
+		}
+	}
 	if config.Swap != nil && (current.Swap == nil || *config.Swap != *current.Swap) {
 		params[lxcApiKeySwap] = int(*config.Swap)
 	}
@@ -232,11 +240,17 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 }
 
 func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
-	rawStatus, err := vmr.GetRawGuestStatus(ctx, c)
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+	if err := c.CheckVmRef(ctx, vmr); err != nil {
+		return err
+	}
+	rawStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
 	if err != nil {
 		return err
 	}
-	raw, err := NewConfigLXCFromApi(ctx, vmr, c)
+	raw, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
@@ -244,22 +258,28 @@ func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRe
 	if err := config.Validate(current); err != nil {
 		return err
 	}
-	return config.updateNoCheck(ctx, allowRestart, vmr, current, rawStatus.State(), c)
+	return config.update_Unsafe(ctx, allowRestart, vmr, current, rawStatus.State(), c)
 }
 
 func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
-	rawStatus, err := vmr.GetRawGuestStatus(ctx, c)
+	if err := c.checkInitialized(); err != nil {
+		return err
+	}
+	if vmr == nil {
+		return errors.New(VmRef_Error_Nil)
+	}
+	rawStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
 	if err != nil {
 		return err
 	}
-	raw, err := NewConfigLXCFromApi(ctx, vmr, c)
+	raw, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
 	if err != nil {
 		return err
 	}
-	return config.updateNoCheck(ctx, allowRestart, vmr, raw.all(*vmr), rawStatus.State(), c)
+	return config.update_Unsafe(ctx, allowRestart, vmr, raw.all(*vmr), rawStatus.State(), c)
 }
 
-func (config ConfigLXC) updateNoCheck(
+func (config ConfigLXC) update_Unsafe(
 	ctx context.Context,
 	allowRestart bool,
 	vmr *VmRef,
@@ -326,7 +346,7 @@ func (config ConfigLXC) updateNoCheck(
 			}
 		}
 
-		newCurrent, err := NewConfigLXCFromApi(ctx, vmr, c) // We have to refetch part of the current config
+		newCurrent, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c) // We have to refetch part of the current config
 		if err != nil {
 			return err
 		}
@@ -509,6 +529,7 @@ func (raw RawConfigLXC) all(vmr VmRef) *ConfigLXC {
 		Node:            util.Pointer(vmr.node),
 		OperatingSystem: raw.OperatingSystem(),
 		Privileged:      &privileged,
+		Protection:      util.Pointer(raw.Protection()),
 		Swap:            util.Pointer(raw.Swap()),
 		Tags:            raw.Tags(),
 		rawDigest:       raw.digest()}
@@ -580,6 +601,13 @@ func (raw RawConfigLXC) isPrivileged() bool {
 	return true // when privileged the API does not return the key at all, so we assume it is privileged
 }
 
+func (raw RawConfigLXC) Protection() bool {
+	if v, isSet := raw[lxcAPIKeyProtection]; isSet {
+		return int(v.(float64)) == 1
+	}
+	return false
+}
+
 func (raw RawConfigLXC) Swap() LxcSwap {
 	if v, isSet := raw[lxcApiKeySwap]; isSet {
 		return LxcSwap(v.(float64))
@@ -610,6 +638,7 @@ const (
 	lxcApiKeyOsTemplate      string = "ostemplate"
 	lxcApiKeyPassword        string = "password"
 	lxcApiKeyPool            string = "pool"
+	lxcAPIKeyProtection      string = "protection"
 	lxcApiKeyRootFS          string = "rootfs"
 	lxcApiKeySSHPublicKeys   string = "ssh-public-keys"
 	lxcApiKeySwap            string = "swap"
@@ -696,8 +725,18 @@ type LxcSwap uint
 
 func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String is for fmt.Stringer.
 
-func NewConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
-	rawConfig, err := c.GetVmConfig(ctx, vmr)
+func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
+	if vmr == nil {
+		return nil, errors.New(VmRef_Error_Nil)
+	}
+	if c == nil {
+		return nil, errors.New(Client_Error_Nil)
+	}
+	return newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
+}
+
+func newRawConfigLXCFromAPI_Unsafe(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
+	rawConfig, err := c.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
 	if err != nil {
 		return nil, err
 	}
