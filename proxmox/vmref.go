@@ -162,10 +162,10 @@ func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
 }
 
 func (vmr *VmRef) FroceStop(ctx context.Context, c *Client) error {
-	if err := c.CheckVmRef(ctx, vmr); err != nil {
+	if err := c.checkInitialized(); err != nil {
 		return err
 	}
-	if err := c.checkInitialized(); err != nil {
+	if err := c.CheckVmRef(ctx, vmr); err != nil {
 		return err
 	}
 	return vmr.forceStop_Unsafe(ctx, c)
@@ -178,6 +178,9 @@ func (vmr *VmRef) forceStop_Unsafe(ctx context.Context, c *Client) error {
 }
 
 func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestStatus, error) {
+	if err := c.checkInitialized(); err != nil {
+		return nil, err
+	}
 	err := c.CheckVmRef(ctx, vmr)
 	if err != nil {
 		return nil, err
