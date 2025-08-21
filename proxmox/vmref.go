@@ -161,7 +161,7 @@ func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
 	return err
 }
 
-func (vmr *VmRef) FroceStop(ctx context.Context, c *Client) error {
+func (vmr *VmRef) ForceStop(ctx context.Context, c *Client) error {
 	if err := c.checkInitialized(); err != nil {
 		return err
 	}
