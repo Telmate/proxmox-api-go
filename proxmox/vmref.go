@@ -157,7 +157,7 @@ func (vmr VmRef) DeleteNoCheck(ctx context.Context, c *Client) error {
 }
 
 func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
-	_, err := c.DeleteVmParams(ctx, vmr, nil)
+	_, err := c.DeleteVmParams(ctx, vmr, nil) // TODO use a more optimized version
 	return err
 }
 
@@ -172,7 +172,7 @@ func (vmr *VmRef) FroceStop(ctx context.Context, c *Client) error {
 }
 
 func (vmr *VmRef) forceStop_Unsafe(ctx context.Context, c *Client) error {
-	_, err := c.StatusChangeVm(ctx, vmr, map[string]any{
+	_, err := c.StatusChangeVm(ctx, vmr, map[string]any{ // TODO use a more optimized version
 		"overrule-shutdown": int(1)}, "stop")
 	return err
 }

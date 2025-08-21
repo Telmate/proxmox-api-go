@@ -736,7 +736,7 @@ func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConf
 }
 
 func newRawConfigLXCFromAPI_Unsafe(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
-	rawConfig, err := c.GetVmConfig(ctx, vmr)
+	rawConfig, err := c.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
 	if err != nil {
 		return nil, err
 	}

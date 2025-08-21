@@ -1206,7 +1206,7 @@ func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (R
 }
 
 func newRawConfigQemuFromAPI_Unsafe(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
-	rawConfig, err := client.GetVmConfig(ctx, vmr)
+	rawConfig, err := client.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
 	if err != nil {
 		return nil, err
 	}
