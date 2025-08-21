@@ -4378,7 +4378,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_ConfigQemu_all(t *testing.T) {
+func Test_ConfigQemu_get(t *testing.T) {
 	baseConfig := func(config ConfigQemu) *ConfigQemu {
 		if config.CPU == nil {
 			config.CPU = &QemuCPU{}
@@ -7354,7 +7354,7 @@ func Test_ConfigQemu_all(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				output, err := subTest.input.all(subTest.vmr)
+				output, err := subTest.input.get(subTest.vmr)
 				if err != nil {
 					require.Equal(t, subTest.err, err, name)
 				} else {

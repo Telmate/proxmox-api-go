@@ -839,7 +839,7 @@ func WaitForShutdown(ctx context.Context, vmr *VmRef, client *Client) (err error
 		if err != nil {
 			log.Print("Wait error:")
 			log.Println(err)
-		} else if raw.State() == PowerStateStopped {
+		} else if raw.GetState() == PowerStateStopped {
 			return nil
 		}
 		time.Sleep(5 * time.Second)
@@ -853,7 +853,7 @@ func SshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (sshPort
 	if err != nil {
 		return "", err
 	}
-	if raw.State() == PowerStateStopped {
+	if raw.GetState() == PowerStateStopped {
 		return "", fmt.Errorf("VM must be running first")
 	}
 	sshPort = strconv.Itoa(int(vmr.VmId()) + 22000)
@@ -875,7 +875,7 @@ func RemoveSshForwardUsernet(ctx context.Context, vmr *VmRef, client *Client) (e
 	if err != nil {
 		return err
 	}
-	if raw.State() == PowerStateStopped {
+	if raw.GetState() == PowerStateStopped {
 		return fmt.Errorf("VM must be running first")
 	}
 	_, err = client.MonitorCmd(ctx, vmr, "device_del net1")
@@ -907,7 +907,7 @@ func SendKeysString(ctx context.Context, vmr *VmRef, client *Client, keys string
 	if err != nil {
 		return err
 	}
-	if raw.State() == PowerStateStopped {
+	if raw.GetState() == PowerStateStopped {
 		return fmt.Errorf("VM must be running first")
 	}
 	for _, r := range keys {
@@ -1093,8 +1093,8 @@ func (c ConfigQemu) String() string { // String is for fmt.Stringer.
 
 type RawConfigQemu map[string]any
 
-func (raw RawConfigQemu) ALL(vmr *VmRef) (*ConfigQemu, error) {
-	config, err := raw.all(vmr)
+func (raw RawConfigQemu) Get(vmr *VmRef) (*ConfigQemu, error) {
+	config, err := raw.get(vmr)
 	if err != nil {
 		return nil, err
 	}
@@ -1102,59 +1102,59 @@ func (raw RawConfigQemu) ALL(vmr *VmRef) (*ConfigQemu, error) {
 	return config, nil
 }
 
-func (raw RawConfigQemu) all(vmr *VmRef) (*ConfigQemu, error) {
+func (raw RawConfigQemu) get(vmr *VmRef) (*ConfigQemu, error) {
 	config := ConfigQemu{
-		Agent:            raw.Agent(),
-		CPU:              raw.CPU(),
-		CloudInit:        raw.CloudInit(),
-		Description:      util.Pointer(raw.Description()),
-		Memory:           raw.Memory(),
-		Name:             util.Pointer(raw.Name()),
-		Networks:         raw.Networks(),
-		PciDevices:       raw.PciDevices(),
-		Protection:       util.Pointer(raw.Protection()),
-		RandomnessDevice: raw.RandomnessDevice(),
-		Serials:          raw.Serials(),
-		Tablet:           util.Pointer(raw.Tablet()),
-		Tags:             raw.Tags(),
-		USBs:             raw.USBs(),
+		Agent:            raw.GetAgent(),
+		CPU:              raw.GetCPU(),
+		CloudInit:        raw.GetCloudInit(),
+		Description:      util.Pointer(raw.GetDescription()),
+		Memory:           raw.GetMemory(),
+		Name:             util.Pointer(raw.GetName()),
+		Networks:         raw.GetNetworks(),
+		PciDevices:       raw.GetPciDevices(),
+		Protection:       util.Pointer(raw.GetProtection()),
+		RandomnessDevice: raw.GetRandomnessDevice(),
+		Serials:          raw.GetSerials(),
+		Tablet:           util.Pointer(raw.GetTablet()),
+		Tags:             raw.GetTags(),
+		USBs:             raw.GetUSBs(),
 	}
-	config.Disks, config.LinkedID = raw.Disks()
+	config.Disks, config.LinkedID = raw.GetDisks()
 	if err := config.mapToStruct(vmr, raw); err != nil {
 		return nil, err
 	}
 	return &config, nil
 }
 
-func (raw RawConfigQemu) Description() string {
+func (raw RawConfigQemu) GetDescription() string {
 	if v, isSet := raw[qemuApiKeyDescription]; isSet {
 		return v.(string)
 	}
 	return ""
 }
 
-func (raw RawConfigQemu) Name() GuestName {
+func (raw RawConfigQemu) GetName() GuestName {
 	if v, isSet := raw[qemuApiKeyName]; isSet {
 		return GuestName(v.(string))
 	}
 	return ""
 }
 
-func (raw RawConfigQemu) Protection() bool {
+func (raw RawConfigQemu) GetProtection() bool {
 	if v, isSet := raw[qemuApiKeyProtection]; isSet {
 		return int(v.(float64)) == 1
 	}
 	return false
 }
 
-func (raw RawConfigQemu) Tablet() bool {
+func (raw RawConfigQemu) GetTablet() bool {
 	if v, isSet := raw[qemuApiKeyTablet]; isSet {
 		return int(v.(float64)) == 1
 	}
 	return true
 }
 
-func (raw RawConfigQemu) Tags() *Tags {
+func (raw RawConfigQemu) GetTags() *Tags {
 	if v, isSet := raw[qemuApiKeyTags]; isSet {
 		return util.Pointer(Tags{}.mapToSDK(v.(string)))
 	}
@@ -1242,7 +1242,7 @@ func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (conf
 		vmr.pool = PoolName(v.(string))
 	}
 
-	config, err = raw.ALL(vmr)
+	config, err = raw.Get(vmr)
 	if err != nil {
 		return
 	}
