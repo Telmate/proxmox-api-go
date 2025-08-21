@@ -17,7 +17,7 @@ var guest_startCmd = &cobra.Command{
 		c := cli.NewClient()
 		raw, err := vmr.GetRawGuestStatus(cli.Context(), c)
 		if err == nil {
-			fmt.Fprintf(GuestCmd.OutOrStdout(), "Status of guest with id (%d) is %s\n", vmr.VmId(), raw.State())
+			fmt.Fprintf(GuestCmd.OutOrStdout(), "Status of guest with id (%d) is %s\n", vmr.VmId(), raw.GetState())
 		}
 		return
 	},

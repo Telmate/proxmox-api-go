@@ -67,7 +67,7 @@ func (config LxcCPU) mapToApiUpdate(current LxcCPU, params map[string]any) (dele
 	return
 }
 
-func (raw RawConfigLXC) CPU() *LxcCPU {
+func (raw RawConfigLXC) GetCPU() *LxcCPU {
 	cpu := LxcCPU{}
 	var parameterSet bool
 	if v, isSet := raw[lxcApiKeyCores]; isSet {

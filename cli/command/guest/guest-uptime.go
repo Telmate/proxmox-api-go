@@ -18,7 +18,7 @@ var guest_uptimeCmd = &cobra.Command{
 		c := cli.NewClient()
 		raw, err := vmr.GetRawGuestStatus(cli.Context(), c)
 		if err == nil {
-			fmt.Fprintln(GuestCmd.OutOrStdout(), "Uptime of guest with id "+vmr.VmId().String()+" is "+strconv.Itoa(int(raw.Uptime().Seconds())))
+			fmt.Fprintln(GuestCmd.OutOrStdout(), "Uptime of guest with id "+vmr.VmId().String()+" is "+strconv.Itoa(int(raw.GetUptime().Seconds())))
 		}
 		return
 	},

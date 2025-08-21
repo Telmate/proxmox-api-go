@@ -2682,7 +2682,7 @@ func Test_ConfigLXC_UpdateNoCheck(t *testing.T) {
 	}
 }
 
-func Test_RawConfigLXC_ALL(t *testing.T) {
+func Test_RawConfigLXC_Get(t *testing.T) {
 	parseIP := func(rawIP string) netip.Addr {
 		ip, err := netip.ParseAddr(rawIP)
 		failPanic(err)
@@ -3608,22 +3608,22 @@ func Test_RawConfigLXC_ALL(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.output, subTest.input.ALL(subTest.vmr, subTest.state), name)
+				require.Equal(t, subTest.output, subTest.input.Get(subTest.vmr, subTest.state), name)
 			})
 		}
 	}
 }
 
-func Test_RawConfigLXC_Digest(t *testing.T) {
+func Test_RawConfigLXC_GetDigest(t *testing.T) {
 	require.Equal(t,
 		[sha1.Size]byte{
 			0xaf, 0x06, 0x49, 0x23, 0xbb, 0xf2, 0x30, 0x15, 0x96, 0xaa,
 			0xc4, 0xc2, 0x73, 0xba, 0x32, 0x17, 0x8e, 0xbc, 0x4a, 0x96},
-		RawConfigLXC{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}.Digest(), "")
+		RawConfigLXC{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}.GetDigest(), "")
 }
 
-func Test_RawConfigLXC_Privileged(t *testing.T) {
-	require.Equal(t, true, RawConfigLXC{}.Privileged())
+func Test_RawConfigLXC_GetPrivileged(t *testing.T) {
+	require.Equal(t, true, RawConfigLXC{}.GetPrivileged())
 }
 
 func Test_LxcMemory_String(t *testing.T) {

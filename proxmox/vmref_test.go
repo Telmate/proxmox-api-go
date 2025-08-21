@@ -416,7 +416,7 @@ func Test_VmRef_MigrateNoCheck(t *testing.T) {
 	}
 }
 
-func Test_RawGuestStatus_ALL(t *testing.T) {
+func Test_RawGuestStatus_Get(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  RawGuestStatus
@@ -446,7 +446,7 @@ func Test_RawGuestStatus_ALL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, test.input.ALL(), test.name)
+			require.Equal(t, test.output, test.input.Get(), test.name)
 		})
 	}
 }

@@ -120,13 +120,13 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 		if err != nil {
 			return err
 		}
-		protection = rawConfig.Protection()
+		protection = rawConfig.GetProtection()
 	case GuestLXC:
 		rawConfig, err := newRawConfigLXCFromAPI_Unsafe(ctx, &vmr, c)
 		if err != nil {
 			return err
 		}
-		protection = rawConfig.Protection()
+		protection = rawConfig.GetProtection()
 	}
 	if protection {
 		return errorMsg{}.guestIsProtectedCantDelete(guestID)
@@ -138,7 +138,7 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 			if err != nil {
 				return err
 			}
-			if guestStatus.State() == PowerStateStopped {
+			if guestStatus.GetState() == PowerStateStopped {
 				break
 			}
 			if err := vmr.forceStop_Unsafe(ctx, c); err != nil {
@@ -480,7 +480,7 @@ type GuestStatus struct {
 
 type RawGuestStatus map[string]any
 
-func (raw RawGuestStatus) Name() GuestName {
+func (raw RawGuestStatus) GetName() GuestName {
 	if v, isSet := raw["name"]; isSet {
 		if name, ok := v.(string); ok {
 			return GuestName(name)
@@ -489,14 +489,14 @@ func (raw RawGuestStatus) Name() GuestName {
 	return ""
 }
 
-func (raw RawGuestStatus) ALL() GuestStatus {
+func (raw RawGuestStatus) Get() GuestStatus {
 	return GuestStatus{
-		Name:   raw.Name(),
-		State:  raw.State(),
-		Uptime: raw.Uptime()}
+		Name:   raw.GetName(),
+		State:  raw.GetState(),
+		Uptime: raw.GetUptime()}
 }
 
-func (raw RawGuestStatus) State() PowerState {
+func (raw RawGuestStatus) GetState() PowerState {
 	if v, isSet := raw["status"]; isSet {
 		if state, ok := v.(string); ok {
 			return PowerState(0).parse(state)
@@ -505,7 +505,7 @@ func (raw RawGuestStatus) State() PowerState {
 	return PowerStateUnknown
 }
 
-func (raw RawGuestStatus) Uptime() time.Duration {
+func (raw RawGuestStatus) GetUptime() time.Duration {
 	if v, isSet := raw["uptime"]; isSet {
 		if uptime, ok := v.(float64); ok {
 			return time.Duration(uptime) * time.Second
