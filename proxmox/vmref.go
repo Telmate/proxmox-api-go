@@ -471,7 +471,7 @@ func (clone cloneSettings) mapToAPI() (GuestID, NodeName, PoolName, map[string]i
 	return id, clone.Node, pool, params
 }
 
-// TODO add more properites to GuestStatus
+// TODO add more properties to GuestStatus
 type GuestStatus struct {
 	Name   GuestName     `json:"name"`
 	State  PowerState    `json:"state"`
