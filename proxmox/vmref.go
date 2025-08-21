@@ -185,7 +185,7 @@ func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestSta
 	if err != nil {
 		return nil, err
 	}
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
+	return vmr.getRawGuestStatus_Unsafe(ctx, c)
 }
 
 func (vmr *VmRef) getRawGuestStatus_Unsafe(ctx context.Context, c *Client) (RawGuestStatus, error) {
