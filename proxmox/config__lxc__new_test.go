@@ -2677,7 +2677,7 @@ func Test_ConfigLXC_UpdateNoCheck(t *testing.T) {
 	}
 	for _, test := range tests {
 		var err error
-		require.NotPanics(t, func() { err = ConfigLXC{}.Update(context.Background(), true, test.vmr, test.client) })
+		require.NotPanics(t, func() { err = ConfigLXC{}.UpdateNoCheck(context.Background(), true, test.vmr, test.client) })
 		require.Equal(t, test.err, err)
 	}
 }
