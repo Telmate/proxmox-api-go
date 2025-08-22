@@ -238,24 +238,33 @@ func (id GuestID) errorContext() string {
 }
 
 func (id GuestID) Exists(ctx context.Context, c *Client) (bool, error) {
+	if err := c.checkInitialized(); err != nil {
+		return false, err
+	}
 	if err := id.Validate(); err != nil {
 		return false, err
 	}
-	return id.ExistsNoCheck(ctx, c)
+	return id.exists_Unsafe(ctx, c)
 }
 
 func (id GuestID) ExistsNoCheck(ctx context.Context, c *Client) (bool, error) {
-	guests, err := c.GetResourceList(ctx, resourceListGuest)
-	if err != nil {
+	if err := c.checkInitialized(); err != nil {
 		return false, err
 	}
-	for i := range guests {
-		guest := guests[i].(map[string]any)
-		if id == GuestID(guest["vmid"].(float64)) {
+	return id.exists_Unsafe(ctx, c)
+}
+
+func (id GuestID) exists_Unsafe(ctx context.Context, c *Client) (bool, error) {
+	_, err := c.GetItemConfigString(ctx, url_NextID+"?vmid="+id.String(), "API", "cluster/nextid",
+		func(err error) bool {
+			return err.Error() == guestIDexistsError
+		})
+	if err != nil {
+		if err.Error() == guestIDexistsError {
 			return true, nil
 		}
 	}
-	return false, nil
+	return false, err
 }
 
 func (id GuestID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
