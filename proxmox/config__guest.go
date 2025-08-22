@@ -393,11 +393,11 @@ func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) 
 const guest_ApiError_AlreadyExists string = "config file already exists"
 
 // Keep trying to create/clone a VM until we get a unique ID
-func guestCreateLoop(ctx context.Context, idKey, url string, params map[string]interface{}, c *Client) (GuestID, error) {
+func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, c *Client) (GuestID, error) {
 	c.guestCreationMutex.Lock()
 	defer c.guestCreationMutex.Unlock()
 	for {
-		guestID, err := c.GetNextIdNoCheck(ctx, nil)
+		guestID, err := c.getNextID_Unsafe(ctx)
 		if err != nil {
 			return 0, err
 		}

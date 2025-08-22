@@ -939,30 +939,59 @@ func (c *Client) Unlink(ctx context.Context, node string, ID GuestID, diskIds st
 }
 
 // GetNextID - get next free GuestID
-func (c *Client) GetNextID(ctx context.Context, currentID *GuestID) (GuestID, error) {
-	if currentID != nil {
-		if err := currentID.Validate(); err != nil {
+func (c *Client) GetNextID(ctx context.Context, startID *GuestID) (GuestID, error) {
+	if err := c.checkInitialized(); err != nil {
+		return 0, err
+	}
+	if startID != nil {
+		if err := startID.Validate(); err != nil {
 			return 0, err
 		}
+		return c.getNextIDstart_Unsafe(ctx, int(*startID))
 	}
-	return c.GetNextIdNoCheck(ctx, currentID)
+	return c.getNextID_Unsafe(ctx)
 }
 
 // GetNextIdNoCheck - get next free GuestID without validating the input
 func (c *Client) GetNextIdNoCheck(ctx context.Context, startID *GuestID) (GuestID, error) {
-	var url string
-	if startID != nil {
-		url = "/cluster/nextid?vmid=" + startID.String()
-	} else {
-		url = "/cluster/nextid"
-	}
-	tmpID, err := c.GetItemConfigString(ctx, url, "API", "cluster/nextid")
-	if err != nil {
-		if err.Error() == "400 Parameter verification failed." {
-			*startID++
-			return c.GetNextID(ctx, startID)
-		}
+	if err := c.checkInitialized(); err != nil {
 		return 0, err
+	}
+	if startID != nil {
+		return c.getNextIDstart_Unsafe(ctx, int(*startID))
+	}
+	return c.getNextID_Unsafe(ctx)
+}
+
+const url_NextID = "/cluster/nextid"
+
+func (c *Client) getNextID_Unsafe(ctx context.Context) (GuestID, error) {
+	tmpID, err := c.GetItemConfigString(ctx, url_NextID, "API", "cluster/nextid")
+	if err != nil {
+		return 0, err
+	}
+	var id int
+	id, err = strconv.Atoi(tmpID)
+	return GuestID(id), err
+}
+
+const guestIDexistsError = "400 Parameter verification failed."
+
+func (c *Client) getNextIDstart_Unsafe(ctx context.Context, guestID int) (GuestID, error) {
+	var tmpID string
+	var err error
+	for {
+		tmpID, err = c.GetItemConfigString(ctx, url_NextID+"?vmid="+strconv.Itoa(guestID), "API", "cluster/nextid",
+			func(err error) bool {
+				return err.Error() == guestIDexistsError
+			})
+		if err == nil {
+			break
+		}
+		if err.Error() != guestIDexistsError {
+			return 0, err
+		}
+		guestID++
 	}
 	var id int
 	id, err = strconv.Atoi(tmpID)

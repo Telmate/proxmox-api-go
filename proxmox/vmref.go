@@ -38,7 +38,7 @@ func (vmr *VmRef) cloneLxc_Unsafe(ctx context.Context, settings CloneLxcTarget, 
 	var err error
 	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String() + "/clone"
 	if id == 0 {
-		id, err = guestCreateLoop(ctx, "newid", url, params, c)
+		id, err = guestCreateLoop_Unsafe(ctx, "newid", url, params, c)
 	} else {
 		_, err = c.PostWithTask(ctx, params, url)
 	}
@@ -77,7 +77,7 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 	var err error
 	url := "/nodes/" + vmr.node.String() + "/qemu/" + vmr.vmId.String() + "/clone"
 	if id == 0 {
-		id, err = guestCreateLoop(ctx, "newid", url, params, c)
+		id, err = guestCreateLoop_Unsafe(ctx, "newid", url, params, c)
 	} else {
 		_, err = c.PostWithTask(ctx, params, url)
 	}
