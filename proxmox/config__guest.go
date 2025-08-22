@@ -227,10 +227,10 @@ type GuestFeatures struct {
 type GuestID uint32
 
 const (
-	GuestID_Error_Maximum string  = "guestID should be less than 1000000000"
-	GuestID_Error_Minimum string  = "guestID should be greater than 99"
-	GuestIdMaximum        GuestID = 999999999
-	GuestIdMinimum        GuestID = 100
+	GuestID_Error_Maximum = "guestID should be less than 1000000000"
+	GuestID_Error_Minimum = "guestID should be greater than 99"
+	GuestIdMaximum        = 999999999
+	GuestIdMinimum        = 100
 )
 
 func (id GuestID) errorContext() string {

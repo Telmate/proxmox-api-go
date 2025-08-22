@@ -32,7 +32,7 @@ func ValidateGuestIDset(args []string, text string) proxmox.GuestID {
 	if err != nil && id <= 0 {
 		log.Fatal(fmt.Errorf("error: %s must be a positive integer", text))
 	}
-	if id > 2^32 {
+	if id > proxmox.GuestIdMaximum {
 		log.Fatal(errors.New(proxmox.GuestID_Error_Maximum))
 	}
 	guestID := proxmox.GuestID(id)
