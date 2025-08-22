@@ -227,10 +227,10 @@ type GuestFeatures struct {
 type GuestID uint32
 
 const (
-	GuestID_Error_Maximum string  = "guestID should be less than 1000000000"
-	GuestID_Error_Minimum string  = "guestID should be greater than 99"
-	GuestIdMaximum        GuestID = 999999999
-	GuestIdMinimum        GuestID = 100
+	GuestID_Error_Maximum = "guestID should be less than 1000000000"
+	GuestID_Error_Minimum = "guestID should be greater than 99"
+	GuestIdMaximum        = 999999999
+	GuestIdMinimum        = 100
 )
 
 func (id GuestID) errorContext() string {
@@ -238,24 +238,33 @@ func (id GuestID) errorContext() string {
 }
 
 func (id GuestID) Exists(ctx context.Context, c *Client) (bool, error) {
+	if err := c.checkInitialized(); err != nil {
+		return false, err
+	}
 	if err := id.Validate(); err != nil {
 		return false, err
 	}
-	return id.ExistsNoCheck(ctx, c)
+	return id.exists_Unsafe(ctx, c)
 }
 
 func (id GuestID) ExistsNoCheck(ctx context.Context, c *Client) (bool, error) {
-	guests, err := c.GetResourceList(ctx, resourceListGuest)
-	if err != nil {
+	if err := c.checkInitialized(); err != nil {
 		return false, err
 	}
-	for i := range guests {
-		guest := guests[i].(map[string]any)
-		if id == GuestID(guest["vmid"].(float64)) {
+	return id.exists_Unsafe(ctx, c)
+}
+
+func (id GuestID) exists_Unsafe(ctx context.Context, c *Client) (bool, error) {
+	_, err := c.GetItemConfigString(ctx, url_NextID+"?vmid="+id.String(), "API", "cluster/nextid",
+		func(err error) bool {
+			return err.Error() == guestIDexistsError
+		})
+	if err != nil {
+		if err.Error() == guestIDexistsError {
 			return true, nil
 		}
 	}
-	return false, nil
+	return false, err
 }
 
 func (id GuestID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
@@ -393,11 +402,11 @@ func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) 
 const guest_ApiError_AlreadyExists string = "config file already exists"
 
 // Keep trying to create/clone a VM until we get a unique ID
-func guestCreateLoop(ctx context.Context, idKey, url string, params map[string]interface{}, c *Client) (GuestID, error) {
+func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, c *Client) (GuestID, error) {
 	c.guestCreationMutex.Lock()
 	defer c.guestCreationMutex.Unlock()
 	for {
-		guestID, err := c.GetNextIdNoCheck(ctx, nil)
+		guestID, err := c.getNextID_Unsafe(ctx)
 		if err != nil {
 			return 0, err
 		}

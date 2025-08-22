@@ -4,17 +4,25 @@ import (
 	"context"
 	"net"
 	"strconv"
+	"strings"
 )
 
 func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client, statistics bool) ([]AgentNetworkInterface, error) {
 	if err := c.CheckVmRef(ctx, vmr); err != nil {
 		return nil, err
 	}
-	vmid := strconv.FormatInt(int64(vmr.vmId), 10)
+	vmid := vmr.vmId.String()
 	params, err := c.GetItemConfigMapStringInterface(ctx,
 		"/nodes/"+vmr.node.String()+"/qemu/"+vmid+"/agent/network-get-interfaces", "guest agent", "data",
-		"500 QEMU guest agent is not running",
-		"500 VM "+vmid+" is not running")
+		func(err error) bool {
+			if strings.HasPrefix(err.Error(), "500 QEMU guest agent is not running") {
+				return true
+			}
+			if strings.HasPrefix(err.Error(), "500 VM "+vmid+" is not running") {
+				return true
+			}
+			return false
+		})
 	if err != nil {
 		return nil, err
 	}

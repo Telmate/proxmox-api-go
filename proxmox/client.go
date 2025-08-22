@@ -62,6 +62,9 @@ func fakeClient() *Client {
 	return &Client{session: &Session{}}
 }
 
+// Returns true if the error must be ignored and returned without further processing.
+type errorIgnore func(err error) bool
+
 const (
 	VmRef_Error_Nil string = "vm reference may not be nil"
 )
@@ -199,7 +202,7 @@ func (c *Client) GetVersion(ctx context.Context) (Version, error) {
 	return version, nil
 }
 
-func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[string]interface{}, tries int, errorString ...string) error {
+func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[string]any, tries int, ignore ...errorIgnore) error {
 	var statErr error
 	for ii := 0; ii < tries; ii++ {
 		_, statErr = c.session.getJSON(ctx, url, nil, nil, data)
@@ -210,8 +213,8 @@ func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[str
 		if strings.Contains(statErr.Error(), "500 no such resource") {
 			return statErr
 		}
-		for _, e := range errorString {
-			if strings.Contains(statErr.Error(), e) {
+		for i := range ignore {
+			if ignore[i](statErr) {
 				return statErr
 			}
 		}
@@ -936,30 +939,59 @@ func (c *Client) Unlink(ctx context.Context, node string, ID GuestID, diskIds st
 }
 
 // GetNextID - get next free GuestID
-func (c *Client) GetNextID(ctx context.Context, currentID *GuestID) (GuestID, error) {
-	if currentID != nil {
-		if err := currentID.Validate(); err != nil {
+func (c *Client) GetNextID(ctx context.Context, startID *GuestID) (GuestID, error) {
+	if err := c.checkInitialized(); err != nil {
+		return 0, err
+	}
+	if startID != nil {
+		if err := startID.Validate(); err != nil {
 			return 0, err
 		}
+		return c.getNextIDstart_Unsafe(ctx, int(*startID))
 	}
-	return c.GetNextIdNoCheck(ctx, currentID)
+	return c.getNextID_Unsafe(ctx)
 }
 
 // GetNextIdNoCheck - get next free GuestID without validating the input
 func (c *Client) GetNextIdNoCheck(ctx context.Context, startID *GuestID) (GuestID, error) {
-	var url string
-	if startID != nil {
-		url = "/cluster/nextid?vmid=" + startID.String()
-	} else {
-		url = "/cluster/nextid"
-	}
-	tmpID, err := c.GetItemConfigString(ctx, url, "API", "cluster/nextid")
-	if err != nil {
-		if err.Error() == "400 Parameter verification failed." {
-			*startID++
-			return c.GetNextID(ctx, startID)
-		}
+	if err := c.checkInitialized(); err != nil {
 		return 0, err
+	}
+	if startID != nil {
+		return c.getNextIDstart_Unsafe(ctx, int(*startID))
+	}
+	return c.getNextID_Unsafe(ctx)
+}
+
+const url_NextID = "/cluster/nextid"
+
+func (c *Client) getNextID_Unsafe(ctx context.Context) (GuestID, error) {
+	tmpID, err := c.GetItemConfigString(ctx, url_NextID, "API", "cluster/nextid")
+	if err != nil {
+		return 0, err
+	}
+	var id int
+	id, err = strconv.Atoi(tmpID)
+	return GuestID(id), err
+}
+
+const guestIDexistsError = "400 Parameter verification failed."
+
+func (c *Client) getNextIDstart_Unsafe(ctx context.Context, guestID int) (GuestID, error) {
+	var tmpID string
+	var err error
+	for {
+		tmpID, err = c.GetItemConfigString(ctx, url_NextID+"?vmid="+strconv.Itoa(guestID), "API", "cluster/nextid",
+			func(err error) bool {
+				return err.Error() == guestIDexistsError
+			})
+		if err == nil {
+			break
+		}
+		if err.Error() != guestIDexistsError {
+			return 0, err
+		}
+		guestID++
 	}
 	var id int
 	id, err = strconv.Atoi(tmpID)
@@ -2111,16 +2143,16 @@ func (c *Client) UpdateSDNZone(ctx context.Context, id string, params map[string
 }
 
 // Shared
-func (c *Client) GetItemConfigMapStringInterface(ctx context.Context, url, text, message string, errorString ...string) (map[string]interface{}, error) {
-	data, err := c.GetItemConfig(ctx, url, text, message, errorString...)
+func (c *Client) GetItemConfigMapStringInterface(ctx context.Context, url, text, message string, ignore ...errorIgnore) (map[string]any, error) {
+	data, err := c.GetItemConfig(ctx, url, text, message, ignore...)
 	if err != nil {
 		return nil, err
 	}
 	return data["data"].(map[string]interface{}), err
 }
 
-func (c *Client) GetItemConfigString(ctx context.Context, url, text, message string) (string, error) {
-	data, err := c.GetItemConfig(ctx, url, text, message)
+func (c *Client) GetItemConfigString(ctx context.Context, url, text, message string, ignore ...errorIgnore) (string, error) {
+	data, err := c.GetItemConfig(ctx, url, text, message, ignore...)
 	if err != nil {
 		return "", err
 	}
@@ -2135,8 +2167,8 @@ func (c *Client) GetItemConfigInterfaceArray(ctx context.Context, url, text, mes
 	return data["data"].([]interface{}), err
 }
 
-func (c *Client) GetItemConfig(ctx context.Context, url, text, message string, errorString ...string) (config map[string]interface{}, err error) {
-	err = c.GetJsonRetryable(ctx, url, &config, 3, errorString...)
+func (c *Client) GetItemConfig(ctx context.Context, url, text, message string, ignore ...errorIgnore) (config map[string]any, err error) {
+	err = c.GetJsonRetryable(ctx, url, &config, 3, ignore...)
 	if err != nil {
 		return nil, err
 	}
