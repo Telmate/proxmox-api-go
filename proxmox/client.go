@@ -62,6 +62,9 @@ func fakeClient() *Client {
 	return &Client{session: &Session{}}
 }
 
+// Returns true if the error must be ignored and returned without further processing.
+type errorIgnore func(err error) bool
+
 const (
 	VmRef_Error_Nil string = "vm reference may not be nil"
 )
@@ -199,7 +202,7 @@ func (c *Client) GetVersion(ctx context.Context) (Version, error) {
 	return version, nil
 }
 
-func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[string]interface{}, tries int, errorString ...string) error {
+func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[string]any, tries int, ignore ...errorIgnore) error {
 	var statErr error
 	for ii := 0; ii < tries; ii++ {
 		_, statErr = c.session.getJSON(ctx, url, nil, nil, data)
@@ -210,8 +213,8 @@ func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[str
 		if strings.Contains(statErr.Error(), "500 no such resource") {
 			return statErr
 		}
-		for _, e := range errorString {
-			if strings.Contains(statErr.Error(), e) {
+		for i := range ignore {
+			if ignore[i](statErr) {
 				return statErr
 			}
 		}
@@ -2111,16 +2114,16 @@ func (c *Client) UpdateSDNZone(ctx context.Context, id string, params map[string
 }
 
 // Shared
-func (c *Client) GetItemConfigMapStringInterface(ctx context.Context, url, text, message string, errorString ...string) (map[string]interface{}, error) {
-	data, err := c.GetItemConfig(ctx, url, text, message, errorString...)
+func (c *Client) GetItemConfigMapStringInterface(ctx context.Context, url, text, message string, ignore ...errorIgnore) (map[string]any, error) {
+	data, err := c.GetItemConfig(ctx, url, text, message, ignore...)
 	if err != nil {
 		return nil, err
 	}
 	return data["data"].(map[string]interface{}), err
 }
 
-func (c *Client) GetItemConfigString(ctx context.Context, url, text, message string) (string, error) {
-	data, err := c.GetItemConfig(ctx, url, text, message)
+func (c *Client) GetItemConfigString(ctx context.Context, url, text, message string, ignore ...errorIgnore) (string, error) {
+	data, err := c.GetItemConfig(ctx, url, text, message, ignore...)
 	if err != nil {
 		return "", err
 	}
@@ -2135,8 +2138,8 @@ func (c *Client) GetItemConfigInterfaceArray(ctx context.Context, url, text, mes
 	return data["data"].([]interface{}), err
 }
 
-func (c *Client) GetItemConfig(ctx context.Context, url, text, message string, errorString ...string) (config map[string]interface{}, err error) {
-	err = c.GetJsonRetryable(ctx, url, &config, 3, errorString...)
+func (c *Client) GetItemConfig(ctx context.Context, url, text, message string, ignore ...errorIgnore) (config map[string]any, err error) {
+	err = c.GetJsonRetryable(ctx, url, &config, 3, ignore...)
 	if err != nil {
 		return nil, err
 	}
