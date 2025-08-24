@@ -78,6 +78,11 @@ func Test_ConfigPool_mapToApi(t *testing.T) {
 				current: &ConfigPool{Comment: util.Pointer("old-comment")}},
 			output: map[string]interface{}{
 				"comment": "test-comment"}},
+		{name: `Update commen samet`,
+			input: testInput{
+				new:     ConfigPool{Comment: util.Pointer("test-comment")},
+				current: &ConfigPool{Comment: util.Pointer("test-comment")}},
+			output: map[string]interface{}{}},
 		{name: `Update members`,
 			input: testInput{
 				new:     ConfigPool{Guests: &[]GuestID{100, 300, 200}},
@@ -91,7 +96,7 @@ func Test_ConfigPool_mapToApi(t *testing.T) {
 	}
 }
 
-func Test_ConfigPool_mapToSDK(t *testing.T) {
+func Test_RawConfigPool_Get(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  map[string]interface{}
@@ -110,8 +115,10 @@ func Test_ConfigPool_mapToSDK(t *testing.T) {
 				Comment: util.Pointer("test"),
 				Guests:  &[]GuestID{100, 300, 200}}},
 		{name: "poolid",
-			input:  map[string]interface{}{"poolid": "test"},
-			output: ConfigPool{Name: "test"}},
+			input: map[string]interface{}{"poolid": "test"},
+			output: ConfigPool{
+				Comment: util.Pointer(""),
+				Name:    "test"}},
 		{name: "comment",
 			input:  map[string]interface{}{"comment": "test"},
 			output: ConfigPool{Comment: util.Pointer("test")}},
@@ -121,11 +128,13 @@ func Test_ConfigPool_mapToSDK(t *testing.T) {
 					map[string]interface{}{"vmid": float64(100)},
 					map[string]interface{}{"vmid": float64(300)},
 					map[string]interface{}{"vmid": float64(200)}}},
-			output: ConfigPool{Guests: &[]GuestID{100, 300, 200}}},
+			output: ConfigPool{
+				Comment: util.Pointer(""),
+				Guests:  &[]GuestID{100, 300, 200}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, ConfigPool{}.mapToSDK(test.input))
+			require.Equal(t, test.output, RawConfigPool{a: test.input}.Get())
 		})
 	}
 }
