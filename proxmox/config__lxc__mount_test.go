@@ -519,7 +519,7 @@ func Test_RawConfigLXC_BootMount(t *testing.T) {
 			Storage:         util.Pointer("local-ext4"),
 			SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
 			rawDisk:         "local-ext4:subvol-101-disk-0"},
-		RawConfigLXC{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G,quota=1,replicate=1"}.BootMount())
+		RawConfigLXC{a: map[string]any{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G,quota=1,replicate=1"}}.BootMount())
 }
 
 func Test_RawConfigLXC_Mounts(t *testing.T) {
@@ -542,5 +542,5 @@ func Test_RawConfigLXC_Mounts(t *testing.T) {
 				SizeInKibibytes: util.Pointer(LxcMountSize(18)),
 				Storage:         util.Pointer("local-zfs"),
 				rawDisk:         "local-zfs:subvol-100-disk-1"}}},
-		RawConfigLXC{"mp150": "local-zfs:subvol-100-disk-1,size=18K,acl=0,backup=1,quota=1,mountoptions=lazytime;noexec;discard,mp=/opt/test,replicate=1,ro=1"}.Mounts())
+		RawConfigLXC{a: map[string]any{"mp150": "local-zfs:subvol-100-disk-1,size=18K,acl=0,backup=1,quota=1,mountoptions=lazytime;noexec;discard,mp=/opt/test,replicate=1,ro=1"}}.Mounts())
 }

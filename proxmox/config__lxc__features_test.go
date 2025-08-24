@@ -14,8 +14,8 @@ func Test_RawConfigLXC_Features(t *testing.T) {
 			FUSE:              util.Pointer(false),
 			KeyCtl:            util.Pointer(false),
 			Nesting:           util.Pointer(true)},
-	}, RawConfigLXC{
+	}, RawConfigLXC{a: map[string]any{
 		"features":     string("keyctl=0,mknod=1,nesting=1,fuse=0"),
 		"unprivileged": float64(1),
-	}.Features())
+	}}.Features())
 }

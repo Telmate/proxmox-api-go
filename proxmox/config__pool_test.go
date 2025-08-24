@@ -273,9 +273,9 @@ func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 		{name: `'guestsToAdd' Not in 'guests'`,
 			input: testInput{
 				guests: RawGuestResources{
-					{"vmid": float64(100), "pool": "test"},
-					{"vmid": float64(200), "pool": "poolA"},
-					{"vmid": float64(300), "pool": "test"}},
+					{a: map[string]any{"vmid": float64(100), "pool": "test"}},
+					{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
+					{a: map[string]any{"vmid": float64(300), "pool": "test"}}},
 				guestsToAdd: []GuestID{700, 800, 900}},
 			output: map[PoolName][]GuestID{}},
 		{name: `Empty`,
@@ -287,16 +287,16 @@ func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 		{name: `Empty 'guestsToAdd'`,
 			input: testInput{
 				guests: RawGuestResources{
-					{"vmid": float64(100), "pool": "test"},
-					{"vmid": float64(200), "pool": "poolA"},
-					{"vmid": float64(300), "pool": "test"}}},
+					{a: map[string]any{"vmid": float64(100), "pool": "test"}},
+					{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
+					{a: map[string]any{"vmid": float64(300), "pool": "test"}}}},
 			output: map[PoolName][]GuestID{}},
 		{name: `Full`,
 			input: testInput{
 				guests: RawGuestResources{
-					{"vmid": float64(100), "pool": "test"},
-					{"vmid": float64(200), "pool": "poolA"},
-					{"vmid": float64(300), "pool": "test"}},
+					{a: map[string]any{"vmid": float64(100), "pool": "test"}},
+					{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
+					{a: map[string]any{"vmid": float64(300), "pool": "test"}}},
 				guestsToAdd: []GuestID{100, 300, 200}},
 			output: map[PoolName][]GuestID{
 				"test":  {100, 300},

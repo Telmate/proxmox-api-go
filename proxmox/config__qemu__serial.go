@@ -104,16 +104,16 @@ func (config SerialInterfaces) mapToAPI(current SerialInterfaces, params map[str
 
 func (raw RawConfigQemu) GetSerials() SerialInterfaces {
 	Serials := SerialInterfaces{}
-	if v, isSet := raw[qemuPrefixApiKeySerial+"0"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeySerial+"0"]; isSet {
 		Serials[SerialID0] = SerialInterface{}.mapToSDK(v.(string))
 	}
-	if v, isSet := raw[qemuPrefixApiKeySerial+"1"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeySerial+"1"]; isSet {
 		Serials[SerialID1] = SerialInterface{}.mapToSDK(v.(string))
 	}
-	if v, isSet := raw[qemuPrefixApiKeySerial+"2"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeySerial+"2"]; isSet {
 		Serials[SerialID2] = SerialInterface{}.mapToSDK(v.(string))
 	}
-	if v, isSet := raw[qemuPrefixApiKeySerial+"3"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeySerial+"3"]; isSet {
 		Serials[SerialID3] = SerialInterface{}.mapToSDK(v.(string))
 	}
 	if len(Serials) > 0 {

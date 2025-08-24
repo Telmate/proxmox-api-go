@@ -2816,7 +2816,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 	}
 	type test struct {
 		name   string
-		input  RawConfigLXC
+		input  map[string]any
 		vmr    VmRef
 		state  PowerState
 		output *ConfigLXC
@@ -2828,27 +2828,27 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		{category: `Architecture`,
 			tests: []test{
 				{name: `amd64`,
-					input:  RawConfigLXC{"arch": "amd64"},
+					input:  map[string]any{"arch": "amd64"},
 					output: baseConfig(ConfigLXC{Architecture: "amd64"})},
 				{name: `""`,
-					input:  RawConfigLXC{"arch": ""},
+					input:  map[string]any{"arch": ""},
 					output: baseConfig(ConfigLXC{Architecture: ""})}}},
 		{category: `BootMount`,
 			tests: []test{
 				{name: `ACL true`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,acl=1"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,acl=1"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						ACL:     util.Pointer(TriBoolTrue),
 						Storage: util.Pointer("local-zfs"),
 						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `ACL false`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,acl=0"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,acl=0"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						ACL:     util.Pointer(TriBoolFalse),
 						Storage: util.Pointer("local-zfs"),
 						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Options Discard true`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=discard"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=discard"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Options: &LxcBootMountOptions{
 							Discard:  util.Pointer(true),
@@ -2858,7 +2858,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 						Storage: util.Pointer("local-zfs"),
 						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Options LazyTime true`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=lazytime"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=lazytime"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Options: &LxcBootMountOptions{
 							Discard:  util.Pointer(false),
@@ -2868,7 +2868,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 						Storage: util.Pointer("local-zfs"),
 						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Options NoATime true`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=noatime"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=noatime"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Options: &LxcBootMountOptions{
 							Discard:  util.Pointer(false),
@@ -2878,7 +2878,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 						Storage: util.Pointer("local-zfs"),
 						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Options NoSuid true`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=nosuid"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,mountoptions=nosuid"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						ACL: util.Pointer(TriBoolNone),
 						Options: &LxcBootMountOptions{
@@ -2889,37 +2889,37 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 						Storage: util.Pointer("local-zfs"),
 						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Quota false`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Quota:   util.Pointer(false),
 						Storage: util.Pointer("local-zfs"),
 						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Quota true`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,quota=1"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,quota=1"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Quota:   util.Pointer(true),
 						Storage: util.Pointer("local-zfs"),
 						rawDisk: "local-zfs:subvol-101-disk-0"})})},
 				{name: `Replicate false`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,replicate=0"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,replicate=0"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Replicate: util.Pointer(false),
 						Storage:   util.Pointer("local-zfs"),
 						rawDisk:   "local-zfs:subvol-101-disk-0"})})},
 				{name: `Replicate true`,
-					input: RawConfigLXC{"rootfs": "local-zfs:subvol-101-disk-0,replicate=1"},
+					input: map[string]any{"rootfs": "local-zfs:subvol-101-disk-0,replicate=1"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Replicate: util.Pointer(true),
 						Storage:   util.Pointer("local-zfs"),
 						rawDisk:   "local-zfs:subvol-101-disk-0"})})},
 				{name: `SizeInKibibytes`,
-					input: RawConfigLXC{"rootfs": "local-ext4:subvol-101-disk-0,size=999M"},
+					input: map[string]any{"rootfs": "local-ext4:subvol-101-disk-0,size=999M"},
 					output: baseConfig(ConfigLXC{BootMount: baseBootMount(LxcBootMount{
 						Storage:         util.Pointer("local-ext4"),
 						SizeInKibibytes: util.Pointer(LxcMountSize(1022976)),
 						rawDisk:         "local-ext4:subvol-101-disk-0"})})},
 				{name: `all`,
-					input: RawConfigLXC{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G,quota=1,replicate=1"},
+					input: map[string]any{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G,quota=1,replicate=1"},
 					output: baseConfig(ConfigLXC{BootMount: &LxcBootMount{
 						ACL:   util.Pointer(TriBoolTrue),
 						Quota: util.Pointer(true),
@@ -2946,15 +2946,15 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		{category: `Description`,
 			tests: []test{
 				{name: `test`,
-					input:  RawConfigLXC{"description": "test"},
+					input:  map[string]any{"description": "test"},
 					output: baseConfig(ConfigLXC{Description: util.Pointer("test")})},
 				{name: `""`,
-					input:  RawConfigLXC{"description": ""},
+					input:  map[string]any{"description": ""},
 					output: baseConfig(ConfigLXC{Description: util.Pointer("")})}}},
 		{category: `Digest`,
 			tests: []test{
 				{name: `set`,
-					input: RawConfigLXC{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"},
+					input: map[string]any{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"},
 					output: baseConfig(ConfigLXC{
 						Digest: [sha1.Size]byte{
 							0xaf, 0x06, 0x49, 0x23, 0xbb, 0xf2, 0x30, 0x15, 0x96, 0xaa,
@@ -2963,7 +2963,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		{category: `DNS`,
 			tests: []test{
 				{name: `all`,
-					input: RawConfigLXC{
+					input: map[string]any{
 						"nameserver":   "1.1.1.1 8.8.8.8 9.9.9.9",
 						"searchdomain": "example.com"},
 					output: baseConfig(ConfigLXC{DNS: &GuestDNS{
@@ -2973,12 +2973,12 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							parseIP("9.9.9.9")}),
 						SearchDomain: util.Pointer("example.com")}})},
 				{name: `NameServers`,
-					input: RawConfigLXC{"nameserver": "8.8.8.8"},
+					input: map[string]any{"nameserver": "8.8.8.8"},
 					output: baseConfig(ConfigLXC{DNS: &GuestDNS{
 						NameServers:  util.Pointer([]netip.Addr{parseIP("8.8.8.8")}),
 						SearchDomain: util.Pointer("")}})},
 				{name: `SearchDomain`,
-					input: RawConfigLXC{"searchdomain": "example.com"},
+					input: map[string]any{"searchdomain": "example.com"},
 					output: baseConfig(ConfigLXC{DNS: &GuestDNS{
 						NameServers:  util.Pointer([]netip.Addr(nil)),
 						SearchDomain: util.Pointer("example.com")}})}}},
@@ -3094,51 +3094,51 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		{category: `Memory`,
 			tests: []test{
 				{name: `set`,
-					input:  RawConfigLXC{"memory": float64(512)},
+					input:  map[string]any{"memory": float64(512)},
 					output: baseConfig(ConfigLXC{Memory: util.Pointer(LxcMemory(512))})}}},
 		{category: `Name`,
 			tests: []test{
 				{name: `set`,
-					input:  RawConfigLXC{"hostname": "test"},
+					input:  map[string]any{"hostname": "test"},
 					output: baseConfig(ConfigLXC{Name: util.Pointer(GuestName("test"))})}}},
 		{category: `Mounts`,
 			tests: []test{
 				{name: `BindMount minimal`,
-					input: RawConfigLXC{"mp0": "/host/path,mp=/guest/path"},
+					input: map[string]any{"mp0": "/host/path,mp=/guest/path"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID0: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
 							GuestPath: util.Pointer(LxcMountPath("/guest/path"))})}}})},
 				{name: `BindMount.ReadOnly false`,
-					input: RawConfigLXC{"mp1": "/host/path,mp=/guest/path"},
+					input: map[string]any{"mp1": "/host/path,mp=/guest/path"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID1: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
 							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
 							ReadOnly:  util.Pointer(false)})}}})},
 				{name: `BindMount.ReadOnly true`,
-					input: RawConfigLXC{"mp2": "/host/path,mp=/guest/path,ro=1"},
+					input: map[string]any{"mp2": "/host/path,mp=/guest/path,ro=1"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID2: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
 							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
 							ReadOnly:  util.Pointer(true)})}}})},
 				{name: `BindMount.Replicate false`,
-					input: RawConfigLXC{"mp3": "/host/path,mp=/guest/path,replicate=0"},
+					input: map[string]any{"mp3": "/host/path,mp=/guest/path,replicate=0"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID3: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
 							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
 							Replicate: util.Pointer(false)})}}})},
 				{name: `BindMount.Replicate true`,
-					input: RawConfigLXC{"mp4": "/host/path,mp=/guest/path"},
+					input: map[string]any{"mp4": "/host/path,mp=/guest/path"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID4: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
 							GuestPath: util.Pointer(LxcMountPath("/guest/path")),
 							Replicate: util.Pointer(true)})}}})},
 				{name: `BindMount.Options.Discard true`,
-					input: RawConfigLXC{"mp5": "/host/path,mp=/guest/path,mountoptions=discard"},
+					input: map[string]any{"mp5": "/host/path,mp=/guest/path,mountoptions=discard"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID5: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
@@ -3146,7 +3146,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Options: baseMountOptions(LxcMountOptions{
 								Discard: util.Pointer(true)})})}}})},
 				{name: `BindMount.Options.LazyTime true`,
-					input: RawConfigLXC{"mp6": "/host/path,mp=/guest/path,mountoptions=lazytime"},
+					input: map[string]any{"mp6": "/host/path,mp=/guest/path,mountoptions=lazytime"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID6: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
@@ -3154,7 +3154,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Options: baseMountOptions(LxcMountOptions{
 								LazyTime: util.Pointer(true)})})}}})},
 				{name: `BindMount.Options.NoATime true`,
-					input: RawConfigLXC{"mp7": "/host/path,mp=/guest/path,mountoptions=noatime"},
+					input: map[string]any{"mp7": "/host/path,mp=/guest/path,mountoptions=noatime"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID7: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
@@ -3162,7 +3162,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Options: baseMountOptions(LxcMountOptions{
 								NoATime: util.Pointer(true)})})}}})},
 				{name: `BindMount.Options.NoDevice true`,
-					input: RawConfigLXC{"mp8": "/host/path,mp=/guest/path,mountoptions=nodev"},
+					input: map[string]any{"mp8": "/host/path,mp=/guest/path,mountoptions=nodev"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID8: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
@@ -3170,7 +3170,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Options: baseMountOptions(LxcMountOptions{
 								NoDevice: util.Pointer(true)})})}}})},
 				{name: `BindMount.Options.NoExec true`,
-					input: RawConfigLXC{"mp9": "/host/path,mp=/guest/path,mountoptions=noexec"},
+					input: map[string]any{"mp9": "/host/path,mp=/guest/path,mountoptions=noexec"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID9: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
@@ -3178,7 +3178,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Options: baseMountOptions(LxcMountOptions{
 								NoExec: util.Pointer(true)})})}}})},
 				{name: `BindMount.Options.NoSuid true`,
-					input: RawConfigLXC{"mp10": "/host/path,mp=/guest/path,mountoptions=nosuid"},
+					input: map[string]any{"mp10": "/host/path,mp=/guest/path,mountoptions=nosuid"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID10: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
@@ -3186,7 +3186,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Options: baseMountOptions(LxcMountOptions{
 								NoSuid: util.Pointer(true)})})}}})},
 				{name: `BindMount.Options all true`,
-					input: RawConfigLXC{"mp11": "/host/path,mp=/guest/path,mountoptions=discard;lazytime;noatime;nodev;noexec;nosuid"},
+					input: map[string]any{"mp11": "/host/path,mp=/guest/path,mountoptions=discard;lazytime;noatime;nodev;noexec;nosuid"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID11: LxcMount{BindMount: baseBindMount(LxcBindMount{
 							HostPath:  util.Pointer(LxcHostPath("/host/path")),
@@ -3199,22 +3199,21 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 								NoExec:   util.Pointer(true),
 								NoSuid:   util.Pointer(true)}})}}})},
 				{name: `DataMount minimal ext4 (privileged`,
-					input: RawConfigLXC{"mp100": "local-ext4:100/vm-100-disk-0.raw"},
+					input: map[string]any{"mp100": "local-ext4:100/vm-100-disk-0.raw"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID100: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota:   util.Pointer(false),
 							Storage: util.Pointer("local-ext4"),
 							rawDisk: "local-ext4:100/vm-100-disk-0.raw"})}}})},
 				{name: `DataMount minimal zfs (privileged`,
-					input: RawConfigLXC{"mp101": "local-zfs:subvol-100-disk-1"},
+					input: map[string]any{"mp101": "local-zfs:subvol-100-disk-1"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID101: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota:   util.Pointer(false),
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.ACL false (privileged`,
-					input: RawConfigLXC{
-						"mp102": "local-zfs:subvol-100-disk-1,acl=0"},
+					input: map[string]any{"mp102": "local-zfs:subvol-100-disk-1,acl=0"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID102: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							ACL:     util.Pointer(TriBoolFalse),
@@ -3222,7 +3221,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.ACL true (privileged)`,
-					input: RawConfigLXC{"mp103": "local-zfs:subvol-100-disk-1,acl=1"},
+					input: map[string]any{"mp103": "local-zfs:subvol-100-disk-1,acl=1"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID103: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							ACL:     util.Pointer(TriBoolTrue),
@@ -3230,7 +3229,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Backup false (privileged)`,
-					input: RawConfigLXC{"mp104": "local-zfs:subvol-100-disk-1,backup=0"},
+					input: map[string]any{"mp104": "local-zfs:subvol-100-disk-1,backup=0"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID104: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Backup:  util.Pointer(false),
@@ -3238,7 +3237,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Backup true (privileged)`,
-					input: RawConfigLXC{"mp105": "local-zfs:subvol-100-disk-1,backup=1"},
+					input: map[string]any{"mp105": "local-zfs:subvol-100-disk-1,backup=1"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID105: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Backup:  util.Pointer(true),
@@ -3246,7 +3245,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Options.Discard true`,
-					input: RawConfigLXC{"mp201": "local-zfs:subvol-100-disk-1,mountoptions=discard"},
+					input: map[string]any{"mp201": "local-zfs:subvol-100-disk-1,mountoptions=discard"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID201: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Options: baseMountOptions(LxcMountOptions{
@@ -3255,7 +3254,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Options.LazyTime true`,
-					input: RawConfigLXC{"mp203": "local-zfs:subvol-100-disk-1,mountoptions=lazytime"},
+					input: map[string]any{"mp203": "local-zfs:subvol-100-disk-1,mountoptions=lazytime"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID203: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Options: baseMountOptions(LxcMountOptions{
@@ -3264,7 +3263,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Options.NoATime true`,
-					input: RawConfigLXC{"mp204": "local-zfs:subvol-100-disk-1,mountoptions=noatime"},
+					input: map[string]any{"mp204": "local-zfs:subvol-100-disk-1,mountoptions=noatime"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID204: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Options: baseMountOptions(LxcMountOptions{
@@ -3273,7 +3272,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Options.NoDevice true`,
-					input: RawConfigLXC{"mp205": "local-zfs:subvol-100-disk-1,mountoptions=nodev"},
+					input: map[string]any{"mp205": "local-zfs:subvol-100-disk-1,mountoptions=nodev"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID205: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Options: baseMountOptions(LxcMountOptions{
@@ -3282,7 +3281,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Options.NoExec true`,
-					input: RawConfigLXC{"mp206": "local-zfs:subvol-100-disk-1,mountoptions=noexec"},
+					input: map[string]any{"mp206": "local-zfs:subvol-100-disk-1,mountoptions=noexec"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID206: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Options: baseMountOptions(LxcMountOptions{
@@ -3291,7 +3290,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Options.NoSuid true`,
-					input: RawConfigLXC{"mp207": "local-zfs:subvol-100-disk-1,mountoptions=nosuid"},
+					input: map[string]any{"mp207": "local-zfs:subvol-100-disk-1,mountoptions=nosuid"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID207: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Options: baseMountOptions(LxcMountOptions{
@@ -3300,7 +3299,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Options all true`,
-					input: RawConfigLXC{"mp208": "local-zfs:subvol-100-disk-1,mountoptions=noexec;nosuid;lazytime;discard;noatime;nodev"},
+					input: map[string]any{"mp208": "local-zfs:subvol-100-disk-1,mountoptions=noexec;nosuid;lazytime;discard;noatime;nodev"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID208: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Options: &LxcMountOptions{
@@ -3314,7 +3313,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Path (privileged)`,
-					input: RawConfigLXC{"mp106": "local-zfs:subvol-100-disk-1,mp=/mnt/test"},
+					input: map[string]any{"mp106": "local-zfs:subvol-100-disk-1,mp=/mnt/test"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID106: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota:   util.Pointer(false),
@@ -3322,7 +3321,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Quota false Privilege false`,
-					input: RawConfigLXC{
+					input: map[string]any{
 						"mp107":        "local-zfs:subvol-100-disk-1,quota=0",
 						"unprivileged": float64(1)},
 					output: baseConfig(ConfigLXC{
@@ -3332,7 +3331,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 								Storage: util.Pointer("local-zfs"),
 								rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Quota false Privilege true`,
-					input: RawConfigLXC{
+					input: map[string]any{
 						"mp108":        "local-zfs:subvol-100-disk-1,quota=0",
 						"unprivileged": float64(0)},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
@@ -3341,7 +3340,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Quota true Privilege false`,
-					input: RawConfigLXC{
+					input: map[string]any{
 						"mp109":        "local-zfs:subvol-100-disk-1,quota=1",
 						"unprivileged": float64(1)},
 					output: baseConfig(ConfigLXC{
@@ -3351,7 +3350,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 								Storage: util.Pointer("local-zfs"),
 								rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Quota true Privilege true`,
-					input: RawConfigLXC{
+					input: map[string]any{
 						"mp110":        "local-zfs:subvol-100-disk-1,quota=1",
 						"unprivileged": float64(0)},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
@@ -3360,7 +3359,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage: util.Pointer("local-zfs"),
 							rawDisk: "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.ReadOnly false (privileged)`,
-					input: RawConfigLXC{"mp111": "local-zfs:subvol-100-disk-1,ro=0"},
+					input: map[string]any{"mp111": "local-zfs:subvol-100-disk-1,ro=0"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID111: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							ReadOnly: util.Pointer(false),
@@ -3368,7 +3367,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage:  util.Pointer("local-zfs"),
 							rawDisk:  "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.ReadOnly true (privileged)`,
-					input: RawConfigLXC{"mp112": "local-zfs:subvol-100-disk-1,ro=1"},
+					input: map[string]any{"mp112": "local-zfs:subvol-100-disk-1,ro=1"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID112: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							ReadOnly: util.Pointer(true),
@@ -3376,7 +3375,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage:  util.Pointer("local-zfs"),
 							rawDisk:  "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Replicate false (privileged)`,
-					input: RawConfigLXC{"mp113": "local-zfs:subvol-100-disk-1,replicate=0"},
+					input: map[string]any{"mp113": "local-zfs:subvol-100-disk-1,replicate=0"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID113: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Replicate: util.Pointer(false),
@@ -3384,7 +3383,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage:   util.Pointer("local-zfs"),
 							rawDisk:   "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.Replicate true (privileged)`,
-					input: RawConfigLXC{"mp114": "local-zfs:subvol-100-disk-1,replicate=1"},
+					input: map[string]any{"mp114": "local-zfs:subvol-100-disk-1,replicate=1"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID114: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Replicate: util.Pointer(true),
@@ -3392,7 +3391,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage:   util.Pointer("local-zfs"),
 							rawDisk:   "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.SizeInKibibytes 1T (privileged)`,
-					input: RawConfigLXC{"mp115": "local-zfs:subvol-100-disk-1,size=1T"},
+					input: map[string]any{"mp115": "local-zfs:subvol-100-disk-1,size=1T"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID115: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota:           util.Pointer(false),
@@ -3400,7 +3399,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage:         util.Pointer("local-zfs"),
 							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.SizeInKibibytes 1G (privileged)`,
-					input: RawConfigLXC{"mp116": "local-zfs:subvol-100-disk-1,size=1G"},
+					input: map[string]any{"mp116": "local-zfs:subvol-100-disk-1,size=1G"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID116: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota:           util.Pointer(false),
@@ -3408,7 +3407,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage:         util.Pointer("local-zfs"),
 							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.SizeInKibibytes 12M (privileged)`,
-					input: RawConfigLXC{"mp117": "local-zfs:subvol-100-disk-1,size=12M"},
+					input: map[string]any{"mp117": "local-zfs:subvol-100-disk-1,size=12M"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID117: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota:           util.Pointer(false),
@@ -3416,7 +3415,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage:         util.Pointer("local-zfs"),
 							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount.SizeInKibibytes 18K  (privileged)`,
-					input: RawConfigLXC{"mp118": "local-zfs:subvol-100-disk-1,size=18K"},
+					input: map[string]any{"mp118": "local-zfs:subvol-100-disk-1,size=18K"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID118: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota:           util.Pointer(false),
@@ -3424,7 +3423,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							Storage:         util.Pointer("local-zfs"),
 							rawDisk:         "local-zfs:subvol-100-disk-1"})}}})},
 				{name: `DataMount all (privileged)`,
-					input: RawConfigLXC{"mp150": "local-zfs:subvol-100-disk-1,size=18K,acl=0,backup=1,quota=1,mountoptions=lazytime;noexec;discard,mp=/opt/test,replicate=1,ro=1"},
+					input: map[string]any{"mp150": "local-zfs:subvol-100-disk-1,size=18K,acl=0,backup=1,quota=1,mountoptions=lazytime;noexec;discard,mp=/opt/test,replicate=1,ro=1"},
 					output: baseConfig(ConfigLXC{Mounts: LxcMounts{
 						LxcMountID150: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							ACL:    util.Pointer(TriBoolFalse),
@@ -3446,7 +3445,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		{category: `Networks`,
 			tests: []test{
 				{name: `all`,
-					input: RawConfigLXC{"net0": "name=eth0,bridge=vmbr0,ip=192.168.0.23/24,gw=12.168.0.1,rate=0.810,trunks=101,hwaddr=00:A1:22:b3:44:55,tag=100,link_down=1,firewall=1,ip6=2001:db8::1/64,gw6=2001:db8::2,mtu=896"},
+					input: map[string]any{"net0": "name=eth0,bridge=vmbr0,ip=192.168.0.23/24,gw=12.168.0.1,rate=0.810,trunks=101,hwaddr=00:A1:22:b3:44:55,tag=100,link_down=1,firewall=1,ip6=2001:db8::1/64,gw6=2001:db8::2,mtu=896"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID0: baseNetwork(LxcNetwork{
 							Bridge:    util.Pointer("vmbr0"),
@@ -3466,86 +3465,86 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 							TaggedVlans:   util.Pointer(Vlans{Vlan(101)}),
 							mac:           "00:A1:22:b3:44:55"})}})},
 				{name: `Bridge`,
-					input: RawConfigLXC{"net0": "bridge=vmbr0"},
+					input: map[string]any{"net0": "bridge=vmbr0"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID0: baseNetwork(LxcNetwork{Bridge: util.Pointer("vmbr0")})}})},
 				{name: `Connected`,
-					input: RawConfigLXC{"net1": "link_down=1"},
+					input: map[string]any{"net1": "link_down=1"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID1: baseNetwork(LxcNetwork{Connected: util.Pointer(false)})}})},
 				{name: `Firewall`,
-					input: RawConfigLXC{"net2": "firewall=1"},
+					input: map[string]any{"net2": "firewall=1"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID2: baseNetwork(LxcNetwork{Firewall: util.Pointer(true)})}})},
 				{name: `IPv4 Address`,
-					input: RawConfigLXC{"net3": "ip=192.168.0.10/24"},
+					input: map[string]any{"net3": "ip=192.168.0.10/24"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID3: baseNetwork(LxcNetwork{IPv4: &LxcIPv4{
 							Address: util.Pointer(IPv4CIDR("192.168.0.10/24"))}})}})},
 				{name: `IPv4 DHCP`,
-					input: RawConfigLXC{"net4": "ip=dhcp"},
+					input: map[string]any{"net4": "ip=dhcp"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID4: baseNetwork(LxcNetwork{IPv4: &LxcIPv4{
 							DHCP: true}})}})},
 				{name: `IPv4 Gateway`,
-					input: RawConfigLXC{"net5": "gw=1.1.1.1"},
+					input: map[string]any{"net5": "gw=1.1.1.1"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID5: baseNetwork(LxcNetwork{IPv4: &LxcIPv4{
 							Gateway: util.Pointer(IPv4Address("1.1.1.1"))}})}})},
 				{name: `IPv4 Manual`,
-					input: RawConfigLXC{"net6": "ip=manual"},
+					input: map[string]any{"net6": "ip=manual"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID6: baseNetwork(LxcNetwork{IPv4: &LxcIPv4{
 							Manual: true}})}})},
 				{name: `IPv6 Address`,
-					input: RawConfigLXC{"net7": "ip6=2001:db8::1/64"},
+					input: map[string]any{"net7": "ip6=2001:db8::1/64"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID7: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
 							Address: util.Pointer(IPv6CIDR("2001:db8::1/64"))}})}})},
 				{name: `IPv6 DHCP`,
-					input: RawConfigLXC{"net8": "ip6=dhcp"},
+					input: map[string]any{"net8": "ip6=dhcp"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID8: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
 							DHCP: true}})}})},
 				{name: `IPv6 Gateway`,
-					input: RawConfigLXC{"net9": "gw6=2001:db8::2"},
+					input: map[string]any{"net9": "gw6=2001:db8::2"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID9: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
 							Gateway: util.Pointer(IPv6Address("2001:db8::2"))}})}})},
 				{name: `IPv6 Manual`,
-					input: RawConfigLXC{"net10": "ip6=manual"},
+					input: map[string]any{"net10": "ip6=manual"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID10: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
 							Manual: true}})}})},
 				{name: `IPv6 SLAAC`,
-					input: RawConfigLXC{"net11": "ip6=auto"},
+					input: map[string]any{"net11": "ip6=auto"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID11: baseNetwork(LxcNetwork{IPv6: &LxcIPv6{
 							SLAAC: true}})}})},
 				{name: `MAC`,
-					input: RawConfigLXC{"net12": "hwaddr=00:A1:22:b3:44:55"},
+					input: map[string]any{"net12": "hwaddr=00:A1:22:b3:44:55"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID12: baseNetwork(LxcNetwork{
 							MAC: util.Pointer(parseMAC("00:a1:22:B3:44:55")),
 							mac: "00:A1:22:b3:44:55"})}})},
 				{name: `Mtu`,
-					input: RawConfigLXC{"net13": "mtu=1321"},
+					input: map[string]any{"net13": "mtu=1321"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID13: baseNetwork(LxcNetwork{Mtu: util.Pointer(MTU(1321))})}})},
 				{name: `Name`,
-					input: RawConfigLXC{"net13": "name=eth0"},
+					input: map[string]any{"net13": "name=eth0"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID13: baseNetwork(LxcNetwork{Name: util.Pointer(LxcNetworkName("eth0"))})}})},
 				{name: `NativeVlan`,
-					input: RawConfigLXC{"net14": "tag=100"},
+					input: map[string]any{"net14": "tag=100"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID14: baseNetwork(LxcNetwork{NativeVlan: util.Pointer(Vlan(100))})}})},
 				{name: `RateLimitKBps`,
-					input: RawConfigLXC{"net15": "rate=95.649"},
+					input: map[string]any{"net15": "rate=95.649"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID15: baseNetwork(LxcNetwork{RateLimitKBps: util.Pointer(GuestNetworkRate(95649))})}})},
 				{name: `TaggedVlans`,
-					input: RawConfigLXC{"net0": "trunks=200;100;300"},
+					input: map[string]any{"net0": "trunks=200;100;300"},
 					output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 						LxcNetworkID0: baseNetwork(LxcNetwork{TaggedVlans: &Vlans{Vlan(100), Vlan(200), Vlan(300)}})}})}}},
 		{category: `Node`,
@@ -3556,7 +3555,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		{category: `OperatingSystem`,
 			tests: []test{
 				{name: `set`,
-					input:  RawConfigLXC{"ostype": "test"},
+					input:  map[string]any{"ostype": "test"},
 					output: baseConfig(ConfigLXC{OperatingSystem: "test"})}}},
 		{category: `Pool`,
 			tests: []test{
@@ -3566,29 +3565,29 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		{category: `Privileged`,
 			tests: []test{
 				{name: `true`,
-					input:  RawConfigLXC{"unprivileged": float64(0)},
+					input:  map[string]any{"unprivileged": float64(0)},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(true)})},
 				{name: `false`,
-					input:  RawConfigLXC{"unprivileged": float64(1)},
+					input:  map[string]any{"unprivileged": float64(1)},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(false)})},
 				{name: `default true`,
-					input:  RawConfigLXC{},
+					input:  map[string]any{},
 					output: baseConfig(ConfigLXC{Privileged: util.Pointer(true)})}}},
 		{category: `Protection`,
 			tests: []test{
 				{name: `false`,
-					input:  RawConfigLXC{},
+					input:  map[string]any{},
 					output: baseConfig(ConfigLXC{Protection: util.Pointer(false)})},
 				{name: `true`,
-					input:  RawConfigLXC{"protection": float64(1)},
+					input:  map[string]any{"protection": float64(1)},
 					output: baseConfig(ConfigLXC{Protection: util.Pointer(true)})}}},
 		{category: `Swap`,
 			tests: []test{
 				{name: `set`,
-					input:  RawConfigLXC{"swap": float64(256)},
+					input:  map[string]any{"swap": float64(256)},
 					output: baseConfig(ConfigLXC{Swap: util.Pointer(LxcSwap(256))})},
 				{name: `set 0`,
-					input:  RawConfigLXC{"swap": float64(0)},
+					input:  map[string]any{"swap": float64(0)},
 					output: baseConfig(ConfigLXC{Swap: util.Pointer(LxcSwap(0))})}}},
 		{category: `State`,
 			tests: []test{
@@ -3598,7 +3597,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		{category: `Tags`,
 			tests: []test{
 				{name: `set`,
-					input:  RawConfigLXC{"tags": "test"},
+					input:  map[string]any{"tags": "test"},
 					output: baseConfig(ConfigLXC{Tags: &Tags{"test"}})}}},
 	}
 	for _, test := range tests {
@@ -3608,7 +3607,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.output, subTest.input.Get(subTest.vmr, subTest.state), name)
+				require.Equal(t, subTest.output, RawConfigLXC{a: subTest.input}.Get(subTest.vmr, subTest.state), name)
 			})
 		}
 	}
@@ -3619,7 +3618,7 @@ func Test_RawConfigLXC_GetDigest(t *testing.T) {
 		[sha1.Size]byte{
 			0xaf, 0x06, 0x49, 0x23, 0xbb, 0xf2, 0x30, 0x15, 0x96, 0xaa,
 			0xc4, 0xc2, 0x73, 0xba, 0x32, 0x17, 0x8e, 0xbc, 0x4a, 0x96},
-		RawConfigLXC{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}.GetDigest(), "")
+		RawConfigLXC{a: map[string]any{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}}.GetDigest(), "")
 }
 
 func Test_RawConfigLXC_GetPrivileged(t *testing.T) {

@@ -353,7 +353,7 @@ func (id LxcNetworkID) Validate() error {
 func (raw RawConfigLXC) GetNetworks() LxcNetworks {
 	nets := LxcNetworks{}
 	for i := 0; i <= LxcNetworkIdMaximum; i++ {
-		if v, isSet := raw[lxcPrefixApiKeyNetwork+strconv.Itoa(i)]; isSet {
+		if v, isSet := raw.a[lxcPrefixApiKeyNetwork+strconv.Itoa(i)]; isSet {
 			var bridge string
 			var connected bool = true
 			var firewall bool

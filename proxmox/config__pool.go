@@ -435,9 +435,7 @@ func (config PoolName) Validate() error {
 	return nil
 }
 
-type RawConfigPool struct {
-	a map[string]any
-}
+type RawConfigPool struct{ a map[string]any }
 
 func (raw RawConfigPool) Get() ConfigPool {
 	return ConfigPool{

@@ -48,7 +48,7 @@ func (newSetting QemuGuestAgent) mapToAPI(currentSettings *QemuGuestAgent) strin
 }
 
 func (raw RawConfigQemu) GetAgent() *QemuGuestAgent {
-	if v, isSet := raw[qemuApiKeyGuestAgent]; isSet {
+	if v, isSet := raw.a[qemuApiKeyGuestAgent]; isSet {
 		params := v.(string)
 		config := QemuGuestAgent{}
 		tmpEnable, _ := strconv.ParseBool(params[0:1])

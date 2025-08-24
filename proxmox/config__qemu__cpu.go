@@ -615,17 +615,17 @@ func (QemuCPU) mapToApiAffinity(affinity []uint) string {
 
 func (raw RawConfigQemu) GetCPU() *QemuCPU {
 	var cpu QemuCPU
-	if v, isSet := raw[qemuApiKeyCpuAffinity]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCpuAffinity]; isSet {
 		if v.(string) != "" {
 			cpu.Affinity = util.Pointer(QemuCPU{}.mapToSdkAffinity(v.(string)))
 		} else {
 			cpu.Affinity = util.Pointer(make([]uint, 0))
 		}
 	}
-	if v, isSet := raw[qemuApiKeyCpuCores]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCpuCores]; isSet {
 		cpu.Cores = util.Pointer(QemuCpuCores(v.(float64)))
 	}
-	if v, isSet := raw[qemuApiKeyCpuType]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCpuType]; isSet {
 		cpuParams := strings.SplitN(v.(string), ",", 2)
 		cpu.Type = util.Pointer((CpuType)(cpuParams[0]))
 		if len(cpuParams) > 1 && len(cpuParams[1]) > 6 {
@@ -633,20 +633,20 @@ func (raw RawConfigQemu) GetCPU() *QemuCPU {
 			cpu.Flags = CpuFlags{}.mapToSDK(strings.Split(cpuParams[1][6:], ";"))
 		}
 	}
-	if v, isSet := raw[qemuApiKeyCpuLimit]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCpuLimit]; isSet {
 		tmp, _ := parse.Uint(v)
 		cpu.Limit = util.Pointer(CpuLimit(tmp))
 	}
-	if v, isSet := raw[qemuApiKeyCpuUnits]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCpuUnits]; isSet {
 		cpu.Units = util.Pointer(CpuUnits((v.(float64))))
 	}
-	if v, isSet := raw[qemuApiKeyCpuNuma]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCpuNuma]; isSet {
 		cpu.Numa = util.Pointer(v.(float64) == 1)
 	}
-	if v, isSet := raw[qemuApiKeyCpuSockets]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCpuSockets]; isSet {
 		cpu.Sockets = util.Pointer(QemuCpuSockets(v.(float64)))
 	}
-	if v, isSet := raw[qemuApiKeyCpuVirtual]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCpuVirtual]; isSet {
 		cpu.VirtualCores = util.Pointer(CpuVirtualCores((v.(float64))))
 	}
 	return &cpu

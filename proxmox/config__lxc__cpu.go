@@ -70,18 +70,18 @@ func (config LxcCPU) mapToApiUpdate(current LxcCPU, params map[string]any) (dele
 func (raw RawConfigLXC) GetCPU() *LxcCPU {
 	cpu := LxcCPU{}
 	var parameterSet bool
-	if v, isSet := raw[lxcApiKeyCores]; isSet {
+	if v, isSet := raw.a[lxcApiKeyCores]; isSet {
 		tmp := LxcCpuCores(v.(float64))
 		cpu.Cores = &tmp
 		parameterSet = true
 	}
-	if v, isSet := raw[lxcApiKeyCpuLimit]; isSet {
+	if v, isSet := raw.a[lxcApiKeyCpuLimit]; isSet {
 		tmpInt, _ := strconv.ParseInt(v.(string), 10, 32)
 		tmp := LxcCpuLimit(tmpInt)
 		cpu.Limit = &tmp
 		parameterSet = true
 	}
-	if v, isSet := raw[lxcApiKeyCpuUnits]; isSet {
+	if v, isSet := raw.a[lxcApiKeyCpuUnits]; isSet {
 		tmp := LxcCpuUnits(v.(float64))
 		cpu.Units = &tmp
 		parameterSet = true

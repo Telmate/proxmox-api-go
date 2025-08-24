@@ -20,7 +20,7 @@ func listGuests_Unsafe(ctx context.Context, c *Client) (RawGuestResources, error
 	}
 	resources := make(RawGuestResources, len(raw))
 	for i := range raw {
-		resources[i] = raw[i].(map[string]any)
+		resources[i].a = raw[i].(map[string]any)
 	}
 	return resources, nil
 }
@@ -41,7 +41,7 @@ func (r RawGuestResources) SelectID(id GuestID) (RawGuestResource, error) {
 			return r[i], nil
 		}
 	}
-	return nil, errorMsg{}.guestDoesNotExist(id)
+	return RawGuestResource{}, errorMsg{}.guestDoesNotExist(id)
 }
 
 type GuestResource struct {
@@ -67,168 +67,168 @@ type GuestResource struct {
 	Uptime             time.Duration `json:"uptime"`
 }
 
-type RawGuestResource map[string]any
+type RawGuestResource struct{ a map[string]any }
 
 // https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/resources
-func (r RawGuestResource) Get() GuestResource {
+func (raw RawGuestResource) Get() GuestResource {
 	return GuestResource{
-		CpuCores:           r.GetCPUcores(),
-		CpuUsage:           r.GetCPUusage(),
-		DiskReadTotal:      r.GetDiskReadTotal(),
-		DiskSizeInBytes:    r.GetDiskSizeInBytes(),
-		DiskUsedInBytes:    r.GetDiskUsedInBytes(),
-		DiskWriteTotal:     r.GetDiskWriteTotal(),
-		HaState:            r.GetHaState(),
-		ID:                 r.GetID(),
-		MemoryTotalInBytes: r.GetMemoryTotalInBytes(),
-		MemoryUsedInBytes:  r.GetMemoryUsedInBytes(),
-		Name:               r.GetName(),
-		NetworkIn:          r.GetNetworkIn(),
-		NetworkOut:         r.GetNetworkOut(),
-		Node:               r.GetNode(),
-		Pool:               r.GetPool(),
-		Status:             r.GetStatus(),
-		Tags:               r.GetTags(),
-		Template:           r.GetTemplate(),
-		Type:               r.GetType(),
-		Uptime:             r.GetUptime()}
+		CpuCores:           raw.GetCPUcores(),
+		CpuUsage:           raw.GetCPUusage(),
+		DiskReadTotal:      raw.GetDiskReadTotal(),
+		DiskSizeInBytes:    raw.GetDiskSizeInBytes(),
+		DiskUsedInBytes:    raw.GetDiskUsedInBytes(),
+		DiskWriteTotal:     raw.GetDiskWriteTotal(),
+		HaState:            raw.GetHaState(),
+		ID:                 raw.GetID(),
+		MemoryTotalInBytes: raw.GetMemoryTotalInBytes(),
+		MemoryUsedInBytes:  raw.GetMemoryUsedInBytes(),
+		Name:               raw.GetName(),
+		NetworkIn:          raw.GetNetworkIn(),
+		NetworkOut:         raw.GetNetworkOut(),
+		Node:               raw.GetNode(),
+		Pool:               raw.GetPool(),
+		Status:             raw.GetStatus(),
+		Tags:               raw.GetTags(),
+		Template:           raw.GetTemplate(),
+		Type:               raw.GetType(),
+		Uptime:             raw.GetUptime()}
 }
 
-func (r RawGuestResource) GetCPUcores() uint {
-	if v, isSet := r["maxcpu"]; isSet {
+func (raw RawGuestResource) GetCPUcores() uint {
+	if v, isSet := raw.a["maxcpu"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetCPUusage() float64 {
-	if v, isSet := r["cpu"]; isSet {
+func (raw RawGuestResource) GetCPUusage() float64 {
+	if v, isSet := raw.a["cpu"]; isSet {
 		return v.(float64)
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetDiskReadTotal() uint {
-	if v, isSet := r["diskread"]; isSet {
+func (raw RawGuestResource) GetDiskReadTotal() uint {
+	if v, isSet := raw.a["diskread"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetDiskSizeInBytes() uint {
-	if v, isSet := r["maxdisk"]; isSet {
+func (raw RawGuestResource) GetDiskSizeInBytes() uint {
+	if v, isSet := raw.a["maxdisk"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetDiskUsedInBytes() uint {
-	if v, isSet := r["disk"]; isSet {
+func (raw RawGuestResource) GetDiskUsedInBytes() uint {
+	if v, isSet := raw.a["disk"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetDiskWriteTotal() uint {
-	if v, isSet := r["diskwrite"]; isSet {
+func (raw RawGuestResource) GetDiskWriteTotal() uint {
+	if v, isSet := raw.a["diskwrite"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetHaState() string {
-	if v, isSet := r["hastate"]; isSet {
+func (raw RawGuestResource) GetHaState() string {
+	if v, isSet := raw.a["hastate"]; isSet {
 		return v.(string)
 	}
 	return ""
 }
 
-func (r RawGuestResource) GetID() GuestID {
-	if v, isSet := r["vmid"]; isSet {
+func (raw RawGuestResource) GetID() GuestID {
+	if v, isSet := raw.a["vmid"]; isSet {
 		return GuestID(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetMemoryTotalInBytes() uint {
-	if v, isSet := r["maxmem"]; isSet {
+func (raw RawGuestResource) GetMemoryTotalInBytes() uint {
+	if v, isSet := raw.a["maxmem"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetMemoryUsedInBytes() uint {
-	if v, isSet := r["mem"]; isSet {
+func (raw RawGuestResource) GetMemoryUsedInBytes() uint {
+	if v, isSet := raw.a["mem"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetName() GuestName {
-	if v, isSet := r["name"]; isSet {
+func (raw RawGuestResource) GetName() GuestName {
+	if v, isSet := raw.a["name"]; isSet {
 		return GuestName(v.(string))
 	}
 	return ""
 }
 
-func (r RawGuestResource) GetNetworkIn() uint {
-	if v, isSet := r["netin"]; isSet {
+func (raw RawGuestResource) GetNetworkIn() uint {
+	if v, isSet := raw.a["netin"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetNetworkOut() uint {
-	if v, isSet := r["netout"]; isSet {
+func (raw RawGuestResource) GetNetworkOut() uint {
+	if v, isSet := raw.a["netout"]; isSet {
 		return uint(v.(float64))
 	}
 	return 0
 }
 
-func (r RawGuestResource) GetNode() NodeName {
-	if v, isSet := r["node"]; isSet {
+func (raw RawGuestResource) GetNode() NodeName {
+	if v, isSet := raw.a["node"]; isSet {
 		return NodeName(v.(string))
 	}
 	return ""
 }
 
-func (r RawGuestResource) GetPool() PoolName {
-	if v, isSet := r["pool"]; isSet {
+func (raw RawGuestResource) GetPool() PoolName {
+	if v, isSet := raw.a["pool"]; isSet {
 		return PoolName(v.(string))
 	}
 	return ""
 }
 
-func (r RawGuestResource) GetStatus() PowerState {
-	if v, isSet := r["status"]; isSet {
+func (raw RawGuestResource) GetStatus() PowerState {
+	if v, isSet := raw.a["status"]; isSet {
 		return PowerState(0).parse(v.(string))
 	}
 	return PowerStateUnknown
 }
 
-func (r RawGuestResource) GetTags() Tags {
-	if v, isSet := r["tags"]; isSet {
+func (raw RawGuestResource) GetTags() Tags {
+	if v, isSet := raw.a["tags"]; isSet {
 		return Tags{}.mapToSDK(v.(string))
 	}
 	return nil
 }
 
-func (r RawGuestResource) GetTemplate() bool {
-	if v, isSet := r["template"]; isSet {
+func (raw RawGuestResource) GetTemplate() bool {
+	if v, isSet := raw.a["template"]; isSet {
 		return int(v.(float64)) == 1
 	}
 	return false
 }
 
-func (r RawGuestResource) GetType() GuestType {
-	if v, isSet := r["type"]; isSet {
+func (raw RawGuestResource) GetType() GuestType {
+	if v, isSet := raw.a["type"]; isSet {
 		return GuestType(v.(string))
 	}
 	return ""
 }
 
-func (r RawGuestResource) GetUptime() time.Duration {
-	if v, isSet := r["uptime"]; isSet {
+func (raw RawGuestResource) GetUptime() time.Duration {
+	if v, isSet := raw.a["uptime"]; isSet {
 		return time.Duration(v.(float64)) * time.Second
 	}
 	return 0
