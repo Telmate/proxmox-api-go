@@ -154,127 +154,127 @@ func (disks QemuScsiDisks) mapToIntMap() map[uint8]*QemuScsiStorage {
 func (raw RawConfigQemu) disksSCSI(linkedVmId *GuestID) *QemuScsiDisks {
 	disks := QemuScsiDisks{}
 	var structPopulated bool
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"0"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"0"]; isSet {
 		disks.Disk_0 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"1"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"1"]; isSet {
 		disks.Disk_1 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"2"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"2"]; isSet {
 		disks.Disk_2 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"3"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"3"]; isSet {
 		disks.Disk_3 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"4"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"4"]; isSet {
 		disks.Disk_4 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"5"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"5"]; isSet {
 		disks.Disk_5 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"6"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"6"]; isSet {
 		disks.Disk_6 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"7"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"7"]; isSet {
 		disks.Disk_7 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"8"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"8"]; isSet {
 		disks.Disk_8 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"9"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"9"]; isSet {
 		disks.Disk_9 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"10"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"10"]; isSet {
 		disks.Disk_10 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"11"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"11"]; isSet {
 		disks.Disk_11 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"12"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"12"]; isSet {
 		disks.Disk_12 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"13"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"13"]; isSet {
 		disks.Disk_13 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"14"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"14"]; isSet {
 		disks.Disk_14 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"15"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"15"]; isSet {
 		disks.Disk_15 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"16"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"16"]; isSet {
 		disks.Disk_16 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"17"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"17"]; isSet {
 		disks.Disk_17 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"18"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"18"]; isSet {
 		disks.Disk_18 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"19"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"19"]; isSet {
 		disks.Disk_19 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"20"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"20"]; isSet {
 		disks.Disk_20 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"21"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"21"]; isSet {
 		disks.Disk_21 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"22"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"22"]; isSet {
 		disks.Disk_22 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"23"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"23"]; isSet {
 		disks.Disk_23 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"24"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"24"]; isSet {
 		disks.Disk_24 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"25"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"25"]; isSet {
 		disks.Disk_25 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"26"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"26"]; isSet {
 		disks.Disk_26 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"27"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"27"]; isSet {
 		disks.Disk_27 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"28"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"28"]; isSet {
 		disks.Disk_28 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"29"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"29"]; isSet {
 		disks.Disk_29 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskSCSI+"30"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"30"]; isSet {
 		disks.Disk_30 = QemuScsiStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}

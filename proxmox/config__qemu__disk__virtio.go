@@ -122,67 +122,67 @@ func (disks QemuVirtIODisks) mapToIntMap() map[uint8]*QemuVirtIOStorage {
 func (raw RawConfigQemu) disksVirtIO(linkedVmId *GuestID) *QemuVirtIODisks {
 	disks := QemuVirtIODisks{}
 	var structPopulated bool
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"0"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"0"]; isSet {
 		disks.Disk_0 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"1"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"1"]; isSet {
 		disks.Disk_1 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"2"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"2"]; isSet {
 		disks.Disk_2 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"3"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"3"]; isSet {
 		disks.Disk_3 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"4"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"4"]; isSet {
 		disks.Disk_4 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"5"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"5"]; isSet {
 		disks.Disk_5 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"6"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"6"]; isSet {
 		disks.Disk_6 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"7"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"7"]; isSet {
 		disks.Disk_7 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"8"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"8"]; isSet {
 		disks.Disk_8 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"9"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"9"]; isSet {
 		disks.Disk_9 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"10"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"10"]; isSet {
 		disks.Disk_10 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"11"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"11"]; isSet {
 		disks.Disk_11 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"12"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"12"]; isSet {
 		disks.Disk_12 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"13"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"13"]; isSet {
 		disks.Disk_13 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"14"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"14"]; isSet {
 		disks.Disk_14 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskVirtIO+"15"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"15"]; isSet {
 		disks.Disk_15 = QemuVirtIOStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}

@@ -96,19 +96,19 @@ func (disks QemuIdeDisks) mapToIntMap() map[uint8]*QemuIdeStorage {
 func (raw RawConfigQemu) disksIde(linkedVmId *GuestID) *QemuIdeDisks {
 	disks := QemuIdeDisks{}
 	var structPopulated bool
-	if v, isSet := raw[qemuPrefixApiKeyDiskIde+"0"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskIde+"0"]; isSet {
 		disks.Disk_0 = QemuIdeStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskIde+"1"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskIde+"1"]; isSet {
 		disks.Disk_1 = QemuIdeStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskIde+"2"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskIde+"2"]; isSet {
 		disks.Disk_2 = QemuIdeStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}
-	if v, isSet := raw[qemuPrefixApiKeyDiskIde+"3"]; isSet {
+	if v, isSet := raw.a[qemuPrefixApiKeyDiskIde+"3"]; isSet {
 		disks.Disk_3 = QemuIdeStorage{}.mapToStruct(v.(string), linkedVmId)
 		structPopulated = true
 	}

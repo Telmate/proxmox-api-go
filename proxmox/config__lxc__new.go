@@ -501,7 +501,7 @@ func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 	return config.Networks.Validate(current.Networks)
 }
 
-type RawConfigLXC map[string]any
+type RawConfigLXC struct{ a map[string]any }
 
 func (raw RawConfigLXC) Get(vmr VmRef, state PowerState) *ConfigLXC {
 	config := raw.get(vmr)
@@ -540,14 +540,14 @@ func (raw RawConfigLXC) get(vmr VmRef) *ConfigLXC {
 }
 
 func (raw RawConfigLXC) GetArchitecture() CpuArchitecture {
-	if v, isSet := raw[lxcApiKeyArchitecture]; isSet {
+	if v, isSet := raw.a[lxcApiKeyArchitecture]; isSet {
 		return CpuArchitecture(v.(string))
 	}
 	return ""
 }
 
 func (raw RawConfigLXC) GetDescription() *string {
-	if v, isSet := raw[lxcApiKeyDescription]; isSet {
+	if v, isSet := raw.a[lxcApiKeyDescription]; isSet {
 		return util.Pointer(v.(string))
 	}
 	return nil
@@ -558,32 +558,32 @@ func (raw RawConfigLXC) GetDigest() [sha1.Size]byte {
 }
 
 func (raw RawConfigLXC) getDigest() digest {
-	if v, isSet := raw[lxcApiKeyDigest]; isSet {
+	if v, isSet := raw.a[lxcApiKeyDigest]; isSet {
 		return digest(v.(string))
 	}
 	return ""
 }
 
 func (raw RawConfigLXC) GetDNS() *GuestDNS {
-	return GuestDNS{}.mapToSDK(raw)
+	return GuestDNS{}.mapToSDK(raw.a)
 }
 
 func (raw RawConfigLXC) GetMemory() LxcMemory {
-	if v, isSet := raw[lxcApiKeyMemory]; isSet {
+	if v, isSet := raw.a[lxcApiKeyMemory]; isSet {
 		return LxcMemory(v.(float64))
 	}
 	return 0
 }
 
 func (raw RawConfigLXC) GetName() GuestName {
-	if v, isSet := raw[lxcApiKeyName]; isSet {
+	if v, isSet := raw.a[lxcApiKeyName]; isSet {
 		return GuestName(v.(string))
 	}
 	return ""
 }
 
 func (raw RawConfigLXC) GetOperatingSystem() OperatingSystem {
-	if v, isSet := raw[lxcApiKeyOperatingSystem]; isSet {
+	if v, isSet := raw.a[lxcApiKeyOperatingSystem]; isSet {
 		return OperatingSystem(v.(string))
 	}
 	return ""
@@ -595,28 +595,28 @@ func (raw RawConfigLXC) GetPrivileged() bool {
 }
 
 func (raw RawConfigLXC) isPrivileged() bool {
-	if v, isSet := raw[lxcApiKeyUnprivileged]; isSet {
+	if v, isSet := raw.a[lxcApiKeyUnprivileged]; isSet {
 		return v.(float64) == 0
 	}
 	return true // when privileged the API does not return the key at all, so we assume it is privileged
 }
 
 func (raw RawConfigLXC) GetProtection() bool {
-	if v, isSet := raw[lxcAPIKeyProtection]; isSet {
+	if v, isSet := raw.a[lxcAPIKeyProtection]; isSet {
 		return int(v.(float64)) == 1
 	}
 	return false
 }
 
 func (raw RawConfigLXC) GetSwap() LxcSwap {
-	if v, isSet := raw[lxcApiKeySwap]; isSet {
+	if v, isSet := raw.a[lxcApiKeySwap]; isSet {
 		return LxcSwap(v.(float64))
 	}
 	return 0
 }
 
 func (raw RawConfigLXC) GetTags() *Tags {
-	if v, isSet := raw[lxcApiKeyTags]; isSet {
+	if v, isSet := raw.a[lxcApiKeyTags]; isSet {
 		return util.Pointer(Tags{}.mapToSDK(v.(string)))
 	}
 	return nil
@@ -727,10 +727,10 @@ func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String
 
 func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
+		return RawConfigLXC{}, errors.New(VmRef_Error_Nil)
 	}
 	if c == nil {
-		return nil, errors.New(Client_Error_Nil)
+		return RawConfigLXC{}, errors.New(Client_Error_Nil)
 	}
 	return newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
 }
@@ -738,7 +738,7 @@ func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConf
 func newRawConfigLXCFromAPI_Unsafe(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	rawConfig, err := c.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
 	if err != nil {
-		return nil, err
+		return RawConfigLXC{}, err
 	}
-	return rawConfig, nil
+	return RawConfigLXC{a: rawConfig}, nil
 }

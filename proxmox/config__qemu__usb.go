@@ -48,7 +48,7 @@ const QemuUSBsAmount = uint8(QemuUsbIDMaximum) + 1
 func (raw RawConfigQemu) GetUSBs() QemuUSBs {
 	usbList := make(QemuUSBs)
 	for i := QemuUsbID(0); i < QemuUsbID(QemuUSBsAmount); i++ {
-		if v, isSet := raw[qemuPrefixApiKeyUSB+i.String()]; isSet {
+		if v, isSet := raw.a[qemuPrefixApiKeyUSB+i.String()]; isSet {
 			usbList[i] = QemuUSB{}.mapToSDK(v.(string))
 		}
 	}

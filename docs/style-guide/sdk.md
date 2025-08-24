@@ -122,9 +122,9 @@ The SDK needs to convert the API response to something the SDK understands.
 In [Example Mapping to SDK](#example-mapping-to-sdk) a code example is given of how to convert the API response to the SDK data structure.
 The Rules of the logic for mapping to the SDK are:
 
-- We start with a raw config object, which uses a primitive `map[string]any`, in the example this is called `RawExampleConfig`.
-- For each top-level field in the final SDK config, there should be a corresponding method in the raw config that returns the value for that field. This enables opt-in conversion from the raw config to the SDK config.
-- The raw config has an `ALL()` method that calls all individual conversion methods, returning a fully populated SDK config.
+- We start with a raw config object, which uses a primitive `map[string]any`, in the example this is called `RawConfigExample`.
+- For each top-level field in the final SDK config, there should be a corresponding method prefixed with `Get` in the raw config that returns the value for that field. This enables opt-in conversion from the raw config to the SDK config.
+- The raw config has an `Get()` method that calls all individual conversion methods, returning a fully populated SDK config.
 
 #### Example Mapping to SDK
 
@@ -138,7 +138,7 @@ The Rules of the logic for mapping to the SDK are:
 
 ```go
 func main(){
-    var raw RawExampleConfig
+    var raw RawExampleExample
     raw = map[string]any{
         "item_unit": "56",
         "flag": "true,1,false",
@@ -154,23 +154,25 @@ type ConfigExample struct {
     Flags   *ExampleFlags
 }
 
-// RawExampleConfig is a map that represents the raw configuration data from the API.
-type RawExampleConfig map[string]any
+// RawConfigExample is a map that represents the raw configuration data from the API.
+type RawConfigExample struct {
+    a map[string]any
+}
 
-// ALL converts the raw configuration to a fully populated ConfigExample struct.
-func (raw RawExampleConfig) ALL() (config ConfigExample) {
+// Get converts the raw configuration to a fully populated ConfigExample struct.
+func (raw RawConfigExample) Get() (config ConfigExample) {
     return ConfigExample{
-        ID:      raw.ID(),
-        Comment: raw.Comment(),
-        Flags:   raw.Flags(),
+        ID:      raw.GetID(),
+        Comment: raw.GetComment(),
+        Flags:   raw.GetFlags(),
     }
 }
 
 type ExampleID uint
 
 // ID returns the ID of the raw configuration as an ExampleID.
-func (raw RawExampleConfig) ID() *ExampleID {
-    if itemValue, isSet := raw["item_unit"]; isSet {
+func (raw RawConfigExample) GetID() *ExampleID {
+    if itemValue, isSet := raw.a["item_unit"]; isSet {
         tmpID, _ := strconv.Atoi(itemValue.(string))
         id := ExampleID(tmpID)
         return &id
@@ -186,8 +188,8 @@ type ExampleFlags struct {
 }
 
 // Flags returns the flags of the raw configuration as an ExampleFlags struct.
-func (raw RawExampleConfig) Flags() (*ExampleFlags) {
-    if itemValue, isSet := raw["flag"]; isSet {
+func (raw RawConfigExample) GetFlags() (*ExampleFlags) {
+    if itemValue, isSet := raw.a["flag"]; isSet {
         // omitted for brevity.
         return &ExampleFlags{}
     }
@@ -195,8 +197,8 @@ func (raw RawExampleConfig) Flags() (*ExampleFlags) {
 }
 
 // Comment returns the comment of the raw configuration as a string pointer.
-func (raw RawExampleConfig) Comment() (*string) {
-    if itemValue, isSet := raw["config_description"]; isSet {
+func (raw RawConfigExample) GetComment() (*string) {
+    if itemValue, isSet := raw.a["config_description"]; isSet {
         comment := itemValue.(string)
         return &comment
     }

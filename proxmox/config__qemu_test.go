@@ -4422,7 +4422,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 	uint53 := uint(53)
 	type test struct {
 		name   string
-		input  RawConfigQemu
+		input  map[string]any
 		vmr    *VmRef
 		output *ConfigQemu
 		err    error
@@ -7354,7 +7354,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				output, err := subTest.input.get(subTest.vmr)
+				output, err := RawConfigQemu{a: subTest.input}.get(subTest.vmr)
 				if err != nil {
 					require.Equal(t, subTest.err, err, name)
 				} else {

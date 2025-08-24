@@ -1217,7 +1217,7 @@ func (raw RawConfigLXC) GetBootMount(privileged bool) *LxcBootMount {
 		config.Quota = &quota
 	}
 	var settings map[string]string
-	if v, isSet := raw[lxcApiKeyRootFS].(string); isSet {
+	if v, isSet := raw.a[lxcApiKeyRootFS].(string); isSet {
 		storage = v[:strings.IndexRune(v, ':')]
 		if index := strings.IndexRune(v, ','); index != -1 {
 			config.rawDisk = v[:index]
@@ -1278,7 +1278,7 @@ func (raw RawConfigLXC) Mounts() LxcMounts {
 func (raw RawConfigLXC) getMounts(privileged bool) LxcMounts {
 	mounts := LxcMounts{}
 	for i := range LxcMountsAmount {
-		if v, isSet := raw[lxcPrefixApiKeyMount+strconv.Itoa(i)].(string); isSet {
+		if v, isSet := raw.a[lxcPrefixApiKeyMount+strconv.Itoa(i)].(string); isSet {
 			if v[0] == '/' { // Bind mount
 				mounts.mapToSdkBindMount(LxcMountID(i), v)
 			} else { // Data mount

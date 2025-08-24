@@ -186,7 +186,7 @@ func (raw RawConfigLXC) Features() *LxcFeatures {
 func (raw RawConfigLXC) getFeatures(privileged bool) *LxcFeatures {
 	var features lxcFeatures
 	var set bool
-	if v, isSet := raw[lxcApiKeyFeatures]; isSet {
+	if v, isSet := raw.a[lxcApiKeyFeatures]; isSet {
 		settings := splitStringOfSettings(v.(string))
 		if v, isSet := settings["mknod"]; isSet {
 			features[lxcFeaturesCreateDeviceNodes] = v == "1"

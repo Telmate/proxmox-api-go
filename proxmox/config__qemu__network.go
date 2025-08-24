@@ -376,7 +376,7 @@ func (config QemuNetworkInterfaces) mapToAPI(current QemuNetworkInterfaces, para
 func (raw RawConfigQemu) GetNetworks() QemuNetworkInterfaces {
 	interfaces := QemuNetworkInterfaces{}
 	for i := uint8(0); i < QemuNetworkInterfacesAmount; i++ {
-		if rawInterface, isSet := raw[qemuPrefixApiKeyNetwork+strconv.Itoa(int(i))]; isSet {
+		if rawInterface, isSet := raw.a[qemuPrefixApiKeyNetwork+strconv.Itoa(int(i))]; isSet {
 			interfaces[QemuNetworkInterfaceID(i)] = QemuNetworkInterface{}.mapToSDK(rawInterface.(string))
 		}
 	}

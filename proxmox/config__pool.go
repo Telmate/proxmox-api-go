@@ -47,46 +47,24 @@ func listPools(ctx context.Context, c *Client) ([]interface{}, error) {
 
 type ConfigPool struct {
 	Name    PoolName   `json:"name"`
-	Comment *string    `json:"comment"`
+	Comment *string    `json:"comment"` // never nil when returned
 	Guests  *[]GuestID `json:"guests"`
 }
 
-func (config ConfigPool) mapToApi(currentConfig *ConfigPool) map[string]interface{} {
-	params := map[string]interface{}{}
-	if currentConfig == nil { //create
-		params["poolid"] = string(config.Name)
+func (config ConfigPool) mapToApi(current *ConfigPool) map[string]any {
+	params := map[string]any{}
+	if current == nil { //create
+		params[poolApiKeyName] = string(config.Name)
 		if config.Comment != nil && *config.Comment != "" {
-			params["comment"] = string(*config.Comment)
+			params[poolApiKeyComment] = string(*config.Comment)
 		}
 		return params
 	}
 	// update
-	if config.Comment != nil {
-		params["comment"] = string(*config.Comment)
+	if config.Comment != nil && *config.Comment != *current.Comment {
+		params[poolApiKeyComment] = string(*config.Comment)
 	}
 	return params
-}
-
-func (ConfigPool) mapToSDK(params map[string]interface{}) (config ConfigPool) {
-	if v, isSet := params["poolid"]; isSet {
-		config.Name = PoolName(v.(string))
-	}
-	if v, isSet := params["comment"]; isSet {
-		config.Comment = util.Pointer(v.(string))
-	}
-	if v, isSet := params["members"]; isSet {
-		guests := make([]GuestID, 0)
-		for _, e := range v.([]interface{}) {
-			param := e.(map[string]interface{})
-			if v, isSet := param["vmid"]; isSet {
-				guests = append(guests, GuestID(v.(float64)))
-			}
-		}
-		if len(guests) > 0 {
-			config.Guests = &guests
-		}
-	}
-	return
 }
 
 func (config ConfigPool) Create(ctx context.Context, c *Client) error {
@@ -173,7 +151,7 @@ func (config ConfigPool) UpdateNoCheck(ctx context.Context, c *Client) error {
 	if err != nil {
 		return err
 	}
-	if params := config.mapToApi(current); len(params) > 0 {
+	if params := config.mapToApi(util.Pointer(current.Get())); len(params) > 0 {
 		if err = config.Name.put(ctx, c, params, version); err != nil {
 			return err
 		}
@@ -262,7 +240,7 @@ func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs [
 	if err != nil {
 		return err
 	}
-	return pool.addGuestsNoCheck(ctx, c, guestIDs, config.Guests, version)
+	return pool.addGuestsNoCheck(ctx, c, guestIDs, config.GetGuests(), version)
 }
 
 func (config PoolName) Delete(ctx context.Context, c *Client) error {
@@ -306,24 +284,23 @@ func (config PoolName) ExistsNoCheck(ctx context.Context, c *Client) (bool, erro
 	return ItemInKeyOfArray(raw, "poolid", string(config)), nil
 }
 
-func (pool PoolName) Get(ctx context.Context, c *Client) (*ConfigPool, error) {
+func (pool PoolName) Get(ctx context.Context, c *Client) (RawConfigPool, error) {
 	if err := pool.Validate(); err != nil {
-		return nil, err
+		return RawConfigPool{}, err
 	}
 	// TODO: permission check
 	return pool.GetNoCheck(ctx, c)
 }
 
-func (pool PoolName) GetNoCheck(ctx context.Context, c *Client) (*ConfigPool, error) {
+func (pool PoolName) GetNoCheck(ctx context.Context, c *Client) (RawConfigPool, error) {
 	if c == nil {
-		return nil, errors.New(Client_Error_Nil)
+		return RawConfigPool{}, errors.New(Client_Error_Nil)
 	}
 	params, err := c.GetItemConfigMapStringInterface(ctx, "/pools/"+string(pool), "pool", "CONFIG")
 	if err != nil {
-		return nil, err
+		return RawConfigPool{}, err
 	}
-	config := ConfigPool{}.mapToSDK(params)
-	return &config, nil
+	return RawConfigPool{a: params}, nil
 }
 
 func (PoolName) guestsToRemoveFromPools(guests RawGuestResources, guestsToAdd []GuestID) map[PoolName][]GuestID {
@@ -427,11 +404,11 @@ func (pool PoolName) SetGuestsNoChecks(ctx context.Context, c *Client, guestID [
 	if err != nil {
 		return err
 	}
-	config, err := pool.Get(ctx, c)
+	raw, err := pool.Get(ctx, c)
 	if err != nil {
 		return err
 	}
-	return pool.setGuestsNoCheck(ctx, c, guestID, config.Guests, version)
+	return pool.setGuestsNoCheck(ctx, c, guestID, raw.GetGuests(), version)
 }
 
 func (pool PoolName) setGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, currentGuests *[]GuestID, version Version) error {
@@ -457,3 +434,47 @@ func (config PoolName) Validate() error {
 	}
 	return nil
 }
+
+type RawConfigPool struct{ a map[string]any }
+
+func (raw RawConfigPool) Get() ConfigPool {
+	return ConfigPool{
+		Name:    raw.GetName(),
+		Comment: util.Pointer(raw.GetComment()),
+		Guests:  raw.GetGuests()}
+}
+
+func (raw RawConfigPool) GetName() PoolName {
+	if v, isSet := raw.a[poolApiKeyName]; isSet {
+		return PoolName(v.(string))
+	}
+	return ""
+}
+
+func (raw RawConfigPool) GetComment() string {
+	if v, isSet := raw.a[poolApiKeyComment]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func (raw RawConfigPool) GetGuests() *[]GuestID {
+	guests := make([]GuestID, 0)
+	if v, isSet := raw.a["members"]; isSet {
+		for _, e := range v.([]any) {
+			param := e.(map[string]any)
+			if v, isSet := param["vmid"]; isSet {
+				guests = append(guests, GuestID(v.(float64)))
+			}
+		}
+	}
+	if len(guests) != 0 {
+		return &guests
+	}
+	return nil
+}
+
+const (
+	poolApiKeyName    string = "poolid"
+	poolApiKeyComment string = "comment"
+)

@@ -61,17 +61,17 @@ func (config QemuMemory) mapToAPI(current *QemuMemory, params map[string]interfa
 
 func (raw RawConfigQemu) GetMemory() *QemuMemory {
 	config := QemuMemory{}
-	if v, isSet := raw[qemuApiKeyMemoryCapacity]; isSet {
+	if v, isSet := raw.a[qemuApiKeyMemoryCapacity]; isSet {
 		tmp, _ := parse.Uint(v)
 		tmpIntermediate := QemuMemoryCapacity(tmp)
 		config.CapacityMiB = &tmpIntermediate
 	}
-	if v, isSet := raw[qemuApiKeyMemoryBallooning]; isSet {
+	if v, isSet := raw.a[qemuApiKeyMemoryBallooning]; isSet {
 		tmp, _ := parse.Uint(v)
 		tmpIntermediate := QemuMemoryBalloonCapacity(tmp)
 		config.MinimumCapacityMiB = &tmpIntermediate
 	}
-	if v, isSet := raw[qemuApiKeyMemoryShares]; isSet {
+	if v, isSet := raw.a[qemuApiKeyMemoryShares]; isSet {
 		tmp, _ := parse.Uint(v)
 		tmpIntermediate := QemuMemoryShares(tmp)
 		config.Shares = &tmpIntermediate

@@ -87,34 +87,34 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 func (raw RawConfigQemu) GetCloudInit() *CloudInit {
 	ci := CloudInit{}
 	var set bool
-	if v, isSet := raw[qemuApiKeyCloudInitCustom]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCloudInitCustom]; isSet {
 		ci.Custom = CloudInitCustom{}.mapToSDK(v.(string))
 		set = true
 	}
-	if v, isSet := raw[qemuApiKeyCloudInitPassword]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCloudInitPassword]; isSet {
 		ci.UserPassword = util.Pointer(v.(string))
 		set = true
 	}
-	if v, isSet := raw[qemuApiKeyCloudInitUpgrade]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCloudInitUpgrade]; isSet {
 		ci.UpgradePackages = util.Pointer(Itob(int(v.(float64))))
 		set = true
 	}
-	if v, isSet := raw[qemuApiKeyCloudInitUser]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCloudInitUser]; isSet {
 		tmp := v.(string)
 		if tmp != "" && tmp != " " {
 			ci.Username = &tmp
 			set = true
 		}
 	}
-	if v, isSet := raw[qemuApiKeyCloudInitSshKeys]; isSet {
+	if v, isSet := raw.a[qemuApiKeyCloudInitSshKeys]; isSet {
 		ci.PublicSSHkeys = util.Pointer(sshKeyUrlDecode(v.(string)))
 		set = true
 	}
-	if v := (GuestDNS{}.mapToSDK(raw)); v != nil {
+	if v := (GuestDNS{}.mapToSDK(raw.a)); v != nil {
 		ci.DNS = v
 		set = true
 	}
-	ci.NetworkInterfaces = CloudInitNetworkInterfaces{}.mapToSDK(raw)
+	ci.NetworkInterfaces = CloudInitNetworkInterfaces{}.mapToSDK(raw.a)
 	if set || len(ci.NetworkInterfaces) > 0 {
 		return &ci
 	}
