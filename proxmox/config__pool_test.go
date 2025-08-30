@@ -134,7 +134,7 @@ func Test_RawConfigPool_Get(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, RawConfigPool{a: test.input}.Get())
+			require.Equal(t, test.output, (&rawConfigPool{a: test.input}).Get())
 		})
 	}
 }
@@ -261,6 +261,13 @@ func Test_PoolName_GetNoCheck(t *testing.T) {
 }
 
 func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
+	set := func(raw []rawGuestResource) RawGuestResources {
+		interfaces := make([]RawGuestResource, len(raw))
+		for i := range raw {
+			interfaces[i] = &raw[i]
+		}
+		return interfaces
+	}
 	type testInput struct {
 		guests      RawGuestResources
 		guestsToAdd []GuestID
@@ -272,10 +279,10 @@ func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 	}{
 		{name: `'guestsToAdd' Not in 'guests'`,
 			input: testInput{
-				guests: RawGuestResources{
+				guests: set([]rawGuestResource{
 					{a: map[string]any{"vmid": float64(100), "pool": "test"}},
 					{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
-					{a: map[string]any{"vmid": float64(300), "pool": "test"}}},
+					{a: map[string]any{"vmid": float64(300), "pool": "test"}}}),
 				guestsToAdd: []GuestID{700, 800, 900}},
 			output: map[PoolName][]GuestID{}},
 		{name: `Empty`,
@@ -286,17 +293,17 @@ func Test_PoolName_guestsToRemoveFromPools(t *testing.T) {
 			output: map[PoolName][]GuestID{}},
 		{name: `Empty 'guestsToAdd'`,
 			input: testInput{
-				guests: RawGuestResources{
+				guests: set([]rawGuestResource{
 					{a: map[string]any{"vmid": float64(100), "pool": "test"}},
 					{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
-					{a: map[string]any{"vmid": float64(300), "pool": "test"}}}},
+					{a: map[string]any{"vmid": float64(300), "pool": "test"}}})},
 			output: map[PoolName][]GuestID{}},
 		{name: `Full`,
 			input: testInput{
-				guests: RawGuestResources{
+				guests: set([]rawGuestResource{
 					{a: map[string]any{"vmid": float64(100), "pool": "test"}},
 					{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
-					{a: map[string]any{"vmid": float64(300), "pool": "test"}}},
+					{a: map[string]any{"vmid": float64(300), "pool": "test"}}}),
 				guestsToAdd: []GuestID{100, 300, 200}},
 			output: map[PoolName][]GuestID{
 				"test":  {100, 300},
