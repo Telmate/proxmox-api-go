@@ -505,7 +505,8 @@ func Test_lxcMountMove_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_RawConfigLXC_BootMount(t *testing.T) {
+func Test_RawConfigLXC_GetBootMount(t *testing.T) {
+	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	require.Equal(t,
 		&LxcBootMount{
 			ACL:   util.Pointer(TriBoolTrue),
@@ -519,10 +520,11 @@ func Test_RawConfigLXC_BootMount(t *testing.T) {
 			Storage:         util.Pointer("local-ext4"),
 			SizeInKibibytes: util.Pointer(LxcMountSize(1048576)),
 			rawDisk:         "local-ext4:subvol-101-disk-0"},
-		RawConfigLXC{a: map[string]any{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G,quota=1,replicate=1"}}.BootMount())
+		set(map[string]any{"rootfs": "local-ext4:subvol-101-disk-0,acl=1,mountoptions=discard;lazytime;noatime;nosuid,size=1G,quota=1,replicate=1"}).GetBootMount())
 }
 
 func Test_RawConfigLXC_Mounts(t *testing.T) {
+	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	require.Equal(t,
 		LxcMounts{
 			LxcMountID150: LxcMount{DataMount: &LxcDataMount{
@@ -542,5 +544,5 @@ func Test_RawConfigLXC_Mounts(t *testing.T) {
 				SizeInKibibytes: util.Pointer(LxcMountSize(18)),
 				Storage:         util.Pointer("local-zfs"),
 				rawDisk:         "local-zfs:subvol-100-disk-1"}}},
-		RawConfigLXC{a: map[string]any{"mp150": "local-zfs:subvol-100-disk-1,size=18K,acl=0,backup=1,quota=1,mountoptions=lazytime;noexec;discard,mp=/opt/test,replicate=1,ro=1"}}.Mounts())
+		set(map[string]any{"mp150": "local-zfs:subvol-100-disk-1,size=18K,acl=0,backup=1,quota=1,mountoptions=lazytime;noexec;discard,mp=/opt/test,replicate=1,ro=1"}).GetMounts())
 }

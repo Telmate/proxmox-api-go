@@ -2683,6 +2683,7 @@ func Test_ConfigLXC_UpdateNoCheck(t *testing.T) {
 }
 
 func Test_RawConfigLXC_Get(t *testing.T) {
+	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	parseIP := func(rawIP string) netip.Addr {
 		ip, err := netip.ParseAddr(rawIP)
 		failPanic(err)
@@ -3607,22 +3608,24 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.output, RawConfigLXC{a: subTest.input}.Get(subTest.vmr, subTest.state), name)
+				require.Equal(t, subTest.output, set(subTest.input).Get(subTest.vmr, subTest.state), name)
 			})
 		}
 	}
 }
 
 func Test_RawConfigLXC_GetDigest(t *testing.T) {
+	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	require.Equal(t,
 		[sha1.Size]byte{
 			0xaf, 0x06, 0x49, 0x23, 0xbb, 0xf2, 0x30, 0x15, 0x96, 0xaa,
 			0xc4, 0xc2, 0x73, 0xba, 0x32, 0x17, 0x8e, 0xbc, 0x4a, 0x96},
-		RawConfigLXC{a: map[string]any{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}}.GetDigest(), "")
+		set(map[string]any{"digest": "af064923bbf2301596aac4c273ba32178ebc4a96"}).GetDigest(), "")
 }
 
 func Test_RawConfigLXC_GetPrivileged(t *testing.T) {
-	require.Equal(t, true, RawConfigLXC{}.GetPrivileged())
+	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
+	require.Equal(t, true, set(map[string]any{}).GetPrivileged())
 }
 
 func Test_LxcMemory_String(t *testing.T) {

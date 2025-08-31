@@ -350,7 +350,7 @@ func (id LxcNetworkID) Validate() error {
 	return nil
 }
 
-func (raw RawConfigLXC) GetNetworks() LxcNetworks {
+func (raw *rawConfigLXC) GetNetworks() LxcNetworks {
 	nets := LxcNetworks{}
 	for i := 0; i <= LxcNetworkIdMaximum; i++ {
 		if v, isSet := raw.a[lxcPrefixApiKeyNetwork+strconv.Itoa(i)]; isSet {

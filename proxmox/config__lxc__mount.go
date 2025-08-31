@@ -1198,11 +1198,9 @@ func (disk lxcMountResize) resize(ctx context.Context, vmr *VmRef, client *Clien
 		"/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/resize")
 }
 
-func (raw RawConfigLXC) BootMount() *LxcBootMount {
-	return raw.GetBootMount(raw.isPrivileged())
-}
+func (raw *rawConfigLXC) GetBootMount() *LxcBootMount { return raw.getBootMount(raw.isPrivileged()) }
 
-func (raw RawConfigLXC) GetBootMount(privileged bool) *LxcBootMount {
+func (raw *rawConfigLXC) getBootMount(privileged bool) *LxcBootMount {
 	var acl TriBool
 	var quota bool
 	var size LxcMountSize
@@ -1271,11 +1269,9 @@ func (raw RawConfigLXC) GetBootMount(privileged bool) *LxcBootMount {
 	return &config
 }
 
-func (raw RawConfigLXC) Mounts() LxcMounts {
-	return raw.getMounts(raw.isPrivileged())
-}
+func (raw *rawConfigLXC) GetMounts() LxcMounts { return raw.getMounts(raw.isPrivileged()) }
 
-func (raw RawConfigLXC) getMounts(privileged bool) LxcMounts {
+func (raw *rawConfigLXC) getMounts(privileged bool) LxcMounts {
 	mounts := LxcMounts{}
 	for i := range LxcMountsAmount {
 		if v, isSet := raw.a[lxcPrefixApiKeyMount+strconv.Itoa(i)].(string); isSet {
