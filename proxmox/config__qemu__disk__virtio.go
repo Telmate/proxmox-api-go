@@ -119,7 +119,7 @@ func (disks QemuVirtIODisks) mapToIntMap() map[uint8]*QemuVirtIOStorage {
 	}
 }
 
-func (raw RawConfigQemu) disksVirtIO(linkedVmId *GuestID) *QemuVirtIODisks {
+func (raw *rawConfigQemu) disksVirtIO(linkedVmId *GuestID) *QemuVirtIODisks {
 	disks := QemuVirtIODisks{}
 	var structPopulated bool
 	if v, isSet := raw.a[qemuPrefixApiKeyDiskVirtIO+"0"]; isSet {

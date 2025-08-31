@@ -613,7 +613,7 @@ func (QemuCPU) mapToApiAffinity(affinity []uint) string {
 	return builder.String()
 }
 
-func (raw RawConfigQemu) GetCPU() *QemuCPU {
+func (raw *rawConfigQemu) GetCPU() *QemuCPU {
 	var cpu QemuCPU
 	if v, isSet := raw.a[qemuApiKeyCpuAffinity]; isSet {
 		if v.(string) != "" {

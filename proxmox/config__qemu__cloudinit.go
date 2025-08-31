@@ -84,7 +84,7 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]interface
 	return
 }
 
-func (raw RawConfigQemu) GetCloudInit() *CloudInit {
+func (raw *rawConfigQemu) GetCloudInit() *CloudInit {
 	ci := CloudInit{}
 	var set bool
 	if v, isSet := raw.a[qemuApiKeyCloudInitCustom]; isSet {

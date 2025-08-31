@@ -1091,9 +1091,28 @@ func (c ConfigQemu) String() string { // String is for fmt.Stringer.
 	return string(jsConf)
 }
 
-type RawConfigQemu struct{ a map[string]any }
+type RawConfigQemu interface {
+	Get(vmr *VmRef) (*ConfigQemu, error)
+	GetAgent() *QemuGuestAgent
+	GetCPU() *QemuCPU
+	GetCloudInit() *CloudInit
+	GetDescription() string
+	GetMemory() *QemuMemory
+	GetName() GuestName
+	GetNetworks() QemuNetworkInterfaces
+	GetPciDevices() QemuPciDevices
+	GetProtection() bool
+	GetRandomnessDevice() *VirtIoRNG
+	GetSerials() SerialInterfaces
+	GetTablet() bool
+	GetTags() *Tags
+	GetUSBs() QemuUSBs
+	get(vmr *VmRef) (*ConfigQemu, error)
+}
 
-func (raw RawConfigQemu) Get(vmr *VmRef) (*ConfigQemu, error) {
+type rawConfigQemu struct{ a map[string]any }
+
+func (raw *rawConfigQemu) Get(vmr *VmRef) (*ConfigQemu, error) {
 	config, err := raw.get(vmr)
 	if err != nil {
 		return nil, err
@@ -1102,7 +1121,7 @@ func (raw RawConfigQemu) Get(vmr *VmRef) (*ConfigQemu, error) {
 	return config, nil
 }
 
-func (raw RawConfigQemu) get(vmr *VmRef) (*ConfigQemu, error) {
+func (raw *rawConfigQemu) get(vmr *VmRef) (*ConfigQemu, error) {
 	config := ConfigQemu{
 		Agent:            raw.GetAgent(),
 		CPU:              raw.GetCPU(),
@@ -1126,35 +1145,35 @@ func (raw RawConfigQemu) get(vmr *VmRef) (*ConfigQemu, error) {
 	return &config, nil
 }
 
-func (raw RawConfigQemu) GetDescription() string {
+func (raw *rawConfigQemu) GetDescription() string {
 	if v, isSet := raw.a[qemuApiKeyDescription]; isSet {
 		return v.(string)
 	}
 	return ""
 }
 
-func (raw RawConfigQemu) GetName() GuestName {
+func (raw *rawConfigQemu) GetName() GuestName {
 	if v, isSet := raw.a[qemuApiKeyName]; isSet {
 		return GuestName(v.(string))
 	}
 	return ""
 }
 
-func (raw RawConfigQemu) GetProtection() bool {
+func (raw *rawConfigQemu) GetProtection() bool {
 	if v, isSet := raw.a[qemuApiKeyProtection]; isSet {
 		return int(v.(float64)) == 1
 	}
 	return false
 }
 
-func (raw RawConfigQemu) GetTablet() bool {
+func (raw *rawConfigQemu) GetTablet() bool {
 	if v, isSet := raw.a[qemuApiKeyTablet]; isSet {
 		return int(v.(float64)) == 1
 	}
 	return true
 }
 
-func (raw RawConfigQemu) GetTags() *Tags {
+func (raw *rawConfigQemu) GetTags() *Tags {
 	if v, isSet := raw.a[qemuApiKeyTags]; isSet {
 		return util.Pointer(Tags{}.mapToSDK(v.(string)))
 	}
@@ -1197,10 +1216,10 @@ const (
 
 func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
 	if vmr == nil {
-		return RawConfigQemu{}, errors.New(VmRef_Error_Nil)
+		return nil, errors.New(VmRef_Error_Nil)
 	}
 	if client == nil {
-		return RawConfigQemu{}, errors.New(Client_Error_Nil)
+		return nil, errors.New(Client_Error_Nil)
 	}
 	return newRawConfigQemuFromAPI_Unsafe(ctx, vmr, client)
 }
@@ -1208,9 +1227,9 @@ func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (R
 func newRawConfigQemuFromAPI_Unsafe(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
 	rawConfig, err := client.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
 	if err != nil {
-		return RawConfigQemu{}, err
+		return nil, err
 	}
-	return RawConfigQemu{a: rawConfig}, nil
+	return &rawConfigQemu{a: rawConfig}, nil
 }
 
 func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (config *ConfigQemu, err error) {

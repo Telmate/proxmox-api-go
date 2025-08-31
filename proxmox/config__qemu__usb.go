@@ -45,7 +45,7 @@ type QemuUSBs map[QemuUsbID]QemuUSB
 
 const QemuUSBsAmount = uint8(QemuUsbIDMaximum) + 1
 
-func (raw RawConfigQemu) GetUSBs() QemuUSBs {
+func (raw *rawConfigQemu) GetUSBs() QemuUSBs {
 	usbList := make(QemuUSBs)
 	for i := QemuUsbID(0); i < QemuUsbID(QemuUSBsAmount); i++ {
 		if v, isSet := raw.a[qemuPrefixApiKeyUSB+i.String()]; isSet {

@@ -31,7 +31,7 @@ func (config QemuPciDevices) mapToAPI(current QemuPciDevices, params map[string]
 	return builder.String()
 }
 
-func (raw RawConfigQemu) GetPciDevices() QemuPciDevices {
+func (raw *rawConfigQemu) GetPciDevices() QemuPciDevices {
 	pciList := make(QemuPciDevices)
 	for i := QemuPciID(0); i < QemuPciID(QemuPciDevicesAmount); i++ {
 		if v, isSet := raw.a[qemuPrefixApiKeyPCI+i.String()]; isSet {

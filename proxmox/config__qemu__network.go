@@ -373,7 +373,7 @@ func (config QemuNetworkInterfaces) mapToAPI(current QemuNetworkInterfaces, para
 	return
 }
 
-func (raw RawConfigQemu) GetNetworks() QemuNetworkInterfaces {
+func (raw *rawConfigQemu) GetNetworks() QemuNetworkInterfaces {
 	interfaces := QemuNetworkInterfaces{}
 	for i := uint8(0); i < QemuNetworkInterfacesAmount; i++ {
 		if rawInterface, isSet := raw.a[qemuPrefixApiKeyNetwork+strconv.Itoa(int(i))]; isSet {

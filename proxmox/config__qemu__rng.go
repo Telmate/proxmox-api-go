@@ -172,7 +172,7 @@ func (source EntropySource) Validate() error {
 	return errors.New(EntropySourceErrorInvalid)
 }
 
-func (raw RawConfigQemu) GetRandomnessDevice() *VirtIoRNG {
+func (raw *rawConfigQemu) GetRandomnessDevice() *VirtIoRNG {
 	if v, isSet := raw.a[qemuApiKeyRandomnessDevice]; isSet {
 		var config VirtIoRNG
 		settings := splitStringOfSettings(v.(string))
