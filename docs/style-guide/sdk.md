@@ -122,47 +122,75 @@ The SDK needs to convert the API response to something the SDK understands.
 In [Example Mapping to SDK](#example-mapping-to-sdk) a code example is given of how to convert the API response to the SDK data structure.
 The Rules of the logic for mapping to the SDK are:
 
-- We start with a raw config object, which uses a primitive `map[string]any`, in the example this is called `RawConfigExample`.
-- For each top-level field in the final SDK config, there should be a corresponding method prefixed with `Get` in the raw config that returns the value for that field. This enables opt-in conversion from the raw config to the SDK config.
-- The raw config has an `Get()` method that calls all individual conversion methods, returning a fully populated SDK config.
+- We start with a public interface with the name of the real config prefixed with `Raw`, in this case `RawConfigExample`.
+- The interface is implemented by a private struct which uses an internal `map[string]any`, in the example this is called `rawConfigExample`.
+- For each top-level field in the final SDK config, there should be a corresponding method prefixed with `Get` in the raw config that returns the value for that field. This enables field-level conversion from the raw config to the SDK config.
+- The raw config has a `Get()` method that calls all individual conversion methods, returning a fully populated SDK config.
 
 #### Example Mapping to SDK
 
 ```json
 {
-    "item_unit": "56", // this is always a number represented as a string
-    "flag": "true,1,false", //this are always 3 values and are always in the same order
-    "config_description": "long comment" //this is always a string
+    "item_unit": "56", // always a number represented as a string, required in schema.
+    "flag": "true,1,false", // always 3 values and are always in the same order.
+    "config_description": "long comment" // always a string.
 }
 ```
 
 ```go
+import (
+    "reflect"
+    "strconv"
+)
+
 func main(){
-    var raw RawExampleExample
-    raw = map[string]any{
+    rawConfig := Example()
+    config := rawConfig.Get()
+    id := rawConfig.GetID()
+    config2 := ConfigExample{
+        ID:      &id,
+        Comment: rawConfig.GetComment(),
+        Flags:   rawConfig.GetFlags(),
+    }
+    if !reflect.DeepEqual(config, config2) {
+        panic("configs are not equal")
+    }
+}
+
+func Example() RawConfigExample {
+    raw := map[string]any{
         "item_unit": "56",
         "flag": "true,1,false",
         "config_description": "long comment",
     }
-    config := raw.ALL()
+    return &rawConfigExample{a: raw}
 }
 
 // all root configs should be prefixed with 'Config'
 type ConfigExample struct {
-    ID      *ExampleID
+    ID      *ExampleID // never nil when returned
     Comment *string
     Flags   *ExampleFlags
 }
 
-// RawConfigExample is a map that represents the raw configuration data from the API.
-type RawConfigExample struct {
+// RawConfigExample is an interface so we can mock it during tests.
+type RawConfigExample interface {
+    Get() ConfigExample
+    GetComment() *string
+    GetFlags() *ExampleFlags
+    GetID() ExampleID
+}
+
+// rawConfigExample holds a map that represents the raw configuration data from the API.
+type rawConfigExample struct {
     a map[string]any
 }
 
 // Get converts the raw configuration to a fully populated ConfigExample struct.
-func (raw RawConfigExample) Get() (config ConfigExample) {
+func (raw *rawConfigExample) Get() (config ConfigExample) {
+    id := raw.GetID() 
     return ConfigExample{
-        ID:      raw.GetID(),
+        ID:      &id,
         Comment: raw.GetComment(),
         Flags:   raw.GetFlags(),
     }
@@ -170,34 +198,33 @@ func (raw RawConfigExample) Get() (config ConfigExample) {
 
 type ExampleID uint
 
-// ID returns the ID of the raw configuration as an ExampleID.
-func (raw RawConfigExample) GetID() *ExampleID {
+// GetID returns the ID of the raw configuration as an ExampleID.
+func (raw *rawConfigExample) GetID() ExampleID {
     if itemValue, isSet := raw.a["item_unit"]; isSet {
         tmpID, _ := strconv.Atoi(itemValue.(string))
-        id := ExampleID(tmpID)
-        return &id
+        return ExampleID(tmpID)
     }
-    return nil
+    return 0
 }
 
-// api key 'flag' was given a custom to type to improve clarity.
+// ExampleFlags is a custom type to hold the value of the 'flag' field.
 type ExampleFlags struct {
     A bool
     B bool
     C bool
 }
 
-// Flags returns the flags of the raw configuration as an ExampleFlags struct.
-func (raw RawConfigExample) GetFlags() (*ExampleFlags) {
+// GetFlags returns the flags of the raw configuration as an ExampleFlags struct.
+func (raw *rawConfigExample) GetFlags() (*ExampleFlags) {
     if itemValue, isSet := raw.a["flag"]; isSet {
-        // omitted for brevity.
+        // omitted for brevity. in the real implementation, this would parse the "flag" string into three values.
         return &ExampleFlags{}
     }
     return nil
 }
 
-// Comment returns the comment of the raw configuration as a string pointer.
-func (raw RawConfigExample) GetComment() (*string) {
+// GetComment returns the comment of the raw configuration as a string pointer.
+func (raw *rawConfigExample) GetComment() (*string) {
     if itemValue, isSet := raw.a["config_description"]; isSet {
         comment := itemValue.(string)
         return &comment
