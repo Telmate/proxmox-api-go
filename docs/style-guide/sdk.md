@@ -9,6 +9,7 @@ When this document refers to the SDK, it references the code in the [/proxmox](.
 - [Software Development Kit](#software-development-kit)
   - [Table of Contents](#table-of-contents)
   - [Data Structures](#data-structures)
+  - [Client](#client)
   - [Mapping between SDK and API](#mapping-between-sdk-and-api)
     - [Mapping to API](#mapping-to-api)
       - [Example Mapping to API](#example-mapping-to-api)
@@ -45,6 +46,20 @@ In the upcoming section, we will delve into the details of the two primary data 
 
 **Note:** When defining configurations for an object, it's essential to prefix only the top-level configuration with `Config`.
 This practice is designed to enhance the user experience when utilizing code completion features in your [Integrated Development Environment (IDE)](https://www.codecademy.com/article/what-is-an-ide).
+
+## Client
+
+The Client is the main entrypoint for the SDK.
+It is responsible for managing the connection to the Proxmox API and providing access to the various services.
+The Client is designed to be used as a singleton, and should be created from a configuration struct.
+This Client consists of two layers:
+
+![Diagram of the Client interface ands it's internals](../assets/client-interface.drawio.svg)
+
+1. **`ClientNew`**: The Public interface for the SDK. This is only consumed by Public functions. With this interface, developers can mock any high-level functionality of the SDK.
+
+2. **`clientApiInterface`**: The private interface for the Client that is responsible for making the actual API calls.
+This interface is only consumed by the SDK itself. This interface is essentially a wrapper that sets the url and makes the API call. With this interface, developers can mock any low-level functionality of the SDK.
 
 ## Mapping between SDK and API
 
