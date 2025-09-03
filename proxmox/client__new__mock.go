@@ -12,21 +12,13 @@ type MockClient struct {
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 }
 
-func (m MockClient) New() ClientNew {
-	return &m
-}
+func (m MockClient) New() ClientNew { return &m }
 
-func (m *MockClient) panic(field string) {
-	panic(field + " not set in MockClient")
-}
+func (m *MockClient) panic(field string) { panic(field + " not set in MockClient") }
 
-func (m *MockClient) old() *Client {
-	panic("old not implemented in MockClient")
-}
+func (m *MockClient) old() *Client { panic("old not implemented in MockClient") }
 
-func (m *MockClient) apiGet() clientApiInterface {
-	panic("apiGet not implemented in MockClient")
-}
+func (m *MockClient) apiGet() clientApiInterface { panic("apiGet not implemented in MockClient") }
 
 func (m *MockClient) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
 	if m.GuestGetLxcRawConfigFunc == nil {

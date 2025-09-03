@@ -10,13 +10,9 @@ type mockClientAPI struct {
 	listGuestResourcesFunc func(ctx context.Context) ([]interface{}, error)
 }
 
-func (m mockClientAPI) new() clientApiInterface {
-	return &m
-}
+func (m mockClientAPI) new() clientApiInterface { return &m }
 
-func (m *mockClientAPI) panic(field string) {
-	panic(field + " not set in mockClientAPI")
-}
+func (m *mockClientAPI) panic(field string) { panic(field + " not set in mockClientAPI") }
 
 // Interface methods
 

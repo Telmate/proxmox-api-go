@@ -25,10 +25,6 @@ type clientNew struct {
 	oldClient *Client
 }
 
-func (c *clientNew) old() *Client {
-	return c.oldClient
-}
+func (c *clientNew) old() *Client { return c.oldClient }
 
-func (c *clientNew) apiGet() clientApiInterface {
-	return c.api
-}
+func (c *clientNew) apiGet() clientApiInterface { return c.api }

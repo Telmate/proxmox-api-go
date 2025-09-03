@@ -9,7 +9,6 @@ import (
 type clientApiInterface interface {
 	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
-	// getResourceList(ctx context.Context, resourceType string) ([]any, error)
 	listGuestResources(ctx context.Context) ([]any, error)
 }
 
