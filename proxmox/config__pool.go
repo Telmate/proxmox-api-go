@@ -285,6 +285,9 @@ func (config PoolName) ExistsNoCheck(ctx context.Context, c *Client) (bool, erro
 }
 
 func (pool PoolName) Get(ctx context.Context, c *Client) (RawConfigPool, error) {
+	if err := c.checkInitialized(); err != nil {
+		return nil, err
+	}
 	return c.new().poolGetRawConfig(ctx, pool)
 }
 
