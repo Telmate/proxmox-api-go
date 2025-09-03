@@ -1221,15 +1221,19 @@ func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (R
 	if client == nil {
 		return nil, errors.New(Client_Error_Nil)
 	}
-	return newRawConfigQemuFromAPI_Unsafe(ctx, vmr, client)
+	return client.new().guestGetQemuRawConfig(ctx, vmr)
 }
 
-func newRawConfigQemuFromAPI_Unsafe(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
-	rawConfig, err := client.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
+func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (RawConfigQemu, error) {
+	rawConfig, err := c.getGuestConfig(ctx, vmr)
 	if err != nil {
 		return nil, err
 	}
 	return &rawConfigQemu{a: rawConfig}, nil
+}
+
+func (c *clientNew) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
+	return guestGetRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 
 func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (config *ConfigQemu, err error) {

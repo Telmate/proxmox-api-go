@@ -250,7 +250,8 @@ func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRe
 	if err != nil {
 		return err
 	}
-	raw, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
+
+	raw, err := guestGetLxcRawConfig_Unsafe(ctx, vmr, c.new().apiGet())
 	if err != nil {
 		return err
 	}
@@ -272,7 +273,7 @@ func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vm
 	if err != nil {
 		return err
 	}
-	raw, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
+	raw, err := c.new().guestGetLxcRawConfig(ctx, vmr)
 	if err != nil {
 		return err
 	}
@@ -346,7 +347,7 @@ func (config ConfigLXC) update_Unsafe(
 			}
 		}
 
-		newCurrent, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c) // We have to refetch part of the current config
+		newCurrent, err := c.new().guestGetLxcRawConfig(ctx, vmr) // We have to refetch part of the current config
 		if err != nil {
 			return err
 		}
@@ -757,13 +758,17 @@ func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConf
 	if c == nil {
 		return nil, errors.New(Client_Error_Nil)
 	}
-	return newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
+	return c.new().guestGetLxcRawConfig(ctx, vmr)
 }
 
-func newRawConfigLXCFromAPI_Unsafe(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
-	rawConfig, err := c.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
+func guestGetLxcRawConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (RawConfigLXC, error) {
+	rawConfig, err := c.getGuestConfig(ctx, vmr)
 	if err != nil {
 		return nil, err
 	}
 	return &rawConfigLXC{a: rawConfig}, nil
+}
+
+func (c *clientNew) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
+	return guestGetLxcRawConfig_Unsafe(ctx, vmr, c.api)
 }

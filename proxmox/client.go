@@ -146,6 +146,17 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 	return client, err_s
 }
 
+func (c *Client) new() ClientNew {
+	userParts := strings.SplitN(c.Username, "@", 2)
+	return &clientNew{
+		oldClient: c,
+		api: &clientAPI{
+			session:     c.session,
+			taskTimeout: time.Duration(c.TaskTimeout) * time.Second,
+			url:         c.ApiUrl,
+			user:        UserID{Name: userParts[0], Realm: userParts[1]}}}
+}
+
 // SetAPIToken specifies a pair of user identifier and token UUID to use
 // for authenticating API calls.
 // If this is set, a ticket from calling `login` will not be used.
@@ -361,6 +372,7 @@ func (c *Client) GetVmState(ctx context.Context, vmr *VmRef) (vmState map[string
 	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
 }
 
+// TODO will be deprecated: use NewRawConfigQemuFromApi() or NewRawConfigLXCFromAPI() instead
 func (c *Client) GetVmConfig(ctx context.Context, vmr *VmRef) (vmConfig map[string]interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {

@@ -7,14 +7,16 @@ import (
 
 // List all guest the user has viewing rights for in the cluster
 func ListGuests(ctx context.Context, c *Client) (RawGuestResources, error) {
-	if err := c.checkInitialized(); err != nil {
-		return nil, err
-	}
-	return listGuests_Unsafe(ctx, c)
+	return c.new().guestListResources(ctx)
 }
 
-func listGuests_Unsafe(ctx context.Context, c *Client) (RawGuestResources, error) {
-	raw, err := c.getResourceList_Unsafe(ctx, resourceListGuest)
+func (c *clientNew) guestListResources(ctx context.Context) (RawGuestResources, error) {
+	return listGuests_Unsafe(ctx, c.api)
+
+}
+
+func listGuests_Unsafe(ctx context.Context, c clientApiInterface) (RawGuestResources, error) {
+	raw, err := c.listGuestResources(ctx)
 	if err != nil {
 		return nil, err
 	}
