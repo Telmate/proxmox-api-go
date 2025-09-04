@@ -523,10 +523,6 @@ type RawConfigLXC interface {
 	getMounts(privileged bool) LxcMounts
 }
 
-type RawConfigLXCMock struct {
-	GetFunc func(vmr VmRef, state PowerState) *ConfigLXC
-}
-
 type rawConfigLXC struct{ a map[string]any }
 
 func (raw *rawConfigLXC) Get(vmr VmRef, state PowerState) *ConfigLXC {
