@@ -151,7 +151,7 @@ func (disks QemuScsiDisks) mapToIntMap() map[uint8]*QemuScsiStorage {
 	}
 }
 
-func (raw RawConfigQemu) disksSCSI(linkedVmId *GuestID) *QemuScsiDisks {
+func (raw *rawConfigQemu) disksSCSI(linkedVmId *GuestID) *QemuScsiDisks {
 	disks := QemuScsiDisks{}
 	var structPopulated bool
 	if v, isSet := raw.a[qemuPrefixApiKeyDiskSCSI+"0"]; isSet {

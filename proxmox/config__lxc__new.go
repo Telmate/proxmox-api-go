@@ -250,7 +250,8 @@ func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRe
 	if err != nil {
 		return err
 	}
-	raw, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
+
+	raw, err := guestGetLxcRawConfig_Unsafe(ctx, vmr, c.new().apiGet())
 	if err != nil {
 		return err
 	}
@@ -272,7 +273,7 @@ func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vm
 	if err != nil {
 		return err
 	}
-	raw, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
+	raw, err := c.new().guestGetLxcRawConfig(ctx, vmr)
 	if err != nil {
 		return err
 	}
@@ -346,7 +347,7 @@ func (config ConfigLXC) update_Unsafe(
 			}
 		}
 
-		newCurrent, err := newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c) // We have to refetch part of the current config
+		newCurrent, err := c.new().guestGetLxcRawConfig(ctx, vmr) // We have to refetch part of the current config
 		if err != nil {
 			return err
 		}
@@ -354,10 +355,10 @@ func (config ConfigLXC) update_Unsafe(
 
 		if len(move) > 0 {
 			if getRootMount {
-				current.BootMount = newCurrent.BootMount()
+				current.BootMount = newCurrent.GetBootMount()
 			}
 			if getMounts {
-				current.Mounts = newCurrent.Mounts()
+				current.Mounts = newCurrent.GetMounts()
 			}
 		}
 	}
@@ -501,9 +502,30 @@ func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 	return config.Networks.Validate(current.Networks)
 }
 
-type RawConfigLXC struct{ a map[string]any }
+type RawConfigLXC interface {
+	Get(vmr VmRef, state PowerState) *ConfigLXC
+	GetArchitecture() CpuArchitecture
+	GetBootMount() *LxcBootMount
+	GetDNS() *GuestDNS
+	GetDescription() *string
+	GetDigest() [sha1.Size]byte
+	GetMemory() LxcMemory
+	GetMounts() LxcMounts
+	GetName() GuestName
+	GetOperatingSystem() OperatingSystem
+	GetPrivileged() bool
+	GetProtection() bool
+	GetSwap() LxcSwap
+	GetTags() *Tags
+	get(vmr VmRef) *ConfigLXC
+	getBootMount(privileged bool) *LxcBootMount
+	getDigest() digest
+	getMounts(privileged bool) LxcMounts
+}
 
-func (raw RawConfigLXC) Get(vmr VmRef, state PowerState) *ConfigLXC {
+type rawConfigLXC struct{ a map[string]any }
+
+func (raw *rawConfigLXC) Get(vmr VmRef, state PowerState) *ConfigLXC {
 	config := raw.get(vmr)
 	config.Digest = config.rawDigest.sha1()
 	if state != PowerStateUnknown {
@@ -512,11 +534,11 @@ func (raw RawConfigLXC) Get(vmr VmRef, state PowerState) *ConfigLXC {
 	return config
 }
 
-func (raw RawConfigLXC) get(vmr VmRef) *ConfigLXC {
+func (raw *rawConfigLXC) get(vmr VmRef) *ConfigLXC {
 	privileged := raw.isPrivileged()
 	config := ConfigLXC{
 		Architecture:    raw.GetArchitecture(),
-		BootMount:       raw.GetBootMount(privileged),
+		BootMount:       raw.getBootMount(privileged),
 		CPU:             raw.GetCPU(),
 		DNS:             raw.GetDNS(),
 		Description:     raw.GetDescription(),
@@ -539,50 +561,50 @@ func (raw RawConfigLXC) get(vmr VmRef) *ConfigLXC {
 	return &config
 }
 
-func (raw RawConfigLXC) GetArchitecture() CpuArchitecture {
+func (raw *rawConfigLXC) GetArchitecture() CpuArchitecture {
 	if v, isSet := raw.a[lxcApiKeyArchitecture]; isSet {
 		return CpuArchitecture(v.(string))
 	}
 	return ""
 }
 
-func (raw RawConfigLXC) GetDescription() *string {
+func (raw *rawConfigLXC) GetDescription() *string {
 	if v, isSet := raw.a[lxcApiKeyDescription]; isSet {
 		return util.Pointer(v.(string))
 	}
 	return nil
 }
 
-func (raw RawConfigLXC) GetDigest() [sha1.Size]byte {
+func (raw *rawConfigLXC) GetDigest() [sha1.Size]byte {
 	return raw.getDigest().sha1()
 }
 
-func (raw RawConfigLXC) getDigest() digest {
+func (raw *rawConfigLXC) getDigest() digest {
 	if v, isSet := raw.a[lxcApiKeyDigest]; isSet {
 		return digest(v.(string))
 	}
 	return ""
 }
 
-func (raw RawConfigLXC) GetDNS() *GuestDNS {
+func (raw *rawConfigLXC) GetDNS() *GuestDNS {
 	return GuestDNS{}.mapToSDK(raw.a)
 }
 
-func (raw RawConfigLXC) GetMemory() LxcMemory {
+func (raw *rawConfigLXC) GetMemory() LxcMemory {
 	if v, isSet := raw.a[lxcApiKeyMemory]; isSet {
 		return LxcMemory(v.(float64))
 	}
 	return 0
 }
 
-func (raw RawConfigLXC) GetName() GuestName {
+func (raw *rawConfigLXC) GetName() GuestName {
 	if v, isSet := raw.a[lxcApiKeyName]; isSet {
 		return GuestName(v.(string))
 	}
 	return ""
 }
 
-func (raw RawConfigLXC) GetOperatingSystem() OperatingSystem {
+func (raw *rawConfigLXC) GetOperatingSystem() OperatingSystem {
 	if v, isSet := raw.a[lxcApiKeyOperatingSystem]; isSet {
 		return OperatingSystem(v.(string))
 	}
@@ -590,32 +612,32 @@ func (raw RawConfigLXC) GetOperatingSystem() OperatingSystem {
 }
 
 // GetPrivileged returns true if the container is privileged, false if it is unprivileged.
-func (raw RawConfigLXC) GetPrivileged() bool {
+func (raw *rawConfigLXC) GetPrivileged() bool {
 	return raw.isPrivileged()
 }
 
-func (raw RawConfigLXC) isPrivileged() bool {
+func (raw *rawConfigLXC) isPrivileged() bool {
 	if v, isSet := raw.a[lxcApiKeyUnprivileged]; isSet {
 		return v.(float64) == 0
 	}
 	return true // when privileged the API does not return the key at all, so we assume it is privileged
 }
 
-func (raw RawConfigLXC) GetProtection() bool {
+func (raw *rawConfigLXC) GetProtection() bool {
 	if v, isSet := raw.a[lxcAPIKeyProtection]; isSet {
 		return int(v.(float64)) == 1
 	}
 	return false
 }
 
-func (raw RawConfigLXC) GetSwap() LxcSwap {
+func (raw *rawConfigLXC) GetSwap() LxcSwap {
 	if v, isSet := raw.a[lxcApiKeySwap]; isSet {
 		return LxcSwap(v.(float64))
 	}
 	return 0
 }
 
-func (raw RawConfigLXC) GetTags() *Tags {
+func (raw *rawConfigLXC) GetTags() *Tags {
 	if v, isSet := raw.a[lxcApiKeyTags]; isSet {
 		return util.Pointer(Tags{}.mapToSDK(v.(string)))
 	}
@@ -727,18 +749,22 @@ func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String
 
 func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	if vmr == nil {
-		return RawConfigLXC{}, errors.New(VmRef_Error_Nil)
+		return nil, errors.New(VmRef_Error_Nil)
 	}
 	if c == nil {
-		return RawConfigLXC{}, errors.New(Client_Error_Nil)
+		return nil, errors.New(Client_Error_Nil)
 	}
-	return newRawConfigLXCFromAPI_Unsafe(ctx, vmr, c)
+	return c.new().guestGetLxcRawConfig(ctx, vmr)
 }
 
-func newRawConfigLXCFromAPI_Unsafe(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
-	rawConfig, err := c.GetVmConfig(ctx, vmr) // FIXME Why are we making a call that has validation
+func guestGetLxcRawConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (RawConfigLXC, error) {
+	rawConfig, err := c.getGuestConfig(ctx, vmr)
 	if err != nil {
-		return RawConfigLXC{}, err
+		return nil, err
 	}
-	return RawConfigLXC{a: rawConfig}, nil
+	return &rawConfigLXC{a: rawConfig}, nil
+}
+
+func (c *clientNew) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
+	return guestGetLxcRawConfig_Unsafe(ctx, vmr, c.api)
 }

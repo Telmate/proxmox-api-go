@@ -193,7 +193,7 @@ func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs
 	if version.Encode() >= version_8_0_0 {
 		return config.addGuestsNoCheckV8(ctx, c, guestsToAdd)
 	}
-	rawGuests, err := listGuests_Unsafe(ctx, c)
+	rawGuests, err := listGuests_Unsafe(ctx, c.new().apiGet())
 	if err != nil {
 		return err
 	}
@@ -285,22 +285,37 @@ func (config PoolName) ExistsNoCheck(ctx context.Context, c *Client) (bool, erro
 }
 
 func (pool PoolName) Get(ctx context.Context, c *Client) (RawConfigPool, error) {
+	if err := c.checkInitialized(); err != nil {
+		return nil, err
+	}
+	return c.new().poolGetRawConfig(ctx, pool)
+}
+
+func (c *clientNew) poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error) {
 	if err := pool.Validate(); err != nil {
-		return RawConfigPool{}, err
+		return nil, err
 	}
 	// TODO: permission check
-	return pool.GetNoCheck(ctx, c)
+	return pool.getRawConfig(ctx, c.api)
 }
 
 func (pool PoolName) GetNoCheck(ctx context.Context, c *Client) (RawConfigPool, error) {
 	if c == nil {
-		return RawConfigPool{}, errors.New(Client_Error_Nil)
+		return nil, errors.New(Client_Error_Nil)
 	}
-	params, err := c.GetItemConfigMapStringInterface(ctx, "/pools/"+string(pool), "pool", "CONFIG")
+	return c.new().poolGetRawConfigNoCheck(ctx, pool)
+}
+
+func (c *clientNew) poolGetRawConfigNoCheck(ctx context.Context, pool PoolName) (RawConfigPool, error) {
+	return pool.getRawConfig(ctx, c.api)
+}
+
+func (pool PoolName) getRawConfig(ctx context.Context, c clientApiInterface) (RawConfigPool, error) {
+	params, err := c.getPoolConfig(ctx, pool)
 	if err != nil {
-		return RawConfigPool{}, err
+		return nil, err
 	}
-	return RawConfigPool{a: params}, nil
+	return &rawConfigPool{a: params}, nil
 }
 
 func (PoolName) guestsToRemoveFromPools(guests RawGuestResources, guestsToAdd []GuestID) map[PoolName][]GuestID {
@@ -435,30 +450,37 @@ func (config PoolName) Validate() error {
 	return nil
 }
 
-type RawConfigPool struct{ a map[string]any }
+type RawConfigPool interface {
+	Get() ConfigPool
+	GetName() PoolName
+	GetComment() string
+	GetGuests() *[]GuestID
+}
 
-func (raw RawConfigPool) Get() ConfigPool {
+type rawConfigPool struct{ a map[string]any }
+
+func (raw *rawConfigPool) Get() ConfigPool {
 	return ConfigPool{
 		Name:    raw.GetName(),
 		Comment: util.Pointer(raw.GetComment()),
 		Guests:  raw.GetGuests()}
 }
 
-func (raw RawConfigPool) GetName() PoolName {
+func (raw *rawConfigPool) GetName() PoolName {
 	if v, isSet := raw.a[poolApiKeyName]; isSet {
 		return PoolName(v.(string))
 	}
 	return ""
 }
 
-func (raw RawConfigPool) GetComment() string {
+func (raw *rawConfigPool) GetComment() string {
 	if v, isSet := raw.a[poolApiKeyComment]; isSet {
 		return v.(string)
 	}
 	return ""
 }
 
-func (raw RawConfigPool) GetGuests() *[]GuestID {
+func (raw *rawConfigPool) GetGuests() *[]GuestID {
 	guests := make([]GuestID, 0)
 	if v, isSet := raw.a["members"]; isSet {
 		for _, e := range v.([]any) {

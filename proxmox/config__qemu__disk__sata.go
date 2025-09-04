@@ -97,7 +97,7 @@ func (disks QemuSataDisks) mapToIntMap() map[uint8]*QemuSataStorage {
 	}
 }
 
-func (raw RawConfigQemu) disksSata(linkedVmId *GuestID) *QemuSataDisks {
+func (raw *rawConfigQemu) disksSata(linkedVmId *GuestID) *QemuSataDisks {
 	disks := QemuSataDisks{}
 	var structPopulated bool
 	if v, isSet := raw.a[qemuPrefixApiKeyDiskSata+"0"]; isSet {

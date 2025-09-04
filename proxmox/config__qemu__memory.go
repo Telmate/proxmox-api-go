@@ -59,7 +59,7 @@ func (config QemuMemory) mapToAPI(current *QemuMemory, params map[string]interfa
 	return ""
 }
 
-func (raw RawConfigQemu) GetMemory() *QemuMemory {
+func (raw *rawConfigQemu) GetMemory() *QemuMemory {
 	config := QemuMemory{}
 	if v, isSet := raw.a[qemuApiKeyMemoryCapacity]; isSet {
 		tmp, _ := parse.Uint(v)

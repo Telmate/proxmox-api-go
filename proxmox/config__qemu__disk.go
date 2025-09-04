@@ -1069,7 +1069,7 @@ func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, vmID, 
 	return delete
 }
 
-func (raw RawConfigQemu) GetDisks() (disks *QemuStorages, linkedID *GuestID) {
+func (raw *rawConfigQemu) GetDisks() (disks *QemuStorages, linkedID *GuestID) {
 	tmpLinkedID := util.Pointer(GuestID(0))
 	storage := QemuStorages{
 		Ide:    raw.disksIde(tmpLinkedID),

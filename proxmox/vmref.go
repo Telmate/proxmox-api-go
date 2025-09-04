@@ -99,8 +99,8 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 	if guestID == 0 {
 		return errors.New(VmRef_Error_IDnotSet)
 	}
-
-	rawGuests, err := listGuests_Unsafe(ctx, c)
+	ca := c.new().apiGet()
+	rawGuests, err := listGuests_Unsafe(ctx, ca)
 	if err != nil {
 		return err
 	}
@@ -116,13 +116,13 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 	var protection bool // Check if guest is protected
 	switch guestType {
 	case GuestQemu:
-		rawConfig, err := newRawConfigQemuFromAPI_Unsafe(ctx, &vmr, c)
+		rawConfig, err := guestGetRawQemuConfig_Unsafe(ctx, &vmr, ca)
 		if err != nil {
 			return err
 		}
 		protection = rawConfig.GetProtection()
 	case GuestLXC:
-		rawConfig, err := newRawConfigLXCFromAPI_Unsafe(ctx, &vmr, c)
+		rawConfig, err := guestGetLxcRawConfig_Unsafe(ctx, &vmr, ca)
 		if err != nil {
 			return err
 		}

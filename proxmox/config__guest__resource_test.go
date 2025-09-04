@@ -8,70 +8,77 @@ import (
 )
 
 func Test_RawGuestResources_Get(t *testing.T) {
+	set := func(raw []rawGuestResource) RawGuestResources {
+		interfaces := make([]RawGuestResource, len(raw))
+		for i := range raw {
+			interfaces[i] = &raw[i]
+		}
+		return interfaces
+	}
 	tests := []struct {
 		name   string
 		input  RawGuestResources
 		output []GuestResource
 	}{
 		{name: "CpuCores",
-			input:  RawGuestResources{{a: map[string]any{"maxcpu": float64(10)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"maxcpu": float64(10)}}}),
 			output: []GuestResource{{CpuCores: 10}}},
 		{name: "CpuUsage",
-			input:  RawGuestResources{{a: map[string]any{"cpu": float64(3.141592653589793)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"cpu": float64(3.141592653589793)}}}),
 			output: []GuestResource{{CpuUsage: 3.141592653589793}}},
 		{name: "DiskReadTotal",
-			input:  RawGuestResources{{a: map[string]any{"diskread": float64(1637428)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"diskread": float64(1637428)}}}),
 			output: []GuestResource{{DiskReadTotal: 1637428}}},
 		{name: "DiskSizeInBytes",
-			input:  RawGuestResources{{a: map[string]any{"maxdisk": float64(8589934592)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"maxdisk": float64(8589934592)}}}),
 			output: []GuestResource{{DiskSizeInBytes: 8589934592}}},
 		{name: "DiskUsedInBytes",
-			input:  RawGuestResources{{a: map[string]any{"disk": float64(1073741824)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"disk": float64(1073741824)}}}),
 			output: []GuestResource{{DiskUsedInBytes: 1073741824}}},
 		{name: "DiskWriteTotal",
-			input:  RawGuestResources{{a: map[string]any{"diskwrite": float64(1690811)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"diskwrite": float64(1690811)}}}),
 			output: []GuestResource{{DiskWriteTotal: 1690811}}},
 		{name: "HaState",
-			input:  RawGuestResources{{a: map[string]any{"hastate": "started"}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"hastate": "started"}}}),
 			output: []GuestResource{{HaState: "started"}}},
 		{name: "Id",
-			input:  RawGuestResources{{a: map[string]any{"vmid": float64(100)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"vmid": float64(100)}}}),
 			output: []GuestResource{{ID: 100}}},
 		{name: "MemoryTotalInBytes",
-			input:  RawGuestResources{{a: map[string]any{"maxmem": float64(2147483648)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"maxmem": float64(2147483648)}}}),
 			output: []GuestResource{{MemoryTotalInBytes: 2147483648}}},
 		{name: "MemoryUsedInBytes",
-			input:  RawGuestResources{{a: map[string]any{"mem": float64(1048576)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"mem": float64(1048576)}}}),
 			output: []GuestResource{{MemoryUsedInBytes: 1048576}}},
 		{name: "Name",
-			input:  RawGuestResources{{a: map[string]any{"name": "test-vm1"}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"name": "test-vm1"}}}),
 			output: []GuestResource{{Name: "test-vm1"}}},
 		{name: "NetworkIn",
-			input:  RawGuestResources{{a: map[string]any{"netin": float64(23884639)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"netin": float64(23884639)}}}),
 			output: []GuestResource{{NetworkIn: 23884639}}},
 		{name: "NetworkOut",
-			input:  RawGuestResources{{a: map[string]any{"netout": float64(1000123465987)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"netout": float64(1000123465987)}}}),
 			output: []GuestResource{{NetworkOut: 1000123465987}}},
 		{name: "Node",
-			input:  RawGuestResources{{a: map[string]any{"node": "pve1"}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"node": "pve1"}}}),
 			output: []GuestResource{{Node: "pve1"}}},
 		{name: "Status",
-			input:  RawGuestResources{{a: map[string]any{"status": "running"}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"status": "running"}}}),
 			output: []GuestResource{{Status: PowerStateRunning}}},
 		{name: "Tags",
-			input:  RawGuestResources{{a: map[string]any{"tags": "tag1;tag2;tag3"}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"tags": "tag1;tag2;tag3"}}}),
 			output: []GuestResource{{Tags: []Tag{"tag1", "tag2", "tag3"}}}},
 		{name: "Template",
-			input:  RawGuestResources{{a: map[string]any{"template": float64(1)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"template": float64(1)}}}),
 			output: []GuestResource{{Template: true}}},
 		{name: "Type",
-			input:  RawGuestResources{{a: map[string]any{"type": "qemu"}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"type": "qemu"}}}),
 			output: []GuestResource{{Type: GuestQemu}}},
 		{name: "Uptime",
-			input:  RawGuestResources{{a: map[string]any{"uptime": float64(72169)}}},
+			input:  set([]rawGuestResource{{a: map[string]any{"uptime": float64(72169)}}}),
 			output: []GuestResource{{Uptime: 72169 * time.Second}}},
 		{name: "[]GuestResource",
-			input: RawGuestResources{
+			input: set([]rawGuestResource{
 				{a: map[string]any{
 					"maxcpu":    float64(10),
 					"cpu":       float64(3.141592653589793),
@@ -131,7 +138,7 @@ func Test_RawGuestResources_Get(t *testing.T) {
 					"tags":      "template",
 					"template":  float64(1),
 					"type":      "qemu",
-					"uptime":    float64(0)}}},
+					"uptime":    float64(0)}}}),
 			output: []GuestResource{
 				{
 					CpuCores:           10,
