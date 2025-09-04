@@ -130,9 +130,9 @@ func (c *clientAPI) waitForCompletion(ctx context.Context, taskResponse map[stri
 	return "", fmt.Errorf("Wait timeout for:" + taskUpid)
 }
 
-func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpIP string) (exitStatus any, err error) {
-	node := rxTaskNode.FindStringSubmatch(taskUpIP)[1]
-	url := fmt.Sprintf("/nodes/%s/tasks/%s/status", node, taskUpIP)
+func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (exitStatus any, err error) {
+	node := rxTaskNode.FindStringSubmatch(taskUpID)[1]
+	url := "/nodes/" + node + "/tasks/" + taskUpID + "/status"
 	var data map[string]any
 	_, err = c.session.getJSON(ctx, url, nil, nil, &data)
 	if err == nil {
