@@ -55,8 +55,7 @@ func (c *clientAPI) getRootMap(ctx context.Context, url, text, message string, i
 
 func (c *clientAPI) getRootList(ctx context.Context, url string, ignore errorIgnore) (map[string]any, error) {
 	var data map[string]any
-	err := c.getJsonRetry(ctx, url, &data, 3, ignore)
-	if err != nil {
+	if err := c.getJsonRetry(ctx, url, &data, 3, ignore); err != nil {
 		return nil, err
 	}
 	return data, nil
