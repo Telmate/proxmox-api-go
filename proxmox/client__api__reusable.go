@@ -27,7 +27,7 @@ func (c *clientAPI) getMap(ctx context.Context, url, text, message string, ignor
 	if err != nil {
 		return nil, err
 	}
-	return data["data"].(map[string]interface{}), err
+	return data["data"].(map[string]any), err
 }
 
 func (c *clientAPI) getList(ctx context.Context, url string, ignore errorIgnore) ([]any, error) {
@@ -35,7 +35,7 @@ func (c *clientAPI) getList(ctx context.Context, url string, ignore errorIgnore)
 	if err != nil {
 		return nil, err
 	}
-	data, ok := list["data"].([]interface{})
+	data, ok := list["data"].([]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to cast response to list, resp: %v", list)
 	}
