@@ -1,22 +1,18 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" style="background: transparent; background-color: transparent;" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="292px" height="83px" viewBox="-0.5 -0.5 292 83" content="&lt;mxfile&gt;&lt;diagram id=&quot;GHpFAqs5_VdShQAqG6PK&quot; name=&quot;Page-1&quot;&gt;1VdNc5swEP01zLSHdPgw2DnaOE17aCczPjQ5yiCDJjKiQhjor6+EVuYrjt1O3GkuRvu0u1q9fULY8sJ9fc9Rnn5jMaaWa8e15a0t1/VnjvxVQKMB159rIOEk1pDTARvyCwNoA1qSGBcDR8EYFSQfghHLMhyJAYY4Z9XQbcfocNUcJXgCbCJEp+gPEotUowvf7vAvmCSpWdmxYWaPjDMARYpiVvUg787yQs6Y0KN9HWKquDO86LjPJ2aPhXGciUsCFlCGaMzecCy3CmbGMvlYpWJPpeXIIa6JeOyNn+TY/jT3wVyrDtvGaMDgrMxiHIMVlfzQGipHITh7PpLoqshM8OaxTesb88msqIxujdYyi+hMIaOMS4Qq9m9ixJ8/WK7nB7fhOrDc8Dj+KCOmXAF9BSt5ZFoNDAnEEwxurqcxRVUvEBi+x2yPZWXSgWOKBDkMVYNAfMnRD0KXnKOm55Azkomil/lBAdIBjpFnjgOcovmo1SN3dzF0N6IEfznQBVwYbRY31WqCIGqQtkdJB7U6PCHi+R+Kciqia4nBn4rBCOSNxTBpgDMbNmB2Pf5hlwdES6jWcgMq97vasbakrjPBz5KZiZuifVEvpYMT5HVLqpmXowSebaLti1mm/iElsiHfcWUCZfHbSTI+RsiF6R/KLSVRLzcZZ5KY3rSBR8rs3m1KiVVKBN7kqBVMJe++c0I9KbsD5gLXrwrKzI6PtTar7mK6BSjt3UmBfVqAA+28JpTF/yOUqBXKMidfM4H5TnXgKorJOTkggd+5ZLyzmnH8K4lGuU5EM2LoDCeoyPVX3Y7UisfVjlBqXvZwPQxvAADfgLrjYWqGlPSpe4G58W35V8x575s5/18xJ83uC1pfgN3fEO/uNw==&lt;/diagram&gt;&lt;/mxfile&gt;">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" style="background: transparent; background-color: transparent;" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="291px" height="62px" viewBox="-0.5 -0.5 291 62" content="&lt;mxfile&gt;&lt;diagram id=&quot;GHpFAqs5_VdShQAqG6PK&quot; name=&quot;Page-1&quot;&gt;1VZNc5swEP01zLSHzPARqH2MyUd7aCczPvQswxo0EYgIYXB/fQVaATJxnEPSaS4gPe0uu2+fJJwgLroHQar8J0+BOb6bdk5w6/h+tI7UsweOGgiu1xrIBE015E3Alv4BBF1EG5pCbRlKzpmklQ0mvCwhkRZGhOCtbbbnzP5qRTJYANuEsCX6m6Yy1+gqdCf8O9AsN1/2XFwpiDFGoM5JytsZFNw5QSw4l3pUdDGwnjvDi/a7P7M6JiaglG9y+IZ5yKMpDlJVK05LXqrXJpcFUzNPDWsp+NNYtT8iMWdcKIT1ZV+lRDx9cfwgjNbxrWp2PI6/Ko9lkph3zRuRGI5DbCwRGRizlcb6FGeOWNoD8AKkOCoDAYxIerDbRbDr2Wg3uj5yqlLxXRSod43tQX2aqYmgc0KniV01mGUxQQPnZ/jHKg+ENZit40dM1bvZ8yGlqTPRc8PNwlU9bIobZeBFVTeQatbVKMP3EGj3YpSlfcyoasgvaI2jSn63CCZOEfrG8I/NjtFkFpueRlKYLtrAJ8oUvClTSFGJbU4lbCsyCKZV58wloZ6V3QGEhO5VQZlVWxdm2k6HwBqhfLb/I/e8AC3tvCaU1f8jlGQQyk1Ff5QSxL7vwIcophL0QCR8cskEFzXjhR8kmt50IZoThi5wQupK36B72vU8bvaUMXPY4/Vg3wAIvgN142Y62pTMqXuBOe89mAs+N3Phv2JOTae/FX0BTr98wd1f&lt;/diagram&gt;&lt;/mxfile&gt;">
     <defs/>
     <g>
         <g>
-            <path d="M 270 46 Q 300 61 285 76 Q 270 91 250.27 67.33" fill="none" stroke="#569cd6" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke" style="stroke: light-dark(rgb(86, 156, 214), rgb(86, 156, 214));"/>
-            <path d="M 246.43 62.72 L 254.63 66.3 L 250.27 67.33 L 248.48 71.42 Z" fill="#569cd6" stroke="#569cd6" stroke-width="2" stroke-miterlimit="10" pointer-events="all" style="fill: light-dark(rgb(86, 156, 214), rgb(86, 156, 214)); stroke: light-dark(rgb(86, 156, 214), rgb(86, 156, 214));"/>
+            <path d="M 91 31 L 112.76 31" fill="none" stroke="#569cd6" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke" style="stroke: light-dark(rgb(86, 156, 214), rgb(86, 156, 214));"/>
+            <path d="M 118.76 31 L 110.76 35 L 112.76 31 L 110.76 27 Z" fill="#569cd6" stroke="#569cd6" stroke-width="2" stroke-miterlimit="10" pointer-events="all" style="fill: light-dark(rgb(86, 156, 214), rgb(86, 156, 214)); stroke: light-dark(rgb(86, 156, 214), rgb(86, 156, 214));"/>
         </g>
         <g>
-            <path d="M 90 31 L 111.76 31" fill="none" stroke="#569cd6" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke" style="stroke: light-dark(rgb(86, 156, 214), rgb(86, 156, 214));"/>
-            <path d="M 117.76 31 L 109.76 35 L 111.76 31 L 109.76 27 Z" fill="#569cd6" stroke="#569cd6" stroke-width="2" stroke-miterlimit="10" pointer-events="all" style="fill: light-dark(rgb(86, 156, 214), rgb(86, 156, 214)); stroke: light-dark(rgb(86, 156, 214), rgb(86, 156, 214));"/>
-        </g>
-        <g>
-            <rect x="0" y="1" width="90" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" stroke-width="2" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="1" y="1" width="90" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" stroke-width="2" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
         </g>
         <g>
             <g transform="translate(-0.5 -0.5)">
                 <switch>
                     <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
-                        <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 88px; height: 1px; padding-top: 31px; margin-left: 1px;">
+                        <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 88px; height: 1px; padding-top: 31px; margin-left: 2px;">
                             <div style="box-sizing: border-box; font-size: 0; text-align: center; color: #000000; ">
                                 <div style="display: inline-block; font-size: 12px; font-family: &quot;Helvetica&quot;; color: light-dark(#000000, #ffffff); line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
                                     <font style="font-size: 16px;">
@@ -32,20 +28,20 @@
                             </div>
                         </div>
                     </foreignObject>
-                    <text x="45" y="35" fill="light-dark(#000000, #ffffff)" font-family="&quot;Helvetica&quot;" font-size="12px" text-anchor="middle">
+                    <text x="46" y="35" fill="light-dark(#000000, #ffffff)" font-family="&quot;Helvetica&quot;" font-size="12px" text-anchor="middle">
                         ClientNew...
                     </text>
                 </switch>
             </g>
         </g>
         <g>
-            <rect x="120" y="1" width="150" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" stroke-width="2" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
+            <rect x="121" y="1" width="150" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" stroke-width="2" pointer-events="all" style="fill: light-dark(#ffffff, var(--ge-dark-color, #121212)); stroke: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));"/>
         </g>
         <g>
             <g transform="translate(-0.5 -0.5)">
                 <switch>
                     <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
-                        <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 148px; height: 1px; padding-top: 31px; margin-left: 121px;">
+                        <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 148px; height: 1px; padding-top: 31px; margin-left: 122px;">
                             <div style="box-sizing: border-box; font-size: 0; text-align: center; color: #000000; ">
                                 <div style="display: inline-block; font-size: 12px; font-family: &quot;Helvetica&quot;; color: light-dark(#000000, #ffffff); line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
                                     <font style="font-size: 16px;">
@@ -61,17 +57,17 @@
                             </div>
                         </div>
                     </foreignObject>
-                    <text x="195" y="35" fill="light-dark(#000000, #ffffff)" font-family="&quot;Helvetica&quot;" font-size="12px" text-anchor="middle">
+                    <text x="196" y="35" fill="light-dark(#000000, #ffffff)" font-family="&quot;Helvetica&quot;" font-size="12px" text-anchor="middle">
                         clientApiInterface...
                     </text>
                 </switch>
             </g>
         </g>
         <g>
-            <rect x="280" y="51" width="10" height="10" fill="none" stroke="none" pointer-events="all"/>
+            <rect x="281" y="51" width="10" height="10" fill="none" stroke="none" pointer-events="all"/>
         </g>
         <g>
-            <rect x="240" y="51" width="10" height="10" fill="none" stroke="none" pointer-events="all"/>
+            <rect x="241" y="51" width="10" height="10" fill="none" stroke="none" pointer-events="all"/>
         </g>
     </g>
     <switch>
