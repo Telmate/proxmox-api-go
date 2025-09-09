@@ -49,7 +49,7 @@ func (vmr *VmRef) cloneLxc_Unsafe(ctx context.Context, settings CloneLxcTarget, 
 		vmId:   id,
 		node:   node,
 		pool:   pool,
-		vmType: vmRefLXC}, nil
+		vmType: GuestLxc}, nil
 }
 
 // CloneQemu creates a new Qemu VM by cloning the current VM.
@@ -88,7 +88,7 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 		vmId:   id,
 		node:   node,
 		pool:   pool,
-		vmType: vmRefQemu}, nil
+		vmType: GuestQemu}, nil
 }
 
 func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
@@ -111,7 +111,7 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 
 	guestType := rawGuest.GetType()
 	vmr.node = rawGuest.GetNode()
-	vmr.vmType = string(guestType)
+	vmr.vmType = guestType
 
 	var protection bool // Check if guest is protected
 	switch guestType {
@@ -121,7 +121,7 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 			return err
 		}
 		protection = rawConfig.GetProtection()
-	case GuestLXC:
+	case GuestLxc:
 		rawConfig, err := guestGetLxcRawConfig_Unsafe(ctx, &vmr, ca)
 		if err != nil {
 			return err
@@ -189,7 +189,7 @@ func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestSta
 }
 
 func (vmr *VmRef) getRawGuestStatus_Unsafe(ctx context.Context, c *Client) (RawGuestStatus, error) {
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
+	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
 }
 
 func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
@@ -223,7 +223,7 @@ func (vmr *VmRef) migrate_Unsafe(ctx context.Context, c *Client, newNode NodeNam
 	if LiveMigrate {
 		params["online"] = 1
 	}
-	_, err := c.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/migrate")
+	_, err := c.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/migrate")
 	return err
 }
 

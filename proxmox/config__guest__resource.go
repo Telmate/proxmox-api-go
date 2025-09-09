@@ -248,9 +248,14 @@ func (raw *rawGuestResource) GetTemplate() bool {
 
 func (raw *rawGuestResource) GetType() GuestType {
 	if v, isSet := raw.a["type"]; isSet {
-		return GuestType(v.(string))
+		switch v.(string) {
+		case "lxc":
+			return GuestLxc
+		case "qemu":
+			return GuestQemu
+		}
 	}
-	return ""
+	return guestUnknown
 }
 
 func (raw *rawGuestResource) GetUptime() time.Duration {

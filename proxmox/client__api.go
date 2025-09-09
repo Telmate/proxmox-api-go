@@ -22,7 +22,7 @@ type clientAPI struct {
 // Interface methods
 
 func (c *clientAPI) getGuestConfig(ctx context.Context, vmr *VmRef) (vmConfig map[string]any, err error) {
-	return c.getMap(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/config", "vm", "CONFIG", nil)
+	return c.getMap(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config", "vm", "CONFIG", nil)
 }
 
 func (c *clientAPI) getPoolConfig(ctx context.Context, pool PoolName) (poolConfig map[string]any, err error) {

@@ -21,9 +21,9 @@ var configCmd = &cobra.Command{
 		vmType := vmr.GetVmType()
 		var config interface{}
 		switch vmType {
-		case "qemu":
+		case proxmox.GuestQemu:
 			config, err = proxmox.NewConfigQemuFromApi(cli.Context(), vmr, c)
-		case "lxc":
+		case proxmox.GuestLxc:
 			config, err = proxmox.NewConfigLxcFromApi(cli.Context(), vmr, c)
 		}
 		if err != nil {

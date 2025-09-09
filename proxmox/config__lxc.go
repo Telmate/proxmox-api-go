@@ -333,7 +333,7 @@ func NewConfigLxcFromApi(ctx context.Context, vmr *VmRef, client *Client) (confi
 
 // create LXC container using the Proxmox API
 func (config ConfigLxc) CreateLxc(ctx context.Context, vmr *VmRef, client *Client) (err error) {
-	vmr.SetVmType("lxc")
+	vmr.SetVmType(GuestLxc)
 	paramMap := config.mapToApiValues()
 
 	// amend vmid
@@ -355,7 +355,7 @@ func (config ConfigLxc) CreateLxc(ctx context.Context, vmr *VmRef, client *Clien
 
 // Deprecated: use VmRef.CloneLxc() instead
 func (config ConfigLxc) CloneLxc(ctx context.Context, vmr *VmRef, client *Client) (err error) {
-	vmr.SetVmType("lxc")
+	vmr.SetVmType(GuestLxc)
 
 	//map the clone specific parameters
 	paramMap := map[string]interface{}{

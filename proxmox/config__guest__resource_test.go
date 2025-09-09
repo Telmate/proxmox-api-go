@@ -179,7 +179,7 @@ func Test_RawGuestResources_Get(t *testing.T) {
 					Status:             PowerStateRunning,
 					Tags:               []Tag{"dev"},
 					Template:           false,
-					Type:               GuestLXC,
+					Type:               GuestLxc,
 					Uptime:             88678345 * time.Second,
 				},
 				{

@@ -129,7 +129,7 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 		node:   node,
 		vmId:   id,
 		pool:   pool,
-		vmType: vmRefQemu,
+		vmType: GuestQemu,
 	}
 	if err = resizeNewDisks(ctx, vmr, client, config.Disks, nil); err != nil {
 		return nil, err
@@ -496,7 +496,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		return
 	}
 	// TODO implement tmp move and version change
-	urlPart := "/" + vmr.vmType + "/" + vmr.vmId.String() + "/config"
+	urlPart := "/" + vmr.vmType.String() + "/" + vmr.vmId.String() + "/config"
 	var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 	stopped := false
 
@@ -624,7 +624,7 @@ func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
 	if err = vmr.nilCheck(); err != nil {
 		return
 	}
-	vmr.SetVmType("qemu")
+	vmr.SetVmType(GuestQemu)
 	idCopy := vmr.vmId
 	config.ID = &idCopy
 	return
@@ -780,7 +780,7 @@ storage:xxx
 */
 // Deprecated: use VmRef.CloneQemu() instead
 func (config ConfigQemu) CloneVm(ctx context.Context, sourceVmr *VmRef, vmr *VmRef, client *Client) (err error) {
-	vmr.SetVmType("qemu")
+	vmr.SetVmType(GuestQemu)
 	var storage string
 	var format string
 	fullClone := "1"

@@ -169,9 +169,9 @@ func main() {
 		vmType := vmr.GetVmType()
 		var config interface{}
 		switch vmType {
-		case "qemu":
+		case proxmox.GuestQemu:
 			config, err = proxmox.NewConfigQemuFromApi(ctx, vmr, c)
-		case "lxc":
+		case proxmox.GuestLxc:
 			config, err = proxmox.NewConfigLxcFromApi(ctx, vmr, c)
 		}
 		failError(err)

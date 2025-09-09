@@ -7,7 +7,7 @@ import (
 func _create_vmref() (ref *pxapi.VmRef) {
 	ref = pxapi.NewVmRef(200)
 	ref.SetNode("pve")
-	ref.SetVmType("lxc")
+	ref.SetVmType(pxapi.GuestLxc)
 	return ref
 }
 
