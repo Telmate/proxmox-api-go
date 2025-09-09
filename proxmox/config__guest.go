@@ -279,6 +279,7 @@ func (id GuestID) Validate() error {
 	return nil
 }
 
+// GuestType is an enum for the type of guest (lxc or qemu)
 type GuestType uint8
 
 const (
