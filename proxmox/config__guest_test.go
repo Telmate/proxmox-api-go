@@ -147,3 +147,79 @@ func Test_GuestID_Validate(t *testing.T) {
 		})
 	}
 }
+
+func Test_GuestType_Parse(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		output GuestType
+		err    error
+	}{
+		{name: "Valid qemu",
+			input:  "qemu",
+			output: GuestQemu},
+		{name: "Valid lxc",
+			input:  "lxc",
+			output: GuestLxc},
+		{name: "Invalid empty",
+			input:  "",
+			output: guestUnknown,
+			err:    errors.New(GuestType_Error_Invalid)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var result GuestType
+			err := result.Parse(test.input)
+			require.Equal(t, test.output, result)
+			require.Equal(t, test.err, err)
+		})
+	}
+}
+
+func Test_GuestType_parse(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		output GuestType
+	}{
+		{name: "Valid qemu",
+			input:  "qemu",
+			output: GuestQemu},
+		{name: "Valid lxc",
+			input:  "lxc",
+			output: GuestLxc},
+		{name: "Invalid empty",
+			input:  "",
+			output: guestUnknown},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var result GuestType
+			result.parse(test.input)
+			require.Equal(t, test.output, result)
+		})
+	}
+}
+
+func Test_GuestType_String(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  GuestType
+		output string
+	}{
+		{name: "Valid qemu",
+			input:  GuestQemu,
+			output: "qemu"},
+		{name: "Valid lxc",
+			input:  GuestLxc,
+			output: "lxc"},
+		{name: "Invalid unknown",
+			input:  guestUnknown,
+			output: "unknown"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t, test.output, test.input.String())
+		})
+	}
+}

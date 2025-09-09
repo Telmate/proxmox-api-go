@@ -279,12 +279,46 @@ func (id GuestID) Validate() error {
 	return nil
 }
 
-type GuestType string
+type GuestType uint8
 
 const (
-	GuestLXC  GuestType = "lxc"
-	GuestQemu GuestType = "qemu"
+	guestUnknown GuestType = 0
+	GuestLxc     GuestType = 1
+	GuestQemu    GuestType = 2
 )
+
+const GuestType_Error_Invalid = "guest type should be one of (lxc, qemu)"
+
+func (t *GuestType) Parse(guestType string) error {
+	switch guestType {
+	case "lxc":
+		*t = GuestLxc
+		return nil
+	case "qemu":
+		*t = GuestQemu
+		return nil
+	}
+	return errors.New(GuestType_Error_Invalid)
+}
+
+func (t *GuestType) parse(guestType string) {
+	switch guestType {
+	case "lxc":
+		*t = GuestLxc
+	case "qemu":
+		*t = GuestQemu
+	}
+}
+
+func (t GuestType) String() string {
+	switch t {
+	case GuestLxc:
+		return "lxc"
+	case GuestQemu:
+		return "qemu"
+	}
+	return "unknown"
+}
 
 // check if the guest has the specified feature.
 func GuestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
@@ -301,7 +335,7 @@ func GuestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature Gu
 
 func guestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
 	var params map[string]interface{}
-	params, err := client.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/feature?feature=snapshot", "guest", "FEATURES")
+	params, err := client.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/feature?feature=snapshot", "guest", "FEATURES")
 	if err != nil {
 		return false, err
 	}
@@ -365,7 +399,7 @@ func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) 
 	if force {
 		params = map[string]interface{}{"forceStop": force}
 	}
-	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/shutdown")
+	_, err = client.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/shutdown")
 	return
 }
 
@@ -396,7 +430,7 @@ func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) 
 	if err := client.CheckVmRef(ctx, vmr); err != nil {
 		return nil, err
 	}
-	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/pending", "Guest", "PENDING CONFIG")
+	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/pending", "Guest", "PENDING CONFIG")
 }
 
 const guest_ApiError_AlreadyExists string = "config file already exists"

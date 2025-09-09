@@ -85,7 +85,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		node:   node,
 		vmId:   id,
 		pool:   pool,
-		vmType: vmRefLXC}
+		vmType: GuestLxc}
 	if config.State != nil && *config.State == PowerStateRunning {
 		if err := GuestStart(ctx, vmRef, c); err != nil {
 			return nil, err

@@ -79,7 +79,7 @@ type VmRef struct {
 	vmId    GuestID
 	node    NodeName
 	pool    PoolName
-	vmType  string
+	vmType  GuestType
 	haState string
 	haGroup string
 }
@@ -92,11 +92,11 @@ func (vmr *VmRef) SetPool(pool string) {
 	vmr.pool = PoolName(pool)
 }
 
-func (vmr *VmRef) SetVmType(vmType string) {
+func (vmr *VmRef) SetVmType(vmType GuestType) {
 	vmr.vmType = vmType
 }
 
-func (vmr *VmRef) GetVmType() string {
+func (vmr *VmRef) GetVmType() GuestType {
 	return vmr.vmType
 }
 
@@ -128,7 +128,7 @@ func (vmr *VmRef) nilCheck() error {
 }
 
 func NewVmRef(vmId GuestID) (vmr *VmRef) {
-	vmr = &VmRef{vmId: vmId, node: "", vmType: ""}
+	vmr = &VmRef{vmId: vmId, node: "", vmType: guestUnknown}
 	return
 }
 
@@ -267,7 +267,7 @@ func (c *Client) CheckVmRef(ctx context.Context, vmr *VmRef) (err error) {
 	if vmr == nil {
 		return errors.New(VmRef_Error_Nil)
 	}
-	if vmr.node == "" || vmr.vmType == "" {
+	if vmr.node == "" || vmr.vmType == guestUnknown {
 		_, err = c.GetVmInfo(ctx, vmr)
 	}
 	return
@@ -283,7 +283,7 @@ func (c *Client) GetVmInfo(ctx context.Context, vmr *VmRef) (vmInfo map[string]i
 		if GuestID(vm["vmid"].(float64)) == vmr.vmId {
 			vmInfo = vm
 			vmr.node = NodeName(vmInfo["node"].(string))
-			vmr.vmType = vmInfo["type"].(string)
+			vmr.vmType.parse(vmInfo["type"].(string))
 			vmr.pool = ""
 			if vmInfo["pool"] != nil {
 				vmr.pool = PoolName(vmInfo["pool"].(string))
@@ -316,7 +316,7 @@ func (c *Client) GetVmRefsByName(ctx context.Context, name GuestName) (vmrs []*V
 		if vm["name"] != nil && GuestName(vm["name"].(string)) == name {
 			vmr := NewVmRef(GuestID(vm["vmid"].(float64)))
 			vmr.node = NodeName(vm["node"].(string))
-			vmr.vmType = vm["type"].(string)
+			vmr.vmType.parse(vm["type"].(string))
 			vmr.pool = ""
 			if vm["pool"] != nil {
 				vmr.pool = PoolName(vm["pool"].(string))
@@ -345,7 +345,7 @@ func (c *Client) GetVmRefById(ctx context.Context, ID GuestID) (vmr *VmRef, err 
 		if int(vm["vmid"].(float64)) != 0 && GuestID(vm["vmid"].(float64)) == ID {
 			vmr = NewVmRef(GuestID(vm["vmid"].(float64)))
 			vmr.node = NodeName(vm["node"].(string))
-			vmr.vmType = vm["type"].(string)
+			vmr.vmType.parse(vm["type"].(string))
 			vmr.pool = ""
 			if vm["pool"] != nil {
 				vmr.pool = PoolName(vm["pool"].(string))
@@ -369,7 +369,7 @@ func (c *Client) GetVmState(ctx context.Context, vmr *VmRef) (vmState map[string
 	if err != nil {
 		return nil, err
 	}
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
+	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
 }
 
 // TODO will be deprecated: use NewRawConfigQemuFromApi() or NewRawConfigLXCFromAPI() instead
@@ -378,7 +378,7 @@ func (c *Client) GetVmConfig(ctx context.Context, vmr *VmRef) (vmConfig map[stri
 	if err != nil {
 		return nil, err
 	}
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/config", "vm", "CONFIG")
+	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config", "vm", "CONFIG")
 }
 
 func (c *Client) GetStorageStatus(ctx context.Context, vmr *VmRef, storageName string) (storageStatus map[string]interface{}, err error) {
@@ -462,7 +462,7 @@ func (c *Client) CreateTemplate(ctx context.Context, vmr *VmRef) error {
 
 	// Specifically ignore empty exit status for LXCs, since they don't return a task ID
 	// when creating templates in the first place (but still successfully create them).
-	if exitStatus != "OK" && vmr.vmType != "lxc" {
+	if exitStatus != "OK" && vmr.vmType != GuestLxc {
 		return errors.New("Can't convert Vm to template:" + exitStatus)
 	}
 
@@ -799,7 +799,7 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 
 // DEPRECATED SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
-	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType+"/"+vmr.vmId.String()+"/config")
+	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config")
 }
 
 // SetLxcConfig - send config options
