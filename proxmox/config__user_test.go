@@ -179,23 +179,22 @@ func Test_ConfigUser_mapToArray(t *testing.T) {
 	}
 }
 
-func Test_ConfigUser_mapToStruct(t *testing.T) {
-	testData := []struct {
-		base   ConfigUser
-		input  map[string]interface{}
+func Test_rawConfigUser_Get(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  map[string]any
 		output *ConfigUser
 	}{
-		{
-			input: map[string]interface{}{
-				"comment":   "test comment",
-				"email":     "test@example.com",
+		{name: `all fields`,
+			input: map[string]any{
+				"comment":   string("test comment"),
+				"email":     string("test@example.com"),
 				"enable":    float64(1),
 				"expire":    float64(123456789),
-				"firstname": "testFirstName",
-				"groups":    "group1,group2,group3",
-				"keys":      "2fa",
-				"lastname":  "testLastName",
-			},
+				"firstname": string("testFirstName"),
+				"groups":    string("group1,group2,group3"),
+				"keys":      string("2fa"),
+				"lastname":  string("testLastName")},
 			output: &ConfigUser{
 				Comment:   "test comment",
 				Email:     "test@example.com",
@@ -204,152 +203,52 @@ func Test_ConfigUser_mapToStruct(t *testing.T) {
 				FirstName: "testFirstName",
 				Groups:    &[]GroupName{"group1", "group2", "group3"},
 				Keys:      "2fa",
-				LastName:  "testLastName",
-			},
-		},
-		// Only User
-		{
-			input:  map[string]interface{}{"userid": "username@pam"},
-			output: &ConfigUser{User: UserID{Name: "username", Realm: "pam"}},
-		},
-		{
-			base:   ConfigUser{User: UserID{Name: "username1", Realm: "pve"}},
-			output: &ConfigUser{User: UserID{Name: "username1", Realm: "pve"}},
-		},
-		{
-			base:   ConfigUser{User: UserID{Name: "username1", Realm: "pve"}},
-			input:  map[string]interface{}{"userid": "username@pam"},
-			output: &ConfigUser{User: UserID{Name: "username", Realm: "pam"}},
-		},
-		// Only Comment
-		{
-			input:  map[string]interface{}{"comment": "test comment"},
-			output: &ConfigUser{Comment: "test comment"},
-		},
-		{
-			base:   ConfigUser{Comment: "Comment 1"},
-			output: &ConfigUser{Comment: "Comment 1"},
-		},
-		{
-			base:   ConfigUser{Comment: "Comment 1"},
-			input:  map[string]interface{}{"comment": "test comment"},
-			output: &ConfigUser{Comment: "test comment"},
-		},
-		// Only Email
-		{
-			input:  map[string]interface{}{"email": "test@example.com"},
-			output: &ConfigUser{Email: "test@example.com"},
-		},
-		{
-			base:   ConfigUser{Email: "test@proxmox.com"},
-			output: &ConfigUser{Email: "test@proxmox.com"},
-		},
-		{
-			base:   ConfigUser{Email: "test@proxmox.com"},
-			input:  map[string]interface{}{"email": "test@example.com"},
-			output: &ConfigUser{Email: "test@example.com"},
-		},
-		// Only Enable
-		{
-			input:  map[string]interface{}{"enable": float64(1)},
-			output: &ConfigUser{Enable: true},
-		},
-		{
-			base:   ConfigUser{Enable: true},
-			output: &ConfigUser{Enable: true},
-		},
-		{
-			base:   ConfigUser{Enable: true},
-			input:  map[string]interface{}{"enable": float64(0)},
-			output: &ConfigUser{Enable: false},
-		},
-		// Only Expire
-		{
-			input:  map[string]interface{}{"expire": float64(123456789)},
-			output: &ConfigUser{Expire: 123456789},
-		},
-		{
-			base:   ConfigUser{Expire: 10},
-			output: &ConfigUser{Expire: 10},
-		},
-		{
-			base:   ConfigUser{Expire: 10},
-			input:  map[string]interface{}{"expire": float64(123456789)},
-			output: &ConfigUser{Expire: 123456789},
-		},
-		// Only FirstName
-		{
-			input:  map[string]interface{}{"firstname": "testFirstName"},
-			output: &ConfigUser{FirstName: "testFirstName"},
-		},
-		{
-			base:   ConfigUser{FirstName: "TestName"},
-			output: &ConfigUser{FirstName: "TestName"},
-		},
-		{
-			base:   ConfigUser{FirstName: "TestName"},
-			input:  map[string]interface{}{"firstname": "testFirstName"},
-			output: &ConfigUser{FirstName: "testFirstName"},
-		},
-		// Only Groups
-		{
-			input:  map[string]interface{}{"groups": "group1,group2,group3"},
-			output: &ConfigUser{Groups: &[]GroupName{"group1", "group2", "group3"}},
-		},
-		{
-			base:   ConfigUser{Groups: &[]GroupName{"group4", "group5", "group6"}},
-			output: &ConfigUser{Groups: &[]GroupName{"group4", "group5", "group6"}},
-		},
-		{
-			base:   ConfigUser{Groups: &[]GroupName{"group4", "group5", "group6"}},
-			input:  map[string]interface{}{"groups": "group1,group2,group3"},
-			output: &ConfigUser{Groups: &[]GroupName{"group1", "group2", "group3"}},
-		},
-		// Group Empty List
-		{
-			input:  map[string]interface{}{"groups": ""},
-			output: &ConfigUser{Groups: &[]GroupName{}},
-		},
-		// Groups as interface
-		{
-			input:  map[string]interface{}{"groups": []interface{}{"group1", "group2", "group3"}},
-			output: &ConfigUser{Groups: &[]GroupName{"group1", "group2", "group3"}},
-		},
-		{
-			input:  map[string]interface{}{"groups": []interface{}{}},
-			output: &ConfigUser{Groups: &[]GroupName{}},
-		},
-		// Only Keys
-		{
-			input:  map[string]interface{}{"keys": "2fa"},
-			output: &ConfigUser{Keys: "2fa"},
-		},
-		{
-			base:   ConfigUser{Keys: "testKey"},
-			output: &ConfigUser{Keys: "testKey"},
-		},
-		{
-			base:   ConfigUser{Keys: "testKey"},
-			input:  map[string]interface{}{"keys": "2fa"},
-			output: &ConfigUser{Keys: "2fa"},
-		},
-		// Only LastName
-		{
-			input:  map[string]interface{}{"lastname": "testLastName"},
-			output: &ConfigUser{LastName: "testLastName"},
-		},
-		{
-			base:   ConfigUser{LastName: "Name"},
-			output: &ConfigUser{LastName: "Name"},
-		},
-		{
-			base:   ConfigUser{LastName: "Name"},
-			input:  map[string]interface{}{"lastname": "testLastName"},
-			output: &ConfigUser{LastName: "testLastName"},
-		},
+				LastName:  "testLastName"}},
+		{name: `User`,
+			input: map[string]any{"userid": string("username@pam")},
+			output: &ConfigUser{
+				User: UserID{Name: "username", Realm: "pam"}}},
+		{name: `Comment`,
+			input: map[string]any{"comment": "test comment"},
+			output: &ConfigUser{
+				Comment: "test comment"}},
+		{name: `Email`,
+			input: map[string]any{"email": string("test@example.com")},
+			output: &ConfigUser{
+				Email: "test@example.com"}},
+		{name: `Enable`,
+			input: map[string]any{"enable": float64(1)},
+			output: &ConfigUser{
+				Enable: true}},
+		{name: `Expire`,
+			input: map[string]any{"expire": float64(123456789)},
+			output: &ConfigUser{
+				Expire: 123456789}},
+		{name: `FirstName`,
+			input: map[string]any{"firstname": string("testFirstName")},
+			output: &ConfigUser{
+				FirstName: "testFirstName"}},
+		{name: `Groups`,
+			input: map[string]any{"groups": string("group1,group2,group3")},
+			output: &ConfigUser{
+				Groups: &[]GroupName{"group1", "group2", "group3"}}},
+		{name: `Groups empty`,
+			input: map[string]any{"groups": string("")},
+			output: &ConfigUser{
+				Groups: &[]GroupName{}}},
+		{name: `Keys`,
+			input: map[string]any{"keys": string("2fa")},
+			output: &ConfigUser{
+				Keys: "2fa"}},
+		{name: `LastName`,
+			input: map[string]any{"lastname": string("testLastName")},
+			output: &ConfigUser{
+				LastName: "testLastName"}},
 	}
-	for _, e := range testData {
-		require.Equal(t, e.output, e.base.mapToStruct(e.input))
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, (&rawConfigUser{a: test.input}).Get())
+		})
 	}
 }
 

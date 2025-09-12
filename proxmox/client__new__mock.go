@@ -10,6 +10,8 @@ type MockClient struct {
 	// Pool
 	PoolGetRawConfigFunc        func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)
+	// User
+	UserGetRawConfigFunc func(ctx context.Context, userID UserID) (RawConfigUser, error)
 }
 
 func (m MockClient) New() ClientNew { return &m }
@@ -53,4 +55,11 @@ func (m *MockClient) poolGetRawConfigNoCheck(ctx context.Context, pool PoolName)
 		m.panic("PoolGetRawConfigNoCheckFunc")
 	}
 	return m.PoolGetRawConfigNoCheckFunc(ctx, pool)
+}
+
+func (m *MockClient) userGetRawConfig(ctx context.Context, userID UserID) (RawConfigUser, error) {
+	if m.UserGetRawConfigFunc == nil {
+		m.panic("UserGetRawConfigFunc")
+	}
+	return m.UserGetRawConfigFunc(ctx, userID)
 }

@@ -18,6 +18,8 @@ type ClientNew interface {
 	// Pool
 	poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	poolGetRawConfigNoCheck(ctx context.Context, pool PoolName) (RawConfigPool, error)
+	// User
+	userGetRawConfig(ctx context.Context, userID UserID) (RawConfigUser, error)
 }
 
 type clientNew struct {
