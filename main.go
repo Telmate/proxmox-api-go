@@ -531,7 +531,9 @@ func main() {
 		var config interface{}
 		userId, err := proxmox.NewUserID(flag.Args()[1])
 		failError(err)
-		config, err = proxmox.NewConfigUserFromApi(ctx, userId, c)
+		var rawConfig proxmox.RawConfigUser
+		rawConfig, err = proxmox.NewRawConfigUserFromApi(ctx, userId, c)
+		config = rawConfig.Get()
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
 		failError(err)

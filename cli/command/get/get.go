@@ -18,28 +18,47 @@ func init() {
 func getConfig(args []string, IDtype string) (err error) {
 	id := cli.RequiredIDset(args, 0, IDtype+"ID")
 	c := cli.NewClient()
-	var config interface{}
+	var config any
 	switch IDtype {
 	case "AcmeAccount":
 		config, err = proxmox.NewConfigAcmeAccountFromApi(cli.Context(), id, c)
+		if err != nil {
+			return
+		}
 	case "Group":
 		config, err = proxmox.NewConfigGroupFromApi(cli.Context(), proxmox.GroupName(id), c)
+		if err != nil {
+			return
+		}
 	case "MetricServer":
 		config, err = proxmox.NewConfigMetricsFromApi(cli.Context(), id, c)
+		if err != nil {
+			return
+		}
 	case "Pool":
-		config, err = c.GetPoolInfo(cli.Context(), id)
+		var rawConfig proxmox.RawConfigPool
+		rawConfig, err = proxmox.PoolName(id).Get(cli.Context(), c)
+		if err != nil {
+			return
+		}
+		config = rawConfig.Get()
 	case "Storage":
 		config, err = proxmox.NewConfigStorageFromApi(cli.Context(), id, c)
+		if err != nil {
+			return
+		}
 	case "User":
 		var userId proxmox.UserID
 		userId, err = proxmox.NewUserID(id)
 		if err != nil {
 			return
 		}
-		config, err = proxmox.NewConfigUserFromApi(cli.Context(), userId, c)
-	}
-	if err != nil {
-		return
+		var rawConfig proxmox.RawConfigUser
+		rawConfig, err = proxmox.NewRawConfigUserFromApi(cli.Context(), userId, c)
+		if err != nil {
+			return
+		}
+		config = rawConfig.Get()
 	}
 	cli.PrintFormattedJson(GetCmd.OutOrStdout(), config)
 	return
