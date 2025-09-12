@@ -1748,7 +1748,7 @@ func (c *Client) GetPoolList(ctx context.Context) (pools map[string]interface{},
 	return c.GetItemList(ctx, "/pools")
 }
 
-// TODO: implement replacement
+// Deprecated: use PoolName.Get() instead
 func (c *Client) GetPoolInfo(ctx context.Context, poolid string) (poolInfo map[string]interface{}, err error) {
 	return c.GetItemConfigMapStringInterface(ctx, "/pools/"+poolid, "pool", "CONFIG")
 }
