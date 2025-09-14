@@ -12,6 +12,7 @@ import (
 const Error_NewUserID string = "no username or realm specified, syntax is \"username@realm\""
 
 // User options for the Proxmox API
+// TODO rework this at some point to use pointers for all optional values
 type ConfigUser struct {
 	User      UserID       `json:"user"`
 	Comment   string       `json:"comment,omitempty"`
@@ -71,44 +72,12 @@ func (config ConfigUser) mapToApiValues(create bool) (params map[string]interfac
 	return
 }
 
-func (ConfigUser) mapToArray(params []interface{}) *[]ConfigUser {
+func (ConfigUser) mapToArray(params []any) *[]ConfigUser {
 	users := make([]ConfigUser, len(params))
 	for i, e := range params {
-		users[i] = *ConfigUser{}.mapToStruct(e.(map[string]interface{}))
+		users[i] = *(&rawConfigUser{a: e.(map[string]any)}).Get()
 	}
 	return &users
-}
-
-// Maps the API values from proxmox to a struct
-func (config ConfigUser) mapToStruct(params map[string]interface{}) *ConfigUser {
-	if _, isSet := params["userid"]; isSet {
-		config.User = UserID{}.mapToStruct(params["userid"].(string))
-	}
-	if _, isSet := params["comment"]; isSet {
-		config.Comment = params["comment"].(string)
-	}
-	if _, isSet := params["email"]; isSet {
-		config.Email = params["email"].(string)
-	}
-	if _, isSet := params["enable"]; isSet {
-		config.Enable = Itob(int(params["enable"].(float64)))
-	}
-	if _, isSet := params["expire"]; isSet {
-		config.Expire = uint(params["expire"].(float64))
-	}
-	if _, isSet := params["firstname"]; isSet {
-		config.FirstName = params["firstname"].(string)
-	}
-	if _, isSet := params["keys"]; isSet {
-		config.Keys = params["keys"].(string)
-	}
-	if _, isSet := params["lastname"]; isSet {
-		config.LastName = params["lastname"].(string)
-	}
-	if _, isSet := params["groups"]; isSet {
-		config.Groups = GroupName("").mapToArray(params["groups"])
-	}
-	return &config
 }
 
 // Create or update the user depending on if the user already exists or not.
@@ -368,6 +337,99 @@ func (password UserPassword) Validate() error {
 	return errors.New("the minimum password length is 5")
 }
 
+type RawConfigUser interface {
+	Get() *ConfigUser
+	GetComment() string
+	GetEmail() string
+	GetEnable() bool
+	GetExpire() uint
+	GetFirstName() string
+	GetGroups() *[]GroupName
+	GetKeys() string
+	GetLastName() string
+	GetUser() UserID
+}
+
+type rawConfigUser struct {
+	a map[string]any
+}
+
+func (r *rawConfigUser) Get() *ConfigUser {
+	return &ConfigUser{
+		Comment:   r.GetComment(),
+		Email:     r.GetEmail(),
+		Enable:    r.GetEnable(),
+		Expire:    r.GetExpire(),
+		FirstName: r.GetFirstName(),
+		Groups:    r.GetGroups(),
+		Keys:      r.GetKeys(),
+		LastName:  r.GetLastName(),
+		User:      r.GetUser()}
+}
+
+func (r *rawConfigUser) GetComment() string {
+	if v, isSet := r.a["comment"]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func (r *rawConfigUser) GetEmail() string {
+	if v, isSet := r.a["email"]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func (r *rawConfigUser) GetEnable() bool {
+	if v, isSet := r.a["enable"]; isSet {
+		return Itob(int(v.(float64)))
+	}
+	return false
+}
+
+func (r *rawConfigUser) GetExpire() uint {
+	if v, isSet := r.a["expire"]; isSet {
+		return uint(v.(float64))
+	}
+	return 0
+}
+
+func (r *rawConfigUser) GetFirstName() string {
+	if v, isSet := r.a["firstname"]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func (r *rawConfigUser) GetGroups() *[]GroupName {
+	if v, isSet := r.a["groups"]; isSet {
+		return GroupName("").mapToArray(v)
+	}
+	return nil
+}
+
+func (r *rawConfigUser) GetKeys() string {
+	if v, isSet := r.a["keys"]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func (r *rawConfigUser) GetLastName() string {
+	if v, isSet := r.a["lastname"]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func (r *rawConfigUser) GetUser() UserID {
+	if v, isSet := r.a["userid"]; isSet {
+		return UserID{}.mapToStruct(v.(string))
+	}
+	return UserID{}
+}
+
 // Check if the user already exists in proxmox.
 func CheckUserExistence(ctx context.Context, userId UserID, client *Client) (existence bool, err error) {
 	list, err := listUsersFull(ctx, client)
@@ -409,13 +471,23 @@ func listUsersFull(ctx context.Context, client *Client) ([]interface{}, error) {
 	return client.GetItemListInterfaceArray(ctx, "/access/users?full=1")
 }
 
-func NewConfigUserFromApi(ctx context.Context,
-	userId UserID, client *Client) (*ConfigUser, error) {
-	userConfig, err := client.GetItemConfigMapStringInterface(ctx, "/access/users/"+userId.String(), "user", "CONFIG")
+func NewRawConfigUserFromApi(ctx context.Context, userID UserID, c *Client) (RawConfigUser, error) {
+	return c.new().userGetRawConfig(ctx, userID)
+}
+
+func (c *clientNew) userGetRawConfig(ctx context.Context, userID UserID) (RawConfigUser, error) {
+	if err := userID.Validate(); err != nil {
+		return nil, err
+	}
+	return userGetRawConfigUser_Unsafe(ctx, userID, c.api)
+}
+
+func userGetRawConfigUser_Unsafe(ctx context.Context, userID UserID, c clientApiInterface) (RawConfigUser, error) {
+	userConfig, err := c.getUserConfig(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return ConfigUser{User: userId}.mapToStruct(userConfig), nil
+	return &rawConfigUser{a: userConfig}, nil
 }
 
 func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {

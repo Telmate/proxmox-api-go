@@ -18,7 +18,7 @@ func Test_Pool_Create(t *testing.T) {
 func Test_Pool_Is_Created(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	_, err := Test.GetClient().GetPoolInfo(context.Background(), "test-pool")
+	_, err := proxmox.PoolName("test-pool").Get(context.Background(), Test.GetClient())
 	require.NoError(t, err)
 }
 
@@ -31,6 +31,6 @@ func Test_Pool_Delete(t *testing.T) {
 func Test_Pool_Is_Deleted(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	_, err := Test.GetClient().GetPoolInfo(context.Background(), "test-pool")
+	_, err := proxmox.PoolName("test-pool").Get(context.Background(), Test.GetClient())
 	require.Error(t, err)
 }

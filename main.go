@@ -474,12 +474,12 @@ func main() {
 			os.Exit(1)
 		}
 		poolid := flag.Args()[1]
-		poolinfo, err := c.GetPoolInfo(ctx, poolid)
+		raw, err := proxmox.PoolName(poolid).Get(ctx, c)
 		if err != nil {
 			log.Printf("Error getting pool info %+v\n", err)
 			os.Exit(1)
 		}
-		poolList, err := json.Marshal(poolinfo)
+		poolList, err := json.Marshal(raw.Get())
 		failError(err)
 		fmt.Println(string(poolList))
 
@@ -531,7 +531,9 @@ func main() {
 		var config interface{}
 		userId, err := proxmox.NewUserID(flag.Args()[1])
 		failError(err)
-		config, err = proxmox.NewConfigUserFromApi(ctx, userId, c)
+		var rawConfig proxmox.RawConfigUser
+		rawConfig, err = proxmox.NewRawConfigUserFromApi(ctx, userId, c)
+		config = rawConfig.Get()
 		failError(err)
 		cj, err := json.MarshalIndent(config, "", "  ")
 		failError(err)

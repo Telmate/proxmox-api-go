@@ -13,7 +13,8 @@ func Test_Root_Login_Correct_Api_Key(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
 
-	user, _ := pxapi.NewConfigUserFromApi(context.Background(), pxapi.UserID{Name: "root", Realm: "pam"}, Test.GetClient())
+	rawUser, _ := pxapi.NewRawConfigUserFromApi(context.Background(), pxapi.UserID{Name: "root", Realm: "pam"}, Test.GetClient())
+	user := rawUser.Get()
 
 	token := pxapi.ApiToken{TokenId: "testing", Comment: "This is a test", Expire: 0, Privsep: false}
 

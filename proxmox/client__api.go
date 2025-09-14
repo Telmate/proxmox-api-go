@@ -9,6 +9,7 @@ import (
 type clientApiInterface interface {
 	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
+	getUserConfig(ctx context.Context, userId UserID) (map[string]any, error)
 	listGuestResources(ctx context.Context) ([]any, error)
 }
 
@@ -27,6 +28,10 @@ func (c *clientAPI) getGuestConfig(ctx context.Context, vmr *VmRef) (vmConfig ma
 
 func (c *clientAPI) getPoolConfig(ctx context.Context, pool PoolName) (poolConfig map[string]any, err error) {
 	return c.getMap(ctx, "/pools/"+string(pool), "pool", "CONFIG", nil)
+}
+
+func (c *clientAPI) getUserConfig(ctx context.Context, userID UserID) (userConfig map[string]any, err error) {
+	return c.getMap(ctx, "/access/users/"+userID.String(), "user", "CONFIG", nil)
 }
 
 func (c *clientAPI) listGuestResources(ctx context.Context) ([]any, error) {
