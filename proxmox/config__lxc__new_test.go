@@ -2683,7 +2683,6 @@ func Test_ConfigLXC_UpdateNoCheck(t *testing.T) {
 }
 
 func Test_RawConfigLXC_Get(t *testing.T) {
-	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	parseIP := func(rawIP string) netip.Addr {
 		ip, err := netip.ParseAddr(rawIP)
 		failPanic(err)
@@ -2821,11 +2820,14 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		vmr    VmRef
 		state  PowerState
 		output *ConfigLXC
+		err    error
 	}
 	tests := []struct {
 		category string
 		tests    []test
 	}{
+		{category: `Error`,
+			tests: []test{{err: errors.New("this should propagate")}}},
 		{category: `Architecture`,
 			tests: []test{
 				{name: `amd64`,
@@ -3608,7 +3610,14 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.output, set(subTest.input).Get(subTest.vmr, subTest.state), name)
+				raw, err := guestGetLxcRawConfig_Unsafe(context.Background(), &subTest.vmr, &mockClientAPI{
+					getGuestConfigFunc: func(ctx context.Context, vmr *VmRef) (map[string]any, error) {
+						return subTest.input, subTest.err
+					}})
+				require.Equal(t, subTest.err, err, name)
+				if subTest.output != nil {
+					require.Equal(t, subTest.output, raw.Get(subTest.vmr, subTest.state), name)
+				}
 			})
 		}
 	}
