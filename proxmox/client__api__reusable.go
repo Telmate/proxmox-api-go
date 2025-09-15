@@ -17,7 +17,7 @@ func (c *clientAPI) getResourceList(ctx context.Context, resourceType string) ([
 	if resourceType != "" {
 		url = url + "?type=" + resourceType
 	}
-	return c.getList(ctx, url, nil)
+	return c.getList(ctx, url, "", "", nil)
 }
 
 // Primitive methods
@@ -30,8 +30,8 @@ func (c *clientAPI) getMap(ctx context.Context, url, text, message string, ignor
 	return data["data"].(map[string]any), err
 }
 
-func (c *clientAPI) getList(ctx context.Context, url string, ignore errorIgnore) ([]any, error) {
-	list, err := c.getRootList(ctx, url, ignore)
+func (c *clientAPI) getList(ctx context.Context, url, text, message string, ignore errorIgnore) ([]any, error) {
+	list, err := c.getRootList(ctx, url, text, message, ignore)
 	if err != nil {
 		return nil, err
 	}
@@ -53,10 +53,13 @@ func (c *clientAPI) getRootMap(ctx context.Context, url, text, message string, i
 	return config, nil
 }
 
-func (c *clientAPI) getRootList(ctx context.Context, url string, ignore errorIgnore) (map[string]any, error) {
+func (c *clientAPI) getRootList(ctx context.Context, url, text, message string, ignore errorIgnore) (map[string]any, error) {
 	var data map[string]any
 	if err := c.getJsonRetry(ctx, url, &data, 3, ignore); err != nil {
 		return nil, err
+	}
+	if data["data"] == nil {
+		return nil, errors.New(text + " " + message + " not readable")
 	}
 	return data, nil
 }
