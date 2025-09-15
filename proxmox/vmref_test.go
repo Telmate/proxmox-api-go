@@ -416,6 +416,45 @@ func Test_VmRef_MigrateNoCheck(t *testing.T) {
 	}
 }
 
+func Test_VmRef_pendingChanges(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []any
+		output bool
+		err    error
+	}{
+		{name: `No pending`,
+			input: []any{
+				map[string]any{"key": string("test"), "value": string("value")},
+				map[string]any{"key": string("cpu"), "value": float64(2)},
+				map[string]any{"key": string("disks"), "value": string("sata0")}}},
+		{name: `Pending`,
+			input: []any{
+				map[string]any{"key": string("test"), "value": string("value")},
+				map[string]any{"key": string("cores"), "value": float64(2), "pending": float64(3)},
+				map[string]any{"key": string("disks"), "value": string("sata0")}},
+			output: true},
+		{name: `Delete`,
+			input: []any{
+				map[string]any{"key": string("test"), "value": string("value")},
+				map[string]any{"key": string("cores"), "value": float64(2)},
+				map[string]any{"key": string("tpmstate0"), "value": string("local-zfs:vm-1001-disk-2,size=4M,version=v1.2"), "delete": float64(1)}},
+			output: true},
+		{name: `Error`,
+			err: errors.New("test")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			pending, err := (&VmRef{}).pendingChanges(context.Background(), &mockClientAPI{
+				getGuestPendingChangesFunc: func(ctx context.Context, vmr *VmRef) ([]any, error) {
+					return test.input, test.err
+				}})
+			require.Equal(t, test.err, err)
+			require.Equal(t, test.output, pending)
+		})
+	}
+}
+
 func Test_RawGuestStatus_Get(t *testing.T) {
 	tests := []struct {
 		name   string

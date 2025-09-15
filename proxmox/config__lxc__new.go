@@ -288,6 +288,8 @@ func (config ConfigLXC) update_Unsafe(
 	currentState PowerState,
 	c *Client) error {
 
+	ca := c.new().apiGet()
+
 	var move []lxcMountMove
 	var resize []lxcMountResize
 	var getRootMount, getMounts, requiresOffStateForMountActions bool
@@ -368,7 +370,7 @@ func (config ConfigLXC) update_Unsafe(
 			return err
 		}
 		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes
-			pendingChanges, err := GuestHasPendingChanges(ctx, vmr, c)
+			pendingChanges, err := vmr.pendingChanges(ctx, ca)
 			if err != nil {
 				return fmt.Errorf("error checking for pending changes: %w", err)
 			}

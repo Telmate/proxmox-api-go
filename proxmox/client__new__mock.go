@@ -4,9 +4,11 @@ import "context"
 
 type MockClient struct {
 	// Guest
-	GuestGetLxcRawConfigFunc  func(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
-	GuestGetQemuRawConfigFunc func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
-	GuestListResourcesFunc    func(ctx context.Context) (RawGuestResources, error)
+	GuestCheckPendingChangesFunc func(ctx context.Context, vmr *VmRef) (bool, error)
+	GuestCheckVmRefFunc          func(ctx context.Context, vmr *VmRef) error
+	GuestGetLxcRawConfigFunc     func(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
+	GuestGetQemuRawConfigFunc    func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
+	GuestListResourcesFunc       func(ctx context.Context) (RawGuestResources, error)
 	// Pool
 	PoolGetRawConfigFunc        func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)
@@ -21,6 +23,20 @@ func (m *MockClient) panic(field string) { panic(field + " not set in MockClient
 func (m *MockClient) old() *Client { panic("old not implemented in MockClient") }
 
 func (m *MockClient) apiGet() clientApiInterface { panic("apiGet not implemented in MockClient") }
+
+func (m *MockClient) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error) {
+	if m.GuestCheckPendingChangesFunc == nil {
+		m.panic("GuestCheckPendingChangesFunc")
+	}
+	return m.GuestCheckPendingChangesFunc(ctx, vmr)
+}
+
+func (m *MockClient) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
+	if m.GuestCheckVmRefFunc == nil {
+		m.panic("GuestCheckVmRefFunc")
+	}
+	return m.GuestCheckVmRefFunc(ctx, vmr)
+}
 
 func (m *MockClient) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
 	if m.GuestGetLxcRawConfigFunc == nil {
