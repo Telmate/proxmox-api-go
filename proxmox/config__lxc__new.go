@@ -749,6 +749,8 @@ type LxcSwap uint
 
 func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String is for fmt.Stringer.
 
+// NewRawConfigLXCFromAPI returns the configuration of the LXC container.
+// Including pending changes.
 func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	if vmr == nil {
 		return nil, errors.New(VmRef_Error_Nil)
@@ -769,4 +771,23 @@ func guestGetLxcRawConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInt
 
 func (c *clientNew) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
 	return guestGetLxcRawConfig_Unsafe(ctx, vmr, c.api)
+}
+
+// NewActiveRawConfigLXCFromApi returns the active configuration of the LXC container.
+// Without pending changes.
+func NewActiveRawConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigLXC, pending bool, err error) {
+	return c.new().guestGetLxcActiveRawConfig(ctx, vmr)
+}
+
+func guestGetActiveRawLxcConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw RawConfigLXC, pending bool, err error) {
+	var tmpConfig map[string]any
+	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
+	if err != nil {
+		return nil, false, err
+	}
+	return &rawConfigLXC{a: tmpConfig}, pending, nil
+}
+
+func (c *clientNew) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error) {
+	return guestGetActiveRawLxcConfig_Unsafe(ctx, vmr, c.api)
 }

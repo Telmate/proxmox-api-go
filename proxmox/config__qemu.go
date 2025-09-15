@@ -1219,6 +1219,8 @@ const (
 	qemuPrefixApiKeyUSB         string = "usb"
 )
 
+// NewRawConfigQemuFromApi returns the configuration of the LXC container.
+// Including pending changes.
 func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
 	if vmr == nil {
 		return nil, errors.New(VmRef_Error_Nil)
@@ -1239,6 +1241,25 @@ func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiIn
 
 func (c *clientNew) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
 	return guestGetRawQemuConfig_Unsafe(ctx, vmr, c.api)
+}
+
+// NewActiveRawConfigQemuFromApi returns the active configuration of the LXC container.
+// Without pending changes.
+func NewActiveRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigQemu, pending bool, err error) {
+	return c.new().guestGetQemuActiveRawConfig(ctx, vmr)
+}
+
+func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw RawConfigQemu, pending bool, err error) {
+	var tmpConfig map[string]any
+	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
+	if err != nil {
+		return nil, false, err
+	}
+	return &rawConfigQemu{a: tmpConfig}, pending, nil
+}
+
+func (c *clientNew) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error) {
+	return guestGetActiveRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 
 func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (config *ConfigQemu, err error) {

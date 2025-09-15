@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/netip"
@@ -7362,6 +7363,141 @@ func Test_ConfigQemu_get(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func Test_ActiveRawConfigQemu_Get(t *testing.T) {
+	baseConfig := func(config ConfigQemu) *ConfigQemu {
+		if config.Bios == "" {
+			config.Bios = ("seabios")
+		}
+		if config.Boot == "" {
+			config.Boot = "cdn"
+		}
+		if config.CPU == nil {
+			config.CPU = &QemuCPU{}
+		}
+		if config.Description == nil {
+			config.Description = util.Pointer("")
+		}
+		if config.EFIDisk == nil {
+			config.EFIDisk = QemuDevice{}
+		}
+		if config.Hotplug == "" {
+			config.Hotplug = "network,disk,usb"
+		}
+		if config.Memory == nil {
+			config.Memory = &QemuMemory{}
+		}
+		if config.Name == nil {
+			config.Name = util.Pointer(GuestName(""))
+		}
+		if config.Onboot == nil {
+			config.Onboot = util.Pointer(true)
+		}
+		if config.Protection == nil {
+			config.Protection = util.Pointer(false)
+		}
+		if config.QemuDisks == nil {
+			config.QemuDisks = QemuDevices{}
+		}
+		if config.QemuKVM == nil {
+			config.QemuKVM = util.Pointer(true)
+		}
+		if config.QemuOs == "" {
+			config.QemuOs = "other"
+		}
+		if config.QemuUnusedDisks == nil {
+			config.QemuUnusedDisks = QemuDevices{}
+		}
+		if config.QemuVga == nil {
+			config.QemuVga = QemuDevice{}
+		}
+		if config.Scsihw == "" {
+			config.Scsihw = "lsi"
+		}
+		if config.Tablet == nil {
+			config.Tablet = util.Pointer(true)
+		}
+		return &config
+	}
+	tests := []struct {
+		name    string
+		input   []any
+		vmr     *VmRef
+		pending bool
+		output  *ConfigQemu
+		err     error
+	}{
+		{name: `No pending changes`,
+			input: []any{
+				map[string]any{
+					"key":   string("cores"),
+					"value": float64(3)},
+				map[string]any{
+					"key":   string("name"),
+					"value": string("testName")},
+				map[string]any{
+					"key":   string("description"),
+					"value": string("test")}},
+			output: baseConfig(ConfigQemu{
+				CPU:         &QemuCPU{Cores: util.Pointer(QemuCpuCores(3))},
+				Description: util.Pointer("test"),
+				Name:        util.Pointer(GuestName("testName")),
+			})},
+		{name: `pending change`,
+			input: []any{
+				map[string]any{
+					"key":   string("name"),
+					"value": string("testName")},
+				map[string]any{
+					"key":     string("cores"),
+					"value":   float64(3),
+					"pending": float64(7)},
+				map[string]any{
+					"key":   string("description"),
+					"value": string("test")}},
+			pending: true,
+			output: baseConfig(ConfigQemu{
+				CPU:         &QemuCPU{Cores: util.Pointer(QemuCpuCores(3))},
+				Description: util.Pointer("test"),
+				Name:        util.Pointer(GuestName("testName")),
+			})},
+		{name: `pending delete`,
+			input: []any{
+				map[string]any{
+					"key":   string("name"),
+					"value": string("testName")},
+				map[string]any{
+					"key":    string("description"),
+					"value":  string("test"),
+					"delete": float64(1)},
+				map[string]any{
+					"key":     string("cores"),
+					"value":   float64(3),
+					"pending": float64(7)}},
+			pending: true,
+			output: baseConfig(ConfigQemu{
+				CPU:         &QemuCPU{Cores: util.Pointer(QemuCpuCores(3))},
+				Description: util.Pointer("test"),
+				Name:        util.Pointer(GuestName("testName")),
+			})},
+		{name: `error`,
+			err: errors.New("this error should be propagated")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			raw, pending, err := guestGetActiveRawQemuConfig_Unsafe(context.Background(), &VmRef{}, &mockClientAPI{
+				getGuestPendingChangesFunc: func(ctx context.Context, vmr *VmRef) ([]any, error) {
+					return test.input, test.err
+				}})
+			require.Equal(t, test.err, err)
+			require.Equal(t, test.pending, pending)
+			if test.output != nil {
+				config, _ := raw.Get(test.vmr)
+				require.Equal(t, test.output, config)
+			}
+		})
 	}
 }
 
