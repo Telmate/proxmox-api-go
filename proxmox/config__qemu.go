@@ -1219,7 +1219,7 @@ const (
 	qemuPrefixApiKeyUSB         string = "usb"
 )
 
-// NewRawConfigQemuFromApi returns the configuration of the LXC container.
+// NewRawConfigQemuFromApi returns the configuration of the Qemu guest.
 // Including pending changes.
 func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
 	if vmr == nil {
@@ -1243,7 +1243,7 @@ func (c *clientNew) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawC
 	return guestGetRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 
-// NewActiveRawConfigQemuFromApi returns the active configuration of the LXC container.
+// NewActiveRawConfigQemuFromApi returns the active configuration of the Qemu guest.
 // Without pending changes.
 func NewActiveRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigQemu, pending bool, err error) {
 	return c.new().guestGetQemuActiveRawConfig(ctx, vmr)

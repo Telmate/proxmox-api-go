@@ -749,7 +749,7 @@ type LxcSwap uint
 
 func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String is for fmt.Stringer.
 
-// NewRawConfigLXCFromAPI returns the configuration of the LXC container.
+// NewRawConfigLXCFromAPI returns the configuration of the LXC guest.
 // Including pending changes.
 func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	if vmr == nil {
@@ -773,7 +773,7 @@ func (c *clientNew) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawCo
 	return guestGetLxcRawConfig_Unsafe(ctx, vmr, c.api)
 }
 
-// NewActiveRawConfigLXCFromApi returns the active configuration of the LXC container.
+// NewActiveRawConfigLXCFromApi returns the active configuration of the LXC guest.
 // Without pending changes.
 func NewActiveRawConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigLXC, pending bool, err error) {
 	return c.new().guestGetLxcActiveRawConfig(ctx, vmr)
