@@ -444,9 +444,9 @@ func (CpuType) Error(version Version) error {
 	return errors.New("cpuType can only be one of the following values: " + strings.Join(cpusConverted, ", "))
 }
 
-func (cpu CpuType) mapToApi(version Version) string {
+func (cpu CpuType) mapToApi(version EncodedVersion) string {
 	cpus := CpuType("").cpuBase()
-	if version.Encode() >= version_8_0_0 {
+	if version >= version_8_0_0 {
 		cpu.cpuV8(cpus)
 	}
 	if v, ok := cpus[CpuType(strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", "")))]; ok {
@@ -456,7 +456,7 @@ func (cpu CpuType) mapToApi(version Version) string {
 }
 
 func (cpu CpuType) Validate(version Version) error {
-	if cpu == "" || cpu.mapToApi(version) != "" {
+	if cpu == "" || cpu.mapToApi(version.Encode()) != "" {
 		return nil
 	}
 	return CpuType("").Error(version)
@@ -513,7 +513,7 @@ const (
 	QemuCPU_Error_CoresRequired string = "cores is required"
 )
 
-func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]interface{}, version Version) (delete string) {
+func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]any, version EncodedVersion) (delete string) {
 	if cpu.Affinity != nil {
 		if len(*cpu.Affinity) != 0 {
 			params[qemuApiKeyCpuAffinity] = cpu.mapToApiAffinity(*cpu.Affinity)

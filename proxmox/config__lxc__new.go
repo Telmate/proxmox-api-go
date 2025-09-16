@@ -259,7 +259,11 @@ func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRe
 	if err := config.Validate(current); err != nil {
 		return err
 	}
-	return config.update_Unsafe(ctx, allowRestart, vmr, current, rawStatus.GetState(), c)
+	version, err := c.Version(ctx)
+	if err != nil {
+		return err
+	}
+	return config.update_Unsafe(ctx, allowRestart, vmr, current, rawStatus.GetState(), version.Encode(), c)
 }
 
 func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
@@ -277,7 +281,11 @@ func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vm
 	if err != nil {
 		return err
 	}
-	return config.update_Unsafe(ctx, allowRestart, vmr, raw.get(*vmr), rawStatus.GetState(), c)
+	version, err := c.Version(ctx)
+	if err != nil {
+		return err
+	}
+	return config.update_Unsafe(ctx, allowRestart, vmr, raw.get(*vmr), rawStatus.GetState(), version.Encode(), c)
 }
 
 func (config ConfigLXC) update_Unsafe(
@@ -286,6 +294,7 @@ func (config ConfigLXC) update_Unsafe(
 	vmr *VmRef,
 	current *ConfigLXC,
 	currentState PowerState,
+	version EncodedVersion,
 	c *Client) error {
 
 	ca := c.new().apiGet()
@@ -313,11 +322,12 @@ func (config ConfigLXC) update_Unsafe(
 		requiresOffStateForMountActions = markedMounts.offState
 	}
 
+	var err error
 	if targetState == PowerStateStopped && currentState != PowerStateStopped { // We want the vm to be stopped, better to do this before we start making other api calls
 		if !allowRestart {
 			return errors.New("guest has to be stopped before applying changes")
 		}
-		if _, err := c.ShutdownVm(ctx, vmr); err != nil {
+		if _, err = c.ShutdownVm(ctx, vmr); err != nil {
 			return err
 		}
 		currentState = PowerStateStopped // We assume the guest is stopped now
@@ -328,7 +338,7 @@ func (config ConfigLXC) update_Unsafe(
 			if !allowRestart {
 				return errors.New("guest has to be stopped before moving disks")
 			}
-			if err := GuestShutdown(ctx, vmr, c, true); err != nil { // We have to stop the guest before moving disks
+			if err = GuestShutdown(ctx, vmr, c, true); err != nil { // We have to stop the guest before moving disks
 				return err
 			}
 			currentState = PowerStateStopped // We assume the guest is stopped now
@@ -338,18 +348,19 @@ func (config ConfigLXC) update_Unsafe(
 	if len(resize) > 0 || len(move) > 0 {
 
 		for i := range move { // Move mounts
-			if _, err := move[i].move(ctx, true, vmr, c); err != nil {
+			if _, err = move[i].move(ctx, true, vmr, c); err != nil {
 				return err
 			}
 		}
 
 		for i := range resize { // Resize mounts
-			if _, err := resize[i].resize(ctx, vmr, c); err != nil {
+			if _, err = resize[i].resize(ctx, vmr, c); err != nil {
 				return err
 			}
 		}
 
-		newCurrent, err := c.new().guestGetLxcRawConfig(ctx, vmr) // We have to refetch part of the current config
+		var newCurrent RawConfigLXC
+		newCurrent, err = c.new().guestGetLxcRawConfig(ctx, vmr) // We have to refetch part of the current config
 		if err != nil {
 			return err
 		}
@@ -366,11 +377,12 @@ func (config ConfigLXC) update_Unsafe(
 	}
 
 	if params := config.mapToApiUpdate(*current); len(params) > 0 {
-		if err := c.Put(ctx, params, url+"/config"); err != nil {
+		if err = c.Put(ctx, params, url+"/config"); err != nil {
 			return err
 		}
 		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes
-			pendingChanges, err := vmr.pendingChanges(ctx, ca)
+			var pendingChanges bool
+			pendingChanges, err = vmr.pendingChanges(ctx, ca)
 			if err != nil {
 				return fmt.Errorf("error checking for pending changes: %w", err)
 			}
@@ -379,7 +391,7 @@ func (config ConfigLXC) update_Unsafe(
 					// TODO revert pending changes
 					return errors.New("guest has to be restarted to apply changes")
 				}
-				if err := GuestReboot(ctx, vmr, c); err != nil {
+				if err = GuestReboot(ctx, vmr, c); err != nil {
 					return fmt.Errorf("error restarting guest: %w", err)
 				}
 				currentState = PowerStateRunning // We assume the guest is running now
@@ -387,11 +399,14 @@ func (config ConfigLXC) update_Unsafe(
 		}
 	}
 	if currentState != PowerStateRunning && targetState == PowerStateRunning { // We want the guest to be running, so we start it now
-		if err := GuestStart(ctx, vmr, c); err != nil {
+		if err = GuestStart(ctx, vmr, c); err != nil {
 			return err
 		}
 	}
-	return nil
+	if config.Pool != nil {
+		err = guestSetPoolNoCheck(ctx, c, vmr.vmId, *config.Pool, current.Pool, version)
+	}
+	return err
 }
 
 func (config ConfigLXC) Validate(current *ConfigLXC) (err error) {
