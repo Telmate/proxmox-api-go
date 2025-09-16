@@ -344,12 +344,9 @@ func guestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature Gu
 }
 
 // Check if there are any pending changes that require a reboot to be applied.
+// Same as VmRef.PendingChanges.
 func GuestHasPendingChanges(ctx context.Context, vmr *VmRef, client *Client) (bool, error) {
-	params, err := pendingGuestConfigFromApi(ctx, vmr, client)
-	if err != nil {
-		return false, err
-	}
-	return keyExists(params, "pending") || keyExists(params, "delete"), nil
+	return vmr.PendingChanges(ctx, client)
 }
 
 // Reboot the specified guest
@@ -425,13 +422,6 @@ func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (feature
 	}
 	features.Snapshot, err = guestHasFeature(ctx, vmr, client, GuestFeature_Snapshot)
 	return
-}
-
-func pendingGuestConfigFromApi(ctx context.Context, vmr *VmRef, client *Client) ([]interface{}, error) {
-	if err := client.CheckVmRef(ctx, vmr); err != nil {
-		return nil, err
-	}
-	return client.GetItemConfigInterfaceArray(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/pending", "Guest", "PENDING CONFIG")
 }
 
 const guest_ApiError_AlreadyExists string = "config file already exists"

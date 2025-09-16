@@ -227,6 +227,44 @@ func (vmr *VmRef) migrate_Unsafe(ctx context.Context, c *Client, newNode NodeNam
 	return err
 }
 
+func (vmr *VmRef) PendingChanges(ctx context.Context, c *Client) (bool, error) {
+	return c.new().guestCheckPendingChanges(ctx, vmr)
+}
+
+func (vmr *VmRef) pendingChanges(ctx context.Context, c clientApiInterface) (bool, error) {
+	changes, err := c.getGuestPendingChanges(ctx, vmr)
+	if err != nil {
+		return false, err
+	}
+	for _, item := range changes {
+		if len(item.(map[string]any)) > 2 { // we always have the keys `key` & `value`
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (c *clientNew) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error) {
+	return vmr.pendingChanges(ctx, c.apiGet())
+}
+
+func (vmr *VmRef) pendingConfig(ctx context.Context, c clientApiInterface) (map[string]any, bool, error) {
+	changes, err := c.getGuestPendingChanges(ctx, vmr)
+	if err != nil {
+		return nil, false, err
+	}
+	var pending bool
+	config := make(map[string]any, len(changes))
+	for _, item := range changes {
+		m := item.(map[string]any)
+		config[m["key"].(string)] = m["value"]
+		if len(m) > 2 {
+			pending = true
+		}
+	}
+	return config, pending, nil
+}
+
 func (vmr *VmRef) Stop(ctx context.Context, c *Client) error {
 	if err := c.checkInitialized(); err != nil {
 		return err
