@@ -94,7 +94,7 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	}
 
 	var params map[string]interface{}
-	_, params, err = config.mapToAPI(ConfigQemu{}, version)
+	_, params, err = config.mapToAPI(ConfigQemu{}, version.Encode())
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (config *ConfigQemu) defaults() {
 	}
 }
 
-func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (rebootRequired bool, params map[string]interface{}, err error) {
+func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersion) (rebootRequired bool, params map[string]interface{}, err error) {
 	// TODO check if cloudInit settings changed, they require a reboot to take effect.
 	var itemsToDelete string
 
@@ -566,8 +566,10 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		vmr.node = *config.Node
 	}
 
+	versionEncoded := version.Encode()
+
 	var params map[string]interface{}
-	rebootRequired, params, err = config.mapToAPI(*currentConfig, version)
+	rebootRequired, params, err = config.mapToAPI(*currentConfig, versionEncoded)
 	if err != nil {
 		return
 	}
@@ -589,7 +591,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	}
 
 	if config.Pool != nil { // update pool membership
-		guestSetPoolNoCheck(ctx, client, vmr.vmId, *config.Pool, currentConfig.Pool, version)
+		guestSetPoolNoCheck(ctx, client, vmr.vmId, *config.Pool, currentConfig.Pool, versionEncoded)
 	}
 
 	if stopped { // start vm if it was stopped

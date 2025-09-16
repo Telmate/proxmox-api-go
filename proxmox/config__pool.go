@@ -90,7 +90,7 @@ func (config ConfigPool) CreateNoCheck(ctx context.Context, c *Client) error {
 		return err
 	}
 	if config.Guests != nil {
-		return config.Name.addGuestsNoCheck(ctx, c, *config.Guests, nil, version)
+		return config.Name.addGuestsNoCheck(ctx, c, *config.Guests, nil, version.Encode())
 	}
 	return nil
 }
@@ -152,7 +152,7 @@ func (config ConfigPool) UpdateNoCheck(ctx context.Context, c *Client) error {
 		return err
 	}
 	if params := config.mapToApi(util.Pointer(current.Get())); len(params) > 0 {
-		if err = config.Name.put(ctx, c, params, version); err != nil {
+		if err = config.Name.put(ctx, c, params, version.Encode()); err != nil {
 			return err
 		}
 	}
@@ -180,7 +180,7 @@ const (
 
 var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
 
-func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, currentGuests *[]GuestID, version Version) error {
+func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, currentGuests *[]GuestID, version EncodedVersion) error {
 	var guestsToAdd []GuestID
 	if currentGuests != nil && len(*currentGuests) > 0 {
 		guestsToAdd = subtractArray(guestIDs, *currentGuests)
@@ -190,7 +190,7 @@ func (config PoolName) addGuestsNoCheck(ctx context.Context, c *Client, guestIDs
 	if len(guestsToAdd) == 0 {
 		return nil
 	}
-	if version.Encode() >= version_8_0_0 {
+	if version >= version_8_0_0 {
 		return config.addGuestsNoCheckV8(ctx, c, guestsToAdd)
 	}
 	rawGuests, err := listGuests_Unsafe(ctx, c.new().apiGet())
@@ -240,7 +240,7 @@ func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs [
 	if err != nil {
 		return err
 	}
-	return pool.addGuestsNoCheck(ctx, c, guestIDs, config.GetGuests(), version)
+	return pool.addGuestsNoCheck(ctx, c, guestIDs, config.GetGuests(), version.Encode())
 }
 
 func (config PoolName) Delete(ctx context.Context, c *Client) error {
@@ -348,8 +348,8 @@ func (PoolName) mapToString(guestIDs []GuestID) (vms string) {
 	return
 }
 
-func (pool PoolName) put(ctx context.Context, c *Client, params map[string]interface{}, version Version) error {
-	if version.Encode() < version_8_0_0 {
+func (pool PoolName) put(ctx context.Context, c *Client, params map[string]any, version EncodedVersion) error {
+	if version < version_8_0_0 {
 		return pool.putV7(ctx, c, params)
 	}
 	return pool.putV8(ctx, c, params)
@@ -380,7 +380,7 @@ func (pool PoolName) RemoveGuests(ctx context.Context, c *Client, guestIDs []Gue
 	} else if !exists {
 		return errors.New(PoolName_Error_NotExists)
 	}
-	return pool.removeGuestsNoCheck(ctx, c, guestIDs, version)
+	return pool.removeGuestsNoCheck(ctx, c, guestIDs, version.Encode())
 }
 
 func (pool PoolName) RemoveGuestsNoChecks(ctx context.Context, c *Client, guestIDs []GuestID) error {
@@ -388,10 +388,10 @@ func (pool PoolName) RemoveGuestsNoChecks(ctx context.Context, c *Client, guestI
 	if err != nil {
 		return err
 	}
-	return pool.removeGuestsNoCheck(ctx, c, guestIDs, version)
+	return pool.removeGuestsNoCheck(ctx, c, guestIDs, version.Encode())
 }
 
-func (pool PoolName) removeGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, version Version) error {
+func (pool PoolName) removeGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, version EncodedVersion) error {
 	return pool.put(ctx, c, map[string]interface{}{
 		"vms":    PoolName("").mapToString(guestIDs),
 		"delete": "1"},
@@ -423,10 +423,10 @@ func (pool PoolName) SetGuestsNoChecks(ctx context.Context, c *Client, guestID [
 	if err != nil {
 		return err
 	}
-	return pool.setGuestsNoCheck(ctx, c, guestID, raw.GetGuests(), version)
+	return pool.setGuestsNoCheck(ctx, c, guestID, raw.GetGuests(), version.Encode())
 }
 
-func (pool PoolName) setGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, currentGuests *[]GuestID, version Version) error {
+func (pool PoolName) setGuestsNoCheck(ctx context.Context, c *Client, guestIDs []GuestID, currentGuests *[]GuestID, version EncodedVersion) error {
 	if currentGuests != nil && len(*currentGuests) > 0 {
 		if err := pool.removeGuestsNoCheck(ctx, c, subtractArray(*currentGuests, guestIDs), version); err != nil {
 			return err

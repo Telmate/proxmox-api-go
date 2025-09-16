@@ -358,7 +358,7 @@ func GuestReboot(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	return
 }
 
-func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID GuestID, newPool PoolName, currentPool *PoolName, version Version) (err error) {
+func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID GuestID, newPool PoolName, currentPool *PoolName, version EncodedVersion) (err error) {
 	if newPool == "" {
 		if currentPool != nil && *currentPool != "" { // leave pool
 			if err = (*currentPool).removeGuestsNoCheck(ctx, c, []GuestID{guestID}, version); err != nil {
@@ -367,7 +367,7 @@ func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID GuestID, newPoo
 		}
 	} else {
 		if currentPool == nil || *currentPool == "" { // join pool
-			if version.Encode() < version_8_0_0 {
+			if version < version_8_0_0 {
 				if err = newPool.addGuestsNoCheckV7(ctx, c, []GuestID{guestID}); err != nil {
 					return
 				}
@@ -375,7 +375,7 @@ func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID GuestID, newPoo
 				newPool.addGuestsNoCheckV8(ctx, c, []GuestID{guestID})
 			}
 		} else if newPool != *currentPool { // change pool
-			if version.Encode() < version_8_0_0 {
+			if version < version_8_0_0 {
 				if err = (*currentPool).removeGuestsNoCheck(ctx, c, []GuestID{guestID}, version); err != nil {
 					return
 				}
