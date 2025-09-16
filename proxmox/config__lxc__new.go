@@ -259,7 +259,11 @@ func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRe
 	if err := config.Validate(current); err != nil {
 		return err
 	}
-	return config.update_Unsafe(ctx, allowRestart, vmr, current, rawStatus.GetState(), c)
+	version, err := c.Version(ctx)
+	if err != nil {
+		return err
+	}
+	return config.update_Unsafe(ctx, allowRestart, vmr, current, rawStatus.GetState(), version.Encode(), c)
 }
 
 func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
@@ -277,7 +281,11 @@ func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vm
 	if err != nil {
 		return err
 	}
-	return config.update_Unsafe(ctx, allowRestart, vmr, raw.get(*vmr), rawStatus.GetState(), c)
+	version, err := c.Version(ctx)
+	if err != nil {
+		return err
+	}
+	return config.update_Unsafe(ctx, allowRestart, vmr, raw.get(*vmr), rawStatus.GetState(), version.Encode(), c)
 }
 
 func (config ConfigLXC) update_Unsafe(
@@ -286,6 +294,7 @@ func (config ConfigLXC) update_Unsafe(
 	vmr *VmRef,
 	current *ConfigLXC,
 	currentState PowerState,
+	version EncodedVersion,
 	c *Client) error {
 
 	var move []lxcMountMove
@@ -391,6 +400,9 @@ func (config ConfigLXC) update_Unsafe(
 		if err = GuestStart(ctx, vmr, c); err != nil {
 			return err
 		}
+	}
+	if config.Pool != nil {
+		err = guestSetPoolNoCheck(ctx, c, vmr.vmId, *config.Pool, current.Pool, version)
 	}
 	return err
 }
