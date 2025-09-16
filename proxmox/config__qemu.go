@@ -476,6 +476,9 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 
 func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
 	// TODO add digest during update to check if the config has changed
+
+	ca := client.new().apiGet()
+
 	// currentConfig will be mutated
 	currentConfig, err := NewConfigQemuFromApi(ctx, vmr, client)
 	if err != nil {
@@ -532,8 +535,18 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		if err != nil {
 			return false, fmt.Errorf("error updating VM: %v", err)
 		}
-		// Deleting these items can create pending changes
-		rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
+
+	}
+
+	// Deleting items can create pending changes.
+	// Moving disks changes the disk id. we need to get the config again if any disk was moved.
+	if itemsToDeleteBeforeUpdate != "" || len(markedDisks.Move) != 0 {
+		var rawConfig map[string]any
+		rawConfig, rebootRequired, err = vmr.pendingConfig(ctx, ca)
+		if err != nil {
+			return
+		}
+		currentConfig, err = (&rawConfigQemu{a: rawConfig}).get(vmr)
 		if err != nil {
 			return
 		}
@@ -547,14 +560,6 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 			} else {
 				return rebootRequired, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
 			}
-		}
-	}
-
-	// TODO GuestHasPendingChanges() has the current vm config technically. We can use this to avoid an extra API call.
-	if len(markedDisks.Move) != 0 { // Moving disks changes the disk id. we need to get the config again if any disk was moved.
-		currentConfig, err = NewConfigQemuFromApi(ctx, vmr, client)
-		if err != nil {
-			return
 		}
 	}
 
@@ -578,7 +583,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	}
 
 	if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped
-		rebootRequired, err = GuestHasPendingChanges(ctx, vmr, client)
+		rebootRequired, err = vmr.pendingChanges(ctx, ca)
 		if err != nil {
 			return
 		}
@@ -1214,6 +1219,8 @@ const (
 	qemuPrefixApiKeyUSB         string = "usb"
 )
 
+// NewRawConfigQemuFromApi returns the configuration of the Qemu guest.
+// Including pending changes.
 func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
 	if vmr == nil {
 		return nil, errors.New(VmRef_Error_Nil)
@@ -1234,6 +1241,25 @@ func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiIn
 
 func (c *clientNew) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
 	return guestGetRawQemuConfig_Unsafe(ctx, vmr, c.api)
+}
+
+// NewActiveRawConfigQemuFromApi returns the active configuration of the Qemu guest.
+// Without pending changes.
+func NewActiveRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigQemu, pending bool, err error) {
+	return c.new().guestGetQemuActiveRawConfig(ctx, vmr)
+}
+
+func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw RawConfigQemu, pending bool, err error) {
+	var tmpConfig map[string]any
+	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
+	if err != nil {
+		return nil, false, err
+	}
+	return &rawConfigQemu{a: tmpConfig}, pending, nil
+}
+
+func (c *clientNew) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error) {
+	return guestGetActiveRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 
 func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (config *ConfigQemu, err error) {

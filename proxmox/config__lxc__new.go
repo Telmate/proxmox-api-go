@@ -288,6 +288,8 @@ func (config ConfigLXC) update_Unsafe(
 	currentState PowerState,
 	c *Client) error {
 
+	ca := c.new().apiGet()
+
 	var move []lxcMountMove
 	var resize []lxcMountResize
 	var getRootMount, getMounts, requiresOffStateForMountActions bool
@@ -368,7 +370,7 @@ func (config ConfigLXC) update_Unsafe(
 			return err
 		}
 		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes
-			pendingChanges, err := GuestHasPendingChanges(ctx, vmr, c)
+			pendingChanges, err := vmr.pendingChanges(ctx, ca)
 			if err != nil {
 				return fmt.Errorf("error checking for pending changes: %w", err)
 			}
@@ -747,6 +749,8 @@ type LxcSwap uint
 
 func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String is for fmt.Stringer.
 
+// NewRawConfigLXCFromAPI returns the configuration of the LXC guest.
+// Including pending changes.
 func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	if vmr == nil {
 		return nil, errors.New(VmRef_Error_Nil)
@@ -767,4 +771,23 @@ func guestGetLxcRawConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInt
 
 func (c *clientNew) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
 	return guestGetLxcRawConfig_Unsafe(ctx, vmr, c.api)
+}
+
+// NewActiveRawConfigLXCFromApi returns the active configuration of the LXC guest.
+// Without pending changes.
+func NewActiveRawConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigLXC, pending bool, err error) {
+	return c.new().guestGetLxcActiveRawConfig(ctx, vmr)
+}
+
+func guestGetActiveRawLxcConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw RawConfigLXC, pending bool, err error) {
+	var tmpConfig map[string]any
+	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
+	if err != nil {
+		return nil, false, err
+	}
+	return &rawConfigLXC{a: tmpConfig}, pending, nil
+}
+
+func (c *clientNew) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error) {
+	return guestGetActiveRawLxcConfig_Unsafe(ctx, vmr, c.api)
 }

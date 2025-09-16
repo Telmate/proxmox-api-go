@@ -1,6 +1,9 @@
 package proxmox
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 // The new implementation of the client
 
@@ -12,7 +15,11 @@ type ClientNew interface {
 	apiGet() clientApiInterface // TODO once we use `ClientNew` everywhere this function can be removed
 
 	// Guest
+	guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error)
+	guestCheckVmRef(ctx context.Context, vmr *VmRef) error
+	guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error)
 	guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
+	guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error)
 	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	guestListResources(ctx context.Context) (RawGuestResources, error)
 	// Pool
@@ -30,3 +37,22 @@ type clientNew struct {
 func (c *clientNew) old() *Client { return c.oldClient }
 
 func (c *clientNew) apiGet() clientApiInterface { return c.api }
+
+func (c *clientNew) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
+	if vmr == nil {
+		return errors.New(VmRef_Error_Nil)
+	}
+	if vmr.node == "" || vmr.vmType == guestUnknown {
+		raw, err := c.guestListResources(ctx)
+		if err != nil {
+			return err
+		}
+		rawGuest, err := raw.SelectID(vmr.vmId)
+		if err != nil {
+			return err
+		}
+		vmr.node = rawGuest.GetNode()
+		vmr.vmType = rawGuest.GetType()
+	}
+	return nil
+}

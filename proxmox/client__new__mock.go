@@ -4,9 +4,13 @@ import "context"
 
 type MockClient struct {
 	// Guest
-	GuestGetLxcRawConfigFunc  func(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
-	GuestGetQemuRawConfigFunc func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
-	GuestListResourcesFunc    func(ctx context.Context) (RawGuestResources, error)
+	GuestCheckPendingChangesFunc    func(ctx context.Context, vmr *VmRef) (bool, error)
+	GuestCheckVmRefFunc             func(ctx context.Context, vmr *VmRef) error
+	GuestGetLxcActiveRawConfigFunc  func(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error)
+	GuestGetLxcRawConfigFunc        func(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
+	GuestGetQemuActiveRawConfigFunc func(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error)
+	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
+	GuestListResourcesFunc          func(ctx context.Context) (RawGuestResources, error)
 	// Pool
 	PoolGetRawConfigFunc        func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)
@@ -22,11 +26,39 @@ func (m *MockClient) old() *Client { panic("old not implemented in MockClient") 
 
 func (m *MockClient) apiGet() clientApiInterface { panic("apiGet not implemented in MockClient") }
 
+func (m *MockClient) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error) {
+	if m.GuestCheckPendingChangesFunc == nil {
+		m.panic("GuestCheckPendingChangesFunc")
+	}
+	return m.GuestCheckPendingChangesFunc(ctx, vmr)
+}
+
+func (m *MockClient) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
+	if m.GuestCheckVmRefFunc == nil {
+		m.panic("GuestCheckVmRefFunc")
+	}
+	return m.GuestCheckVmRefFunc(ctx, vmr)
+}
+
+func (m *MockClient) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error) {
+	if m.GuestGetLxcActiveRawConfigFunc == nil {
+		m.panic("GuestGetLxcActiveRawConfigFunc")
+	}
+	return m.GuestGetLxcActiveRawConfigFunc(ctx, vmr)
+}
+
 func (m *MockClient) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
 	if m.GuestGetLxcRawConfigFunc == nil {
 		m.panic("GuestGetLxcRawConfigFunc")
 	}
 	return m.GuestGetLxcRawConfigFunc(ctx, vmr)
+}
+
+func (m *MockClient) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error) {
+	if m.GuestGetQemuActiveRawConfigFunc == nil {
+		m.panic("GuestGetQemuActiveRawConfigFunc")
+	}
+	return m.GuestGetQemuActiveRawConfigFunc(ctx, vmr)
 }
 
 func (m *MockClient) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {

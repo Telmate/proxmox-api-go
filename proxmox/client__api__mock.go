@@ -5,10 +5,11 @@ import (
 )
 
 type mockClientAPI struct {
-	getGuestConfigFunc     func(ctx context.Context, vmr *VmRef) (map[string]any, error)
-	getPoolConfigFunc      func(ctx context.Context, pool PoolName) (map[string]any, error)
-	getUserConfigFunc      func(ctx context.Context, userId UserID) (map[string]any, error)
-	listGuestResourcesFunc func(ctx context.Context) ([]interface{}, error)
+	getGuestConfigFunc         func(ctx context.Context, vmr *VmRef) (map[string]any, error)
+	getGuestPendingChangesFunc func(ctx context.Context, vmr *VmRef) ([]any, error)
+	getPoolConfigFunc          func(ctx context.Context, pool PoolName) (map[string]any, error)
+	getUserConfigFunc          func(ctx context.Context, userId UserID) (map[string]any, error)
+	listGuestResourcesFunc     func(ctx context.Context) ([]interface{}, error)
 }
 
 func (m mockClientAPI) new() clientApiInterface { return &m }
@@ -22,6 +23,13 @@ func (m *mockClientAPI) getGuestConfig(ctx context.Context, vmr *VmRef) (vmConfi
 		m.panic("getGuestConfigFunc")
 	}
 	return m.getGuestConfigFunc(ctx, vmr)
+}
+
+func (m *mockClientAPI) getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error) {
+	if m.getGuestPendingChangesFunc == nil {
+		m.panic("getGuestPendingChangesFunc")
+	}
+	return m.getGuestPendingChangesFunc(ctx, vmr)
 }
 
 func (m *mockClientAPI) getPoolConfig(ctx context.Context, pool PoolName) (poolConfig map[string]any, err error) {

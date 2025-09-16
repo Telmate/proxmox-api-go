@@ -2683,7 +2683,6 @@ func Test_ConfigLXC_UpdateNoCheck(t *testing.T) {
 }
 
 func Test_RawConfigLXC_Get(t *testing.T) {
-	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	parseIP := func(rawIP string) netip.Addr {
 		ip, err := netip.ParseAddr(rawIP)
 		failPanic(err)
@@ -2821,11 +2820,14 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		vmr    VmRef
 		state  PowerState
 		output *ConfigLXC
+		err    error
 	}
 	tests := []struct {
 		category string
 		tests    []test
 	}{
+		{category: `Error`,
+			tests: []test{{err: errors.New("this should propagate")}}},
 		{category: `Architecture`,
 			tests: []test{
 				{name: `amd64`,
@@ -3608,9 +3610,121 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 				name += "/" + subTest.name
 			}
 			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.output, set(subTest.input).Get(subTest.vmr, subTest.state), name)
+				raw, err := guestGetLxcRawConfig_Unsafe(context.Background(), &subTest.vmr, &mockClientAPI{
+					getGuestConfigFunc: func(ctx context.Context, vmr *VmRef) (map[string]any, error) {
+						return subTest.input, subTest.err
+					}})
+				require.Equal(t, subTest.err, err, name)
+				if subTest.output != nil {
+					require.Equal(t, subTest.output, raw.Get(subTest.vmr, subTest.state), name)
+				}
 			})
 		}
+	}
+}
+
+func Test_ActiveRawConfigLXC_Get(t *testing.T) {
+	baseConfig := func(config ConfigLXC) *ConfigLXC {
+		if config.ID == nil {
+			config.ID = util.Pointer(GuestID(0))
+		}
+		if config.Memory == nil {
+			config.Memory = util.Pointer(LxcMemory(0))
+		}
+		if config.Name == nil {
+			config.Name = util.Pointer(GuestName(""))
+		}
+		if config.Networks == nil {
+			config.Networks = make(LxcNetworks)
+		}
+		if config.Node == nil {
+			config.Node = util.Pointer(NodeName(""))
+		}
+		if config.Privileged == nil {
+			config.Privileged = util.Pointer(true)
+		}
+		if config.Protection == nil {
+			config.Protection = util.Pointer(false)
+		}
+		if config.Swap == nil {
+			config.Swap = util.Pointer(LxcSwap(0))
+		}
+		return &config
+	}
+	tests := []struct {
+		name    string
+		input   []any
+		vmr     VmRef
+		pending bool
+		state   PowerState
+		output  *ConfigLXC
+		err     error
+	}{
+		{name: `No pending changes`,
+			input: []any{
+				map[string]any{
+					"key":   string("cores"),
+					"value": float64(3)},
+				map[string]any{
+					"key":   string("hostname"),
+					"value": string("testName")},
+				map[string]any{
+					"key":   string("description"),
+					"value": string("test")}},
+			output: baseConfig(ConfigLXC{
+				CPU:         &LxcCPU{Cores: util.Pointer(LxcCpuCores(3))},
+				Description: util.Pointer("test"),
+				Name:        util.Pointer(GuestName("testName"))})},
+		{name: `pending change`,
+			input: []any{
+				map[string]any{
+					"key":   string("hostname"),
+					"value": string("testName")},
+				map[string]any{
+					"key":     string("cores"),
+					"value":   float64(3),
+					"pending": float64(7)},
+				map[string]any{
+					"key":   string("description"),
+					"value": string("test")}},
+			pending: true,
+			output: baseConfig(ConfigLXC{
+				CPU:         &LxcCPU{Cores: util.Pointer(LxcCpuCores(3))},
+				Description: util.Pointer("test"),
+				Name:        util.Pointer(GuestName("testName"))})},
+		{name: `pending delete`,
+			input: []any{
+				map[string]any{
+					"key":   string("hostname"),
+					"value": string("testName")},
+				map[string]any{
+					"key":    string("description"),
+					"value":  string("test"),
+					"delete": float64(1)},
+				map[string]any{
+					"key":     string("cores"),
+					"value":   float64(3),
+					"pending": float64(7)}},
+			pending: true,
+			output: baseConfig(ConfigLXC{
+				CPU:         &LxcCPU{Cores: util.Pointer(LxcCpuCores(3))},
+				Description: util.Pointer("test"),
+				Name:        util.Pointer(GuestName("testName"))})},
+		{name: `error`,
+			err: errors.New("this error should be propagated")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			raw, pending, err := guestGetActiveRawLxcConfig_Unsafe(context.Background(), &VmRef{}, &mockClientAPI{
+				getGuestPendingChangesFunc: func(ctx context.Context, vmr *VmRef) ([]any, error) {
+					return test.input, test.err
+				}})
+			require.Equal(t, test.err, err)
+			require.Equal(t, test.pending, pending)
+			if test.output != nil {
+				require.Equal(t, test.output, raw.Get(test.vmr, test.state))
+			}
+		})
 	}
 }
 
