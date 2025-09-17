@@ -147,14 +147,23 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 }
 
 func (c *Client) new() ClientNew {
-	userParts := strings.SplitN(c.Username, "@", 2)
+	var user UserID
+	if c.Username != "" {
+		index := strings.IndexRune(c.Username, '@')
+		user = UserID{Name: c.Username[:index], Realm: c.Username[index+1:]}
+	} else {
+		token := c.session.AuthToken
+		indexAt := strings.IndexRune(token, '@')
+		indexEx := strings.IndexRune(token[indexAt+1:], '!')
+		user = UserID{Name: token[:indexAt], Realm: token[indexAt+1 : indexAt+indexEx+1]}
+	}
 	return &clientNew{
 		oldClient: c,
 		api: &clientAPI{
 			session:     c.session,
 			taskTimeout: time.Duration(c.TaskTimeout) * time.Second,
 			url:         c.ApiUrl,
-			user:        UserID{Name: userParts[0], Realm: userParts[1]}}}
+			user:        user}}
 }
 
 // SetAPIToken specifies a pair of user identifier and token UUID to use
