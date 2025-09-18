@@ -4380,27 +4380,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 }
 
 func Test_ConfigQemu_get(t *testing.T) {
-	baseConfig := func(config ConfigQemu) *ConfigQemu {
-		if config.CPU == nil {
-			config.CPU = &QemuCPU{}
-		}
-		if config.Description == nil {
-			config.Description = util.Pointer("")
-		}
-		if config.Memory == nil {
-			config.Memory = &QemuMemory{}
-		}
-		if config.Name == nil {
-			config.Name = util.Pointer(GuestName(""))
-		}
-		if config.Protection == nil {
-			config.Protection = util.Pointer(false)
-		}
-		if config.Tablet == nil {
-			config.Tablet = util.Pointer(true)
-		}
-		return &config
-	}
+	baseConfig := func(config ConfigQemu) *ConfigQemu { return config.baseTest() }
 	parseIP := func(rawIP string) (ip netip.Addr) {
 		ip, _ = netip.ParseAddr(rawIP)
 		return
@@ -7374,29 +7354,14 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		if config.Boot == "" {
 			config.Boot = "cdn"
 		}
-		if config.CPU == nil {
-			config.CPU = &QemuCPU{}
-		}
-		if config.Description == nil {
-			config.Description = util.Pointer("")
-		}
 		if config.EFIDisk == nil {
 			config.EFIDisk = QemuDevice{}
 		}
 		if config.Hotplug == "" {
 			config.Hotplug = "network,disk,usb"
 		}
-		if config.Memory == nil {
-			config.Memory = &QemuMemory{}
-		}
-		if config.Name == nil {
-			config.Name = util.Pointer(GuestName(""))
-		}
 		if config.Onboot == nil {
 			config.Onboot = util.Pointer(true)
-		}
-		if config.Protection == nil {
-			config.Protection = util.Pointer(false)
 		}
 		if config.QemuDisks == nil {
 			config.QemuDisks = QemuDevices{}
@@ -7416,10 +7381,7 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		if config.Scsihw == "" {
 			config.Scsihw = "lsi"
 		}
-		if config.Tablet == nil {
-			config.Tablet = util.Pointer(true)
-		}
-		return &config
+		return config.baseTest()
 	}
 	tests := []struct {
 		name    string
@@ -9627,4 +9589,26 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 			})
 		}
 	}
+}
+
+func (config ConfigQemu) baseTest() *ConfigQemu {
+	if config.CPU == nil {
+		config.CPU = &QemuCPU{}
+	}
+	if config.Description == nil {
+		config.Description = util.Pointer("")
+	}
+	if config.Memory == nil {
+		config.Memory = &QemuMemory{}
+	}
+	if config.Name == nil {
+		config.Name = util.Pointer(GuestName(""))
+	}
+	if config.Protection == nil {
+		config.Protection = util.Pointer(false)
+	}
+	if config.Tablet == nil {
+		config.Tablet = util.Pointer(true)
+	}
+	return &config
 }
