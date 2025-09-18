@@ -455,6 +455,86 @@ func Test_VmRef_pendingChanges(t *testing.T) {
 	}
 }
 
+func Test_VmRef_pendingCurrentConfig(t *testing.T) {
+	baseConfig := func(config ConfigQemu) *ConfigQemu { return config.baseTest() }
+	tests := []struct {
+		name    string
+		input   []any
+		output  *ConfigQemu
+		pending bool
+		err     error
+	}{
+		{name: `Delete`,
+			input: []any{
+				map[string]any{
+					"key":   string("name"),
+					"value": string("test")},
+				map[string]any{
+					"key":    string("serial0"),
+					"value":  string("socket"),
+					"delete": float64(1)},
+				map[string]any{
+					"key":   string("cores"),
+					"value": float64(2)}},
+			pending: true,
+			output: baseConfig(ConfigQemu{
+				CPU: &QemuCPU{
+					Cores: util.Pointer(QemuCpuCores(2))},
+				Name: util.Pointer(GuestName("test"))})},
+		{name: `Error`,
+			err:    errors.New("test"),
+			output: baseConfig(ConfigQemu{})},
+		{name: `No pending`,
+			input: []any{
+				map[string]any{
+					"key":   string("name"),
+					"value": string("test")},
+				map[string]any{
+					"key":   string("cores"),
+					"value": float64(2)},
+				map[string]any{
+					"key":   string("memory"),
+					"value": float64(2048)}},
+			output: baseConfig(ConfigQemu{
+				CPU: &QemuCPU{
+					Cores: util.Pointer(QemuCpuCores(2))},
+				Memory: &QemuMemory{
+					CapacityMiB: util.Pointer(QemuMemoryCapacity(2048))},
+				Name: util.Pointer(GuestName("test"))})},
+		{name: `Pending`,
+			input: []any{
+				map[string]any{
+					"key":   string("name"),
+					"value": string("test")},
+				map[string]any{
+					"key":     string("cores"),
+					"value":   float64(2),
+					"pending": float64(3)},
+				map[string]any{
+					"key":   string("memory"),
+					"value": float64(2048)}},
+			pending: true,
+			output: baseConfig(ConfigQemu{
+				CPU: &QemuCPU{
+					Cores: util.Pointer(QemuCpuCores(3))},
+				Memory: &QemuMemory{
+					CapacityMiB: util.Pointer(QemuMemoryCapacity(2048))},
+				Name: util.Pointer(GuestName("test"))})},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rawConfig, pending, err := (&VmRef{}).pendingCurrentConfig(context.Background(), &mockClientAPI{
+				getGuestPendingChangesFunc: func(ctx context.Context, vmr *VmRef) ([]any, error) {
+					return test.input, test.err
+				}})
+			config, _ := (&rawConfigQemu{a: rawConfig}).get(nil)
+			require.Equal(t, test.err, err)
+			require.Equal(t, test.pending, pending)
+			require.Equal(t, test.output, config)
+		})
+	}
+}
+
 func Test_RawGuestStatus_Get(t *testing.T) {
 	tests := []struct {
 		name   string
