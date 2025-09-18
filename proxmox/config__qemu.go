@@ -1253,7 +1253,7 @@ func NewActiveRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, c *Client) (
 
 func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw RawConfigQemu, pending bool, err error) {
 	var tmpConfig map[string]any
-	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
+	tmpConfig, pending, err = vmr.pendingActiveConfig(ctx, c)
 	if err != nil {
 		return nil, false, err
 	}
