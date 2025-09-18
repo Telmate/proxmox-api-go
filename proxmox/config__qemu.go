@@ -542,7 +542,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	// Moving disks changes the disk id. we need to get the config again if any disk was moved.
 	if itemsToDeleteBeforeUpdate != "" || len(markedDisks.Move) != 0 {
 		var rawConfig map[string]any
-		rawConfig, rebootRequired, err = vmr.pendingConfig(ctx, ca)
+		rawConfig, rebootRequired, err = vmr.pendingCurrentConfig(ctx, ca)
 		if err != nil {
 			return
 		}
