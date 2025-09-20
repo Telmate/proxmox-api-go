@@ -11,6 +11,9 @@ type MockClient struct {
 	GuestGetQemuActiveRawConfigFunc func(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error)
 	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	GuestListResourcesFunc          func(ctx context.Context) (RawGuestResources, error)
+	// HA
+	HaListRulesFunc        func(ctx context.Context) (HaRules, error)
+	HaListRulesNoCheckFunc func(ctx context.Context) (HaRules, error)
 	// Pool
 	PoolGetRawConfigFunc        func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)
@@ -73,6 +76,20 @@ func (m *MockClient) guestListResources(ctx context.Context) (RawGuestResources,
 		m.panic("GuestListResourcesFunc")
 	}
 	return m.GuestListResourcesFunc(ctx)
+}
+
+func (m *MockClient) haListRules(ctx context.Context) (HaRules, error) {
+	if m.HaListRulesFunc == nil {
+		m.panic("HaListRulesFunc")
+	}
+	return m.HaListRulesFunc(ctx)
+}
+
+func (m *MockClient) haListRulesNoCheck(ctx context.Context) (HaRules, error) {
+	if m.HaListRulesNoCheckFunc == nil {
+		m.panic("HaListRulesNoCheckFunc")
+	}
+	return m.HaListRulesNoCheckFunc(ctx)
 }
 
 func (m *MockClient) poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error) {

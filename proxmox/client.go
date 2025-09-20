@@ -2481,5 +2481,6 @@ func (v Version) String() string {
 type EncodedVersion uint32
 
 const (
+	version_9_0_0 EncodedVersion = 589824
 	version_8_0_0 EncodedVersion = 524288
 )

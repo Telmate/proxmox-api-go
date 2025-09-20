@@ -12,6 +12,7 @@ type clientApiInterface interface {
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfig(ctx context.Context, userId UserID) (map[string]any, error)
 	listGuestResources(ctx context.Context) ([]any, error)
+	listHaRules(ctx context.Context) ([]any, error)
 }
 
 type clientAPI struct {
@@ -41,4 +42,8 @@ func (c *clientAPI) getUserConfig(ctx context.Context, userID UserID) (userConfi
 
 func (c *clientAPI) listGuestResources(ctx context.Context) ([]any, error) {
 	return c.getResourceList(ctx, resourceListGuest)
+}
+
+func (c *clientAPI) listHaRules(ctx context.Context) ([]any, error) {
+	return c.getList(ctx, "/cluster/ha/rules", "ha rules", "CONFIG", nil)
 }

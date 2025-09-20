@@ -186,6 +186,7 @@ func Test_EncodedVersion_const(t *testing.T) {
 		input  Version
 		output EncodedVersion
 	}{
+		{input: Version{Major: 9}, output: version_9_0_0},
 		{input: Version{Major: 8}, output: version_8_0_0},
 	}
 	for _, test := range tests {
