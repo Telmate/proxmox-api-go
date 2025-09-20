@@ -23,6 +23,8 @@ type ClientNew interface {
 	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	guestListResources(ctx context.Context) (RawGuestResources, error)
 	// HA
+	haDeleteRule(ctx context.Context, id HaRuleID) error
+	haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error
 	haListRules(ctx context.Context) (HaRules, error)
 	haListRulesNoCheck(ctx context.Context) (HaRules, error)
 	// Pool

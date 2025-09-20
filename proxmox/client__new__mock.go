@@ -12,8 +12,10 @@ type MockClient struct {
 	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	GuestListResourcesFunc          func(ctx context.Context) (RawGuestResources, error)
 	// HA
-	HaListRulesFunc        func(ctx context.Context) (HaRules, error)
-	HaListRulesNoCheckFunc func(ctx context.Context) (HaRules, error)
+	HaDeleteRuleFunc        func(ctx context.Context, id HaRuleID) error
+	HaDeleteRuleNoCheckFunc func(ctx context.Context, id HaRuleID) error
+	HaListRulesFunc         func(ctx context.Context) (HaRules, error)
+	HaListRulesNoCheckFunc  func(ctx context.Context) (HaRules, error)
 	// Pool
 	PoolGetRawConfigFunc        func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)
@@ -76,6 +78,20 @@ func (m *MockClient) guestListResources(ctx context.Context) (RawGuestResources,
 		m.panic("GuestListResourcesFunc")
 	}
 	return m.GuestListResourcesFunc(ctx)
+}
+
+func (m *MockClient) haDeleteRule(ctx context.Context, id HaRuleID) error {
+	if m.HaDeleteRuleFunc == nil {
+		m.panic("HaDeleteRuleFunc")
+	}
+	return m.HaDeleteRuleFunc(ctx, id)
+}
+
+func (m *MockClient) haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error {
+	if m.HaDeleteRuleNoCheckFunc == nil {
+		m.panic("HaDeleteRuleNoCheckFunc")
+	}
+	return m.HaDeleteRuleNoCheckFunc(ctx, id)
 }
 
 func (m *MockClient) haListRules(ctx context.Context) (HaRules, error) {

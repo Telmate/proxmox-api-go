@@ -352,6 +352,29 @@ const (
 	HaRuleIDMax            = 128
 )
 
+func (id HaRuleID) Delete(ctx context.Context, c *Client) error {
+	return c.new().haDeleteRule(ctx, id)
+}
+
+func (c *clientNew) haDeleteRule(ctx context.Context, id HaRuleID) error {
+	if err := id.Validate(); err != nil {
+		return err
+	}
+	return id.delete(ctx, c.api)
+}
+
+func (id HaRuleID) DeleteNoCheck(ctx context.Context, c *Client) error {
+	return c.new().haDeleteRuleNoCheck(ctx, id)
+}
+
+func (c *clientNew) haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error {
+	return id.delete(ctx, c.api)
+}
+
+func (id HaRuleID) delete(ctx context.Context, c clientApiInterface) error {
+	return c.deleteHaRule(ctx, id)
+}
+
 func (id HaRuleID) String() string { return string(id) } // for fmt.Stringer interface
 
 func (id HaRuleID) Validate() error {

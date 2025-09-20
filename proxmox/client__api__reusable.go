@@ -22,6 +22,13 @@ func (c *clientAPI) getResourceList(ctx context.Context, resourceType string) ([
 
 // Primitive methods
 
+// Makes a DELETE request without waiting on proxmox for the task to complete.
+// It returns the HTTP error as 'err'.
+func (c *clientAPI) delete(ctx context.Context, url string) (err error) {
+	_, err = c.session.delete(ctx, url, nil, nil)
+	return
+}
+
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string, ignore errorIgnore) (map[string]any, error) {
 	data, err := c.getRootMap(ctx, url, text, message, ignore)
 	if err != nil {
