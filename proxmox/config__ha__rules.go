@@ -231,6 +231,58 @@ const (
 	haStrictTrue       string = "1"
 )
 
+const (
+	HaNodeAffinityRule_Error_Kind           = "rule is not a node affinity rule"
+	HaNodeAffinityRule_Error_GuestsRequired = "guests must be specified during creation"
+	HaNodeAffinityRule_Error_GuestsEmpty    = "guests must not be empty"
+	HaNodeAffinityRule_Error_NodesRequired  = "nodes must be specified during creation"
+	HaNodeAffinityRule_Error_NodesEmpty     = "modes must not be empty"
+)
+
+func (config HaNodeAffinityRule) Validate(current *HaNodeAffinityRule) error {
+	if current != nil {
+		return config.validateUpdate()
+	}
+	return config.validateCreate()
+}
+
+func (config HaNodeAffinityRule) validateCreate() error {
+	if config.Guests == nil {
+		return errors.New(HaNodeAffinityRule_Error_GuestsRequired)
+	}
+	if config.Nodes == nil {
+		return errors.New(HaNodeAffinityRule_Error_NodesRequired)
+	}
+	return config.validateUpdate()
+}
+
+func (config HaNodeAffinityRule) validateUpdate() error {
+	if err := config.ID.Validate(); err != nil {
+		return err
+	}
+	if config.Guests != nil {
+		if len(*config.Guests) == 0 {
+			return errors.New(HaNodeAffinityRule_Error_GuestsEmpty)
+		}
+		for i := range *config.Guests {
+			if err := (*config.Guests)[i].vmId.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+	if config.Nodes != nil {
+		if len(*config.Nodes) == 0 {
+			return errors.New(HaNodeAffinityRule_Error_NodesEmpty)
+		}
+		for i := range *config.Nodes {
+			if err := (*config.Nodes)[i].Validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 type RawHaResourceAffinityRule interface {
 	Get() HaResourceAffinityRule
 	GetAffinity() HaAffinity
@@ -432,9 +484,23 @@ const (
 
 func (p HaPriority) String() string { return strconv.Itoa(int(p)) } // for fmt.Stringer interface
 
+func (p HaPriority) Validate() error {
+	if p > HaPriorityMax {
+		return errors.New(HaPriority_Error_Invalid)
+	}
+	return nil
+}
+
 type HaNode struct {
 	Node     NodeName
 	Priority HaPriority
+}
+
+func (n HaNode) Validate() error {
+	if err := n.Node.Validate(); err != nil {
+		return err
+	}
+	return n.Priority.Validate()
 }
 
 func haVersionCheck(ctx context.Context, c *clientNew) error {

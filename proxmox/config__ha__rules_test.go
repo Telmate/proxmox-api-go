@@ -397,6 +397,126 @@ func Test_HaRule_Get(t *testing.T) {
 	}
 }
 
+func Test_HaNodeAffinityRule_Validate(t *testing.T) {
+	type test struct {
+		name  string
+		input HaNodeAffinityRule
+		err   error
+	}
+	type testType struct {
+		create       []test
+		createUpdate []test
+		update       []test
+	}
+	tests := []struct {
+		category string
+		valid    testType
+		invalid  testType
+	}{
+		{category: `all`,
+			valid: testType{
+				create: []test{
+					{name: `minimum`,
+						input: HaNodeAffinityRule{
+							Guests: &[]VmRef{{vmType: GuestQemu, vmId: 100}},
+							ID:     "ha-rule-1",
+							Nodes:  &[]HaNode{{Node: "node1"}}}}},
+				update: []test{
+					{name: `minimum`,
+						input: HaNodeAffinityRule{ID: "ha-rule-1"}}}}},
+		{category: `Guests`,
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(HaNodeAffinityRule_Error_GuestsRequired)`,
+						err: errors.New(HaNodeAffinityRule_Error_GuestsRequired)}},
+				createUpdate: []test{
+					{name: `errors.New(HaNodeAffinityRule_Error_GuestsEmpty)`,
+						input: HaNodeAffinityRule{
+							Guests: &[]VmRef{},
+							ID:     "ha-rule-1",
+							Nodes:  &[]HaNode{}},
+						err: errors.New(HaNodeAffinityRule_Error_GuestsEmpty)},
+					{name: `errors.New(GuestID_Error_Minimum)`,
+						input: HaNodeAffinityRule{
+							Guests: &[]VmRef{{vmType: GuestQemu, vmId: 99}},
+							ID:     "ha-rule-1",
+							Nodes:  &[]HaNode{}},
+						err: errors.New(GuestID_Error_Minimum)}}}},
+		{category: `ID`,
+			invalid: testType{
+				createUpdate: []test{
+					{name: `errors.New(HaRuleID_Error_MinLength)`,
+						input: HaNodeAffinityRule{
+							Guests: &[]VmRef{},
+							Nodes:  &[]HaNode{}},
+						err: errors.New(HaRuleID_Error_MinLength)}}}},
+		{category: `Nodes`,
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(HaNodeAffinityRule_Error_NodesRequired)`,
+						input: HaNodeAffinityRule{
+							Guests: &[]VmRef{}},
+						err: errors.New(HaNodeAffinityRule_Error_NodesRequired)}},
+				createUpdate: []test{
+					{name: `errors.New(HaNodeAffinityRule_Error_NodesEmpty)`,
+						input: HaNodeAffinityRule{
+							Guests: &[]VmRef{{vmType: GuestQemu, vmId: 100}},
+							ID:     "ha-rule-1",
+							Nodes:  &[]HaNode{}},
+						err: errors.New(HaNodeAffinityRule_Error_NodesEmpty)},
+					{name: `errors.New(NodeName_Error_Empty)`,
+						input: HaNodeAffinityRule{
+							Guests: &[]VmRef{{vmType: GuestQemu, vmId: 100}},
+							ID:     "ha-rule-1",
+							Nodes:  &[]HaNode{{Node: ""}}},
+						err: errors.New(NodeName_Error_Empty)},
+					{name: `errors.New(HaPriority_Error_Invalid)`,
+						input: HaNodeAffinityRule{
+							Guests: &[]VmRef{{vmType: GuestQemu, vmId: 100}},
+							ID:     "ha-rule-1",
+							Nodes:  &[]HaNode{{Node: "node1", Priority: 1001}}},
+						err: errors.New(HaPriority_Error_Invalid)}}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range append(test.valid.create, test.valid.createUpdate...) {
+			name := test.category + "/Valid/Create"
+			if len(test.valid.create)+len(test.valid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(nil), name)
+			})
+		}
+		for _, subTest := range append(test.valid.update, test.valid.createUpdate...) {
+			name := test.category + "/Valid/Update"
+			if len(test.valid.update)+len(test.valid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(&HaNodeAffinityRule{}), name)
+			})
+		}
+		for _, subTest := range append(test.invalid.create, test.invalid.createUpdate...) {
+			name := test.category + "/Invalid/Create"
+			if len(test.invalid.create)+len(test.invalid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(nil), name)
+			})
+		}
+		for _, subTest := range append(test.invalid.update, test.invalid.createUpdate...) {
+			name := test.category + "/Invalid/Update"
+			if len(test.invalid.update)+len(test.invalid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(&HaNodeAffinityRule{}), name)
+			})
+		}
+	}
+}
+
 func Test_HaRuleID_Validate(t *testing.T) {
 	tests := []struct {
 		name   string
