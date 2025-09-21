@@ -10,6 +10,7 @@ type clientApiInterface interface {
 	deleteHaRule(ctx context.Context, id HaRuleID) error
 	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error)
+	getHaRule(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfig(ctx context.Context, userId UserID) (map[string]any, error)
 	listGuestResources(ctx context.Context) ([]any, error)
@@ -35,6 +36,12 @@ func (c *clientAPI) getGuestConfig(ctx context.Context, vmr *VmRef) (vmConfig ma
 
 func (c *clientAPI) getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error) {
 	return c.getList(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/pending", "Guest", "PENDING CONFIG", nil)
+}
+
+func (c *clientAPI) getHaRule(ctx context.Context, id HaRuleID) (haRule map[string]any, err error) {
+	return c.getMap(ctx, "/cluster/ha/rules/"+id.String(), "ha rule", "CONFIG", func(err error) bool {
+		return strings.HasPrefix(err.Error(), "500 no such ha rule")
+	})
 }
 
 func (c *clientAPI) getPoolConfig(ctx context.Context, pool PoolName) (poolConfig map[string]any, err error) {

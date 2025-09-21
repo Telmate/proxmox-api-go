@@ -8,6 +8,7 @@ type mockClientAPI struct {
 	deleteHaRuleFunc           func(ctx context.Context, id HaRuleID) error
 	getGuestConfigFunc         func(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getGuestPendingChangesFunc func(ctx context.Context, vmr *VmRef) ([]any, error)
+	getHaRuleFunc              func(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfigFunc          func(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfigFunc          func(ctx context.Context, userId UserID) (map[string]any, error)
 	listGuestResourcesFunc     func(ctx context.Context) ([]any, error)
@@ -39,6 +40,13 @@ func (m *mockClientAPI) getGuestPendingChanges(ctx context.Context, vmr *VmRef) 
 		m.panic("getGuestPendingChangesFunc")
 	}
 	return m.getGuestPendingChangesFunc(ctx, vmr)
+}
+
+func (m *mockClientAPI) getHaRule(ctx context.Context, id HaRuleID) (haRule map[string]any, err error) {
+	if m.getHaRuleFunc == nil {
+		m.panic("getHaRuleFunc")
+	}
+	return m.getHaRuleFunc(ctx, id)
 }
 
 func (m *mockClientAPI) getPoolConfig(ctx context.Context, pool PoolName) (poolConfig map[string]any, err error) {

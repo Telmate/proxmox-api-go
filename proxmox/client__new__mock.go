@@ -14,6 +14,7 @@ type MockClient struct {
 	// HA
 	HaDeleteRuleFunc        func(ctx context.Context, id HaRuleID) error
 	HaDeleteRuleNoCheckFunc func(ctx context.Context, id HaRuleID) error
+	HaGetRuleFunc           func(ctx context.Context, id HaRuleID) (HaRule, error)
 	HaListRulesFunc         func(ctx context.Context) (HaRules, error)
 	HaListRulesNoCheckFunc  func(ctx context.Context) (HaRules, error)
 	// Pool
@@ -92,6 +93,13 @@ func (m *MockClient) haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error
 		m.panic("HaDeleteRuleNoCheckFunc")
 	}
 	return m.HaDeleteRuleNoCheckFunc(ctx, id)
+}
+
+func (m *MockClient) haGetRule(ctx context.Context, id HaRuleID) (HaRule, error) {
+	if m.HaGetRuleFunc == nil {
+		m.panic("HaGetRuleFunc")
+	}
+	return m.HaGetRuleFunc(ctx, id)
 }
 
 func (m *MockClient) haListRules(ctx context.Context) (HaRules, error) {

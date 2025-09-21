@@ -41,6 +41,28 @@ func listHaRules(ctx context.Context, c clientApiInterface) (HaRules, error) {
 	return &haRules{a: rules}, nil
 }
 
+func NewHaRuleFromApi(ctx context.Context, id HaRuleID, c *Client) (HaRule, error) {
+	return c.new().haGetRule(ctx, id)
+}
+
+func (c *clientNew) haGetRule(ctx context.Context, id HaRuleID) (HaRule, error) {
+	if err := id.Validate(); err != nil {
+		return nil, err
+	}
+	if err := haVersionCheck(ctx, c); err != nil {
+		return nil, err
+	}
+	return id.get(ctx, c.api)
+}
+
+func (id HaRuleID) get(ctx context.Context, c clientApiInterface) (HaRule, error) {
+	raw, err := c.getHaRule(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &haRule{a: raw}, nil
+}
+
 type HaRules interface {
 	ConvertArray() []HaRule
 	ConvertMap() map[HaRuleID]HaRule
