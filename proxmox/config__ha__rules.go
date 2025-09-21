@@ -369,10 +369,15 @@ const (
 // HaRuleID has a minimim of 2 characters and max of 128 characters.
 type HaRuleID string
 
+var haRuleIdRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
+
 const (
-	HaRuleID_Error_Invalid = "rule ID must be between 2 and 128 characters"
-	HaRuleIDMin            = 2
-	HaRuleIDMax            = 128
+	HaRuleID_Error_MinLength = `ha rule ID must atleast be 2 characters`
+	HaRuleID_Error_MaxLength = `ha rule ID has a maximum of 128 characters`
+	HaRuleID_Error_Invalid   = `ha rule ID did not match the following regex '^[a-zA-Z][a-zA-Z0-9\-_]{2,127}$'`
+	HaRuleID_Error_Start     = `ha rule ID can only with a lower or upper case letter`
+	HaRuleIDMin              = 2
+	HaRuleIDMax              = 128
 )
 
 func (id HaRuleID) Delete(ctx context.Context, c *Client) error {
@@ -401,7 +406,17 @@ func (id HaRuleID) delete(ctx context.Context, c clientApiInterface) error {
 func (id HaRuleID) String() string { return string(id) } // for fmt.Stringer interface
 
 func (id HaRuleID) Validate() error {
-	if len(id) < HaRuleIDMin || len(id) > HaRuleIDMax {
+	if len(id) < HaRuleIDMin {
+		return errors.New(HaRuleID_Error_MinLength)
+	}
+	if len(id) > HaRuleIDMax {
+		return errors.New(HaRuleID_Error_MaxLength)
+	}
+	switch id[0] {
+	case '-', '_', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return errors.New(HaRuleID_Error_Start)
+	}
+	if !haRuleIdRegex.MatchString(string(id)) {
 		return errors.New(HaRuleID_Error_Invalid)
 	}
 	return nil

@@ -396,3 +396,33 @@ func Test_HaRule_Get(t *testing.T) {
 		}
 	}
 }
+
+func Test_HaRuleID_Validate(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []string
+		output error
+	}{
+		{name: `Valid HaRuleID`,
+			input: test_data_ha.HaRuleID_Legal()},
+		{name: `Invalid HaRuleID Empty`,
+			input:  test_data_ha.HaRuleID_MinLength(),
+			output: errors.New(HaRuleID_Error_MinLength)},
+		{name: `Invalid HaRuleID Invalid`,
+			input:  test_data_ha.HaRuleID_CharacterIllegal(),
+			output: errors.New(HaRuleID_Error_Invalid)},
+		{name: `Invalid HaRuleID Max Length`,
+			input:  []string{test_data_ha.HaRuleID_MaxIllegal()},
+			output: errors.New(HaRuleID_Error_MaxLength)},
+		{name: `Invalid HaRuleID begin with illegal start character`,
+			input:  test_data_ha.HaRuleID_StartIllegal(),
+			output: errors.New(HaRuleID_Error_Start)},
+	}
+	for _, test := range tests {
+		for _, e := range test.input {
+			t.Run(test.name+"/"+e, func(t *testing.T) {
+				require.Equal(t, test.output, (HaRuleID(e)).Validate())
+			})
+		}
+	}
+}
