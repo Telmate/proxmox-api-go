@@ -517,6 +517,124 @@ func Test_HaNodeAffinityRule_Validate(t *testing.T) {
 	}
 }
 
+func Test_HaResourceAffinityRule_Validate(t *testing.T) {
+	type test struct {
+		name  string
+		input HaResourceAffinityRule
+		err   error
+	}
+	type testType struct {
+		create       []test
+		createUpdate []test
+		update       []test
+	}
+	tests := []struct {
+		category string
+		valid    testType
+		invalid  testType
+	}{
+		{category: `all`,
+			valid: testType{
+				create: []test{
+					{name: `minimum`,
+						input: HaResourceAffinityRule{
+							Affinity: util.Pointer(HaAffinityPositive),
+							Guests:   &[]VmRef{{vmType: GuestQemu, vmId: 100}},
+							ID:       "ha-rule-1"}}},
+				createUpdate: []test{
+					{name: `normal`,
+						input: HaResourceAffinityRule{
+							Affinity: util.Pointer(HaAffinityNegative),
+							Comment:  util.Pointer("This is a comment"),
+							Enabled:  util.Pointer(true),
+							Guests: &[]VmRef{
+								{vmType: GuestQemu, vmId: 100},
+								{vmType: GuestLxc, vmId: 200},
+								{vmType: GuestQemu, vmId: 300}},
+							ID: "ha-rule-1"}}},
+				update: []test{
+					{name: `minimum`,
+						input: HaResourceAffinityRule{ID: "ha-rule-1"}}}}},
+		{category: `Affinity`,
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(HaResourceAffinityRule_Error_AffinityRequired)`,
+						err: errors.New(HaResourceAffinityRule_Error_AffinityRequired)},
+					{name: `errors.New(HaAffinity_Error_Invalid)`,
+						input: HaResourceAffinityRule{
+							Affinity: util.Pointer(HaAffinity(25)),
+							Guests:   &[]VmRef{},
+							ID:       "valid-id"},
+						err: errors.New(HaAffinity_Error_Invalid)}}}},
+		{category: `Guests`,
+			invalid: testType{
+				create: []test{
+					{name: `errors.New(HaResourceAffinityRule_Error_GuestsRequired)`,
+						input: HaResourceAffinityRule{
+							Affinity: util.Pointer(HaAffinityUnknown)},
+						err: errors.New(HaResourceAffinityRule_Error_GuestsRequired)}},
+				createUpdate: []test{
+					{name: `errors.New(HaResourceAffinityRule_Error_GuestsEmpty)`,
+						input: HaResourceAffinityRule{
+							Affinity: util.Pointer(HaAffinityPositive),
+							Guests:   &[]VmRef{},
+							ID:       "ha-rule-1"},
+						err: errors.New(HaResourceAffinityRule_Error_GuestsEmpty)},
+					{name: `errors.New(GuestID_Error_Minimum)`,
+						input: HaResourceAffinityRule{
+							Affinity: util.Pointer(HaAffinityNegative),
+							Guests:   &[]VmRef{{vmType: GuestQemu, vmId: 99}},
+							ID:       "ha-rule-1"},
+						err: errors.New(GuestID_Error_Minimum)}}}},
+		{category: `ID`,
+			invalid: testType{
+				createUpdate: []test{
+					{name: `errors.New(HaRuleID_Error_MinLength)`,
+						input: HaResourceAffinityRule{
+							Affinity: util.Pointer(HaAffinityPositive),
+							Guests:   &[]VmRef{}},
+						err: errors.New(HaRuleID_Error_MinLength)}}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range append(test.valid.create, test.valid.createUpdate...) {
+			name := test.category + "/Valid/Create"
+			if len(test.valid.create)+len(test.valid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(nil), name)
+			})
+		}
+		for _, subTest := range append(test.valid.update, test.valid.createUpdate...) {
+			name := test.category + "/Valid/Update"
+			if len(test.valid.update)+len(test.valid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(&HaResourceAffinityRule{}), name)
+			})
+		}
+		for _, subTest := range append(test.invalid.create, test.invalid.createUpdate...) {
+			name := test.category + "/Invalid/Create"
+			if len(test.invalid.create)+len(test.invalid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(nil), name)
+			})
+		}
+		for _, subTest := range append(test.invalid.update, test.invalid.createUpdate...) {
+			name := test.category + "/Invalid/Update"
+			if len(test.invalid.update)+len(test.invalid.createUpdate) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				require.Equal(t, subTest.err, subTest.input.Validate(&HaResourceAffinityRule{}), name)
+			})
+		}
+	}
+}
+
 func Test_HaRuleID_Validate(t *testing.T) {
 	tests := []struct {
 		name   string

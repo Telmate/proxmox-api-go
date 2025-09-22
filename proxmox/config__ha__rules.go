@@ -355,6 +355,51 @@ type HaResourceAffinityRule struct {
 }
 
 const (
+	HaResourceAffinityRule_Error_AffinityRequired = "affinity must be specified during creation"
+	HaResourceAffinityRule_Error_GuestsEmpty      = "guests must not be empty"
+	HaResourceAffinityRule_Error_GuestsRequired   = "guests must be specified during creation"
+)
+
+func (config HaResourceAffinityRule) Validate(current *HaResourceAffinityRule) error {
+	if current != nil {
+		return config.validateUpdate()
+	}
+	return config.validateCreate()
+}
+
+func (config HaResourceAffinityRule) validateCreate() error {
+	if config.Affinity == nil {
+		return errors.New(HaResourceAffinityRule_Error_AffinityRequired)
+	}
+	if config.Guests == nil {
+		return errors.New(HaResourceAffinityRule_Error_GuestsRequired)
+	}
+	return config.validateUpdate()
+}
+
+func (config HaResourceAffinityRule) validateUpdate() error {
+	if err := config.ID.Validate(); err != nil {
+		return err
+	}
+	if config.Affinity != nil {
+		if err := config.Affinity.Validate(); err != nil {
+			return err
+		}
+	}
+	if config.Guests != nil {
+		if len(*config.Guests) == 0 {
+			return errors.New(HaResourceAffinityRule_Error_GuestsEmpty)
+		}
+		for i := range *config.Guests {
+			if err := (*config.Guests)[i].vmId.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+const (
 	haRuleApiKeyAffinity  string = "affinity"
 	haRuleApiKeyDisabled  string = "disable"
 	haRuleApiKeyComment   string = "comment"
@@ -417,6 +462,15 @@ const (
 	HaAffinityUnknown  HaAffinity = 0
 	HaAffinityNegative HaAffinity = -1
 )
+
+const HaAffinity_Error_Invalid = "affinity must be either positive or negative"
+
+func (a HaAffinity) Validate() error {
+	if a != HaAffinityPositive && a != HaAffinityNegative {
+		return errors.New(HaAffinity_Error_Invalid)
+	}
+	return nil
+}
 
 // HaRuleID has a minimim of 2 characters and max of 128 characters.
 type HaRuleID string
