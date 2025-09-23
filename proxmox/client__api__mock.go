@@ -5,6 +5,7 @@ import (
 )
 
 type mockClientAPI struct {
+	createHaRuleFunc           func(ctx context.Context, params map[string]any) error
 	deleteHaRuleFunc           func(ctx context.Context, id HaRuleID) error
 	getGuestConfigFunc         func(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getGuestPendingChangesFunc func(ctx context.Context, vmr *VmRef) ([]any, error)
@@ -20,6 +21,13 @@ func (m mockClientAPI) new() clientApiInterface { return &m }
 func (m *mockClientAPI) panic(field string) { panic(field + " not set in mockClientAPI") }
 
 // Interface methods
+
+func (m *mockClientAPI) createHaRule(ctx context.Context, params map[string]any) error {
+	if m.createHaRuleFunc == nil {
+		m.panic("createHaRuleFunc")
+	}
+	return m.createHaRuleFunc(ctx, params)
+}
 
 func (m *mockClientAPI) deleteHaRule(ctx context.Context, id HaRuleID) error {
 	if m.deleteHaRuleFunc == nil {

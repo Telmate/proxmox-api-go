@@ -23,6 +23,8 @@ type ClientNew interface {
 	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	guestListResources(ctx context.Context) (RawGuestResources, error)
 	// HA
+	haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error
+	haCreateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error
 	haDeleteRule(ctx context.Context, id HaRuleID) error
 	haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error
 	haListRules(ctx context.Context) (HaRules, error)
@@ -47,6 +49,10 @@ func (c *clientNew) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
 	if vmr == nil {
 		return errors.New(VmRef_Error_Nil)
 	}
+	return c.guestCheckVmRef_Unsafe(ctx, vmr)
+}
+
+func (c *clientNew) guestCheckVmRef_Unsafe(ctx context.Context, vmr *VmRef) error {
 	if vmr.node == "" || vmr.vmType == guestUnknown {
 		raw, err := c.guestListResources(ctx)
 		if err != nil {

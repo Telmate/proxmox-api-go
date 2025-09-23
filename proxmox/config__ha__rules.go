@@ -226,15 +226,71 @@ const (
 	haGuestPrefixVm    string = "vm:"
 	haGuestPrefixCt    string = "ct:"
 	haStrictTrue       string = "1"
+	haStrictFalse      string = "0"
 )
 
 const (
-	HaNodeAffinityRule_Error_Kind           = "rule is not a node affinity rule"
-	HaNodeAffinityRule_Error_GuestsRequired = "guests must be specified during creation"
 	HaNodeAffinityRule_Error_GuestsEmpty    = "guests must not be empty"
-	HaNodeAffinityRule_Error_NodesRequired  = "nodes must be specified during creation"
+	HaNodeAffinityRule_Error_GuestsRequired = "guests must be specified during creation"
+	HaNodeAffinityRule_Error_Kind           = "rule is not a node affinity rule"
 	HaNodeAffinityRule_Error_NodesEmpty     = "modes must not be empty"
+	HaNodeAffinityRule_Error_NodesRequired  = "nodes must be specified during creation"
 )
+
+func (config HaNodeAffinityRule) Create(ctx context.Context, c *Client) error {
+	return c.new().haCreateNodeAffinityRule(ctx, config)
+}
+
+func (c *clientNew) haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {
+	if err := haVersionCheck(ctx, c); err != nil {
+		return err
+	}
+	if err := ha.validateCreate(); err != nil {
+		return err
+	}
+	for i := range *ha.Guests {
+		if err := c.guestCheckVmRef_Unsafe(ctx, &(*ha.Guests)[i]); err != nil {
+			return err
+		}
+	}
+	return ha.create(ctx, c.api)
+}
+
+func (config HaNodeAffinityRule) CreateNoCheck(ctx context.Context, c *Client) error {
+	return c.new().haCreateNodeAffinityRuleNoCheck(ctx, config)
+}
+
+func (c *clientNew) haCreateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error {
+	return ha.create(ctx, c.api)
+}
+
+func (config HaNodeAffinityRule) create(ctx context.Context, c clientApiInterface) error {
+	return c.createHaRule(ctx, config.mapToApiCreate())
+}
+
+func (config HaNodeAffinityRule) mapToApiCreate() map[string]any {
+	params := map[string]any{
+		haRuleApiKeyRuleID: config.ID.String(),
+		haRuleApiKeyType:   haTypeNodeAffinity}
+	if config.Comment != nil && *config.Comment != "" {
+		params[haRuleApiKeyComment] = *config.Comment
+	}
+	if config.Enabled != nil && !*config.Enabled {
+		params[haRuleApiKeyDisabled] = "1"
+	}
+	if config.Guests != nil && len(*config.Guests) > 0 {
+		haMapToApiGuests(*config.Guests, params)
+	}
+	if config.Nodes != nil && len(*config.Nodes) > 0 {
+		haMapToApiNodes(*config.Nodes, params)
+	}
+	if config.Strict != nil && *config.Strict {
+		params[haRuleApiKeyStrict] = haStrictTrue
+	} else {
+		params[haRuleApiKeyStrict] = haStrictFalse
+	}
+	return params
+}
 
 func (config HaNodeAffinityRule) Validate(current *HaNodeAffinityRule) error {
 	if current != nil {
@@ -398,9 +454,10 @@ func (config HaResourceAffinityRule) validateUpdate() error {
 
 const (
 	haRuleApiKeyAffinity  string = "affinity"
-	haRuleApiKeyDisabled  string = "disable"
 	haRuleApiKeyComment   string = "comment"
+	haRuleApiKeyDelete    string = "delete"
 	haRuleApiKeyDigest    string = "digest"
+	haRuleApiKeyDisabled  string = "disable"
 	haRuleApiKeyNodes     string = "nodes"
 	haRuleApiKeyResources string = "resources"
 	haRuleApiKeyRuleID    string = "rule"
@@ -449,7 +506,44 @@ func haGetGuests(params map[string]any) []VmRef {
 	return guests
 }
 
-func haGetID(params map[string]any) HaRuleID { return HaRuleID(params[haRuleApiKeyRuleID].(string)) }
+func haMapToApiGuests(guests []VmRef, params map[string]any) {
+	resoures := make([]string, len(guests))
+	for i := range guests {
+		switch (guests)[i].vmType {
+		case GuestQemu:
+			resoures[i] = haGuestPrefixVm + (guests)[i].vmId.String()
+		case GuestLxc:
+			resoures[i] = haGuestPrefixCt + (guests)[i].vmId.String()
+		}
+	}
+	params[haRuleApiKeyResources] = resoures
+}
+
+func haMapToApiNodes(nodes []HaNode, params map[string]any) {
+	builder := strings.Builder{}
+	for i := range nodes {
+		builder.WriteString(",")
+		if nodes[i].Priority == 0 {
+			builder.WriteString(string(nodes[i].Node.String()))
+		} else {
+			builder.WriteString(string(nodes[i].Node.String()))
+			builder.WriteString(":")
+			builder.WriteString(nodes[i].Priority.String())
+		}
+	}
+	if builder.Len() > 0 {
+		params[haRuleApiKeyNodes] = builder.String()[1:] // cut off first comma
+	} else {
+		params[haRuleApiKeyNodes] = builder.String()
+	}
+}
+
+func haGetID(params map[string]any) HaRuleID {
+	if v, ok := params[haRuleApiKeyRuleID]; ok {
+		return HaRuleID(v.(string))
+	}
+	return ""
+}
 
 // HaAffinity is an enum.
 type HaAffinity int8
@@ -461,6 +555,17 @@ const (
 )
 
 const HaAffinity_Error_Invalid = "affinity must be either positive or negative"
+
+func (a HaAffinity) String() string {
+	switch a {
+	case HaAffinityPositive:
+		return "positive"
+	case HaAffinityNegative:
+		return "negative"
+	default:
+		return ""
+	}
+}
 
 func (a HaAffinity) Validate() error {
 	if a != HaAffinityPositive && a != HaAffinityNegative {

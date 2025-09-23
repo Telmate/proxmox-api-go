@@ -12,11 +12,13 @@ type MockClient struct {
 	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	GuestListResourcesFunc          func(ctx context.Context) (RawGuestResources, error)
 	// HA
-	HaDeleteRuleFunc        func(ctx context.Context, id HaRuleID) error
-	HaDeleteRuleNoCheckFunc func(ctx context.Context, id HaRuleID) error
-	HaGetRuleFunc           func(ctx context.Context, id HaRuleID) (HaRule, error)
-	HaListRulesFunc         func(ctx context.Context) (HaRules, error)
-	HaListRulesNoCheckFunc  func(ctx context.Context) (HaRules, error)
+	HaCreateNodeAffinityRuleFunc        func(ctx context.Context, ha HaNodeAffinityRule) error
+	HaCreateNodeAffinityRuleNoCheckFunc func(ctx context.Context, ha HaNodeAffinityRule) error
+	HaDeleteRuleFunc                    func(ctx context.Context, id HaRuleID) error
+	HaDeleteRuleNoCheckFunc             func(ctx context.Context, id HaRuleID) error
+	HaGetRuleFunc                       func(ctx context.Context, id HaRuleID) (HaRule, error)
+	HaListRulesFunc                     func(ctx context.Context) (HaRules, error)
+	HaListRulesNoCheckFunc              func(ctx context.Context) (HaRules, error)
 	// Pool
 	PoolGetRawConfigFunc        func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)
@@ -79,6 +81,20 @@ func (m *MockClient) guestListResources(ctx context.Context) (RawGuestResources,
 		m.panic("GuestListResourcesFunc")
 	}
 	return m.GuestListResourcesFunc(ctx)
+}
+
+func (m *MockClient) haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {
+	if m.HaCreateNodeAffinityRuleFunc == nil {
+		m.panic("HaCreateNodeAffinityRuleFunc")
+	}
+	return m.HaCreateNodeAffinityRuleFunc(ctx, ha)
+}
+
+func (m *MockClient) haCreateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error {
+	if m.HaCreateNodeAffinityRuleNoCheckFunc == nil {
+		m.panic("HaCreateNodeAffinityRuleNoCheckFunc")
+	}
+	return m.HaCreateNodeAffinityRuleNoCheckFunc(ctx, ha)
 }
 
 func (m *MockClient) haDeleteRule(ctx context.Context, id HaRuleID) error {

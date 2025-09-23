@@ -397,6 +397,133 @@ func Test_HaRule_Get(t *testing.T) {
 	}
 }
 
+func Test_HaNodeAffinityRule_create(t *testing.T) {
+	type test struct {
+		name   string
+		config HaNodeAffinityRule
+		output map[string]any
+	}
+	tests := []struct {
+		category string
+		create   []test
+	}{
+		{category: `Comment`,
+			create: []test{
+				{name: `set`,
+					config: HaNodeAffinityRule{Comment: util.Pointer("This is a comment")},
+					output: map[string]any{
+						"comment": string("This is a comment"),
+						"rule":    string(""),
+						"strict":  string("0"),
+						"type":    string("node-affinity")}},
+				{name: `empty`,
+					config: HaNodeAffinityRule{Comment: util.Pointer("")},
+					output: map[string]any{
+						"rule":   string(""),
+						"strict": string("0"),
+						"type":   string("node-affinity")}}}},
+		{category: `Digest`,
+			create: []test{
+				{name: `set no effect`,
+					config: HaNodeAffinityRule{Digest: [20]byte{0xeb, 0xef, 0xee, 0xde, 0x30, 0x59, 0x41, 0x74, 0x44, 0x30, 0x8d, 0x2e, 0x58, 0xd2, 0xa5, 0xe5, 0x04, 0xfe, 0x61, 0x51}},
+					output: map[string]any{
+						"rule":   string(""),
+						"strict": string("0"),
+						"type":   string("node-affinity")}}}},
+		{category: `Enabled`,
+			create: []test{
+				{name: "false",
+					config: HaNodeAffinityRule{Enabled: util.Pointer(false)},
+					output: map[string]any{
+						"disable": string("1"),
+						"rule":    string(""),
+						"strict":  string("0"),
+						"type":    string("node-affinity")}},
+				{name: "true",
+					config: HaNodeAffinityRule{Enabled: util.Pointer(true)},
+					output: map[string]any{
+						"rule":   string(""),
+						"strict": string("0"),
+						"type":   string("node-affinity")}}}},
+		{category: `Guests`,
+			create: []test{
+				{name: `Multiple`,
+					config: HaNodeAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 100},
+						{vmType: GuestLxc, vmId: 200},
+						{vmType: GuestQemu, vmId: 300}}},
+					output: map[string]any{
+						"resources": []string{"vm:100", "ct:200", "vm:300"},
+						"rule":      string(""),
+						"strict":    string("0"),
+						"type":      string("node-affinity")}},
+				{name: `Single`,
+					config: HaNodeAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestLxc, vmId: 342}}},
+					output: map[string]any{
+						"resources": []string{"ct:342"},
+						"rule":      string(""),
+						"strict":    string("0"),
+						"type":      string("node-affinity")}}}},
+		{category: `ID`,
+			create: []test{
+				{name: `set`,
+					config: HaNodeAffinityRule{ID: "my-id"},
+					output: map[string]any{
+						"rule":   string("my-id"),
+						"strict": string("0"),
+						"type":   string("node-affinity")}}}},
+		{category: `Nodes`,
+			create: []test{
+				{name: `Multiple`,
+					config: HaNodeAffinityRule{Nodes: &[]HaNode{
+						{Node: "node1", Priority: 1},
+						{Node: "node2"},
+						{Node: "node3", Priority: 1000}}},
+					output: map[string]any{
+						"nodes":  string("node1:1,node2,node3:1000"),
+						"rule":   string(""),
+						"strict": string("0"),
+						"type":   string("node-affinity")}},
+				{name: `Single`,
+					config: HaNodeAffinityRule{Nodes: &[]HaNode{
+						{Node: "node42", Priority: 99}}},
+					output: map[string]any{
+						"nodes":  string("node42:99"),
+						"rule":   string(""),
+						"strict": string("0"),
+						"type":   string("node-affinity")}}}},
+		{category: `Strict`,
+			create: []test{
+				{name: "false",
+					config: HaNodeAffinityRule{Strict: util.Pointer(false)},
+					output: map[string]any{
+						"rule":   string(""),
+						"strict": string("0"),
+						"type":   string("node-affinity")}},
+				{name: "true",
+					config: HaNodeAffinityRule{Strict: util.Pointer(true)},
+					output: map[string]any{
+						"rule":   string(""),
+						"strict": string("1"),
+						"type":   string("node-affinity")}}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range test.create {
+			name := test.category + "/Create/" + subTest.name
+			t.Run(name, func(*testing.T) {
+				var tmpParams map[string]any
+				subTest.config.create(context.Background(), &mockClientAPI{
+					createHaRuleFunc: func(ctx context.Context, params map[string]any) error {
+						tmpParams = params
+						return nil
+					}})
+				require.Equal(t, subTest.output, tmpParams, name)
+			})
+		}
+	}
+}
+
 func Test_HaNodeAffinityRule_Validate(t *testing.T) {
 	type test struct {
 		name  string
