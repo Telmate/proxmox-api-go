@@ -25,6 +25,8 @@ type ClientNew interface {
 	// HA
 	haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error
 	haCreateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error
+	haCreateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error
+	haCreateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error
 	haDeleteRule(ctx context.Context, id HaRuleID) error
 	haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error
 	haListRules(ctx context.Context) (HaRules, error)

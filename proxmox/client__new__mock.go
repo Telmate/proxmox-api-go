@@ -97,6 +97,20 @@ func (m *MockClient) haCreateNodeAffinityRuleNoCheck(ctx context.Context, ha HaN
 	return m.HaCreateNodeAffinityRuleNoCheckFunc(ctx, ha)
 }
 
+func (m *MockClient) haCreateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error {
+	if m.HaCreateResourceAffinityRuleFunc == nil {
+		m.panic("HaCreateResourceAffinityRuleFunc")
+	}
+	return m.HaCreateResourceAffinityRuleFunc(ctx, ha)
+}
+
+func (m *MockClient) haCreateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error {
+	if m.HaCreateResourceAffinityRuleNoCheckFunc == nil {
+		m.panic("HaCreateResourceAffinityRuleNoCheckFunc")
+	}
+	return m.HaCreateResourceAffinityRuleNoCheckFunc(ctx, ha)
+}
+
 func (m *MockClient) haDeleteRule(ctx context.Context, id HaRuleID) error {
 	if m.HaDeleteRuleFunc == nil {
 		m.panic("HaDeleteRuleFunc")

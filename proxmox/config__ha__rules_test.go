@@ -644,6 +644,111 @@ func Test_HaNodeAffinityRule_Validate(t *testing.T) {
 	}
 }
 
+func Test_HaResourceAffinityRule_create(t *testing.T) {
+	type test struct {
+		name   string
+		config HaResourceAffinityRule
+		output map[string]any
+	}
+	tests := []struct {
+		category string
+		create   []test
+	}{
+		{category: `Affinity`,
+			create: []test{
+				{name: `empty (not supported in API)`,
+					config: HaResourceAffinityRule{Affinity: util.Pointer(HaAffinityUnknown)},
+					output: map[string]any{
+						"affinity": string(""),
+						"rule":     string(""),
+						"type":     string("resource-affinity")}},
+				{name: `positive`,
+					config: HaResourceAffinityRule{Affinity: util.Pointer(HaAffinityPositive)},
+					output: map[string]any{
+						"affinity": string("positive"),
+						"rule":     string(""),
+						"type":     string("resource-affinity")}},
+				{name: `negative`,
+					config: HaResourceAffinityRule{Affinity: util.Pointer(HaAffinityNegative)},
+					output: map[string]any{
+						"affinity": string("negative"),
+						"rule":     string(""),
+						"type":     string("resource-affinity")}}}},
+		{category: `Comment`,
+			create: []test{
+				{name: `set`,
+					config: HaResourceAffinityRule{Comment: util.Pointer("This is a comment")},
+					output: map[string]any{
+						"comment": string("This is a comment"),
+						"rule":    string(""),
+						"type":    string("resource-affinity")}},
+				{name: `empty`,
+					config: HaResourceAffinityRule{Comment: util.Pointer("")},
+					output: map[string]any{
+						"rule": string(""),
+						"type": string("resource-affinity")}}}},
+		{category: `Digest`,
+			create: []test{
+				{name: `set no effect`,
+					config: HaResourceAffinityRule{Digest: [20]byte{0xeb, 0xef, 0xee, 0xde, 0x30, 0x59, 0x41, 0x74, 0x44, 0x30, 0x8d, 0x2e, 0x58, 0xd2, 0xa5, 0xe5, 0x04, 0xfe, 0x61, 0x51}},
+					output: map[string]any{
+						"rule": string(""),
+						"type": string("resource-affinity")}}}},
+		{category: `Enabled`,
+			create: []test{
+				{name: "false",
+					config: HaResourceAffinityRule{Enabled: util.Pointer(false)},
+					output: map[string]any{
+						"disable": string("1"),
+						"rule":    string(""),
+						"type":    string("resource-affinity")}},
+				{name: "true",
+					config: HaResourceAffinityRule{Enabled: util.Pointer(true)},
+					output: map[string]any{
+						"rule": string(""),
+						"type": string("resource-affinity")}}}},
+		{category: `Guests`,
+			create: []test{
+				{name: `Multiple`,
+					config: HaResourceAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 100},
+						{vmType: GuestLxc, vmId: 200},
+						{vmType: GuestQemu, vmId: 300}}},
+					output: map[string]any{
+						"resources": []string{"vm:100", "ct:200", "vm:300"},
+						"rule":      string(""),
+						"type":      string("resource-affinity")}},
+				{name: `Single`,
+					config: HaResourceAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestLxc, vmId: 342}}},
+					output: map[string]any{
+						"resources": []string{"ct:342"},
+						"rule":      string(""),
+						"type":      string("resource-affinity")}}}},
+		{category: `ID`,
+			create: []test{
+				{name: `set`,
+					config: HaResourceAffinityRule{ID: "my-id"},
+					output: map[string]any{
+						"rule": string("my-id"),
+						"type": string("resource-affinity")}}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range test.create {
+			name := test.category + "/Create/" + subTest.name
+			t.Run(name, func(*testing.T) {
+				var tmpParams map[string]any
+				subTest.config.create(context.Background(), &mockClientAPI{
+					createHaRuleFunc: func(ctx context.Context, params map[string]any) error {
+						tmpParams = params
+						return nil
+					}})
+				require.Equal(t, subTest.output, tmpParams, name)
+			})
+		}
+	}
+}
+
 func Test_HaResourceAffinityRule_Validate(t *testing.T) {
 	type test struct {
 		name  string

@@ -411,7 +411,50 @@ const (
 	HaResourceAffinityRule_Error_AffinityRequired = "affinity must be specified during creation"
 	HaResourceAffinityRule_Error_GuestsEmpty      = "guests must not be empty"
 	HaResourceAffinityRule_Error_GuestsRequired   = "guests must be specified during creation"
+	HaResourceAffinityRule_Error_Kind             = "rule is not a resource affinity rule"
 )
+
+func (config HaResourceAffinityRule) Create(ctx context.Context, c *Client) error {
+	return c.new().haCreateResourceAffinityRule(ctx, config)
+}
+
+func (c *clientNew) haCreateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error {
+	if err := haVersionCheck(ctx, c); err != nil {
+		return err
+	}
+	return ha.create(ctx, c.api)
+}
+
+func (config HaResourceAffinityRule) CreateNoCheck(ctx context.Context, c *Client) error {
+	return c.new().haCreateResourceAffinityRuleNoCheck(ctx, config)
+}
+
+func (c *clientNew) haCreateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error {
+	return ha.create(ctx, c.api)
+}
+
+func (config HaResourceAffinityRule) create(ctx context.Context, c clientApiInterface) error {
+	return c.createHaRule(ctx, config.mapToApiCreate())
+}
+
+func (config HaResourceAffinityRule) mapToApiCreate() map[string]any {
+	params := map[string]any{
+		haRuleApiKeyRuleID: config.ID.String(),
+		haRuleApiKeyType:   haTypeResourceAffinity}
+	if config.Affinity != nil {
+		params[haRuleApiKeyAffinity] = config.Affinity.String()
+	}
+	if config.Comment != nil && *config.Comment != "" {
+		params[haRuleApiKeyComment] = *config.Comment
+	}
+	if config.Enabled != nil && !*config.Enabled {
+		params[haRuleApiKeyDisabled] = "1"
+	}
+	if config.Guests != nil && len(*config.Guests) > 0 {
+		haMapToApiGuests(*config.Guests, params)
+	}
+	return params
+}
 
 func (config HaResourceAffinityRule) Validate(current *HaResourceAffinityRule) error {
 	if current != nil {
