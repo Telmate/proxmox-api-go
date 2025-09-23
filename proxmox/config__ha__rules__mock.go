@@ -30,8 +30,7 @@ type HaRuleMock struct {
 	GetIDFunc               func() HaRuleID
 	GetNodeAffinityFunc     func() (RawHaNodeAffinityRule, bool)
 	GetResourceAffinityFunc func() (RawHaResourceAffinityRule, bool)
-	IsNodeAffinityFunc      func() bool
-	IsResourceAffinityFunc  func() bool
+	KindFunc                func() HaRuleKind
 }
 
 func (m *HaRuleMock) panic(field string) { panic(field + " not set in HaRuleMock") }
@@ -78,18 +77,11 @@ func (m *HaRuleMock) GetResourceAffinity() (RawHaResourceAffinityRule, bool) {
 	return m.GetResourceAffinityFunc()
 }
 
-func (m *HaRuleMock) IsNodeAffinity() bool {
-	if m.IsNodeAffinityFunc == nil {
-		m.panic("IsNodeAffinityFunc")
+func (m *HaRuleMock) Kind() HaRuleKind {
+	if m.KindFunc == nil {
+		m.panic("KindFunc")
 	}
-	return m.IsNodeAffinityFunc()
-}
-
-func (m *HaRuleMock) IsResourceAffinity() bool {
-	if m.IsResourceAffinityFunc == nil {
-		m.panic("IsResourceAffinityFunc")
-	}
-	return m.IsResourceAffinityFunc()
+	return m.KindFunc()
 }
 
 type RawHaNodeAffinityRuleMock struct {

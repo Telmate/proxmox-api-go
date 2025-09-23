@@ -95,8 +95,7 @@ type HaRule interface {
 	GetID() HaRuleID
 	GetNodeAffinity() (RawHaNodeAffinityRule, bool)
 	GetResourceAffinity() (RawHaResourceAffinityRule, bool)
-	IsNodeAffinity() bool
-	IsResourceAffinity() bool
+	Kind() HaRuleKind
 }
 
 type haRule struct {
@@ -112,31 +111,29 @@ func (r *haRule) GetEnabled() bool { return haGetEnabled(r.a) }
 func (r *haRule) GetID() HaRuleID { return haGetID(r.a) }
 
 func (r *haRule) GetNodeAffinity() (RawHaNodeAffinityRule, bool) {
-	if r.IsNodeAffinity() {
+	if r.Kind() == HaRuleKindNodeAffinity {
 		return &rawHaNodeAffinityRule{a: r.a}, true
 	}
 	return nil, false
 }
 
 func (r *haRule) GetResourceAffinity() (RawHaResourceAffinityRule, bool) {
-	if r.IsResourceAffinity() {
+	if r.Kind() == HaRuleKindResourceAffinity {
 		return &rawHaResourceAffinityRule{a: r.a}, true
 	}
 	return nil, false
 }
 
-func (r *haRule) IsNodeAffinity() bool {
-	if v, ok := r.a[haRuleApiKeyType]; ok && v == haTypeNodeAffinity {
-		return true
+func (r *haRule) Kind() HaRuleKind {
+	if v, ok := r.a[haRuleApiKeyType]; ok {
+		switch v.(string) {
+		case haTypeNodeAffinity:
+			return HaRuleKindNodeAffinity
+		case haTypeResourceAffinity:
+			return HaRuleKindResourceAffinity
+		}
 	}
-	return false
-}
-
-func (r *haRule) IsResourceAffinity() bool {
-	if v, ok := r.a[haRuleApiKeyType]; ok && v != haTypeNodeAffinity {
-		return true
-	}
-	return false
+	return HaRuleKindUnknown
 }
 
 type RawHaNodeAffinityRule interface {
@@ -328,8 +325,8 @@ func (r *rawHaResourceAffinityRule) GetGuests() []VmRef { return haGetGuests(r.a
 
 func (r *rawHaResourceAffinityRule) GetID() HaRuleID { return haGetID(r.a) }
 
-func (r *rawHaResourceAffinityRule) get() HaResourceAffinityRule {
-	return HaResourceAffinityRule{
+func (r *rawHaResourceAffinityRule) get() *HaResourceAffinityRule {
+	return &HaResourceAffinityRule{
 		Affinity:  util.Pointer(r.GetAffinity()),
 		Comment:   util.Pointer(r.GetComment()),
 		Enabled:   util.Pointer(r.GetEnabled()),
@@ -527,6 +524,15 @@ func (id HaRuleID) Validate() error {
 	}
 	return nil
 }
+
+// HaRuleKind is an enum.
+type HaRuleKind int8
+
+const (
+	HaRuleKindUnknown          HaRuleKind = 0
+	HaRuleKindNodeAffinity     HaRuleKind = 1
+	HaRuleKindResourceAffinity HaRuleKind = 2
+)
 
 // Max 1000
 type HaPriority uint16
