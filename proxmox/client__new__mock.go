@@ -12,13 +12,15 @@ type MockClient struct {
 	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	GuestListResourcesFunc          func(ctx context.Context) (RawGuestResources, error)
 	// HA
-	HaCreateNodeAffinityRuleFunc        func(ctx context.Context, ha HaNodeAffinityRule) error
-	HaCreateNodeAffinityRuleNoCheckFunc func(ctx context.Context, ha HaNodeAffinityRule) error
-	HaDeleteRuleFunc                    func(ctx context.Context, id HaRuleID) error
-	HaDeleteRuleNoCheckFunc             func(ctx context.Context, id HaRuleID) error
-	HaGetRuleFunc                       func(ctx context.Context, id HaRuleID) (HaRule, error)
-	HaListRulesFunc                     func(ctx context.Context) (HaRules, error)
-	HaListRulesNoCheckFunc              func(ctx context.Context) (HaRules, error)
+	HaCreateNodeAffinityRuleFunc            func(ctx context.Context, ha HaNodeAffinityRule) error
+	HaCreateNodeAffinityRuleNoCheckFunc     func(ctx context.Context, ha HaNodeAffinityRule) error
+	HaCreateResourceAffinityRuleFunc        func(ctx context.Context, ha HaResourceAffinityRule) error
+	HaCreateResourceAffinityRuleNoCheckFunc func(ctx context.Context, ha HaResourceAffinityRule) error
+	HaDeleteRuleFunc                        func(ctx context.Context, id HaRuleID) error
+	HaDeleteRuleNoCheckFunc                 func(ctx context.Context, id HaRuleID) error
+	HaGetRuleFunc                           func(ctx context.Context, id HaRuleID) (HaRule, error)
+	HaListRulesFunc                         func(ctx context.Context) (HaRules, error)
+	HaListRulesNoCheckFunc                  func(ctx context.Context) (HaRules, error)
 	// Pool
 	PoolGetRawConfigFunc        func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)

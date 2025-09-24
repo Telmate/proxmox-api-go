@@ -7,6 +7,7 @@ import (
 
 	"github.com/Telmate/proxmox-api-go/internal/array"
 	"github.com/Telmate/proxmox-api-go/internal/util"
+	"github.com/Telmate/proxmox-api-go/test/data/test_data_ha"
 	"github.com/stretchr/testify/require"
 )
 
@@ -524,6 +525,189 @@ func Test_HaNodeAffinityRule_create(t *testing.T) {
 	}
 }
 
+func Test_HaNodeAffinityRule_Get(t *testing.T) {
+	baseRule := func(r HaNodeAffinityRule) HaNodeAffinityRule {
+		if r.Comment == nil {
+			r.Comment = util.Pointer("")
+		}
+		if r.Enabled == nil {
+			r.Enabled = util.Pointer(true)
+		}
+		if r.Guests == nil {
+			r.Guests = util.Pointer(array.Nil[VmRef]())
+		}
+		if r.Nodes == nil {
+			r.Nodes = util.Pointer(array.Nil[HaNode]())
+		}
+		if r.Strict == nil {
+			r.Strict = util.Pointer(false)
+		}
+		return r
+	}
+	type test struct {
+		name          string
+		input         map[string]any
+		id            HaRuleID
+		outputPublic  HaNodeAffinityRule
+		outputPrivate *HaNodeAffinityRule
+		err           error
+	}
+	tests := []struct {
+		category string
+		tests    []test
+	}{
+		{category: `Comment`,
+			tests: []test{
+				{name: `set`,
+					input: map[string]any{
+						"type":    string("node-affinity"),
+						"comment": string("This is a comment")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Comment: util.Pointer("This is a comment")}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Comment: util.Pointer("This is a comment")}))}}},
+		{category: `Digest`,
+			tests: []test{
+				{name: `set`,
+					input: map[string]any{
+						"type":   string("node-affinity"),
+						"digest": string("ebefeede3059417444308d2e58d2a5e504fe6151")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Digest: [20]byte{0xeb, 0xef, 0xee, 0xde, 0x30, 0x59, 0x41, 0x74, 0x44, 0x30, 0x8d, 0x2e, 0x58, 0xd2, 0xa5, 0xe5, 0x04, 0xfe, 0x61, 0x51}}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						rawDigest: "ebefeede3059417444308d2e58d2a5e504fe6151"}))}}},
+		{category: `Enabled`,
+			tests: []test{
+				{name: "false",
+					input: map[string]any{
+						"type":    string("node-affinity"),
+						"disable": string("1")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Enabled: util.Pointer(false)}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Enabled: util.Pointer(false)}))},
+				{name: "true",
+					input: map[string]any{
+						"type":    string("node-affinity"),
+						"disable": string("0")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Enabled: util.Pointer(true)}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Enabled: util.Pointer(true)}))}}},
+		{category: `Guests`,
+			tests: []test{
+				{name: `Multiple`,
+					input: map[string]any{
+						"type":      string("node-affinity"),
+						"resources": string("vm:100,ct:200,vm:300")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Guests: &[]VmRef{
+							{vmType: GuestQemu, vmId: 100},
+							{vmType: GuestLxc, vmId: 200},
+							{vmType: GuestQemu, vmId: 300}}}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Guests: &[]VmRef{
+							{vmType: GuestQemu, vmId: 100},
+							{vmType: GuestLxc, vmId: 200},
+							{vmType: GuestQemu, vmId: 300}}}))},
+				{name: `Single`,
+					input: map[string]any{
+						"type":      string("node-affinity"),
+						"resources": string("ct:342")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Guests: &[]VmRef{
+							{vmType: GuestLxc, vmId: 342}}}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Guests: &[]VmRef{
+							{vmType: GuestLxc, vmId: 342}}}))}}},
+		{category: `ID`,
+			tests: []test{
+				{name: `set`,
+					id: "my-id",
+					input: map[string]any{
+						"rule": string("my-id"),
+						"type": string("node-affinity")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						ID: "my-id"}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						ID: "my-id"}))}}},
+		{category: `Nodes`,
+			tests: []test{
+				{name: `Multiple`,
+					input: map[string]any{
+						"type":  string("node-affinity"),
+						"nodes": string("node1:1,node2,node3:1000")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Nodes: &[]HaNode{
+							{Node: "node1", Priority: 1},
+							{Node: "node2"},
+							{Node: "node3", Priority: 1000}}}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Nodes: &[]HaNode{
+							{Node: "node1", Priority: 1},
+							{Node: "node2"},
+							{Node: "node3", Priority: 1000}}}))},
+				{name: `Single`,
+					input: map[string]any{
+						"type":  string("node-affinity"),
+						"nodes": string("node42:99")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Nodes: &[]HaNode{
+							{Node: "node42", Priority: 99}}}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Nodes: &[]HaNode{
+							{Node: "node42", Priority: 99}}}))}}},
+		{category: `Strict`,
+			tests: []test{
+				{name: "false",
+					input: map[string]any{
+						"type":   string("node-affinity"),
+						"strict": string("0")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Strict: util.Pointer(false)}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Strict: util.Pointer(false)}))},
+				{name: "true",
+					input: map[string]any{
+						"type":   string("node-affinity"),
+						"strict": string("1")},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Strict: util.Pointer(true)}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Strict: util.Pointer(true)}))}}},
+		{category: `error`,
+			tests: []test{
+				{name: "api error",
+					err: errors.New("api error")}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range test.tests {
+			name := test.category
+			if len(test.tests) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				var tmpID HaRuleID
+				rawRule, err := subTest.id.get(context.Background(), &mockClientAPI{
+					getHaRuleFunc: func(ctx context.Context, id HaRuleID) (map[string]any, error) {
+						tmpID = id
+						return subTest.input, subTest.err
+					}})
+				require.Equal(t, subTest.err, err)
+				require.Equal(t, subTest.id, tmpID)
+				if subTest.err == nil {
+					raw, ok := rawRule.getNodeAffinity()
+					require.Equal(t, true, ok)
+					_, notOk := rawRule.getResourceAffinity()
+					require.Equal(t, false, notOk)
+					require.Equal(t, subTest.outputPrivate, raw.get())
+					require.Equal(t, subTest.outputPublic, raw.Get())
+				}
+			})
+		}
+	}
+}
+
 func Test_HaNodeAffinityRule_Validate(t *testing.T) {
 	type test struct {
 		name  string
@@ -548,6 +732,18 @@ func Test_HaNodeAffinityRule_Validate(t *testing.T) {
 							Guests: &[]VmRef{{vmType: GuestQemu, vmId: 100}},
 							ID:     "ha-rule-1",
 							Nodes:  &[]HaNode{{Node: "node1"}}}}},
+				createUpdate: []test{
+					{name: `normal`,
+						input: HaNodeAffinityRule{
+							Comment: util.Pointer("This is a comment"),
+							Enabled: util.Pointer(true),
+							Guests: &[]VmRef{
+								{vmType: GuestQemu, vmId: 100},
+								{vmType: GuestLxc, vmId: 200},
+								{vmType: GuestQemu, vmId: 300}},
+							ID:     "ha-rule-1",
+							Nodes:  &[]HaNode{{Node: "node1", Priority: 1}, {Node: "node2"}, {Node: "node3", Priority: 1000}},
+							Strict: util.Pointer(true)}}},
 				update: []test{
 					{name: `minimum`,
 						input: HaNodeAffinityRule{ID: "ha-rule-1"}}}}},
@@ -744,6 +940,160 @@ func Test_HaResourceAffinityRule_create(t *testing.T) {
 						return nil
 					}})
 				require.Equal(t, subTest.output, tmpParams, name)
+			})
+		}
+	}
+}
+
+func Test_HaResourceAffinityRule_Get(t *testing.T) {
+	baseRule := func(r HaResourceAffinityRule) HaResourceAffinityRule {
+		if r.Affinity == nil {
+			r.Affinity = util.Pointer(HaAffinityUnknown)
+		}
+		if r.Comment == nil {
+			r.Comment = util.Pointer("")
+		}
+		if r.Enabled == nil {
+			r.Enabled = util.Pointer(true)
+		}
+		if r.Guests == nil {
+			r.Guests = util.Pointer(array.Nil[VmRef]())
+		}
+		return r
+	}
+	type test struct {
+		name          string
+		input         map[string]any
+		id            HaRuleID
+		outputPublic  HaResourceAffinityRule
+		outputPrivate *HaResourceAffinityRule
+		err           error
+	}
+	tests := []struct {
+		category string
+		tests    []test
+	}{
+		{category: `Affinity`,
+			tests: []test{
+				{name: `positive`,
+					input: map[string]any{
+						"type":     string("resource-affinity"),
+						"affinity": string("positive")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Affinity: util.Pointer(HaAffinityPositive)}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Affinity: util.Pointer(HaAffinityPositive)}))},
+				{name: `negative`,
+					input: map[string]any{
+						"type":     string("resource-affinity"),
+						"affinity": string("negative")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Affinity: util.Pointer(HaAffinityNegative)}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Affinity: util.Pointer(HaAffinityNegative)}))}}},
+		{category: `Comment`,
+			tests: []test{
+				{name: `set`,
+					input: map[string]any{
+						"type":    string("resource-affinity"),
+						"comment": string("This is a comment")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Comment: util.Pointer("This is a comment")}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Comment: util.Pointer("This is a comment")}))}}},
+		{category: `Digest`,
+			tests: []test{
+				{name: `set`,
+					input: map[string]any{
+						"type":   string("resource-affinity"),
+						"digest": string("ebefeede3059417444308d2e58d2a5e504fe6151")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Digest: [20]byte{0xeb, 0xef, 0xee, 0xde, 0x30, 0x59, 0x41, 0x74, 0x44, 0x30, 0x8d, 0x2e, 0x58, 0xd2, 0xa5, 0xe5, 0x04, 0xfe, 0x61, 0x51}}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						rawDigest: "ebefeede3059417444308d2e58d2a5e504fe6151"}))}}},
+		{category: `Enabled`,
+			tests: []test{
+				{name: "false",
+					input: map[string]any{
+						"type":    string("resource-affinity"),
+						"disable": string("1")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Enabled: util.Pointer(false)}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Enabled: util.Pointer(false)}))},
+				{name: "true",
+					input: map[string]any{
+						"type":    string("resource-affinity"),
+						"disable": string("0")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Enabled: util.Pointer(true)}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Enabled: util.Pointer(true)}))}}},
+		{category: `Guests`,
+			tests: []test{
+				{name: `Multiple`,
+					input: map[string]any{
+						"type":      string("resource-affinity"),
+						"resources": string("vm:100,ct:200,vm:300")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Guests: &[]VmRef{
+							{vmType: GuestQemu, vmId: 100},
+							{vmType: GuestLxc, vmId: 200},
+							{vmType: GuestQemu, vmId: 300}}}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Guests: &[]VmRef{
+							{vmType: GuestQemu, vmId: 100},
+							{vmType: GuestLxc, vmId: 200},
+							{vmType: GuestQemu, vmId: 300}}}))},
+				{name: `Single`,
+					input: map[string]any{
+						"type":      string("resource-affinity"),
+						"resources": string("ct:342")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Guests: &[]VmRef{
+							{vmType: GuestLxc, vmId: 342}}}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Guests: &[]VmRef{
+							{vmType: GuestLxc, vmId: 342}}}))}}},
+		{category: `ID`,
+			tests: []test{
+				{name: `set`,
+					id: "my-id",
+					input: map[string]any{
+						"rule": string("my-id"),
+						"type": string("resource-affinity")},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						ID: "my-id"}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						ID: "my-id"}))}}},
+		{category: `error`,
+			tests: []test{
+				{name: "api error",
+					err: errors.New("api error")}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range test.tests {
+			name := test.category
+			if len(test.tests) > 1 {
+				name += "/" + subTest.name
+			}
+			t.Run(name, func(*testing.T) {
+				var tmpID HaRuleID
+				rawRule, err := subTest.id.get(context.Background(), &mockClientAPI{
+					getHaRuleFunc: func(ctx context.Context, id HaRuleID) (map[string]any, error) {
+						tmpID = id
+						return subTest.input, subTest.err
+					}})
+				require.Equal(t, subTest.err, err)
+				require.Equal(t, subTest.id, tmpID)
+				if subTest.err == nil {
+					raw, ok := rawRule.getResourceAffinity()
+					require.Equal(t, true, ok)
+					_, notOk := rawRule.getNodeAffinity()
+					require.Equal(t, false, notOk)
+					require.Equal(t, subTest.outputPrivate, raw.get())
+					require.Equal(t, subTest.outputPublic, raw.Get())
+				}
 			})
 		}
 	}

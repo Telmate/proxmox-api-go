@@ -29,6 +29,7 @@ type ClientNew interface {
 	haCreateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error
 	haDeleteRule(ctx context.Context, id HaRuleID) error
 	haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error
+	haGetRule(ctx context.Context, id HaRuleID) (HaRule, error)
 	haListRules(ctx context.Context) (HaRules, error)
 	haListRulesNoCheck(ctx context.Context) (HaRules, error)
 	// Pool

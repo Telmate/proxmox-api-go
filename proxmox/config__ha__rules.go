@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha1"
 	"errors"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -55,7 +57,7 @@ func (c *clientNew) haGetRule(ctx context.Context, id HaRuleID) (HaRule, error) 
 	return id.get(ctx, c.api)
 }
 
-func (id HaRuleID) get(ctx context.Context, c clientApiInterface) (HaRule, error) {
+func (id HaRuleID) get(ctx context.Context, c clientApiInterface) (*haRule, error) {
 	raw, err := c.getHaRule(ctx, id)
 	if err != nil {
 		return nil, err
@@ -111,6 +113,10 @@ func (r *haRule) GetEnabled() bool { return haGetEnabled(r.a) }
 func (r *haRule) GetID() HaRuleID { return haGetID(r.a) }
 
 func (r *haRule) GetNodeAffinity() (RawHaNodeAffinityRule, bool) {
+	return r.getNodeAffinity()
+}
+
+func (r *haRule) getNodeAffinity() (*rawHaNodeAffinityRule, bool) {
 	if r.Kind() == HaRuleKindNodeAffinity {
 		return &rawHaNodeAffinityRule{a: r.a}, true
 	}
@@ -118,6 +124,10 @@ func (r *haRule) GetNodeAffinity() (RawHaNodeAffinityRule, bool) {
 }
 
 func (r *haRule) GetResourceAffinity() (RawHaResourceAffinityRule, bool) {
+	return r.getResourceAffinity()
+}
+
+func (r *haRule) getResourceAffinity() (*rawHaResourceAffinityRule, bool) {
 	if r.Kind() == HaRuleKindResourceAffinity {
 		return &rawHaResourceAffinityRule{a: r.a}, true
 	}
@@ -145,8 +155,6 @@ type RawHaNodeAffinityRule interface {
 	GetID() HaRuleID
 	GetNodes() []HaNode
 	GetStrict() bool
-	get() HaNodeAffinityRule
-	getDigest() digest
 }
 
 type rawHaNodeAffinityRule struct {
@@ -154,10 +162,14 @@ type rawHaNodeAffinityRule struct {
 }
 
 func (r *rawHaNodeAffinityRule) Get() HaNodeAffinityRule {
-	rule := r.get()
-	rule.Digest = rule.rawDigest.sha1()
-	rule.rawDigest = ""
-	return rule
+	return HaNodeAffinityRule{
+		Comment: util.Pointer(r.GetComment()),
+		Digest:  r.GetDigest(),
+		Enabled: util.Pointer(r.GetEnabled()),
+		Guests:  util.Pointer(r.GetGuests()),
+		ID:      r.GetID(),
+		Nodes:   util.Pointer(r.GetNodes()),
+		Strict:  util.Pointer(r.GetStrict())}
 }
 
 func (r *rawHaNodeAffinityRule) GetComment() string { return haGetComment(r.a) }
@@ -196,10 +208,9 @@ func (r *rawHaNodeAffinityRule) GetStrict() bool {
 	return false
 }
 
-func (r *rawHaNodeAffinityRule) get() HaNodeAffinityRule {
-	return HaNodeAffinityRule{
+func (r *rawHaNodeAffinityRule) get() *HaNodeAffinityRule {
+	return &HaNodeAffinityRule{
 		Comment:   util.Pointer(r.GetComment()),
-		Digest:    r.GetDigest(),
 		Enabled:   util.Pointer(r.GetEnabled()),
 		Guests:    util.Pointer(r.GetGuests()),
 		ID:        r.GetID(),
@@ -344,8 +355,6 @@ type RawHaResourceAffinityRule interface {
 	GetEnabled() bool
 	GetGuests() []VmRef
 	GetID() HaRuleID
-	get() HaResourceAffinityRule
-	getDigest() digest
 }
 
 type rawHaResourceAffinityRule struct {
@@ -353,10 +362,14 @@ type rawHaResourceAffinityRule struct {
 }
 
 func (r *rawHaResourceAffinityRule) Get() HaResourceAffinityRule {
-	rule := r.get()
-	rule.Digest = r.GetDigest()
-	rule.rawDigest = ""
-	return rule
+	return HaResourceAffinityRule{
+		Affinity: util.Pointer(r.GetAffinity()),
+		Comment:  util.Pointer(r.GetComment()),
+		Digest:   r.GetDigest(),
+		Enabled:  util.Pointer(r.GetEnabled()),
+		Guests:   util.Pointer(r.GetGuests()),
+		ID:       r.GetID(),
+	}
 }
 
 func (r *rawHaResourceAffinityRule) GetAffinity() HaAffinity {
@@ -506,6 +519,10 @@ const (
 	haRuleApiKeyRuleID    string = "rule"
 	haRuleApiKeyStrict    string = "strict"
 	haRuleApiKeyType      string = "type"
+)
+
+const (
+	haRuleMinimumParams = 2 // type and digest
 )
 
 func haGetComment(params map[string]any) string {
