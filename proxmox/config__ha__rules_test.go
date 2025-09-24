@@ -708,6 +708,227 @@ func Test_HaNodeAffinityRule_Get(t *testing.T) {
 	}
 }
 
+func Test_HaNodeAffinityRule_update(t *testing.T) {
+	baseConfig := func(current *rawHaNodeAffinityRule) *rawHaNodeAffinityRule {
+		if current == nil {
+			current = &rawHaNodeAffinityRule{a: map[string]any{}}
+		}
+		if current.a[haRuleApiKeyComment] == nil {
+			current.a[haRuleApiKeyComment] = string("This is a comment")
+		}
+		if current.a[haRuleApiKeyDisabled] == nil {
+			current.a[haRuleApiKeyDisabled] = string("0")
+		}
+		if current.a[haRuleApiKeyNodes] == nil {
+			current.a[haRuleApiKeyNodes] = string("node1:1,node2,node3:1000")
+		}
+		if current.a[haRuleApiKeyStrict] == nil {
+			current.a[haRuleApiKeyStrict] = string("0")
+		}
+		if current.a[haRuleApiKeyResources] == nil {
+			current.a[haRuleApiKeyResources] = string("vm:100,ct:200,vm:300")
+		}
+		current.a[haRuleApiKeyDigest] = string("da39a3ee5e6b4b0d3255bfef95601890afd80709")
+		return current
+	}
+	type test struct {
+		name          string
+		config        HaNodeAffinityRule
+		currentConfig *rawHaNodeAffinityRule
+		id            HaRuleID
+		output        map[string]any
+	}
+	tests := []struct {
+		category string
+		update   []test
+	}{
+		{category: `Comment`,
+			update: []test{
+				{name: `replace`,
+					config:        HaNodeAffinityRule{Comment: util.Pointer("New comment")},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"comment": string("New comment"),
+						"type":    string("node-affinity"),
+						"digest":  string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `remove`,
+					config:        HaNodeAffinityRule{Comment: util.Pointer("")},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"comment": string(""),
+						"type":    string("node-affinity"),
+						"digest":  string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change`,
+					config:        HaNodeAffinityRule{Comment: util.Pointer("This is a comment")},
+					currentConfig: baseConfig(nil)}}},
+		{category: `Enabled`,
+			update: []test{
+				{name: `replace true`,
+					config: HaNodeAffinityRule{Enabled: util.Pointer(true)},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						haRuleApiKeyDisabled: string("1")}}),
+					output: map[string]any{
+						"delete": string("disable"),
+						"type":   string("node-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace false`,
+					config: HaNodeAffinityRule{Enabled: util.Pointer(false)},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						haRuleApiKeyDisabled: string("0")}}),
+					output: map[string]any{
+						"disable": string("1"),
+						"type":    string("node-affinity"),
+						"digest":  string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change`,
+					config:        HaNodeAffinityRule{Enabled: util.Pointer(true)},
+					currentConfig: baseConfig(nil)}}},
+		{category: `Guests`,
+			update: []test{
+				{name: `replace amount different`,
+					config: HaNodeAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 8565},
+						{vmType: GuestLxc, vmId: 342}}},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"resources": []string{"vm:8565", "ct:342"},
+						"type":      string("node-affinity"),
+						"digest":    string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace amount same`,
+					config: HaNodeAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 8565},
+						{vmType: GuestLxc, vmId: 342},
+						{vmType: GuestQemu, vmId: 777}}},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"resources": []string{"ct:342", "vm:777", "vm:8565"},
+						"type":      string("node-affinity"),
+						"digest":    string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace single`,
+					config: HaNodeAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 342}}},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"resources": []string{"vm:342"},
+						"type":      string("node-affinity"),
+						"digest":    string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `remove (not supported in API)`,
+					config:        HaNodeAffinityRule{Guests: &[]VmRef{}},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"resources": []string{},
+						"type":      string("node-affinity"),
+						"digest":    string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change different order`,
+					config: HaNodeAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 100},
+						{vmType: GuestLxc, vmId: 200},
+						{vmType: GuestQemu, vmId: 300}}},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"resources": string("ct:200,vm:300,vm:100")}})},
+				{name: `no change same order`,
+					config: HaNodeAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 100},
+						{vmType: GuestLxc, vmId: 200},
+						{vmType: GuestQemu, vmId: 300}}},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"resources": string("vm:100,ct:200,vm:300")}})}}},
+		{category: `ID`,
+			update: []test{
+				{name: `no change`,
+					config:        HaNodeAffinityRule{ID: "my-id"},
+					currentConfig: baseConfig(nil)},
+				{name: `with change`,
+					config: HaNodeAffinityRule{
+						ID:      "my-id",
+						Enabled: util.Pointer(true)},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"disable": string("1")}}),
+					output: map[string]any{
+						"delete": string("disable"),
+						"type":   string("node-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")},
+					id: "my-id"}}},
+		{category: `Nodes`,
+			update: []test{
+				{name: `replace Multiple`,
+					config: HaNodeAffinityRule{Nodes: &[]HaNode{
+						{Node: "node42", Priority: 1000},
+						{Node: "nod342"},
+						{Node: "node7", Priority: 1}}},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"nodes": string("node3:1000,node1:1,node2")}}),
+					output: map[string]any{
+						"nodes":  string("nod342,node42:1000,node7:1"),
+						"type":   string("node-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace Single`,
+					config: HaNodeAffinityRule{Nodes: &[]HaNode{
+						{Node: "node7", Priority: 1}}},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"nodes": string("node1;node3:1000")}}),
+					output: map[string]any{
+						"nodes":  string("node7:1"),
+						"type":   string("node-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `remove (not supported in API)`,
+					config: HaNodeAffinityRule{Nodes: &[]HaNode{}},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"nodes": string("node1:1,node3:1000")}}),
+					output: map[string]any{
+						"nodes":  string(""),
+						"type":   string("node-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change different order`,
+					config: HaNodeAffinityRule{Nodes: &[]HaNode{
+						{Node: "node3", Priority: 1000},
+						{Node: "node1", Priority: 1},
+						{Node: "node2"}}},
+					currentConfig: baseConfig(nil)},
+				{name: `no change same order`,
+					config: HaNodeAffinityRule{},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"nodes": string("node1:1,node2,node3:1000")}})}}},
+		{category: `Strict`,
+			update: []test{
+				{name: `replace false`,
+					config: HaNodeAffinityRule{Strict: util.Pointer(false)},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"strict": string("1")}}),
+					output: map[string]any{
+						"strict": string("0"),
+						"type":   string("node-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace true`,
+					config:        HaNodeAffinityRule{Strict: util.Pointer(true)},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"strict": string("1"),
+						"type":   string("node-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change`,
+					config: HaNodeAffinityRule{Strict: util.Pointer(true)},
+					currentConfig: baseConfig(&rawHaNodeAffinityRule{a: map[string]any{
+						"strict": string("1")}})}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range test.update {
+			name := test.category + "/Update/" + subTest.name
+			t.Run(name, func(*testing.T) {
+				var tmpID HaRuleID
+				var tmpParams map[string]any
+				subTest.config.update(context.Background(), subTest.currentConfig, &mockClientAPI{
+					updateHaRuleFunc: func(ctx context.Context, id HaRuleID, params map[string]any) error {
+						tmpID = id
+						tmpParams = params
+						return nil
+					}})
+				require.Equal(t, subTest.id, tmpID)
+				require.Equal(t, subTest.output, tmpParams)
+			})
+		}
+	}
+}
+
 func Test_HaNodeAffinityRule_Validate(t *testing.T) {
 	type test struct {
 		name  string
@@ -1094,6 +1315,188 @@ func Test_HaResourceAffinityRule_Get(t *testing.T) {
 					require.Equal(t, subTest.outputPrivate, raw.get())
 					require.Equal(t, subTest.outputPublic, raw.Get())
 				}
+			})
+		}
+	}
+}
+
+func Test_HaResourceAffinityRule_update(t *testing.T) {
+	baseConfig := func(current *rawHaResourceAffinityRule) *rawHaResourceAffinityRule {
+		if current == nil {
+			current = &rawHaResourceAffinityRule{a: map[string]any{}}
+		}
+		if current.a[haRuleApiKeyAffinity] == nil {
+			current.a[haRuleApiKeyAffinity] = string("positive")
+		}
+		if current.a[haRuleApiKeyComment] == nil {
+			current.a[haRuleApiKeyComment] = string("This is a comment")
+		}
+		if current.a[haRuleApiKeyResources] == nil {
+			current.a[haRuleApiKeyResources] = string("vm:100,ct:200,vm:300")
+		}
+		if current.a[haRuleApiKeyDigest] == nil {
+			current.a[haRuleApiKeyDigest] = string("da39a3ee5e6b4b0d3255bfef95601890afd80709")
+		}
+		return current
+	}
+	type test struct {
+		name          string
+		config        HaResourceAffinityRule
+		currentConfig *rawHaResourceAffinityRule
+		id            HaRuleID
+		output        map[string]any
+	}
+	tests := []struct {
+		category string
+		update   []test
+	}{
+		{category: `Affinity`,
+			update: []test{
+				{name: `replace positive`,
+					config: HaResourceAffinityRule{Affinity: util.Pointer(HaAffinityPositive)},
+					currentConfig: baseConfig(&rawHaResourceAffinityRule{a: map[string]any{
+						haRuleApiKeyAffinity: string("negative")}}),
+					output: map[string]any{
+						"affinity": string("positive"),
+						"type":     string("resource-affinity"),
+						"digest":   string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace negative`,
+					config:        HaResourceAffinityRule{Affinity: util.Pointer(HaAffinityNegative)},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"affinity": string("negative"),
+						"type":     string("resource-affinity"),
+						"digest":   string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `remove (not supported in API)`,
+					config:        HaResourceAffinityRule{Affinity: util.Pointer(HaAffinityUnknown)},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"affinity": string(""),
+						"type":     string("resource-affinity"),
+						"digest":   string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change`,
+					config:        HaResourceAffinityRule{Affinity: util.Pointer(HaAffinityPositive)},
+					currentConfig: baseConfig(nil)}}},
+		{category: `Comment`,
+			update: []test{
+				{name: `replace`,
+					config:        HaResourceAffinityRule{Comment: util.Pointer("New comment")},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"comment": string("New comment"),
+						"type":    string("resource-affinity"),
+						"digest":  string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `remove`,
+					config:        HaResourceAffinityRule{Comment: util.Pointer("")},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"comment": string(""),
+						"type":    string("resource-affinity"),
+						"digest":  string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change`,
+					config:        HaResourceAffinityRule{Comment: util.Pointer("This is a comment")},
+					currentConfig: baseConfig(nil)}}},
+		{category: `Enabled`,
+			update: []test{
+				{name: `replace true`,
+					config: HaResourceAffinityRule{Enabled: util.Pointer(true)},
+					currentConfig: baseConfig(&rawHaResourceAffinityRule{a: map[string]any{
+						"disable": string("1")}}),
+					output: map[string]any{
+						"delete": string("disable"),
+						"type":   string("resource-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace false`,
+					config:        HaResourceAffinityRule{Enabled: util.Pointer(false)},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"disable": string("1"),
+						"type":    string("resource-affinity"),
+						"digest":  string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change`,
+					config:        HaResourceAffinityRule{Enabled: util.Pointer(true)},
+					currentConfig: baseConfig(nil)}}},
+		{category: `Guests`,
+			update: []test{
+				{name: `replace amount different`,
+					config: HaResourceAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 8565},
+						{vmType: GuestLxc, vmId: 342}}},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"resources": []string{"vm:8565", "ct:342"},
+						"type":      string("resource-affinity"),
+						"digest":    string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace amount same`,
+					config: HaResourceAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 8565},
+						{vmType: GuestLxc, vmId: 342},
+						{vmType: GuestQemu, vmId: 777}}},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"resources": []string{"ct:342", "vm:777", "vm:8565"},
+						"type":      string("resource-affinity"),
+						"digest":    string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `replace single`,
+					config: HaResourceAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 342}}},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"resources": []string{"vm:342"},
+						"type":      string("resource-affinity"),
+						"digest":    string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `remove (not supported in API)`,
+					config:        HaResourceAffinityRule{Guests: &[]VmRef{}},
+					currentConfig: baseConfig(nil),
+					output: map[string]any{
+						"resources": []string{},
+						"type":      string("resource-affinity"),
+						"digest":    string("da39a3ee5e6b4b0d3255bfef95601890afd80709")}},
+				{name: `no change different order`,
+					config: HaResourceAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 100},
+						{vmType: GuestLxc, vmId: 200},
+						{vmType: GuestQemu, vmId: 300}}},
+					currentConfig: baseConfig(&rawHaResourceAffinityRule{a: map[string]any{
+						"resources": string("ct:200,vm:300,vm:100")}})},
+				{name: `no change same order`,
+					config: HaResourceAffinityRule{Guests: &[]VmRef{
+						{vmType: GuestQemu, vmId: 100},
+						{vmType: GuestLxc, vmId: 200},
+						{vmType: GuestQemu, vmId: 300}}},
+					currentConfig: baseConfig(&rawHaResourceAffinityRule{a: map[string]any{
+						"resources": string("vm:100,ct:200,vm:300")}})}}},
+		{category: `ID`,
+			update: []test{
+				{name: `no change`,
+					config:        HaResourceAffinityRule{ID: "my-id"},
+					currentConfig: baseConfig(nil)},
+				{name: `with change`,
+					config: HaResourceAffinityRule{
+						ID:      "my-id",
+						Enabled: util.Pointer(true)},
+					currentConfig: baseConfig(&rawHaResourceAffinityRule{a: map[string]any{
+						"disable": string("1")}}),
+					output: map[string]any{
+						"delete": string("disable"),
+						"type":   string("resource-affinity"),
+						"digest": string("da39a3ee5e6b4b0d3255bfef95601890afd80709")},
+					id: "my-id"}}},
+	}
+	for _, test := range tests {
+		for _, subTest := range test.update {
+			name := test.category + "/Update/" + subTest.name
+			t.Run(name, func(*testing.T) {
+				var tmpID HaRuleID
+				var tmpParams map[string]any
+				subTest.config.update(context.Background(), subTest.currentConfig, &mockClientAPI{
+					updateHaRuleFunc: func(ctx context.Context, id HaRuleID, params map[string]any) error {
+						tmpID = id
+						tmpParams = params
+						return nil
+					}})
+				require.Equal(t, subTest.id, tmpID)
+				require.Equal(t, subTest.output, tmpParams)
 			})
 		}
 	}

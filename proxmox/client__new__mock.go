@@ -21,6 +21,10 @@ type MockClient struct {
 	HaGetRuleFunc                           func(ctx context.Context, id HaRuleID) (HaRule, error)
 	HaListRulesFunc                         func(ctx context.Context) (HaRules, error)
 	HaListRulesNoCheckFunc                  func(ctx context.Context) (HaRules, error)
+	HaUpdateNodeAffinityRuleFunc            func(ctx context.Context, ha HaNodeAffinityRule) error
+	HaUpdateNodeAffinityRuleNoCheckFunc     func(ctx context.Context, ha HaNodeAffinityRule) error
+	HaUpdateResourceAffinityRuleFunc        func(ctx context.Context, ha HaResourceAffinityRule) error
+	HaUpdateResourceAffinityRuleNoCheckFunc func(ctx context.Context, ha HaResourceAffinityRule) error
 	// Pool
 	PoolGetRawConfigFunc        func(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	PoolGetRawConfigNoCheckFunc func(ctx context.Context, pool PoolName) (RawConfigPool, error)
@@ -146,6 +150,34 @@ func (m *MockClient) haListRulesNoCheck(ctx context.Context) (HaRules, error) {
 		m.panic("HaListRulesNoCheckFunc")
 	}
 	return m.HaListRulesNoCheckFunc(ctx)
+}
+
+func (m *MockClient) haUpdateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {
+	if m.HaUpdateNodeAffinityRuleFunc == nil {
+		m.panic("HaUpdateNodeAffinityRuleFunc")
+	}
+	return m.HaUpdateNodeAffinityRuleFunc(ctx, ha)
+}
+
+func (m *MockClient) haUpdateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error {
+	if m.HaUpdateNodeAffinityRuleNoCheckFunc == nil {
+		m.panic("HaUpdateNodeAffinityRuleNoCheckFunc")
+	}
+	return m.HaUpdateNodeAffinityRuleNoCheckFunc(ctx, ha)
+}
+
+func (m *MockClient) haUpdateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error {
+	if m.HaUpdateResourceAffinityRuleFunc == nil {
+		m.panic("HaUpdateResourceAffinityRuleFunc")
+	}
+	return m.HaUpdateResourceAffinityRuleFunc(ctx, ha)
+}
+
+func (m *MockClient) haUpdateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error {
+	if m.HaUpdateResourceAffinityRuleNoCheckFunc == nil {
+		m.panic("HaUpdateResourceAffinityRuleNoCheckFunc")
+	}
+	return m.HaUpdateResourceAffinityRuleNoCheckFunc(ctx, ha)
 }
 
 func (m *MockClient) poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error) {

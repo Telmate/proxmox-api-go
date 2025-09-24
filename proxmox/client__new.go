@@ -32,6 +32,10 @@ type ClientNew interface {
 	haGetRule(ctx context.Context, id HaRuleID) (HaRule, error)
 	haListRules(ctx context.Context) (HaRules, error)
 	haListRulesNoCheck(ctx context.Context) (HaRules, error)
+	haUpdateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error
+	haUpdateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error
+	haUpdateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error
+	haUpdateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error
 	// Pool
 	poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	poolGetRawConfigNoCheck(ctx context.Context, pool PoolName) (RawConfigPool, error)

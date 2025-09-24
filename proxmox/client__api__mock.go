@@ -14,6 +14,7 @@ type mockClientAPI struct {
 	getUserConfigFunc          func(ctx context.Context, userId UserID) (map[string]any, error)
 	listGuestResourcesFunc     func(ctx context.Context) ([]any, error)
 	listHaRulesFunc            func(ctx context.Context) ([]any, error)
+	updateHaRuleFunc           func(ctx context.Context, id HaRuleID, params map[string]any) error
 }
 
 func (m mockClientAPI) new() clientApiInterface { return &m }
@@ -83,4 +84,11 @@ func (m *mockClientAPI) listHaRules(ctx context.Context) ([]any, error) {
 		m.panic("ListHaRulesFunc")
 	}
 	return m.listHaRulesFunc(ctx)
+}
+
+func (m *mockClientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error {
+	if m.updateHaRuleFunc == nil {
+		m.panic("updateHaRuleFunc")
+	}
+	return m.updateHaRuleFunc(ctx, id, params)
 }

@@ -89,6 +89,14 @@ func (c *clientAPI) postTask(ctx context.Context, url string, params map[string]
 	return c.checkTask(ctx, resp)
 }
 
+// Makes a PUT request without waiting on proxmox for the task to complete.
+// It returns the HTTP error as 'err'.
+func (c *clientAPI) put(ctx context.Context, url string, params map[string]any) (err error) {
+	reqbody := paramsToBodyWithAllEmpty(params)
+	_, err = c.session.put(ctx, url, nil, nil, &reqbody)
+	return
+}
+
 // handleTaskError reads the body from the passed in HTTP response and closes it.
 // It returns the body of the passed in HTTP response.
 func (c *clientAPI) handleTaskError(resp *http.Response) (exitStatus string) {

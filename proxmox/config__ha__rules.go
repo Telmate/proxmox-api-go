@@ -279,6 +279,52 @@ func (config HaNodeAffinityRule) create(ctx context.Context, c clientApiInterfac
 	return c.createHaRule(ctx, config.mapToApiCreate())
 }
 
+func (config HaNodeAffinityRule) Update(ctx context.Context, c *Client) error {
+	return c.new().haUpdateNodeAffinityRule(ctx, config)
+}
+
+func (c *clientNew) haUpdateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {
+	if err := haVersionCheck(ctx, c); err != nil {
+		return err
+	}
+	if err := ha.validateUpdate(); err != nil {
+		return err
+	}
+	rawRule, err := ha.ID.get(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	raw, ok := rawRule.getNodeAffinity()
+	if !ok {
+		return errors.New(HaNodeAffinityRule_Error_Kind)
+	}
+	return ha.update(ctx, raw, c.api)
+}
+
+func (config HaNodeAffinityRule) UpdateNoCheck(ctx context.Context, c *Client) error {
+	return c.new().haUpdateNodeAffinityRuleNoCheck(ctx, config)
+}
+
+func (c *clientNew) haUpdateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error {
+	rawRule, err := ha.ID.get(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	raw, ok := rawRule.getNodeAffinity()
+	if !ok {
+		return errors.New(HaNodeAffinityRule_Error_Kind)
+	}
+	return ha.update(ctx, raw, c.api)
+}
+
+func (config HaNodeAffinityRule) update(ctx context.Context, current *rawHaNodeAffinityRule, c clientApiInterface) error {
+	params := config.mapToApiUpdate_Unsafe(current)
+	if len(params) <= haRuleMinimumParams {
+		return nil
+	}
+	return c.updateHaRule(ctx, config.ID, params)
+}
+
 func (config HaNodeAffinityRule) mapToApiCreate() map[string]any {
 	params := map[string]any{
 		haRuleApiKeyRuleID: config.ID.String(),
@@ -299,6 +345,40 @@ func (config HaNodeAffinityRule) mapToApiCreate() map[string]any {
 		params[haRuleApiKeyStrict] = haStrictTrue
 	} else {
 		params[haRuleApiKeyStrict] = haStrictFalse
+	}
+	return params
+}
+
+func (config HaNodeAffinityRule) mapToApiUpdate_Unsafe(current *rawHaNodeAffinityRule) map[string]any {
+	params := map[string]any{
+		haRuleApiKeyDigest: current.getDigest().String(),
+		haRuleApiKeyType:   haTypeNodeAffinity}
+	if config.Comment != nil && *config.Comment != current.GetComment() {
+		params[haRuleApiKeyComment] = *config.Comment
+	}
+	var delete string
+	if config.Enabled != nil && *config.Enabled != current.GetEnabled() {
+		if *config.Enabled {
+			delete = haRuleApiKeyDisabled
+		} else {
+			params[haRuleApiKeyDisabled] = "1"
+		}
+	}
+	if config.Guests != nil && haDifferenceGuests(*config.Guests, current.GetGuests()) {
+		haMapToApiGuests(*config.Guests, params)
+	}
+	if config.Nodes != nil && haDifferenceNodes(*config.Nodes, current.GetNodes()) {
+		haMapToApiNodes(*config.Nodes, params)
+	}
+	if config.Strict != nil && *config.Strict != current.GetStrict() {
+		if *config.Strict {
+			params[haRuleApiKeyStrict] = haStrictTrue
+		} else {
+			params[haRuleApiKeyStrict] = haStrictFalse
+		}
+	}
+	if delete != "" {
+		params[haRuleApiKeyDelete] = delete
 	}
 	return params
 }
@@ -450,6 +530,51 @@ func (config HaResourceAffinityRule) create(ctx context.Context, c clientApiInte
 	return c.createHaRule(ctx, config.mapToApiCreate())
 }
 
+func (config HaResourceAffinityRule) Update(ctx context.Context, c *Client) error {
+	return c.new().haUpdateResourceAffinityRule(ctx, config)
+}
+
+func (c *clientNew) haUpdateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error {
+	if err := haVersionCheck(ctx, c); err != nil {
+		return err
+	}
+	if err := ha.validateUpdate(); err != nil {
+	}
+	rawRule, err := ha.ID.get(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	raw, ok := rawRule.getResourceAffinity()
+	if !ok {
+		return errors.New(HaResourceAffinityRule_Error_Kind)
+	}
+	return ha.update(ctx, raw, c.api)
+}
+
+func (config HaResourceAffinityRule) UpdateNoCheck(ctx context.Context, c *Client) error {
+	return c.new().haUpdateResourceAffinityRuleNoCheck(ctx, config)
+}
+
+func (c *clientNew) haUpdateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error {
+	rawRule, err := ha.ID.get(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	raw, ok := rawRule.getResourceAffinity()
+	if !ok {
+		return errors.New(HaResourceAffinityRule_Error_Kind)
+	}
+	return ha.update(ctx, raw, c.api)
+}
+
+func (config HaResourceAffinityRule) update(ctx context.Context, current *rawHaResourceAffinityRule, c clientApiInterface) error {
+	params := config.mapToApiUpdate_Unsafe(current)
+	if len(params) <= haRuleMinimumParams {
+		return nil
+	}
+	return c.updateHaRule(ctx, config.ID, params)
+}
+
 func (config HaResourceAffinityRule) mapToApiCreate() map[string]any {
 	params := map[string]any{
 		haRuleApiKeyRuleID: config.ID.String(),
@@ -465,6 +590,33 @@ func (config HaResourceAffinityRule) mapToApiCreate() map[string]any {
 	}
 	if config.Guests != nil && len(*config.Guests) > 0 {
 		haMapToApiGuests(*config.Guests, params)
+	}
+	return params
+}
+
+func (config HaResourceAffinityRule) mapToApiUpdate_Unsafe(current *rawHaResourceAffinityRule) map[string]any {
+	params := map[string]any{
+		haRuleApiKeyDigest: current.getDigest().String(),
+		haRuleApiKeyType:   haTypeResourceAffinity}
+	if config.Affinity != nil && *config.Affinity != current.GetAffinity() {
+		params[haRuleApiKeyAffinity] = config.Affinity.String()
+	}
+	if config.Comment != nil && *config.Comment != current.GetComment() {
+		params[haRuleApiKeyComment] = *config.Comment
+	}
+	var delete string
+	if config.Enabled != nil && *config.Enabled != current.GetEnabled() {
+		if *config.Enabled {
+			delete = haRuleApiKeyDisabled
+		} else {
+			params[haRuleApiKeyDisabled] = "1"
+		}
+	}
+	if config.Guests != nil && haDifferenceGuests(*config.Guests, current.GetGuests()) {
+		haMapToApiGuests(*config.Guests, params)
+	}
+	if delete != "" {
+		params[haRuleApiKeyDelete] = delete
 	}
 	return params
 }
@@ -564,6 +716,42 @@ func haGetGuests(params map[string]any) []VmRef {
 		guests[i].vmId = GuestID(id)
 	}
 	return guests
+}
+
+func haDifferenceGuests(a, b []VmRef) bool {
+	if len(a) != len(b) {
+		return true
+	}
+	sort.Slice(a, func(i, j int) bool {
+		return a[i].vmId < a[j].vmId
+	})
+	sort.Slice(b, func(i, j int) bool {
+		return b[i].vmId < b[j].vmId
+	})
+	for i := range a {
+		if a[i].vmId != b[i].vmId || a[i].vmType != b[i].vmType {
+			return true
+		}
+	}
+	return false
+}
+
+func haDifferenceNodes(a, b []HaNode) bool {
+	if len(a) != len(b) {
+		return true
+	}
+	sort.Slice(a, func(i, j int) bool {
+		return a[i].Node < a[j].Node
+	})
+	sort.Slice(b, func(i, j int) bool {
+		return b[i].Node < b[j].Node
+	})
+	for i := range a {
+		if a[i].Node != b[i].Node || a[i].Priority != b[i].Priority {
+			return true
+		}
+	}
+	return false
 }
 
 func haMapToApiGuests(guests []VmRef, params map[string]any) {
