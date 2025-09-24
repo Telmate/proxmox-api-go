@@ -244,7 +244,7 @@ const (
 	HaNodeAffinityRule_Error_GuestsEmpty    = "guests must not be empty"
 	HaNodeAffinityRule_Error_GuestsRequired = "guests must be specified during creation"
 	HaNodeAffinityRule_Error_Kind           = "rule is not a node affinity rule"
-	HaNodeAffinityRule_Error_NodesEmpty     = "modes must not be empty"
+	HaNodeAffinityRule_Error_NodesEmpty     = "nodes must not be empty"
 	HaNodeAffinityRule_Error_NodesRequired  = "nodes must be specified during creation"
 )
 
@@ -539,6 +539,7 @@ func (c *clientNew) haUpdateResourceAffinityRule(ctx context.Context, ha HaResou
 		return err
 	}
 	if err := ha.validateUpdate(); err != nil {
+		return err
 	}
 	rawRule, err := ha.ID.get(ctx, c.api)
 	if err != nil {
@@ -755,16 +756,16 @@ func haDifferenceNodes(a, b []HaNode) bool {
 }
 
 func haMapToApiGuests(guests []VmRef, params map[string]any) {
-	resoures := make([]string, len(guests))
+	resources := make([]string, len(guests))
 	for i := range guests {
 		switch (guests)[i].vmType {
 		case GuestQemu:
-			resoures[i] = haGuestPrefixVm + (guests)[i].vmId.String()
+			resources[i] = haGuestPrefixVm + (guests)[i].vmId.String()
 		case GuestLxc:
-			resoures[i] = haGuestPrefixCt + (guests)[i].vmId.String()
+			resources[i] = haGuestPrefixCt + (guests)[i].vmId.String()
 		}
 	}
-	params[haRuleApiKeyResources] = resoures
+	params[haRuleApiKeyResources] = resources
 }
 
 func haMapToApiNodes(nodes []HaNode, params map[string]any) {
@@ -828,10 +829,10 @@ type HaRuleID string
 var haRuleIdRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
 
 const (
-	HaRuleID_Error_MinLength = `ha rule ID must atleast be 2 characters`
+	HaRuleID_Error_MinLength = `ha rule ID must at least be 2 characters`
 	HaRuleID_Error_MaxLength = `ha rule ID has a maximum of 128 characters`
 	HaRuleID_Error_Invalid   = `ha rule ID did not match the following regex '^[a-zA-Z][a-zA-Z0-9\-_]{2,127}$'`
-	HaRuleID_Error_Start     = `ha rule ID can only with a lower or upper case letter`
+	HaRuleID_Error_Start     = `ha rule ID can only start with a lower or upper case letter`
 	HaRuleIDMin              = 2
 	HaRuleIDMax              = 128
 )
