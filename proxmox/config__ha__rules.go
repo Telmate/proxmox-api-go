@@ -773,9 +773,9 @@ func haMapToApiNodes(nodes []HaNode, params map[string]any) {
 	for i := range nodes {
 		builder.WriteString(",")
 		if nodes[i].Priority == 0 {
-			builder.WriteString(string(nodes[i].Node.String()))
+			builder.WriteString(nodes[i].Node.String())
 		} else {
-			builder.WriteString(string(nodes[i].Node.String()))
+			builder.WriteString(nodes[i].Node.String())
 			builder.WriteString(":")
 			builder.WriteString(nodes[i].Priority.String())
 		}
@@ -823,7 +823,7 @@ func (a HaAffinity) Validate() error {
 	return nil
 }
 
-// HaRuleID has a minimim of 2 characters and max of 128 characters.
+// HaRuleID has a minimum of 2 characters and max of 128 characters.
 type HaRuleID string
 
 var haRuleIdRegex = regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
