@@ -248,7 +248,15 @@ func (c *clientNew) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (b
 	return vmr.pendingChanges(ctx, c.apiGet())
 }
 
-func (vmr *VmRef) pendingConfig(ctx context.Context, c clientApiInterface) (map[string]any, bool, error) {
+const (
+	pendingNew      = "pending"
+	pendingCurrent  = "value"
+	pendingDelete   = "delete"
+	pendingProperty = "key"
+)
+
+// pendingActiveConfig returns the active config without pending changes applied.
+func (vmr *VmRef) pendingActiveConfig(ctx context.Context, c clientApiInterface) (map[string]any, bool, error) {
 	changes, err := c.getGuestPendingChanges(ctx, vmr)
 	if err != nil {
 		return nil, false, err
@@ -257,10 +265,34 @@ func (vmr *VmRef) pendingConfig(ctx context.Context, c clientApiInterface) (map[
 	config := make(map[string]any, len(changes))
 	for _, item := range changes {
 		m := item.(map[string]any)
-		config[m["key"].(string)] = m["value"]
+		config[m[pendingProperty].(string)] = m[pendingCurrent]
 		if len(m) > 2 {
 			pending = true
 		}
+	}
+	return config, pending, nil
+}
+
+// pendingCurrentConfig returns the current config with any pending changes applied.
+func (vmr *VmRef) pendingCurrentConfig(ctx context.Context, c clientApiInterface) (map[string]any, bool, error) {
+	changes, err := c.getGuestPendingChanges(ctx, vmr)
+	if err != nil {
+		return nil, false, err
+	}
+	var pending bool
+	config := make(map[string]any, len(changes))
+	for _, item := range changes {
+		m := item.(map[string]any)
+		if _, ok := m[pendingDelete]; ok {
+			pending = true
+			continue
+		}
+		if v, ok := m[pendingNew]; ok {
+			config[m[pendingProperty].(string)] = v
+			pending = true
+			continue
+		}
+		config[m[pendingProperty].(string)] = m[pendingCurrent]
 	}
 	return config, pending, nil
 }
