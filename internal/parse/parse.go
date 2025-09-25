@@ -8,9 +8,23 @@ import (
 const (
 	InvalidType = "invalid type"
 	Negative    = "negative value"
+	Empty       = "empty value"
 )
 
-func Int(input interface{}) (int, error) {
+func Bool(input any) (bool, error) {
+	switch input := input.(type) {
+	case float64:
+		return input == 1, nil
+	case string:
+		if input == "" {
+			return false, errors.New(Empty)
+		}
+		return input[0] == '1', nil
+	}
+	return false, errors.New(InvalidType)
+}
+
+func Int(input any) (int, error) {
 	switch input := input.(type) {
 	case float64:
 		return int(input), nil
@@ -24,7 +38,7 @@ func Int(input interface{}) (int, error) {
 	return 0, errors.New(InvalidType)
 }
 
-func Uint(input interface{}) (uint, error) {
+func Uint(input any) (uint, error) {
 	tmpInt, err := Int(input)
 	if err != nil {
 		return 0, err

@@ -1,15 +1,57 @@
 package parse
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+func Test_Bool(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  any
+		output bool
+		err    error
+	}{
+		{name: `float64 1`,
+			input:  float64(1),
+			output: true},
+		{name: `float64 0`,
+			input:  float64(0),
+			output: false},
+		{name: `string empty`,
+			input: "",
+			err:   errors.New(Empty)},
+		{name: `string 1`,
+			input:  "1",
+			output: true},
+		{name: `string 1 suffixed`,
+			input:  "1;suffixed",
+			output: true},
+		{name: `string 0`,
+			input:  "0",
+			output: false},
+		{name: `string 0 suffixed`,
+			input:  "0;suffixed",
+			output: false},
+		{name: `invalid type`,
+			input: any(nil),
+			err:   errors.New(InvalidType)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tmpOutput, tmpErr := Bool(test.input)
+			require.Equal(t, test.err, tmpErr)
+			require.Equal(t, test.output, tmpOutput)
+		})
+	}
+}
+
 func Test_Int(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  interface{}
+		input  any
 		output int
 		err    bool
 	}{
@@ -29,7 +71,7 @@ func Test_Int(t *testing.T) {
 			input:  "1",
 			output: 1},
 		{name: `invalid type`,
-			input: interface{}(nil),
+			input: any(nil),
 			err:   true},
 	}
 	for _, test := range tests {
@@ -48,7 +90,7 @@ func Test_Int(t *testing.T) {
 func Test_Uint(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  interface{}
+		input  any
 		output uint
 		err    bool
 	}{
@@ -68,7 +110,7 @@ func Test_Uint(t *testing.T) {
 			input:  "1",
 			output: 1},
 		{name: `invalid type`,
-			input: interface{}(nil),
+			input: any(nil),
 			err:   true},
 	}
 	for _, test := range tests {

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Telmate/proxmox-api-go/internal/parse"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -693,8 +694,9 @@ func haGetDigest(params map[string]any) digest {
 }
 
 func haGetEnabled(params map[string]any) bool {
-	if v, ok := params[haRuleApiKeyDisabled]; ok && v == "1" {
-		return false
+	if v, ok := params[haRuleApiKeyDisabled]; ok {
+		vv, _ := parse.Bool(v)
+		return !vv
 	}
 	return true
 }

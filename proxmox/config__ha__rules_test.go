@@ -578,7 +578,15 @@ func Test_HaNodeAffinityRule_Get(t *testing.T) {
 						rawDigest: "ebefeede3059417444308d2e58d2a5e504fe6151"}))}}},
 		{category: `Enabled`,
 			tests: []test{
-				{name: "false",
+				{name: "false float",
+					input: map[string]any{
+						"type":    string("node-affinity"),
+						"disable": float64(1)},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Enabled: util.Pointer(false)}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Enabled: util.Pointer(false)}))},
+				{name: "false string",
 					input: map[string]any{
 						"type":    string("node-affinity"),
 						"disable": string("1")},
@@ -586,7 +594,15 @@ func Test_HaNodeAffinityRule_Get(t *testing.T) {
 						Enabled: util.Pointer(false)}),
 					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
 						Enabled: util.Pointer(false)}))},
-				{name: "true",
+				{name: "true float",
+					input: map[string]any{
+						"type":    string("node-affinity"),
+						"disable": float64(0)},
+					outputPublic: baseRule(HaNodeAffinityRule{
+						Enabled: util.Pointer(true)}),
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
+						Enabled: util.Pointer(true)}))},
+				{name: "true string",
 					input: map[string]any{
 						"type":    string("node-affinity"),
 						"disable": string("0")},
@@ -1234,7 +1250,15 @@ func Test_HaResourceAffinityRule_Get(t *testing.T) {
 						rawDigest: "ebefeede3059417444308d2e58d2a5e504fe6151"}))}}},
 		{category: `Enabled`,
 			tests: []test{
-				{name: "false",
+				{name: "false float",
+					input: map[string]any{
+						"type":    string("resource-affinity"),
+						"disable": float64(1)},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Enabled: util.Pointer(false)}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Enabled: util.Pointer(false)}))},
+				{name: "false string",
 					input: map[string]any{
 						"type":    string("resource-affinity"),
 						"disable": string("1")},
@@ -1242,7 +1266,15 @@ func Test_HaResourceAffinityRule_Get(t *testing.T) {
 						Enabled: util.Pointer(false)}),
 					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
 						Enabled: util.Pointer(false)}))},
-				{name: "true",
+				{name: "true float",
+					input: map[string]any{
+						"type":    string("resource-affinity"),
+						"disable": float64(0)},
+					outputPublic: baseRule(HaResourceAffinityRule{
+						Enabled: util.Pointer(true)}),
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
+						Enabled: util.Pointer(true)}))},
+				{name: "true string",
 					input: map[string]any{
 						"type":    string("resource-affinity"),
 						"disable": string("0")},
@@ -1401,7 +1433,7 @@ func Test_HaResourceAffinityRule_update(t *testing.T) {
 				{name: `replace true`,
 					config: HaResourceAffinityRule{Enabled: util.Pointer(true)},
 					currentConfig: baseConfig(&rawHaResourceAffinityRule{a: map[string]any{
-						"disable": string("1")}}),
+						"disable": float64(1)}}),
 					output: map[string]any{
 						"delete": string("disable"),
 						"type":   string("resource-affinity"),
