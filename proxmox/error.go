@@ -40,3 +40,13 @@ func (errorMsg) guestIsProtectedCantDelete(id GuestID) error {
 		err: Error.GuestIsProtectedCantDelete(),
 		id:  id}
 }
+
+var errGuestNotHaManaged = errors.New("guest is not ha managed")
+
+func (msg errorMsg) HaResourceDoesNotExist() error { return errGuestNotHaManaged }
+
+func (errorMsg) haResourceDoesNotExist(id GuestID) error {
+	return &errorWrapper[GuestID]{
+		err: Error.HaResourceDoesNotExist(),
+		id:  id}
+}

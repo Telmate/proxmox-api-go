@@ -233,6 +233,29 @@ const (
 	GuestIdMinimum        = 100
 )
 
+func (id GuestID) DeleteHaResource(ctx context.Context, c *Client) error {
+	err := id.Validate()
+	if err != nil {
+		return err
+	}
+	return c.new().haDeleteResource(ctx, id)
+}
+
+func (c *clientNew) haDeleteResource(ctx context.Context, id GuestID) error {
+	return id.deleteHaResource(ctx, c.apiGet())
+}
+
+func (id GuestID) deleteHaResource(ctx context.Context, c clientApiInterface) error {
+	err := c.deleteHaResource(ctx, id)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "500 cannot delete service") {
+			return Error.haResourceDoesNotExist(id)
+		}
+		return err
+	}
+	return nil
+}
+
 func (id GuestID) errorContext() string {
 	return "ID " + id.String()
 }

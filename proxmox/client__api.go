@@ -9,6 +9,7 @@ import (
 // in the future we might put the interface even lower, but for now this is sufficient
 type clientApiInterface interface {
 	createHaRule(ctx context.Context, params map[string]any) error
+	deleteHaResource(ctx context.Context, id GuestID) error
 	deleteHaRule(ctx context.Context, id HaRuleID) error
 	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error)
@@ -31,6 +32,10 @@ type clientAPI struct {
 
 func (c *clientAPI) createHaRule(ctx context.Context, params map[string]any) error {
 	return c.post(ctx, "/cluster/ha/rules", params)
+}
+
+func (c *clientAPI) deleteHaResource(ctx context.Context, id GuestID) error {
+	return c.delete(ctx, "/cluster/ha/resources/"+id.String())
 }
 
 func (c *clientAPI) deleteHaRule(ctx context.Context, id HaRuleID) error {
