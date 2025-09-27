@@ -574,8 +574,7 @@ func Test_HaNodeAffinityRule_Get(t *testing.T) {
 						"digest": string("ebefeede3059417444308d2e58d2a5e504fe6151")},
 					outputPublic: baseRule(HaNodeAffinityRule{
 						Digest: [20]byte{0xeb, 0xef, 0xee, 0xde, 0x30, 0x59, 0x41, 0x74, 0x44, 0x30, 0x8d, 0x2e, 0x58, 0xd2, 0xa5, 0xe5, 0x04, 0xfe, 0x61, 0x51}}),
-					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{
-						rawDigest: "ebefeede3059417444308d2e58d2a5e504fe6151"}))}}},
+					outputPrivate: util.Pointer(baseRule(HaNodeAffinityRule{}))}}},
 		{category: `Enabled`,
 			tests: []test{
 				{name: "false float",
@@ -1246,8 +1245,7 @@ func Test_HaResourceAffinityRule_Get(t *testing.T) {
 						"digest": string("ebefeede3059417444308d2e58d2a5e504fe6151")},
 					outputPublic: baseRule(HaResourceAffinityRule{
 						Digest: [20]byte{0xeb, 0xef, 0xee, 0xde, 0x30, 0x59, 0x41, 0x74, 0x44, 0x30, 0x8d, 0x2e, 0x58, 0xd2, 0xa5, 0xe5, 0x04, 0xfe, 0x61, 0x51}}),
-					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{
-						rawDigest: "ebefeede3059417444308d2e58d2a5e504fe6151"}))}}},
+					outputPrivate: util.Pointer(baseRule(HaResourceAffinityRule{}))}}},
 		{category: `Enabled`,
 			tests: []test{
 				{name: "false float",

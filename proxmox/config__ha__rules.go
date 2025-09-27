@@ -211,26 +211,24 @@ func (r *rawHaNodeAffinityRule) GetStrict() bool {
 
 func (r *rawHaNodeAffinityRule) get() *HaNodeAffinityRule {
 	return &HaNodeAffinityRule{
-		Comment:   util.Pointer(r.GetComment()),
-		Enabled:   util.Pointer(r.GetEnabled()),
-		Guests:    util.Pointer(r.GetGuests()),
-		ID:        r.GetID(),
-		Nodes:     util.Pointer(r.GetNodes()),
-		Strict:    util.Pointer(r.GetStrict()),
-		rawDigest: r.getDigest()}
+		Comment: util.Pointer(r.GetComment()),
+		Enabled: util.Pointer(r.GetEnabled()),
+		Guests:  util.Pointer(r.GetGuests()),
+		ID:      r.GetID(),
+		Nodes:   util.Pointer(r.GetNodes()),
+		Strict:  util.Pointer(r.GetStrict())}
 }
 
 func (r *rawHaNodeAffinityRule) getDigest() digest { return haGetDigest(r.a) }
 
 type HaNodeAffinityRule struct {
-	Comment   *string         `json:"comment,omitempty"` // Never nil when returned
-	Digest    [sha1.Size]byte `json:"digest,omitempty"`  // only returned.
-	Enabled   *bool           `json:"enabled,omitempty"` // Never nil when returned
-	Guests    *[]VmRef        `json:"guests,omitempty"`  // Never nil when returned
-	ID        HaRuleID        `json:"id"`
-	Nodes     *[]HaNode       `json:"nodes,omitempty"`  // Never nil when returned
-	Strict    *bool           `json:"strict,omitempty"` // Never nil when returned
-	rawDigest digest          `json:"-"`
+	Comment *string         `json:"comment,omitempty"` // Never nil when returned
+	Digest  [sha1.Size]byte `json:"digest,omitempty"`  // only returned.
+	Enabled *bool           `json:"enabled,omitempty"` // Never nil when returned
+	Guests  *[]VmRef        `json:"guests,omitempty"`  // Never nil when returned
+	ID      HaRuleID        `json:"id"`
+	Nodes   *[]HaNode       `json:"nodes,omitempty"`  // Never nil when returned
+	Strict  *bool           `json:"strict,omitempty"` // Never nil when returned
 }
 
 const (
@@ -477,12 +475,11 @@ func (r *rawHaResourceAffinityRule) GetID() HaRuleID { return haGetID(r.a) }
 
 func (r *rawHaResourceAffinityRule) get() *HaResourceAffinityRule {
 	return &HaResourceAffinityRule{
-		Affinity:  util.Pointer(r.GetAffinity()),
-		Comment:   util.Pointer(r.GetComment()),
-		Enabled:   util.Pointer(r.GetEnabled()),
-		Guests:    util.Pointer(r.GetGuests()),
-		ID:        r.GetID(),
-		rawDigest: r.getDigest()}
+		Affinity: util.Pointer(r.GetAffinity()),
+		Comment:  util.Pointer(r.GetComment()),
+		Enabled:  util.Pointer(r.GetEnabled()),
+		Guests:   util.Pointer(r.GetGuests()),
+		ID:       r.GetID()}
 }
 
 func (r *rawHaResourceAffinityRule) getDigest() digest { return haGetDigest(r.a) }
@@ -492,13 +489,12 @@ const (
 )
 
 type HaResourceAffinityRule struct {
-	Affinity  *HaAffinity     `json:"affinity,omitempty"` // Never nil when returned
-	Comment   *string         `json:"comment,omitempty"`  // Never nil when returned
-	Digest    [sha1.Size]byte `json:"digest,omitempty"`   // only returned.
-	Enabled   *bool           `json:"enabled,omitempty"`  // Never nil when returned
-	Guests    *[]VmRef        `json:"guests,omitempty"`   // Never nil when returned
-	ID        HaRuleID        `json:"id"`
-	rawDigest digest          `json:"-"`
+	Affinity *HaAffinity     `json:"affinity,omitempty"` // Never nil when returned
+	Comment  *string         `json:"comment,omitempty"`  // Never nil when returned
+	Digest   [sha1.Size]byte `json:"digest,omitempty"`   // only returned.
+	Enabled  *bool           `json:"enabled,omitempty"`  // Never nil when returned
+	Guests   *[]VmRef        `json:"guests,omitempty"`   // Never nil when returned
+	ID       HaRuleID        `json:"id"`
 }
 
 const (
