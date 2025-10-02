@@ -511,9 +511,10 @@ func (clone cloneSettings) mapToAPI() (GuestID, NodeName, PoolName, map[string]i
 
 // TODO add more properties to GuestStatus
 type GuestStatus struct {
-	Name   GuestName     `json:"name"`
-	State  PowerState    `json:"state"`
-	Uptime time.Duration `json:"uptime"`
+	Name      GuestName     `json:"name"`
+	State     PowerState    `json:"state"`
+	Uptime    time.Duration `json:"uptime"`
+	HaManaged int           `json:"hamanaged"`
 }
 
 type RawGuestStatus map[string]any
@@ -529,9 +530,10 @@ func (raw RawGuestStatus) GetName() GuestName {
 
 func (raw RawGuestStatus) Get() GuestStatus {
 	return GuestStatus{
-		Name:   raw.GetName(),
-		State:  raw.GetState(),
-		Uptime: raw.GetUptime()}
+		Name:      raw.GetName(),
+		State:     raw.GetState(),
+		Uptime:    raw.GetUptime(),
+		HaManaged: raw.GetHaManaged()}
 }
 
 func (raw RawGuestStatus) GetState() PowerState {
@@ -547,6 +549,20 @@ func (raw RawGuestStatus) GetUptime() time.Duration {
 	if v, isSet := raw["uptime"]; isSet {
 		if uptime, ok := v.(float64); ok {
 			return time.Duration(uptime) * time.Second
+		}
+	}
+	return 0
+}
+
+func (raw RawGuestStatus) GetHaManaged() int {
+	// Check if "ha" field exists and contains a map
+	if v, isSet := raw["ha"]; isSet {
+		if haMap, ok := v.(map[string]interface{}); ok {
+			if managed, exists := haMap["managed"]; exists {
+				if m, ok := managed.(float64); ok { // HA managed is a number
+					return int(m)
+				}
+			}
 		}
 	}
 	return 0
