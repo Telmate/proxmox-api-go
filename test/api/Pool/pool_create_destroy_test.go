@@ -25,7 +25,7 @@ func Test_Pool_Is_Created(t *testing.T) {
 func Test_Pool_Delete(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	proxmox.ConfigPool{Name: "test-pool"}.Create(context.Background(), Test.GetClient())
+	proxmox.ConfigPool{Name: "test-pool"}.Delete(context.Background(), Test.GetClient())
 }
 
 func Test_Pool_Is_Deleted(t *testing.T) {
