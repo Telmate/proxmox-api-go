@@ -22,6 +22,14 @@ func Test_Pool_Is_Created(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func Test_Pools_List(t *testing.T) {
+	Test := api_test.Test{}
+	_ = Test.CreateTest()
+	pools, err := proxmox.ListPools(context.Background(), Test.GetClient())
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pools))
+}
+
 func Test_Pool_Delete(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
