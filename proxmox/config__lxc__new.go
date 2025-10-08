@@ -796,7 +796,7 @@ func NewActiveRawConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (r
 
 func guestGetActiveRawLxcConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw RawConfigLXC, pending bool, err error) {
 	var tmpConfig map[string]any
-	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
+	tmpConfig, pending, err = vmr.pendingActiveConfig(ctx, c)
 	if err != nil {
 		return nil, false, err
 	}
