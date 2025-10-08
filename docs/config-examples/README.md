@@ -12,6 +12,8 @@ Many configs are passed through `stdin` or by specifying a file (with the parame
 
 ## Cloud init
 
+The cloud init format should follow the following schema :
+
 - `username` - User name to change ssh keys and password for instead of the image’s configured default user.
 - `userpassword` - Password to assign the user.
 - `cicustom` - Specify custom files to replace the automatically generated ones at start, as JSON object of:

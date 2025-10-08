@@ -48,7 +48,7 @@ export PM_OTP=otpcode (only if required)
 export PM_HTTP_HEADERS=Key,Value,Key1,Value1 (only if required)
 ```
 
-#### The new CLI
+### The new CLI
 
 In order to use the new CLI, the environment variable `NEW_CLI` must be equal to `true` like that :
 
@@ -127,9 +127,9 @@ With the legacy CLI :
 
 ## JSON Config format
 
-Many configs are passed through `stdin` or by specifying a file (with the parameter `--file` with the new CLI), examples of these configs can be found in [this directory](./docs/config-examples).
+Many commands use configs from files or `stdin`, examples of these configs can be found in [this directory](./docs/config-examples).
 
-### ISO requirements (non cloud-init)
+## ISO requirements (non cloud-init)
 
 Kickstart auto install
 
