@@ -1,0 +1,51 @@
+{
+  "name": "golang1.test.com",
+  "description": "Test proxmox-api-go",
+  "memory": {
+    "capacity": 2048
+  },
+  "ostype": "l26",
+  "cores": 2,
+  "sockets": 1,
+  "iso": {
+    "storage": "local",
+    "file": "ubuntu-14.04.5-server-amd64.iso"
+  },
+  "disk": {
+    "0": {
+      "type": "virtio",
+      "storage": "local",
+      "storage_type": "dir",
+      "size": "30G",
+      "backup": true
+    }
+  },
+  "efidisk": {
+    "storage": "local",
+    "pre-enrolled-keys": "1",
+    "efitype": "4m"
+  },
+  "network": {
+    "0": {
+      "model": "virtio",
+      "bridge": "nat"
+    },
+    "1": {
+      "model": "virtio",
+      "bridge": "vmbr0",
+      "firewall": true,
+      "tag": -1
+    }
+  },
+  "rng0": {
+    "source": "/dev/urandom",
+    "max_bytes": "1024",
+    "period": "1000"
+  },
+  "usb": {
+    "0": {
+      "host": "0658:0200",
+      "usb3": true
+    }
+  }
+}
