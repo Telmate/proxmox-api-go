@@ -351,7 +351,8 @@ type RawConfigUser interface {
 }
 
 type rawConfigUser struct {
-	a map[string]any
+	a    map[string]any
+	user UserID
 }
 
 func (r *rawConfigUser) Get() *ConfigUser {
@@ -427,7 +428,7 @@ func (r *rawConfigUser) GetUser() UserID {
 	if v, isSet := r.a["userid"]; isSet {
 		return UserID{}.mapToStruct(v.(string))
 	}
-	return UserID{}
+	return r.user
 }
 
 // Check if the user already exists in proxmox.
@@ -482,12 +483,12 @@ func (c *clientNew) userGetRawConfig(ctx context.Context, userID UserID) (RawCon
 	return userGetRawConfigUser_Unsafe(ctx, userID, c.api)
 }
 
-func userGetRawConfigUser_Unsafe(ctx context.Context, userID UserID, c clientApiInterface) (RawConfigUser, error) {
+func userGetRawConfigUser_Unsafe(ctx context.Context, userID UserID, c clientApiInterface) (*rawConfigUser, error) {
 	userConfig, err := c.getUserConfig(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return &rawConfigUser{a: userConfig}, nil
+	return &rawConfigUser{a: userConfig, user: userID}, nil
 }
 
 func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
