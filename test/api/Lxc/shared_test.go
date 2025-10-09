@@ -20,7 +20,7 @@ func _create_lxc_spec(network bool, osTemplate string) pxapi.ConfigLxc {
 	disks[0] = make(map[string]interface{})
 	disks[0]["type"] = "virtio"
 	disks[0]["storage"] = "local-lvm"
-	disks[0]["size"] = "8G"
+	disks[0]["size"] = "1G"
 
 	networks := make(pxapi.QemuDevices)
 

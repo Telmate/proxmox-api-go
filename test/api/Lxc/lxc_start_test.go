@@ -19,7 +19,8 @@ func Test_Start_Stop_Lxc_Container_Setup(t *testing.T) {
 	pxapi.DownloadLxcTemplate(context.Background(), Test.GetClient(), templateConfig)
 
 	config := _create_lxc_spec(false, lxcOsTemplate)
-	config.CreateLxc(context.Background(), _create_vmref(), Test.GetClient())
+	err := config.CreateLxc(context.Background(), _create_vmref(), Test.GetClient())
+	require.NoError(t, err)
 }
 
 func Test_Start_Lxc_Container(t *testing.T) {
