@@ -50,3 +50,26 @@ func (errorMsg) haResourceDoesNotExist(id GuestID) error {
 		err: Error.HaResourceDoesNotExist(),
 		id:  id}
 }
+
+type functionalityVersionWrapper struct {
+	err           error
+	functionality string
+	version       Version
+}
+
+func (w *functionalityVersionWrapper) Error() string {
+	return "functionality (" + w.functionality + ") not supported in version (" + w.version.String() + ")"
+}
+
+func (w *functionalityVersionWrapper) Unwrap() error { return w.err }
+
+var errNotSupportedInVersion = errors.New("")
+
+func (msg errorMsg) FunctionalityNotSupportedInVersion() error { return errNotSupportedInVersion }
+
+func functionalityNotSupportedInVersion(functionality string, version Version) error {
+	return &functionalityVersionWrapper{
+		err:           errNotSupportedInVersion,
+		functionality: functionality,
+		version:       version}
+}
