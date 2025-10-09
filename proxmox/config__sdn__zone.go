@@ -57,7 +57,7 @@ func (config *ConfigSDNZone) CreateWithValidate(ctx context.Context, id string, 
 
 func (config *ConfigSDNZone) Create(ctx context.Context, id string, client *Client) (err error) {
 	config.Zone = id
-	params := config.mapToApiValues()
+	params := config.mapToApiValues(true)
 	return client.CreateSDNZone(ctx, params)
 }
 
@@ -71,7 +71,8 @@ func (config *ConfigSDNZone) UpdateWithValidate(ctx context.Context, id string, 
 
 func (config *ConfigSDNZone) Update(ctx context.Context, id string, client *Client) (err error) {
 	config.Zone = id
-	params := config.mapToApiValues()
+	params := config.mapToApiValues(false)
+	delete(params, "zone")
 	err = client.UpdateSDNZone(ctx, id, params)
 	if err != nil {
 		params, _ := json.Marshal(&params)
@@ -141,8 +142,8 @@ func (c *ConfigSDNZone) Validate(ctx context.Context, id string, create bool, cl
 	return
 }
 
-func (config *ConfigSDNZone) mapToApiValues() (params map[string]interface{}) {
-
+// Set create to true when creating the SDNZone
+func (config *ConfigSDNZone) mapToApiValues(create bool) (params map[string]interface{}) {
 	d, _ := json.Marshal(config)
 	json.Unmarshal(d, &params)
 
@@ -157,8 +158,10 @@ func (config *ConfigSDNZone) mapToApiValues() (params map[string]interface{}) {
 			params[key] = Btoi(v.(bool))
 		}
 	}
-	// Remove the zone and type (path parameters) from the map
-	delete(params, "zone")
-	delete(params, "type")
+
+	// Remove the type attribute when updating
+	if (!create) {
+		delete(params, "type")
+	}
 	return
 }
