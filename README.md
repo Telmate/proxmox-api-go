@@ -141,7 +141,18 @@ Network is temporarily eth1 during the pre-provision phase.
 
 ## Test
 
-You're going to need [vagrant](https://www.vagrantup.com/downloads) and [virtualbox](https://www.virtualbox.org/wiki/Downloads) to run the tests:
+In order to test the SDK, the usage of [vagrant](https://www.vagrantup.com/downloads) is advised to recreate base proxmox virtual machines easily and quickly. The projects [rgl/proxmox-ve](https://github.com/rgl/proxmox-ve) (libvirt, proxmox, hyperv, vmware) and [NemoDacremont/proxmox-ve](https://github.com/NemoDacremont/proxmox-ve) (virtualbox) offers the ability to build vagrant image for different providers.
+
+In order to run the tests, a port forwarding must be setup as in [this Vagrantfile](./Vagrantfile) as following :
+
+```vagrant
+    config.vm.network "forwarded_port",
+            guest: 8006,
+            host_ip: "127.0.0.1",
+            host: 8006
+```
+
+Finally, the tests can be run with the following command :
 
 ```sh
 make test
