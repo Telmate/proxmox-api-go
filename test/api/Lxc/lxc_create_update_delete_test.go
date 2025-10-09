@@ -5,14 +5,20 @@ import (
 	"testing"
 
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
+	"github.com/Telmate/proxmox-api-go/test"
 	api_test "github.com/Telmate/proxmox-api-go/test/api"
 	"github.com/stretchr/testify/require"
 )
 
+
 func Test_Create_Lxc_Container(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	config := _create_lxc_spec(true)
+	config := _create_lxc_spec(true, lxcOsTemplate)
+
+	// Download template before testing Lxc
+	templateConfig := pxapi.ConfigContent_Template{Node: test.FirstNode, Storage: test.CtStorage, Template: test.DownloadedLXCTemplate}
+	pxapi.DownloadLxcTemplate(context.Background(), Test.GetClient(), templateConfig)
 
 	err := config.CreateLxc(context.Background(), _create_vmref(), Test.GetClient())
 	require.NoError(t, err)
@@ -59,12 +65,15 @@ func Test_Remove_Lxc_Container(t *testing.T) {
 func Test_Create_Template_Lxc_Container(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
-	config := _create_lxc_spec(true)
+	config := _create_lxc_spec(true, lxcOsTemplate)
 
 	vmRef := _create_vmref()
 	err := config.CreateLxc(context.Background(), vmRef, Test.GetClient())
 	require.NoError(t, err)
 
 	err = Test.GetClient().CreateTemplate(context.Background(), vmRef)
+	require.NoError(t, err)
+
+	err = vmRef.Delete(context.Background(), Test.GetClient())
 	require.NoError(t, err)
 }

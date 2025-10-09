@@ -1,4 +1,4 @@
 TEST?=$(shell go list ./...)
 
 test:
-	@go test $(TEST)
+	@go test -parallel 1 $(TEST)
