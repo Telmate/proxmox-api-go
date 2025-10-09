@@ -65,9 +65,9 @@ func (w *functionalityVersionWrapper) Unwrap() error { return w.err }
 
 var errNotSupportedInVersion = errors.New("")
 
-func (msg errorMsg) FunctionaltyNotSupportedInVersion() error { return errNotSupportedInVersion }
+func (msg errorMsg) FunctionalityNotSupportedInVersion() error { return errNotSupportedInVersion }
 
-func functionaltyNotSupportedInVersion(functionality string, version Version) error {
+func functionalityNotSupportedInVersion(functionality string, version Version) error {
 	return &functionalityVersionWrapper{
 		err:           errNotSupportedInVersion,
 		functionality: functionality,
