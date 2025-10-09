@@ -22,6 +22,8 @@ type ClientNew interface {
 	guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error)
 	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	guestListResources(ctx context.Context) (RawGuestResources, error)
+	guestStop(ctx context.Context, vmr *VmRef) error
+	guestStopForce(ctx context.Context, vmr *VmRef) error
 	// HA
 	haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error
 	haCreateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error

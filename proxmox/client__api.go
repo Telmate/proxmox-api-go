@@ -18,6 +18,7 @@ type clientApiInterface interface {
 	getUserConfig(ctx context.Context, userId UserID) (map[string]any, error)
 	listGuestResources(ctx context.Context) ([]any, error)
 	listHaRules(ctx context.Context) ([]any, error)
+	updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, params map[string]interface{}) error
 	updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error
 }
 
@@ -70,6 +71,11 @@ func (c *clientAPI) listGuestResources(ctx context.Context) ([]any, error) {
 
 func (c *clientAPI) listHaRules(ctx context.Context) ([]any, error) {
 	return c.getList(ctx, "/cluster/ha/rules", "ha rules", "CONFIG", nil)
+}
+
+func (c *clientAPI) updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, params map[string]interface{}) error {
+	_, err := c.postTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/"+setStatus, params)
+	return err
 }
 
 func (c *clientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error {

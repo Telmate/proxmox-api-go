@@ -132,6 +132,11 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 		return errorMsg{}.guestIsProtectedCantDelete(guestID)
 	}
 
+	version, err := c.Version(ctx)
+	if err != nil {
+		return err
+	}
+
 	if rawGuest.GetStatus() != PowerStateStopped { // Check if guest is running
 		for {
 			guestStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
@@ -141,7 +146,12 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 			if guestStatus.GetState() == PowerStateStopped {
 				break
 			}
-			if err := vmr.forceStop_Unsafe(ctx, c); err != nil {
+			if version.Encode() >= version_8_0_0 { // Try to force stop the guest if supported
+				err = vmr.forceStop_Unsafe(ctx, ca)
+			} else {
+				err = vmr.stop_Unsafe(ctx, ca)
+			}
+			if err != nil {
 				return err
 			}
 		}
@@ -161,20 +171,28 @@ func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
 	return err
 }
 
+// ForeceStop stops the guest immediately without a graceful shutdown and cancels any stop/shutdown operations in progress.
+// This function requires Proxmox VE 8.0 or later.
 func (vmr *VmRef) ForceStop(ctx context.Context, c *Client) error {
-	if err := c.checkInitialized(); err != nil {
-		return err
-	}
-	if err := c.CheckVmRef(ctx, vmr); err != nil {
-		return err
-	}
-	return vmr.forceStop_Unsafe(ctx, c)
+	return c.new().guestStopForce(ctx, vmr)
 }
 
-func (vmr *VmRef) forceStop_Unsafe(ctx context.Context, c *Client) error {
-	_, err := c.StatusChangeVm(ctx, vmr, map[string]any{ // TODO use a more optimized version
-		"overrule-shutdown": int(1)}, "stop")
-	return err
+func (c *clientNew) guestStopForce(ctx context.Context, vmr *VmRef) error {
+	version, err := c.oldClient.Version(ctx)
+	if err != nil {
+		return err
+	}
+	if version.Encode() < version_8_0_0 {
+		return functionaltyNotSupportedInVersion("force stop", version)
+	}
+	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
+		return err
+	}
+	return vmr.forceStop_Unsafe(ctx, c.apiGet())
+}
+
+func (vmr *VmRef) forceStop_Unsafe(ctx context.Context, c clientApiInterface) error {
+	return c.updateGuestStatus(ctx, vmr, "stop", map[string]any{"overrule-shutdown": int(1)})
 }
 
 func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestStatus, error) {
@@ -266,18 +284,18 @@ func (vmr *VmRef) pendingConfig(ctx context.Context, c clientApiInterface) (map[
 }
 
 func (vmr *VmRef) Stop(ctx context.Context, c *Client) error {
-	if err := c.checkInitialized(); err != nil {
-		return err
-	}
-	if err := c.CheckVmRef(ctx, vmr); err != nil {
-		return err
-	}
-	return vmr.stop_Unsafe(ctx, c)
+	return c.new().guestStop(ctx, vmr)
 }
 
-func (vmr *VmRef) stop_Unsafe(ctx context.Context, c *Client) error {
-	_, err := c.StatusChangeVm(ctx, vmr, nil, "stop")
-	return err
+func (c *clientNew) guestStop(ctx context.Context, vmr *VmRef) error {
+	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
+		return err
+	}
+	return vmr.stop_Unsafe(ctx, c.apiGet())
+}
+
+func (vmr *VmRef) stop_Unsafe(ctx context.Context, c clientApiInterface) error {
+	return c.updateGuestStatus(ctx, vmr, "stop", nil)
 }
 
 const (
