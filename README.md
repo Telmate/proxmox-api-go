@@ -127,7 +127,7 @@ With the legacy CLI :
 
 ## JSON Config format
 
-Many commands use configs from files or `stdin`, examples of these configs can be found in [this directory](./docs/config-examples).
+Many commands use configs from files or `stdin`, examples of these configs can be found in [this file](./docs/config-examples.md).
 
 ## ISO requirements (non cloud-init)
 
