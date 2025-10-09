@@ -171,7 +171,7 @@ func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
 	return err
 }
 
-// ForeceStop stops the guest immediately without a graceful shutdown and cancels any stop/shutdown operations in progress.
+// ForceStop stops the guest immediately without a graceful shutdown and cancels any stop/shutdown operations in progress.
 // This function requires Proxmox VE 8.0 or later.
 func (vmr *VmRef) ForceStop(ctx context.Context, c *Client) error {
 	return c.new().guestStopForce(ctx, vmr)
