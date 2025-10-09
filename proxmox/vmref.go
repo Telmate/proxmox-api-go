@@ -91,15 +91,14 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 		vmType: GuestQemu}, nil
 }
 
-func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
-	if err := c.checkInitialized(); err != nil {
-		return err
-	}
+func (vmr VmRef) Delete(ctx context.Context, c *Client) error { return c.new().guestDelete(ctx, &vmr) }
+
+func (c *clientNew) guestDelete(ctx context.Context, vmr *VmRef) error {
 	guestID := vmr.VmId()
 	if guestID == 0 {
 		return errors.New(VmRef_Error_IDnotSet)
 	}
-	ca := c.new().apiGet()
+	ca := c.apiGet()
 	rawGuests, err := listGuests_Unsafe(ctx, ca)
 	if err != nil {
 		return err
@@ -116,13 +115,13 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 	var protection bool // Check if guest is protected
 	switch guestType {
 	case GuestQemu:
-		rawConfig, err := guestGetRawQemuConfig_Unsafe(ctx, &vmr, ca)
+		rawConfig, err := guestGetRawQemuConfig_Unsafe(ctx, vmr, ca)
 		if err != nil {
 			return err
 		}
 		protection = rawConfig.GetProtection()
 	case GuestLxc:
-		rawConfig, err := guestGetLxcRawConfig_Unsafe(ctx, &vmr, ca)
+		rawConfig, err := guestGetLxcRawConfig_Unsafe(ctx, vmr, ca)
 		if err != nil {
 			return err
 		}
@@ -132,14 +131,15 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 		return errorMsg{}.guestIsProtectedCantDelete(guestID)
 	}
 
-	version, err := c.Version(ctx)
+	version, err := c.oldClient.Version(ctx)
 	if err != nil {
 		return err
 	}
 
 	if rawGuest.GetStatus() != PowerStateStopped { // Check if guest is running
 		for {
-			guestStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
+			var guestStatus RawGuestStatus
+			guestStatus, err = vmr.getRawGuestStatus_Unsafe(ctx, c.oldClient)
 			if err != nil {
 				return err
 			}
@@ -156,7 +156,7 @@ func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
 			}
 		}
 	}
-	return vmr.delete_Unsafe(ctx, c)
+	return vmr.delete_Unsafe(ctx, c.oldClient)
 }
 
 func (vmr VmRef) DeleteNoCheck(ctx context.Context, c *Client) error {
@@ -283,9 +283,7 @@ func (vmr *VmRef) pendingConfig(ctx context.Context, c clientApiInterface) (map[
 	return config, pending, nil
 }
 
-func (vmr *VmRef) Stop(ctx context.Context, c *Client) error {
-	return c.new().guestStop(ctx, vmr)
-}
+func (vmr *VmRef) Stop(ctx context.Context, c *Client) error { return c.new().guestStop(ctx, vmr) }
 
 func (c *clientNew) guestStop(ctx context.Context, vmr *VmRef) error {
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
