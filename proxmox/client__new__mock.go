@@ -6,11 +6,14 @@ type MockClient struct {
 	// Guest
 	GuestCheckPendingChangesFunc    func(ctx context.Context, vmr *VmRef) (bool, error)
 	GuestCheckVmRefFunc             func(ctx context.Context, vmr *VmRef) error
+	GuestDeleteFunc                 func(ctx context.Context, vmr *VmRef) error
 	GuestGetLxcActiveRawConfigFunc  func(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error)
 	GuestGetLxcRawConfigFunc        func(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
 	GuestGetQemuActiveRawConfigFunc func(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error)
 	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
 	GuestListResourcesFunc          func(ctx context.Context) (RawGuestResources, error)
+	GuestStopFunc                   func(ctx context.Context, vmr *VmRef) error
+	GuestStopForceFunc              func(ctx context.Context, vmr *VmRef) error
 	// HA
 	HaCreateNodeAffinityRuleFunc            func(ctx context.Context, ha HaNodeAffinityRule) error
 	HaCreateNodeAffinityRuleNoCheckFunc     func(ctx context.Context, ha HaNodeAffinityRule) error
@@ -55,6 +58,13 @@ func (m *MockClient) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
 	return m.GuestCheckVmRefFunc(ctx, vmr)
 }
 
+func (m *MockClient) guestDelete(ctx context.Context, vmr *VmRef) error {
+	if m.GuestDeleteFunc == nil {
+		m.panic("GuestDeleteFunc")
+	}
+	return m.GuestDeleteFunc(ctx, vmr)
+}
+
 func (m *MockClient) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error) {
 	if m.GuestGetLxcActiveRawConfigFunc == nil {
 		m.panic("GuestGetLxcActiveRawConfigFunc")
@@ -88,6 +98,20 @@ func (m *MockClient) guestListResources(ctx context.Context) (RawGuestResources,
 		m.panic("GuestListResourcesFunc")
 	}
 	return m.GuestListResourcesFunc(ctx)
+}
+
+func (m *MockClient) guestStop(ctx context.Context, vmr *VmRef) error {
+	if m.GuestStopFunc == nil {
+		m.panic("GuestStopFunc")
+	}
+	return m.GuestStopFunc(ctx, vmr)
+}
+
+func (m *MockClient) guestStopForce(ctx context.Context, vmr *VmRef) error {
+	if m.GuestStopForceFunc == nil {
+		m.panic("GuestStopForceFunc")
+	}
+	return m.GuestStopForceFunc(ctx, vmr)
 }
 
 func (m *MockClient) haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {

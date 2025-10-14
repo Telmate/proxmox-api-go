@@ -25,7 +25,7 @@ $(HOME)/.local/share/bash-completion/completions/proxmox-api-go: proxmox-api-go-
 
 PHONY += test
 test:
-	@go test $(TEST)
+	@go test -parallel 1 $(TEST)
 
 PHONY += clean
 clean:

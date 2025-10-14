@@ -180,13 +180,17 @@ func Test_ConfigUser_mapToArray(t *testing.T) {
 }
 
 func Test_rawConfigUser_Get(t *testing.T) {
+	type input struct {
+		a    map[string]any
+		user UserID
+	}
 	tests := []struct {
 		name   string
-		input  map[string]any
+		input  input
 		output *ConfigUser
 	}{
 		{name: `all fields`,
-			input: map[string]any{
+			input: input{a: map[string]any{
 				"comment":   string("test comment"),
 				"email":     string("test@example.com"),
 				"enable":    float64(1),
@@ -194,7 +198,7 @@ func Test_rawConfigUser_Get(t *testing.T) {
 				"firstname": string("testFirstName"),
 				"groups":    string("group1,group2,group3"),
 				"keys":      string("2fa"),
-				"lastname":  string("testLastName")},
+				"lastname":  string("testLastName")}},
 			output: &ConfigUser{
 				Comment:   "test comment",
 				Email:     "test@example.com",
@@ -204,50 +208,54 @@ func Test_rawConfigUser_Get(t *testing.T) {
 				Groups:    &[]GroupName{"group1", "group2", "group3"},
 				Keys:      "2fa",
 				LastName:  "testLastName"}},
-		{name: `User`,
-			input: map[string]any{"userid": string("username@pam")},
+		{name: `User list users`,
+			input: input{a: map[string]any{"userid": string("username@pam")}},
 			output: &ConfigUser{
 				User: UserID{Name: "username", Realm: "pam"}}},
+		{name: `User get user`,
+			input: input{a: map[string]any{}, user: UserID{Name: "test-user", Realm: "pve"}},
+			output: &ConfigUser{
+				User: UserID{Name: "test-user", Realm: "pve"}}},
 		{name: `Comment`,
-			input: map[string]any{"comment": "test comment"},
+			input: input{a: map[string]any{"comment": "test comment"}},
 			output: &ConfigUser{
 				Comment: "test comment"}},
 		{name: `Email`,
-			input: map[string]any{"email": string("test@example.com")},
+			input: input{a: map[string]any{"email": string("test@example.com")}},
 			output: &ConfigUser{
 				Email: "test@example.com"}},
 		{name: `Enable`,
-			input: map[string]any{"enable": float64(1)},
+			input: input{a: map[string]any{"enable": float64(1)}},
 			output: &ConfigUser{
 				Enable: true}},
 		{name: `Expire`,
-			input: map[string]any{"expire": float64(123456789)},
+			input: input{a: map[string]any{"expire": float64(123456789)}},
 			output: &ConfigUser{
 				Expire: 123456789}},
 		{name: `FirstName`,
-			input: map[string]any{"firstname": string("testFirstName")},
+			input: input{a: map[string]any{"firstname": string("testFirstName")}},
 			output: &ConfigUser{
 				FirstName: "testFirstName"}},
 		{name: `Groups`,
-			input: map[string]any{"groups": string("group1,group2,group3")},
+			input: input{a: map[string]any{"groups": string("group1,group2,group3")}},
 			output: &ConfigUser{
 				Groups: &[]GroupName{"group1", "group2", "group3"}}},
 		{name: `Groups empty`,
-			input: map[string]any{"groups": string("")},
+			input: input{a: map[string]any{"groups": string("")}},
 			output: &ConfigUser{
 				Groups: &[]GroupName{}}},
 		{name: `Keys`,
-			input: map[string]any{"keys": string("2fa")},
+			input: input{a: map[string]any{"keys": string("2fa")}},
 			output: &ConfigUser{
 				Keys: "2fa"}},
 		{name: `LastName`,
-			input: map[string]any{"lastname": string("testLastName")},
+			input: input{a: map[string]any{"lastname": string("testLastName")}},
 			output: &ConfigUser{
 				LastName: "testLastName"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, (&rawConfigUser{a: test.input}).Get())
+			require.Equal(t, test.output, (&rawConfigUser{a: test.input.a, user: test.input.user}).Get())
 		})
 	}
 }
