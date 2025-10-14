@@ -86,13 +86,7 @@ func (config LxcBootMount) mapToApiUpdate(current LxcBootMount, privileged bool,
 	if usedConfig.SizeInKibibytes != nil {
 		rootFs += ",size=" + usedConfig.SizeInKibibytes.String()
 	}
-	if usedConfig.Storage != nil {
-		rootFs = *usedConfig.Storage + ":" + current.rawDisk + rootFs
-		if current.Storage != nil && rootFs == *current.Storage+":"+current.rawDisk+current.string(privileged) {
-			return
-		}
-	}
-	params[lxcApiKeyRootFS] = rootFs
+	params[lxcApiKeyRootFS] = current.rawDisk + rootFs
 }
 
 func (config LxcBootMount) markMountChanges_Unsafe(current *LxcBootMount) lxcUpdateChanges {

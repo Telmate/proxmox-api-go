@@ -261,7 +261,22 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						Replicate: util.Pointer(false)}},
 					output: map[string]any{"rootfs": ""}}},
 			update: []test{
-				{name: `all storage change, no api `,
+				{name: `all storage change, linked clone`,
+					config: ConfigLXC{BootMount: &LxcBootMount{
+						Storage:         util.Pointer("local-zfs"),
+						SizeInKibibytes: util.Pointer(LxcMountSize(4 * gibibyte)),
+						ACL:             util.Pointer(TriBoolTrue),
+						Options: &LxcBootMountOptions{
+							Discard: util.Pointer(true)},
+						Replicate: util.Pointer(false)}},
+					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
+						Storage:         util.Pointer("local-zfs"),
+						SizeInKibibytes: util.Pointer(LxcMountSize(4 * gibibyte)),
+						ACL:             util.Pointer(TriBoolTrue),
+						Replicate:       util.Pointer(false),
+						rawDisk:         "local-zfs:basevol-9100-disk-0/subvol-105-disk-0"}},
+					output: map[string]any{"rootfs": "local-zfs:basevol-9100-disk-0/subvol-105-disk-0,acl=1,mountoptions=discard,replicate=0,size=4G"}},
+				{name: `all storage change, no api change`,
 					config: ConfigLXC{BootMount: &LxcBootMount{
 						Storage: util.Pointer("local-zfs")}},
 					currentConfig: ConfigLXC{BootMount: &LxcBootMount{
