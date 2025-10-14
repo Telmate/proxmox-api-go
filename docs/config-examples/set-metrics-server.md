@@ -1,0 +1,18 @@
+# `set metricserver` or `setMetricsServer` (legacy) JSON Sample
+
+```json
+{
+  "port": 8086,
+  "server": "192.168.67.3",
+  "type": "influxdb",
+  "enable": true,
+  "mtu": 1500,
+  "timeout": 1,
+  "influxdb": {
+    "protocol": "https",
+    "max-body-size": 25000000,
+    "verify-certificate": false,
+    "token": "Rm8mqheWSVrrKKBW"
+  }
+}
+```

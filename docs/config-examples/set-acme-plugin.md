@@ -1,0 +1,10 @@
+# `setAcmePlugin` (legacy) JSON Sample
+
+```json
+{
+  "api": "aws",
+  "data": "AWS_ACCESS_KEY_ID=DEMOACCESSKEYID\nAWS_SECRET_ACCESS_KEY=DEMOSECRETACCESSKEY\n",
+  "enable": true,
+  "validation-delay": 30
+}
+```

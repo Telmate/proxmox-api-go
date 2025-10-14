@@ -1,0 +1,12 @@
+# `create acmeaccount` or `createAcmeAccount` (legacy) JSON Sample
+
+```json
+{
+  "contact": [
+    "b.wayne@proxmox.com",
+    "c.kent@proxmox.com"
+  ],
+  "directory": "https://acme-staging-v02.api.letsencrypt.org/directory",
+  "tos": true
+}
+```
