@@ -47,6 +47,21 @@ func NewConfigSDNZoneFromJson(input []byte) (config *ConfigSDNZone, err error) {
 	return
 }
 
+func NewConfigSDNZoneFromApi(ctx context.Context, id string, client *Client) (config *ConfigSDNZone, err error) {
+	sdnConfig, err := client.GetSDNZone(ctx, id)
+	if err != nil {
+		return
+	}
+
+	// Marshal to use FromJson
+	buf, err := json.Marshal(sdnConfig)
+	if err != nil {
+		return
+	}
+	config, err = NewConfigSDNZoneFromJson(buf)
+	return
+}
+
 func (config *ConfigSDNZone) CreateWithValidate(ctx context.Context, id string, client *Client) (err error) {
 	err = config.Validate(ctx, id, true, client)
 	if err != nil {
