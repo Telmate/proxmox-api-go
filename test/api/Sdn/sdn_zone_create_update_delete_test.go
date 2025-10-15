@@ -2,7 +2,6 @@ package api_test
 
 import (
 	"context"
-	"log"
 	"testing"
 
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
@@ -44,7 +43,7 @@ func Test_Update_Sdn_Zone(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
 	config := _create_sdn_zone_config()
-	config.MTU = 1337
+	config.MTU = updatedMTU
 
 	err := config.UpdateWithValidate(context.Background(), config.Zone, Test.GetClient())
 	require.NoError(t, err)
@@ -57,7 +56,6 @@ func Test_Sdn_Zone_Is_Updated(t *testing.T) {
 
 	config, err := pxapi.NewConfigSDNZoneFromApi(context.Background(), initialConfig.Zone, Test.GetClient())
 	require.NoError(t, err)
-	log.Println(config)
 	require.Equal(t, config.MTU, updatedMTU)
 }
 
