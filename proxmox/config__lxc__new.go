@@ -706,7 +706,18 @@ func (config LxcCreateOptions) mapToAPI(params map[string]any) {
 		params[lxcApiKeyPassword] = *config.UserPassword
 	}
 	if len(config.PublicSSHkeys) != 0 {
-		params[lxcApiKeySSHPublicKeys] = sshKeyUrlEncode(config.PublicSSHkeys)
+		builder := strings.Builder{}
+		first := true
+		for i := range config.PublicSSHkeys {
+			if v := config.PublicSSHkeys[i].String(); v != "" {
+				if !first {
+					builder.WriteString("\n")
+				}
+				first = false
+				builder.WriteString(v)
+			}
+		}
+		params[lxcApiKeySSHPublicKeys] = builder.String()
 	}
 }
 
