@@ -499,7 +499,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					output: map[string]any{
 						"ostemplate":      string("local:vztmpl/test-template"),
 						"password":        string("myPassword!"),
-						"ssh-public-keys": string(test_data_guest.AuthorizedKey_Encoded_Output())}},
+						"ssh-public-keys": string(test_data_guest.AuthorizedKey_Trimmed_Output())}},
 				{name: `OsTemplate`,
 					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
 						OsTemplate: &LxcTemplate{
@@ -521,7 +521,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
 						PublicSSHkeys: publicKeys()}},
 					output: map[string]any{
-						"ssh-public-keys": string(test_data_guest.AuthorizedKey_Encoded_Output())}},
+						"ssh-public-keys": string(test_data_guest.AuthorizedKey_Trimmed_Output())}},
 				{name: `PublicSSHkeys empty`,
 					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
 						PublicSSHkeys: []AuthorizedKey{}}},
