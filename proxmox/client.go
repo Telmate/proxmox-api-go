@@ -2140,7 +2140,7 @@ func (c *Client) CheckSDNZoneExistance(ctx context.Context, id string) (existanc
 // The returned zone can be unmarshalled into a ConfigSDNZone struct.
 func (c *Client) GetSDNZone(ctx context.Context, zoneName string) (zone map[string]interface{}, err error) {
 	url := fmt.Sprintf("/cluster/sdn/zones/%s", zoneName)
-	err = c.GetJsonRetryable(ctx, url, &zone, 3)
+	zone, err = c.GetItemConfigMapStringInterface(ctx, url, "SDNZone", "CONFIG")
 	return
 }
 
