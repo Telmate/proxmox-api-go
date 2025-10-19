@@ -1,4 +1,3 @@
-TEST?=$(shell go list ./...)
 SRC?=$(shell find cli proxmox internal main.go -name '*.go') go.mod go.sum
 
 PHONY += all
@@ -24,15 +23,12 @@ $(HOME)/.local/share/bash-completion/completions/proxmox-api-go: proxmox-api-go-
 	cp $^ $@
 
 PHONY += test
-test: test-units test-integrations
+test: test-unit test-integration
 
-test-units: # Unit tests
+test-unit: # Unit tests
 	@go test -race -vet=off ./internal/... ./proxmox/...
 
-test-integration:
-	@go test -parallel 1 $(TEST)
-
-test-integrations: # Integration tests
+test-integration: # Integration tests
 	@go test -parallel 1 ./test/...
 
 PHONY += clean
