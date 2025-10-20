@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 
 	pxapi "github.com/Telmate/proxmox-api-go/proxmox"
+	testConstant "github.com/Telmate/proxmox-api-go/test"
 )
 
 type Test struct {
@@ -20,13 +21,13 @@ type Test struct {
 
 func (test *Test) CreateClient() (err error) {
 	if test.APIurl == "" {
-		test.APIurl = "https://127.0.0.1:8006/api2/json"
+		test.APIurl = testConstant.ApiURL
 	}
 	if test.UserID == "" {
-		test.UserID = "root@pam"
+		test.UserID = testConstant.UserID
 	}
 	if test.Password == "" {
-		test.Password = "root"
+		test.Password = testConstant.Password
 	}
 	tlsConfig := &tls.Config{InsecureSkipVerify: true}
 
