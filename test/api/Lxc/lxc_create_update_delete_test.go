@@ -33,6 +33,22 @@ func Test_Lxc_Container_Is_Added(t *testing.T) {
 	require.Equal(t, "alpine", config.OsType)
 }
 
+func Test_Start_Lxc_Container(t *testing.T) {
+	Test := api_test.Test{}
+	_ = Test.CreateTest()
+
+	_, err := Test.GetClient().StartVm(context.Background(), _create_vmref())
+	require.NoError(t, err)
+}
+
+func Test_Stop_Lxc_Container(t *testing.T) {
+	Test := api_test.Test{}
+	_ = Test.CreateTest()
+
+	err := _create_vmref().Stop(context.Background(), Test.GetClient())
+	require.NoError(t, err)
+}
+
 func Test_Update_Lxc_Container(t *testing.T) {
 	Test := api_test.Test{}
 	_ = Test.CreateTest()
