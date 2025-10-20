@@ -216,6 +216,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 			output: qemuDisk{
 				Id:           6,
 				Storage:      "storage",
+				VolumePath:   "110/base-110-disk-1.qcow2/100/vm-100-disk-6.qcow2",
 				Format:       QemuDiskFormat_Qcow2,
 				LinkedDiskId: util.Pointer(GuestID(1)),
 				fileSyntax:   diskSyntaxFile,
@@ -226,6 +227,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 			output: qemuDisk{
 				Id:           12,
 				Storage:      "storage",
+				VolumePath:   "base-110-disk-8/vm-100-disk-12",
 				Format:       QemuDiskFormat_Raw,
 				LinkedDiskId: util.Pointer(GuestID(8)),
 				fileSyntax:   diskSyntaxVolume,
@@ -236,6 +238,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 			output: qemuDisk{
 				Id:         9,
 				Storage:    "storage",
+				VolumePath: "100/vm-100-disk-9.qcow2",
 				Format:     QemuDiskFormat_Qcow2,
 				fileSyntax: diskSyntaxFile,
 			},
@@ -245,6 +248,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 			output: qemuDisk{
 				Id:         45,
 				Storage:    "storage",
+				VolumePath: "vm-100-disk-45",
 				Format:     QemuDiskFormat_Raw,
 				fileSyntax: diskSyntaxVolume,
 			},
@@ -254,7 +258,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 		t.Run(test.name, func(*testing.T) {
 			var linkedVmId GuestID
 			disk := qemuDisk{}
-			disk.Id, disk.Storage, disk.Format, disk.LinkedDiskId, disk.fileSyntax = qemuDisk{}.parseDisk(test.input, &linkedVmId)
+			disk.Id, disk.Storage, disk.VolumePath, disk.Format, disk.LinkedDiskId, disk.fileSyntax = qemuDisk{}.parseDisk(test.input, &linkedVmId)
 			require.Equal(t, test.output, disk, test.name)
 		})
 	}
