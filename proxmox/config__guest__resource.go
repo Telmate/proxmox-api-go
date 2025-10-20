@@ -64,6 +64,7 @@ type GuestResource struct {
 	Pool               PoolName      `json:"pool"`
 	Status             PowerState    `json:"status"`
 	Tags               Tags          `json:"tags"`
+	Locked             bool          `json:"locked"`
 	Template           bool          `json:"template"`
 	Type               GuestType     `json:"type"`
 	Uptime             time.Duration `json:"uptime"`
@@ -79,6 +80,7 @@ type RawGuestResource interface {
 	GetDiskWriteTotal() uint
 	GetHaState() string
 	GetID() GuestID
+	GetLocked() bool
 	GetMemoryTotalInBytes() uint
 	GetMemoryUsedInBytes() uint
 	GetName() GuestName
@@ -106,6 +108,7 @@ func (raw *rawGuestResource) Get() GuestResource {
 		DiskWriteTotal:     raw.GetDiskWriteTotal(),
 		HaState:            raw.GetHaState(),
 		ID:                 raw.GetID(),
+		Locked:             raw.GetLocked(),
 		MemoryTotalInBytes: raw.GetMemoryTotalInBytes(),
 		MemoryUsedInBytes:  raw.GetMemoryUsedInBytes(),
 		Name:               raw.GetName(),
@@ -174,6 +177,11 @@ func (raw *rawGuestResource) GetID() GuestID {
 		return GuestID(v.(float64))
 	}
 	return 0
+}
+
+func (raw *rawGuestResource) GetLocked() bool {
+	_, isSet := raw.a["lock"]
+	return isSet
 }
 
 func (raw *rawGuestResource) GetMemoryTotalInBytes() uint {
