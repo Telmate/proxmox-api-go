@@ -36,6 +36,7 @@ type ConfigLXC struct {
 	Pool            *PoolName         `json:"pool,omitempty"`
 	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, defaults to false ,never nil when returned
 	Protection      *bool             `json:"protection,omitempty"` // Never nil when returned
+	Startup         *GuestStartup     `json:"startup,omitempty"`
 	State           *PowerState       `json:"state,omitempty"`
 	Swap            *LxcSwap          `json:"swap,omitempty"` // Never nil when returned
 	Tags            *Tags             `json:"tags,omitempty"`
@@ -143,6 +144,9 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.Protection != nil && *config.Protection {
 		params[lxcAPIKeyProtection] = "1"
 	}
+	if config.Startup != nil {
+		config.Startup.mapToApiCreate(params)
+	}
 	if config.Swap != nil {
 		params[lxcApiKeySwap] = int(*config.Swap)
 	}
@@ -220,6 +224,13 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 			params[lxcAPIKeyProtection] = "1"
 		} else {
 			delete += "," + lxcAPIKeyProtection
+		}
+	}
+	if config.Startup != nil {
+		if current.Startup != nil {
+			delete += config.Startup.mapToApiUpdate(current.Startup, params)
+		} else {
+			config.Startup.mapToApiCreate(params)
 		}
 	}
 	if config.Swap != nil && (current.Swap == nil || *config.Swap != *current.Swap) {
@@ -569,6 +580,7 @@ func (raw *rawConfigLXC) get(vmr VmRef) *ConfigLXC {
 		OperatingSystem: raw.GetOperatingSystem(),
 		Privileged:      &privileged,
 		Protection:      util.Pointer(raw.GetProtection()),
+		Startup:         raw.GetStartup(),
 		Swap:            util.Pointer(raw.GetSwap()),
 		Tags:            raw.GetTags(),
 		rawDigest:       raw.getDigest()}
@@ -645,6 +657,10 @@ func (raw *rawConfigLXC) GetProtection() bool {
 		return int(v.(float64)) == 1
 	}
 	return false
+}
+
+func (raw *rawConfigLXC) GetStartup() *GuestStartup {
+	return GuestStartup{}.mapToSDK(raw.a)
 }
 
 func (raw *rawConfigLXC) GetSwap() LxcSwap {
