@@ -53,7 +53,6 @@ type ConfigQemu struct {
 	Memory           *QemuMemory           `json:"memory,omitempty"`
 	Name             *GuestName            `json:"name,omitempty"` // never nil when returned
 	Networks         QemuNetworkInterfaces `json:"networks,omitempty"`
-	Onboot           *bool                 `json:"onboot,omitempty"`
 	Pool             *PoolName             `json:"pool,omitempty"`
 	Protection       *bool                 `json:"protection,omitempty"` // never nil when returned
 	QemuDisks        QemuDevices           `json:"disk,omitempty"`       // Deprecated use Disks *QemuStorages instead
@@ -68,7 +67,7 @@ type ConfigQemu struct {
 	Scsihw           string                `json:"scsihw,omitempty"` // TODO should be custom type with enum
 	Serials          SerialInterfaces      `json:"serials,omitempty"`
 	Smbios1          string                `json:"smbios1,omitempty"` // TODO should be custom type with enum?
-	Startup          string                `json:"startup,omitempty"` // TODO should be a struct?
+	Startup          *GuestStartup         `json:"startup,omitempty"`
 	Storage          string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
 	TPM              *TpmState             `json:"tpm,omitempty"`
 	Tablet           *bool                 `json:"tablet,omitempty"` // never nil when returned
@@ -155,9 +154,6 @@ func (config *ConfigQemu) defaults() {
 	if config.EFIDisk == nil {
 		config.EFIDisk = QemuDevice{}
 	}
-	if config.Onboot == nil {
-		config.Onboot = util.Pointer(true)
-	}
 	if config.Hotplug == "" {
 		config.Hotplug = "network,disk,usb"
 	}
@@ -223,9 +219,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersi
 			params[qemuApiKeyName] = config.Name.String()
 		}
 	}
-	if config.Onboot != nil {
-		params["onboot"] = *config.Onboot
-	}
 	if config.Protection != nil {
 		params["protection"] = *config.Protection
 	}
@@ -235,8 +228,12 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersi
 	if config.Scsihw != "" {
 		params["scsihw"] = config.Scsihw
 	}
-	if config.Startup != "" {
-		params["startup"] = config.Startup
+	if config.Startup != nil {
+		if currentConfig.Startup != nil {
+			itemsToDelete += config.Startup.mapToApiUpdate(currentConfig.Startup, params)
+		} else {
+			config.Startup.mapToApiCreate(params)
+		}
 	}
 	if config.Tablet != nil {
 		params[qemuApiKeyTablet] = *config.Tablet
@@ -385,9 +382,6 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 	if _, isSet := params["machine"]; isSet {
 		config.Machine = params["machine"].(string)
 	}
-	if _, isSet := params["onboot"]; isSet {
-		config.Onboot = util.Pointer(Itob(int(params["onboot"].(float64))))
-	}
 	if itemValue, isSet := params["tpmstate0"]; isSet {
 		config.TPM = TpmState{}.mapToSDK(itemValue.(string))
 	}
@@ -399,9 +393,6 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 	}
 	if _, isSet := params["scsihw"]; isSet {
 		config.Scsihw = params["scsihw"].(string)
-	}
-	if _, isSet := params["startup"]; isSet {
-		config.Startup = params["startup"].(string)
 	}
 	if _, isSet := params["smbios1"]; isSet {
 		config.Smbios1 = params["smbios1"].(string)
@@ -1141,6 +1132,7 @@ func (raw *rawConfigQemu) get(vmr *VmRef) (*ConfigQemu, error) {
 		Protection:       util.Pointer(raw.GetProtection()),
 		RandomnessDevice: raw.GetRandomnessDevice(),
 		Serials:          raw.GetSerials(),
+		Startup:          raw.GetStartup(),
 		Tablet:           util.Pointer(raw.GetTablet()),
 		Tags:             raw.GetTags(),
 		USBs:             raw.GetUSBs(),
@@ -1171,6 +1163,10 @@ func (raw *rawConfigQemu) GetProtection() bool {
 		return int(v.(float64)) == 1
 	}
 	return false
+}
+
+func (raw *rawConfigQemu) GetStartup() *GuestStartup {
+	return GuestStartup{}.mapToSDK(raw.a)
 }
 
 func (raw *rawConfigQemu) GetTablet() bool {

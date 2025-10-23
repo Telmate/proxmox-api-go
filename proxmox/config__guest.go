@@ -302,6 +302,126 @@ func (id GuestID) Validate() error {
 	return nil
 }
 
+type GuestStartup struct {
+	Enabled         *bool              `json:"enabled,omitempty"`          // Never nil when returned.
+	Order           *GuestStartupOrder `json:"order,omitempty"`            // Never nil when returned.
+	ShutdownTimeout *TimeDuratation    `json:"shutdown_timeout,omitempty"` // Number of seconds of the shutdown timeout. Never nil when returned.
+	StartupDelay    *TimeDuratation    `json:"startup_delay,omitempty"`    // Number of seconds of the startup delay in seconds. Never nil when returned.
+}
+
+const (
+	GuestApiKeyOnBoot  string = "onboot"
+	GuestApiKeyStartup string = "startup"
+)
+
+func (config GuestStartup) combine(current *GuestStartup) GuestStartup {
+	newConfig := GuestStartup{
+		Enabled:         config.Enabled,
+		Order:           current.Order,
+		StartupDelay:    current.StartupDelay,
+		ShutdownTimeout: current.ShutdownTimeout}
+	if config.Order != nil {
+		newConfig.Order = config.Order
+	}
+	if config.StartupDelay != nil {
+		newConfig.StartupDelay = config.StartupDelay
+	}
+	if config.ShutdownTimeout != nil {
+		newConfig.ShutdownTimeout = config.ShutdownTimeout
+	}
+	return newConfig
+}
+
+func (config GuestStartup) mapToApiCreate(params map[string]any) {
+	if config.Enabled != nil && *config.Enabled {
+		params[GuestApiKeyOnBoot] = float64(1)
+	}
+	if v := config.mapToApiStartupCreate(); len(v) > 0 {
+		params[GuestApiKeyStartup] = v[1:] // remove leading comma
+	}
+}
+
+func (config GuestStartup) mapToApiStartupCreate() (parts string) {
+	if config.Order != nil && *config.Order > GuestStartupOrderAny {
+		parts += ",order=" + config.Order.String()
+	}
+	if config.StartupDelay != nil && *config.StartupDelay > TimeDuratationDefault {
+		parts += ",up=" + config.StartupDelay.String()
+	}
+	if config.ShutdownTimeout != nil && *config.ShutdownTimeout > TimeDuratationDefault {
+		parts += ",down=" + config.ShutdownTimeout.String()
+	}
+	return
+}
+
+func (config GuestStartup) mapToApiUpdate(current *GuestStartup, params map[string]any) (delete string) {
+	usedConfig := config.combine(current)
+	if usedConfig.Enabled != nil {
+		if current.Enabled == nil || *usedConfig.Enabled != *current.Enabled {
+			if *usedConfig.Enabled {
+				params[GuestApiKeyOnBoot] = float64(1)
+			} else {
+				delete += "," + GuestApiKeyOnBoot
+			}
+		}
+	}
+	rawStartup := usedConfig.mapToApiStartupCreate()
+	if rawStartup != current.mapToApiStartupCreate() {
+		if rawStartup != "" {
+			params[GuestApiKeyStartup] = rawStartup[1:] // remove leading comma
+		} else {
+			delete += "," + GuestApiKeyStartup
+		}
+	}
+	return
+}
+
+func (GuestStartup) mapToSDK(params map[string]any) *GuestStartup {
+	config := GuestStartup{
+		Enabled:         util.Pointer(false),
+		Order:           util.Pointer(GuestStartupOrderAny),
+		ShutdownTimeout: util.Pointer(TimeDuratationDefault),
+		StartupDelay:    util.Pointer(TimeDuratationDefault)}
+	var configPtr *GuestStartup
+	if v, ok := params[GuestApiKeyOnBoot]; ok {
+		configPtr = &config
+		*config.Enabled = int(v.(float64)) == 1
+	}
+	if v, ok := params[GuestApiKeyStartup]; ok {
+		if configPtr == nil {
+			configPtr = &config
+		}
+		settings := splitStringOfSettings(v.(string))
+		if vv, ok := settings["order"]; ok {
+			order, _ := strconv.ParseUint(vv, 10, 64)
+			*config.Order = GuestStartupOrder(order)
+		}
+		if vv, ok := settings["up"]; ok {
+			up, _ := strconv.ParseUint(vv, 10, 64)
+			*config.StartupDelay = TimeDuratation(up)
+		}
+		if vv, ok := settings["down"]; ok {
+			down, _ := strconv.ParseUint(vv, 10, 64)
+			*config.ShutdownTimeout = TimeDuratation(down)
+		}
+	}
+	return configPtr
+}
+
+// Negative value means default
+type TimeDuratation int
+
+const TimeDuratationDefault TimeDuratation = -1
+
+func (d TimeDuratation) String() string { return strconv.Itoa(int(d)) } // String is for fmt.Stringer.
+
+// Negative value means any order
+type GuestStartupOrder int
+
+const GuestStartupOrderAny GuestStartupOrder = -1
+
+func (o GuestStartupOrder) String() string { return strconv.Itoa(int(o)) } // String is for fmt.Stringer.
+
 // GuestType is an enum for the type of guest (lxc or qemu)
 type GuestType uint8
 
