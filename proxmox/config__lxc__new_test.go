@@ -1907,11 +1907,11 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					output: map[string]any{}},
 				{name: `ShutdownTimeout no effect`,
 					config: ConfigLXC{Startup: &GuestStartup{
-						ShutdownTimeout: util.Pointer(TimeDuratation(-1))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(-1))}},
 					output: map[string]any{}},
 				{name: `StartupDelay no effect`,
 					config: ConfigLXC{Startup: &GuestStartup{
-						StartupDelay: util.Pointer(TimeDuratation(-1))}},
+						StartupDelay: util.Pointer(TimeDuration(-1))}},
 					output: map[string]any{}}},
 			createUpdate: []test{
 				{name: `Enabled true`,
@@ -1928,27 +1928,27 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					output: map[string]any{"startup": string("order=10")}},
 				{name: `ShutdownTimeout`,
 					config: ConfigLXC{Startup: &GuestStartup{
-						ShutdownTimeout: util.Pointer(TimeDuratation(74530))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(74530))}},
 					currentConfig: ConfigLXC{Startup: &GuestStartup{
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(9362))}},
 					output: map[string]any{"startup": string("down=74530")}},
 				{name: `StartupDelay`,
 					config: ConfigLXC{Startup: &GuestStartup{
-						StartupDelay: util.Pointer(TimeDuratation(200))}},
+						StartupDelay: util.Pointer(TimeDuration(200))}},
 					currentConfig: ConfigLXC{Startup: &GuestStartup{
-						StartupDelay: util.Pointer(TimeDuratation(50))}},
+						StartupDelay: util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("up=200")}},
 				{name: `all`,
 					config: ConfigLXC{Startup: &GuestStartup{
 						Enabled:         util.Pointer(true),
 						Order:           util.Pointer(GuestStartupOrder(10)),
-						StartupDelay:    util.Pointer(TimeDuratation(200)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(74530))}},
+						StartupDelay:    util.Pointer(TimeDuration(200)),
+						ShutdownTimeout: util.Pointer(TimeDuration(74530))}},
 					currentConfig: ConfigLXC{Startup: &GuestStartup{
 						Enabled:         util.Pointer(false),
 						Order:           util.Pointer(GuestStartupOrder(20)),
-						StartupDelay:    util.Pointer(TimeDuratation(50)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362))}},
+						StartupDelay:    util.Pointer(TimeDuration(50)),
+						ShutdownTimeout: util.Pointer(TimeDuration(9362))}},
 					output: map[string]any{
 						"onboot":  float64(1),
 						"startup": string("order=10,up=200,down=74530")}}},
@@ -1971,24 +1971,24 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						Order: util.Pointer(GuestStartupOrder(-1))}},
 					currentConfig: ConfigLXC{Startup: &GuestStartup{
 						Order:           util.Pointer(GuestStartupOrder(20)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362)),
-						StartupDelay:    util.Pointer(TimeDuratation(50))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
+						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("up=50,down=9362")}},
 				{name: `ShutdownTimeout unset`,
 					config: ConfigLXC{Startup: &GuestStartup{
-						ShutdownTimeout: util.Pointer(TimeDuratation(-1))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(-1))}},
 					currentConfig: ConfigLXC{Startup: &GuestStartup{
 						Order:           util.Pointer(GuestStartupOrder(20)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362)),
-						StartupDelay:    util.Pointer(TimeDuratation(50))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
+						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("order=20,up=50")}},
 				{name: `StartupDelay unset`,
 					config: ConfigLXC{Startup: &GuestStartup{
-						StartupDelay: util.Pointer(TimeDuratation(-1))}},
+						StartupDelay: util.Pointer(TimeDuration(-1))}},
 					currentConfig: ConfigLXC{Startup: &GuestStartup{
 						Order:           util.Pointer(GuestStartupOrder(20)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362)),
-						StartupDelay:    util.Pointer(TimeDuratation(50))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
+						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("order=20,down=9362")}}}},
 		{category: `Swap`,
 			createUpdate: []test{
@@ -3703,32 +3703,32 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(true),
 							Order:           util.Pointer(GuestStartupOrder(-1)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(-1)),
-							StartupDelay:    util.Pointer(TimeDuratation(-1))}})},
+							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
+							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
 				{name: `Order`,
 					input: map[string]any{"startup": string("order=0")},
 					output: baseConfig(ConfigLXC{
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(false),
 							Order:           util.Pointer(GuestStartupOrder(0)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(-1)),
-							StartupDelay:    util.Pointer(TimeDuratation(-1))}})},
+							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
+							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
 				{name: `ShutdownTimeout`,
 					input: map[string]any{"startup": string("down=503")},
 					output: baseConfig(ConfigLXC{
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(false),
 							Order:           util.Pointer(GuestStartupOrder(-1)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(503)),
-							StartupDelay:    util.Pointer(TimeDuratation(-1))}})},
+							ShutdownTimeout: util.Pointer(TimeDuration(503)),
+							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
 				{name: `StartupDelay`,
 					input: map[string]any{"startup": string("up=7")},
 					output: baseConfig(ConfigLXC{
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(false),
 							Order:           util.Pointer(GuestStartupOrder(-1)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(-1)),
-							StartupDelay:    util.Pointer(TimeDuratation(7))}})},
+							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
+							StartupDelay:    util.Pointer(TimeDuration(7))}})},
 				{name: `all`,
 					input: map[string]any{
 						"onboot":  float64(1),
@@ -3737,8 +3737,8 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(true),
 							Order:           util.Pointer(GuestStartupOrder(75)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(43742)),
-							StartupDelay:    util.Pointer(TimeDuratation(8454))}})}}},
+							ShutdownTimeout: util.Pointer(TimeDuration(43742)),
+							StartupDelay:    util.Pointer(TimeDuration(8454))}})}}},
 		{category: `Swap`,
 			tests: []test{
 				{name: `set`,

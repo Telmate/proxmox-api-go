@@ -4177,11 +4177,11 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output: map[string]any{}},
 				{name: `ShutdownTimeout no effect`,
 					config: &ConfigQemu{Startup: &GuestStartup{
-						ShutdownTimeout: util.Pointer(TimeDuratation(-1))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(-1))}},
 					output: map[string]any{}},
 				{name: `StartupDelay no effect`,
 					config: &ConfigQemu{Startup: &GuestStartup{
-						StartupDelay: util.Pointer(TimeDuratation(-1))}},
+						StartupDelay: util.Pointer(TimeDuration(-1))}},
 					output: map[string]any{}}},
 			createUpdate: []test{
 				{name: `Enabled true`,
@@ -4198,27 +4198,27 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output: map[string]any{"startup": string("order=10")}},
 				{name: `ShutdownTimeout`,
 					config: &ConfigQemu{Startup: &GuestStartup{
-						ShutdownTimeout: util.Pointer(TimeDuratation(74530))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(74530))}},
 					currentConfig: ConfigQemu{Startup: &GuestStartup{
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(9362))}},
 					output: map[string]any{"startup": string("down=74530")}},
 				{name: `StartupDelay`,
 					config: &ConfigQemu{Startup: &GuestStartup{
-						StartupDelay: util.Pointer(TimeDuratation(200))}},
+						StartupDelay: util.Pointer(TimeDuration(200))}},
 					currentConfig: ConfigQemu{Startup: &GuestStartup{
-						StartupDelay: util.Pointer(TimeDuratation(50))}},
+						StartupDelay: util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("up=200")}},
 				{name: `all`,
 					config: &ConfigQemu{Startup: &GuestStartup{
 						Enabled:         util.Pointer(true),
 						Order:           util.Pointer(GuestStartupOrder(10)),
-						StartupDelay:    util.Pointer(TimeDuratation(200)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(74530))}},
+						StartupDelay:    util.Pointer(TimeDuration(200)),
+						ShutdownTimeout: util.Pointer(TimeDuration(74530))}},
 					currentConfig: ConfigQemu{Startup: &GuestStartup{
 						Enabled:         util.Pointer(false),
 						Order:           util.Pointer(GuestStartupOrder(20)),
-						StartupDelay:    util.Pointer(TimeDuratation(50)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362))}},
+						StartupDelay:    util.Pointer(TimeDuration(50)),
+						ShutdownTimeout: util.Pointer(TimeDuration(9362))}},
 					output: map[string]any{
 						"onboot":  float64(1),
 						"startup": string("order=10,up=200,down=74530")}}},
@@ -4240,24 +4240,24 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Order: util.Pointer(GuestStartupOrder(-1))}},
 					currentConfig: ConfigQemu{Startup: &GuestStartup{
 						Order:           util.Pointer(GuestStartupOrder(20)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362)),
-						StartupDelay:    util.Pointer(TimeDuratation(50))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
+						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("up=50,down=9362")}},
 				{name: `ShutdownTimeout unset`,
 					config: &ConfigQemu{Startup: &GuestStartup{
-						ShutdownTimeout: util.Pointer(TimeDuratation(-1))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(-1))}},
 					currentConfig: ConfigQemu{Startup: &GuestStartup{
 						Order:           util.Pointer(GuestStartupOrder(20)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362)),
-						StartupDelay:    util.Pointer(TimeDuratation(50))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
+						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("order=20,up=50")}},
 				{name: `StartupDelay unset`,
 					config: &ConfigQemu{Startup: &GuestStartup{
-						StartupDelay: util.Pointer(TimeDuratation(-1))}},
+						StartupDelay: util.Pointer(TimeDuration(-1))}},
 					currentConfig: ConfigQemu{Startup: &GuestStartup{
 						Order:           util.Pointer(GuestStartupOrder(20)),
-						ShutdownTimeout: util.Pointer(TimeDuratation(9362)),
-						StartupDelay:    util.Pointer(TimeDuratation(50))}},
+						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
+						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("order=20,down=9362")}}}},
 		{category: `Tags`,
 			createUpdate: []test{
@@ -7383,32 +7383,32 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(true),
 							Order:           util.Pointer(GuestStartupOrder(-1)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(-1)),
-							StartupDelay:    util.Pointer(TimeDuratation(-1))}})},
+							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
+							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
 				{name: `Order`,
 					input: map[string]any{"startup": string("order=0")},
 					output: baseConfig(ConfigQemu{
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(false),
 							Order:           util.Pointer(GuestStartupOrder(0)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(-1)),
-							StartupDelay:    util.Pointer(TimeDuratation(-1))}})},
+							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
+							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
 				{name: `ShutdownTimeout`,
 					input: map[string]any{"startup": string("down=503")},
 					output: baseConfig(ConfigQemu{
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(false),
 							Order:           util.Pointer(GuestStartupOrder(-1)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(503)),
-							StartupDelay:    util.Pointer(TimeDuratation(-1))}})},
+							ShutdownTimeout: util.Pointer(TimeDuration(503)),
+							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
 				{name: `StartupDelay`,
 					input: map[string]any{"startup": string("up=7")},
 					output: baseConfig(ConfigQemu{
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(false),
 							Order:           util.Pointer(GuestStartupOrder(-1)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(-1)),
-							StartupDelay:    util.Pointer(TimeDuratation(7))}})},
+							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
+							StartupDelay:    util.Pointer(TimeDuration(7))}})},
 				{name: `all`,
 					input: map[string]any{
 						"onboot":  float64(1),
@@ -7417,8 +7417,8 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Startup: &GuestStartup{
 							Enabled:         util.Pointer(true),
 							Order:           util.Pointer(GuestStartupOrder(75)),
-							ShutdownTimeout: util.Pointer(TimeDuratation(43742)),
-							StartupDelay:    util.Pointer(TimeDuratation(8454))}})}}},
+							ShutdownTimeout: util.Pointer(TimeDuration(43742)),
+							StartupDelay:    util.Pointer(TimeDuration(8454))}})}}},
 		{category: `TPM`,
 			tests: []test{
 				{name: `All`,

@@ -305,8 +305,8 @@ func (id GuestID) Validate() error {
 type GuestStartup struct {
 	Enabled         *bool              `json:"enabled,omitempty"`          // Never nil when returned.
 	Order           *GuestStartupOrder `json:"order,omitempty"`            // Never nil when returned.
-	ShutdownTimeout *TimeDuratation    `json:"shutdown_timeout,omitempty"` // Number of seconds of the shutdown timeout. Never nil when returned.
-	StartupDelay    *TimeDuratation    `json:"startup_delay,omitempty"`    // Number of seconds of the startup delay in seconds. Never nil when returned.
+	ShutdownTimeout *TimeDuration      `json:"shutdown_timeout,omitempty"` // Number of seconds of the shutdown timeout. Never nil when returned.
+	StartupDelay    *TimeDuration      `json:"startup_delay,omitempty"`    // Number of seconds of the startup delay in seconds. Never nil when returned.
 }
 
 const (
@@ -345,10 +345,10 @@ func (config GuestStartup) mapToApiStartupCreate() (parts string) {
 	if config.Order != nil && *config.Order > GuestStartupOrderAny {
 		parts += ",order=" + config.Order.String()
 	}
-	if config.StartupDelay != nil && *config.StartupDelay > TimeDuratationDefault {
+	if config.StartupDelay != nil && *config.StartupDelay > TimeDurationDefault {
 		parts += ",up=" + config.StartupDelay.String()
 	}
-	if config.ShutdownTimeout != nil && *config.ShutdownTimeout > TimeDuratationDefault {
+	if config.ShutdownTimeout != nil && *config.ShutdownTimeout > TimeDurationDefault {
 		parts += ",down=" + config.ShutdownTimeout.String()
 	}
 	return
@@ -380,8 +380,8 @@ func (GuestStartup) mapToSDK(params map[string]any) *GuestStartup {
 	config := GuestStartup{
 		Enabled:         util.Pointer(false),
 		Order:           util.Pointer(GuestStartupOrderAny),
-		ShutdownTimeout: util.Pointer(TimeDuratationDefault),
-		StartupDelay:    util.Pointer(TimeDuratationDefault)}
+		ShutdownTimeout: util.Pointer(TimeDurationDefault),
+		StartupDelay:    util.Pointer(TimeDurationDefault)}
 	var configPtr *GuestStartup
 	if v, ok := params[GuestApiKeyOnBoot]; ok {
 		configPtr = &config
@@ -398,22 +398,22 @@ func (GuestStartup) mapToSDK(params map[string]any) *GuestStartup {
 		}
 		if vv, ok := settings["up"]; ok {
 			up, _ := strconv.ParseUint(vv, 10, 64)
-			*config.StartupDelay = TimeDuratation(up)
+			*config.StartupDelay = TimeDuration(up)
 		}
 		if vv, ok := settings["down"]; ok {
 			down, _ := strconv.ParseUint(vv, 10, 64)
-			*config.ShutdownTimeout = TimeDuratation(down)
+			*config.ShutdownTimeout = TimeDuration(down)
 		}
 	}
 	return configPtr
 }
 
 // Negative value means default
-type TimeDuratation int
+type TimeDuration int
 
-const TimeDuratationDefault TimeDuratation = -1
+const TimeDurationDefault TimeDuration = -1
 
-func (d TimeDuratation) String() string { return strconv.Itoa(int(d)) } // String is for fmt.Stringer.
+func (d TimeDuration) String() string { return strconv.Itoa(int(d)) } // String is for fmt.Stringer.
 
 // Negative value means any order
 type GuestStartupOrder int
