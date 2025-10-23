@@ -199,6 +199,7 @@ type qemuDisk struct {
 	SizeInKibibytes QemuDiskSize
 	// TODO custom type
 	Storage       string // Only set for Disk
+	VolumePath    string
 	Type          qemuDiskType
 	WorldWideName QemuWorldWideName
 	ImportFrom    string
@@ -264,7 +265,11 @@ func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId GuestID, currentStorage str
 				settings = disk.Storage + ":0.001"
 			}
 		} else {
-			settings = disk.formatDisk(vmID, LinkedVmId, currentStorage, currentFormat, syntax)
+			if disk.VolumePath != "" {
+				settings = disk.Storage + ":" + disk.VolumePath
+			} else {
+				settings = disk.formatDisk(vmID, LinkedVmId, currentStorage, currentFormat, syntax)
+			}
 		}
 	}
 
@@ -353,7 +358,7 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]string, linkedV
 	if diskData[0:1] == "/" {
 		disk.File = diskData
 	} else {
-		disk.Id, disk.Storage, disk.Format, disk.LinkedDiskId, disk.fileSyntax = qemuDisk{}.parseDisk(diskData, linkedVmId)
+		disk.Id, disk.Storage, disk.VolumePath, disk.Format, disk.LinkedDiskId, disk.fileSyntax = qemuDisk{}.parseDisk(diskData, linkedVmId)
 	}
 
 	if len(settings) == 0 {
@@ -446,14 +451,14 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]string, linkedV
 // storage:100/vm-100-disk-0.qcow2
 // storage:base-110-disk-1/vm-100-disk-0
 // storage:vm-100-disk-0
-func (qemuDisk) parseDisk(diskData string, linkedVmId *GuestID) (diskId uint, storage string, format QemuDiskFormat, linkedDiskId *GuestID, syntax diskSyntaxEnum) {
+func (qemuDisk) parseDisk(diskData string, linkedVmId *GuestID) (diskId uint, storage string, volumePath string, format QemuDiskFormat, linkedDiskId *GuestID, syntax diskSyntaxEnum) {
 	parts := strings.Split(diskData, ":")
 	storage = parts[0]
 
 	if len(parts) != 2 {
 		return
 	}
-
+	volumePath = parts[1]
 	pathParts := strings.Split(parts[1], "/")
 	switch len(pathParts) {
 	case 1:
@@ -987,6 +992,7 @@ func (storage qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, lin
 			if storage.Disk.SizeInKibibytes >= currentStorage.Disk.SizeInKibibytes { // Update
 				storage.Disk.Id = currentStorage.Disk.Id
 				storage.Disk.LinkedDiskId = currentStorage.Disk.LinkedDiskId
+				storage.Disk.VolumePath = currentStorage.Disk.VolumePath
 				disk := storage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, currentStorage.Disk.fileSyntax, false)
 				if disk != currentStorage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, currentStorage.Disk.fileSyntax, false) {
 					params[string(id)] = disk
