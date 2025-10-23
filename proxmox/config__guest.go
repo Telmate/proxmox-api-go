@@ -306,7 +306,7 @@ type GuestStartup struct {
 	Enabled         *bool              `json:"enabled,omitempty"`          // Never nil when returned.
 	Order           *GuestStartupOrder `json:"order,omitempty"`            // Never nil when returned.
 	ShutdownTimeout *TimeDuration      `json:"shutdown_timeout,omitempty"` // Number of seconds of the shutdown timeout. Never nil when returned.
-	StartupDelay    *TimeDuration      `json:"startup_delay,omitempty"`    // Number of seconds of the startup delay in seconds. Never nil when returned.
+	StartupDelay    *TimeDuration      `json:"startup_delay,omitempty"`    // Number of seconds of the startup delay. Never nil when returned.
 }
 
 const (
