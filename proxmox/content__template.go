@@ -22,6 +22,28 @@ func (content ConfigContent_Template) mapToApiValues() map[string]interface{} {
 	}
 }
 
+func (content ConfigContent_Template) toContentFile() Content_File {
+	return Content_File{
+		Storage: content.Storage,
+		ContentType: ContentType_Template,
+		FilePath: content.Template,
+	}
+}
+
+func (content ConfigContent_Template) Delete(ctx context.Context, client *Client) error {
+	return DeleteFile(ctx, client, content.Node, content.toContentFile())
+}
+
+func (content ConfigContent_Template) Exists(ctx context.Context, client *Client) (exists bool, err error) {
+	files, err := ListFiles(ctx, client, content.Node, content.Storage, ContentType_Template)
+	if err != nil {
+		return
+	}
+
+	exists = CheckFileExistence(content.Template, files)
+	return
+}
+
 // Return an error if the one of the values is empty.
 func (content ConfigContent_Template) Validate() (err error) {
 	if content.Node == "" {
