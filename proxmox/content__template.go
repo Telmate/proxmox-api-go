@@ -30,6 +30,12 @@ func (content ConfigContent_Template) toContentFile() Content_File {
 	}
 }
 
+// Returns the volume id of the Template, it is in the form of <storage>:vztmpl/<file>
+// Ex: local:vztmpl/alpine-3.22-default_20250617_amd64.tar.xz
+func (content ConfigContent_Template) VolId() string {
+	return content.toContentFile().format()
+}
+
 func (content ConfigContent_Template) Download(ctx context.Context, client *Client) error {
 	return DownloadLxcTemplate(ctx, client, content)
 }
