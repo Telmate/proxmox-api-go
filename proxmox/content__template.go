@@ -30,6 +30,10 @@ func (content ConfigContent_Template) toContentFile() Content_File {
 	}
 }
 
+func (content ConfigContent_Template) Download(ctx context.Context, client *Client) error {
+	return DownloadLxcTemplate(ctx, client, content)
+}
+
 func (content ConfigContent_Template) Delete(ctx context.Context, client *Client) error {
 	return DeleteFile(ctx, client, content.Node, content.toContentFile())
 }
