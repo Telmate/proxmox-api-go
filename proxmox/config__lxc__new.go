@@ -70,7 +70,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 	}
 	url := "/nodes/" + node.String() + "/lxc"
 	if config.ID == nil {
-		id, err = guestCreateLoop_Unsafe(ctx, "vmid", url, params, c)
+		id, err = guestCreateLoop_Unsafe(ctx, lxcApiKeyGuestID, url, params, c)
 		if err != nil {
 			return nil, err
 		}
@@ -80,6 +80,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		if err != nil {
 			return nil, fmt.Errorf("error creating LXC: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}
+		id = *config.ID
 	}
 
 	vmRef := &VmRef{
@@ -123,7 +124,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		config.Features.mapToApiCreate(params)
 	}
 	if config.ID != nil {
-		params[lxcApiKeyGuestID] = *config.ID
+		params[lxcApiKeyGuestID] = int(*config.ID)
 	}
 	if config.Memory != nil {
 		params[lxcApiKeyMemory] = *config.Memory

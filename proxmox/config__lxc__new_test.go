@@ -782,7 +782,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			create: []test{
 				{name: `set`,
 					config: ConfigLXC{ID: util.Pointer(GuestID(15))},
-					output: map[string]any{"vmid": GuestID(15)}}},
+					output: map[string]any{"vmid": int(15)}}},
 			update: []test{
 				{name: `do nothing`,
 					config:        ConfigLXC{ID: util.Pointer(GuestID(15))},
