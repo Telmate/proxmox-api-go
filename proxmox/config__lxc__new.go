@@ -80,6 +80,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		if err != nil {
 			return nil, fmt.Errorf("error creating LXC: %v, error status: %s (params: %v)", err, exitStatus, params)
 		}
+		id = *config.ID
 	}
 
 	vmRef := &VmRef{
