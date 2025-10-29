@@ -123,7 +123,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		config.Features.mapToApiCreate(params)
 	}
 	if config.ID != nil {
-		params[lxcApiKeyGuestID] = *config.ID
+		params[lxcApiKeyGuestID] = int(*config.ID)
 	}
 	if config.Memory != nil {
 		params[lxcApiKeyMemory] = *config.Memory
