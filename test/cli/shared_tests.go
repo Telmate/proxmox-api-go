@@ -46,7 +46,7 @@ func ListTest(t *testing.T, args []string, expected string) {
 	assert.Contains(t, string(out), expected)
 }
 
-func (test *Test) StandardTest(t *testing.T) (out []byte) {
+func (test Test) StandardTest(t *testing.T) (out []byte) {
 	SetEnvironmentVariables()
 	cli.RootCmd.SetArgs(test.Args)
 	buffer := new(bytes.Buffer)
