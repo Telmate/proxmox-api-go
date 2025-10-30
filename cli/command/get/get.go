@@ -25,6 +25,11 @@ func getConfig(args []string, IDtype string) (err error) {
 		if err != nil {
 			return
 		}
+	case "AcmePlugin":
+		config, err = proxmox.NewConfigAcmePluginFromApi(cli.Context(), id, c)
+		if err != nil {
+			return
+		}
 	case "Group":
 		config, err = proxmox.NewConfigGroupFromApi(cli.Context(), proxmox.GroupName(id), c)
 		if err != nil {
