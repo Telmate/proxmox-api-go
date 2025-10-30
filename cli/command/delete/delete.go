@@ -25,6 +25,8 @@ func deleteID(ctx context.Context, args []string, IDtype string) (err error) {
 	switch IDtype {
 	case "AcmeAccount":
 		exitStatus, err = c.DeleteAcmeAccount(ctx, id)
+	case "AcmePlugin":
+		err = c.DeleteAcmePlugin(ctx, id)
 	case "Group":
 		err = proxmox.GroupName(id).Delete(ctx, c)
 	case "MetricServer":
