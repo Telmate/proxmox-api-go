@@ -6,9 +6,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var template_downloadCmd = &cobra.Command{
-	Use:   "download NODE STORAGE TEMPLATE",
-	Short: "download the specified LXC template",
+var template_deleteCmd = &cobra.Command{
+	Use:   "delete NODE STORAGE TEMPLATE",
+	Short: "delete the specified LXC template",
 	Args:  cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
@@ -20,14 +20,14 @@ var template_downloadCmd = &cobra.Command{
 		if err = config.Validate(); err != nil {
 			return
 		}
-		if err = config.Download(cli.Context(), c); err != nil {
+		if err = config.Delete(cli.Context(), c); err != nil {
 			return
 		}
-		cli.PrintItemCreated(templateCmd.OutOrStdout(), config.Template, "LXC Template")
+		cli.PrintItemDeleted(templateCmd.OutOrStdout(), config.Template, "LXC Template")
 		return
 	},
 }
 
 func init() {
-	templateCmd.AddCommand(template_downloadCmd)
+	templateCmd.AddCommand(template_deleteCmd)
 }
