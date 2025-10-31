@@ -57,7 +57,7 @@ func createGuest(ctx context.Context, args []string, IDtype string) (err error) 
 		// 		VirtualCores: util.Pointer(proxmox.CpuVirtualCores(2)),
 		// 	},
 		// }.Update(ctx, true, vmr, c)
-		vmr, err = config.Create(cli.Context(), c)
+		_, err = config.Create(cli.Context(), c)
 	}
 	if err != nil {
 		return
