@@ -34,28 +34,30 @@ func createGuest(ctx context.Context, args []string, IDtype string) (err error) 
 		}
 		err = config.CreateLxc(ctx, vmr, c)
 	case "QemuGuest":
-		// var config *proxmox.ConfigQemu
-		// config, err = proxmox.NewConfigQemuFromJson(cli.NewConfig())
-		// if err != nil {
-		// return
-		// }
+		var config *proxmox.ConfigQemu
+		config, err = proxmox.NewConfigQemuFromJson(cli.NewConfig())
+		if err != nil {
+			return
+		}
+		config.Node = util.Pointer(proxmox.NodeName(node))
+		config.ID = util.Pointer(proxmox.GuestID(id))
 
-		_, err = proxmox.ConfigQemu{
-			CPU: &proxmox.QemuCPU{
-				Affinity: util.Pointer([]uint{0, 1, 2}),
-				Cores:    util.Pointer(proxmox.QemuCpuCores(4)),
-				// Flags: &proxmox.CpuFlags{
-				// 	AES: util.Pointer(proxmox.TriBoolFalse),
-				// },
-				Limit:        util.Pointer(proxmox.CpuLimit(65)),
-				Numa:         util.Pointer(bool(true)),
-				Sockets:      util.Pointer(proxmox.QemuCpuSockets(1)),
-				Type:         util.Pointer(proxmox.CpuType("athlon")),
-				Units:        util.Pointer(proxmox.CpuUnits(1024)),
-				VirtualCores: util.Pointer(proxmox.CpuVirtualCores(2)),
-			},
-		}.Update(ctx, true, vmr, c)
-		// err = config.Create(vmr, c)
+		// _, err = proxmox.ConfigQemu{
+		// 	CPU: &proxmox.QemuCPU{
+		// 		Affinity: util.Pointer([]uint{0, 1, 2}),
+		// 		Cores:    util.Pointer(proxmox.QemuCpuCores(4)),
+		// 		// Flags: &proxmox.CpuFlags{
+		// 		// 	AES: util.Pointer(proxmox.TriBoolFalse),
+		// 		// },
+		// 		Limit:        util.Pointer(proxmox.CpuLimit(65)),
+		// 		Numa:         util.Pointer(bool(true)),
+		// 		Sockets:      util.Pointer(proxmox.QemuCpuSockets(1)),
+		// 		Type:         util.Pointer(proxmox.CpuType("athlon")),
+		// 		Units:        util.Pointer(proxmox.CpuUnits(1024)),
+		// 		VirtualCores: util.Pointer(proxmox.CpuVirtualCores(2)),
+		// 	},
+		// }.Update(ctx, true, vmr, c)
+		vmr, err = config.Create(cli.Context(), c)
 	}
 	if err != nil {
 		return
