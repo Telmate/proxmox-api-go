@@ -1,6 +1,8 @@
 package version
 
 import (
+	"fmt"
+
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +17,7 @@ var VersionCmd = &cobra.Command{
 			return
 		}
 
-		cli.PrintRawJson(cli.RootCmd.OutOrStdout(), versionInfo)
+		fmt.Fprintln(cli.RootCmd.OutOrStdout(), versionInfo)
 		return
 	},
 }
