@@ -11,11 +11,13 @@ import (
 // Acme Plugin options for the Proxmox API
 type ConfigAcmePlugin struct {
 	ID              string   `json:"pluginid"`
-	API             string   `json:"api"`
-	Data            string   `json:"data,omitempty"`
-	Enable          bool     `json:"enable"`
+	Digest          string   `json:"digest"`
+	Type            string   `json:"type"`  // Can be standalone or dns, if dns then all the following attributes are present
+	API             string   `json:"api,omitempty"`
+	Data            string   `json:"data,omitempty"`  // base64 encoded data used by the plugin
+	Enable          bool     `json:"enable,omitempty"`
 	Nodes           []string `json:"nodes,omitempty"`
-	ValidationDelay int      `json:"validation-delay"`
+	ValidationDelay int      `json:"validation-delay,omitempty"`
 }
 
 func (config ConfigAcmePlugin) mapToApiValues() (params map[string]interface{}) {
@@ -83,6 +85,14 @@ func NewConfigAcmePluginFromApi(ctx context.Context, id string, client *Client) 
 	config = new(ConfigAcmePlugin)
 
 	config.ID = id
+	config.Type = rawConfig["type"].(string)
+	config.Digest = rawConfig["digest"].(string)
+
+	// Stop parsing now since other attributes are related to type="dns"
+	if config.Type == "standalone" {
+		return
+	}
+
 	config.API = rawConfig["api"].(string)
 
 	if _, isSet := rawConfig["data"]; isSet {
