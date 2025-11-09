@@ -20,7 +20,7 @@ type MockClient struct {
 	HaCreateNodeAffinityRuleNoCheckFunc     func(ctx context.Context, ha HaNodeAffinityRule) error
 	HaCreateResourceAffinityRuleFunc        func(ctx context.Context, ha HaResourceAffinityRule) error
 	HaCreateResourceAffinityRuleNoCheckFunc func(ctx context.Context, ha HaResourceAffinityRule) error
-	HaDeleteResourceFunc                    func(ctx context.Context, id GuestID) error
+	HaDeleteResourceFunc                    func(ctx context.Context, id GuestID) (bool, error)
 	HaDeleteRuleFunc                        func(ctx context.Context, id HaRuleID) error
 	HaDeleteRuleNoCheckFunc                 func(ctx context.Context, id HaRuleID) error
 	HaGetRuleFunc                           func(ctx context.Context, id HaRuleID) (HaRule, error)
@@ -150,7 +150,7 @@ func (m *MockClient) haCreateResourceAffinityRuleNoCheck(ctx context.Context, ha
 	return m.HaCreateResourceAffinityRuleNoCheckFunc(ctx, ha)
 }
 
-func (m *MockClient) haDeleteResource(ctx context.Context, id GuestID) error {
+func (m *MockClient) haDeleteResource(ctx context.Context, id GuestID) (bool, error) {
 	if m.HaDeleteResourceFunc == nil {
 		m.panic("HaDeleteResourceFunc")
 	}
