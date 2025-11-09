@@ -440,7 +440,11 @@ func (c *Client) GetVmSpiceProxy(ctx context.Context, vmr *VmRef) (vmSpiceProxy 
 
 // deprecated use *VmRef.GetAgentInformation() instead
 func (c *Client) GetVmAgentNetworkInterfaces(ctx context.Context, vmr *VmRef) ([]AgentNetworkInterface, error) {
-	return vmr.GetAgentInformation(ctx, c, true)
+	raw, err := vmr.GetAgentInformation(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	return raw.Get(), nil
 }
 
 func (c *Client) CreateTemplate(ctx context.Context, vmr *VmRef) error {

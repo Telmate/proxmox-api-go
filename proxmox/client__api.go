@@ -13,6 +13,7 @@ type clientApiInterface interface {
 	deleteHaRule(ctx context.Context, id HaRuleID) error
 	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error)
+	getGuestQemuAgent(ctx context.Context, vmr *VmRef, isRunning *bool) (map[string]any, error)
 	getHaRule(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfig(ctx context.Context, userId UserID) (map[string]any, error)
@@ -49,6 +50,28 @@ func (c *clientAPI) getGuestConfig(ctx context.Context, vmr *VmRef) (vmConfig ma
 
 func (c *clientAPI) getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error) {
 	return c.getList(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/pending", "Guest", "PENDING CONFIG", nil)
+}
+
+func (c *clientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef, isRunning *bool) (map[string]any, error) {
+	guestID := vmr.vmId.String()
+	return c.getMap(ctx, "/nodes/"+vmr.node.String()+"/qemu/"+guestID+"/agent/network-get-interfaces", "guest agent", "data",
+		func(err error) bool {
+			const (
+				prefix500 = "500 "
+				prefixLen = len(prefix500)
+			)
+			errStr := err.Error()
+			if strings.HasPrefix(errStr, prefix500) {
+				if strings.HasPrefix(errStr[prefixLen:], "QEMU guest agent is not running") {
+					return true
+				}
+				if strings.HasPrefix(errStr[prefixLen:], "VM "+guestID+" is not running") {
+					return true
+				}
+			}
+			*isRunning = true
+			return false
+		})
 }
 
 func (c *clientAPI) getHaRule(ctx context.Context, id HaRuleID) (haRule map[string]any, err error) {
