@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-// GetAgentInformation: When the agent isn't running `[]AgentNetworkInterface` will be nil.
 func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client) (RawAgentNetworkInterfaces, error) {
 	return c.new().guestGetRawAgentInformation(ctx, vmr)
 }
