@@ -233,7 +233,7 @@ const (
 	GuestIdMinimum        = 100
 )
 
-// DeleteHaResource: When false the resource isn't deleted as it does not exist.
+// DeleteHaResource deletes an HA resource. Returns false if the resource does not exist and was not deleted, true if successfully deleted.
 func (id GuestID) DeleteHaResource(ctx context.Context, c *Client) (bool, error) {
 	err := id.Validate()
 	if err != nil {
