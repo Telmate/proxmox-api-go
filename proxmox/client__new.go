@@ -22,6 +22,7 @@ type ClientNew interface {
 	guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
 	guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error)
 	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
+	guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, error)
 	guestListResources(ctx context.Context) (RawGuestResources, error)
 	guestStop(ctx context.Context, vmr *VmRef) error
 	guestStopForce(ctx context.Context, vmr *VmRef) error
