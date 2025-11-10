@@ -64,6 +64,14 @@ func getConfig(args []string, IDtype string) (err error) {
 			return
 		}
 		config = rawConfig.Get()
+	case "Vminfo":
+		c := cli.NewClient()
+		var vmr *proxmox.VmRef
+		vmr, err = proxmox.NewVmRefFromApi(cli.Context(), cli.ValidateGuestIDset(args, "GuestID"), c)
+		if err != nil {
+			return
+		}
+		config, err = proxmox.NewConfigQemuFromApi(cli.Context(), vmr, c)
 	}
 	cli.PrintFormattedJson(GetCmd.OutOrStdout(), config)
 	return
