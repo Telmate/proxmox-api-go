@@ -132,6 +132,27 @@ func NewVmRef(vmId GuestID) (vmr *VmRef) {
 	return
 }
 
+func NewVmRefFromApi(ctx context.Context, vmId GuestID, client *Client) (vmr *VmRef, err error) {
+	vmr = NewVmRef(vmId)
+
+	guests, err := client.new().guestListResources(ctx)
+	if err != nil {
+		return
+	}
+
+	for _, guest := range guests {
+		if guest.GetID() == vmr.VmId() {
+			vmr.SetNode(guest.GetNode().String())
+			vmr.SetVmType(guest.GetType())
+			vmr.SetPool(guest.GetPool().String())
+			vmr.haState = guest.GetHaState()
+			break
+		}
+	}
+
+	return
+}
+
 func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tls.Config, proxyString string, taskTimeout int) (client *Client, err error) {
 	var sess *Session
 	sess, err_s := NewSession(apiUrl, hclient, proxyString, tls)
