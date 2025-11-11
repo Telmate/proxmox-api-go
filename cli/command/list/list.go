@@ -31,6 +31,8 @@ func listRaw(ctx context.Context, IDtype string) {
 		list, err = c.GetNodeList(ctx)
 	case "Storages":
 		list, err = c.GetStorageList(ctx)
+	case "Resources":
+		list, err = c.GetResourceList(ctx, "")
 	}
 	cli.LogFatalListing(IDtype, err)
 	cli.PrintRawJson(listCmd.OutOrStdout(), list)
