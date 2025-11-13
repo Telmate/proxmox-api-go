@@ -65,12 +65,11 @@ func getConfig(args []string, IDtype string) (err error) {
 		}
 		config = rawConfig.Get()
 	case "Vminfo":
-		c := cli.NewClient()
 		var vmr *proxmox.VmRef
-		vmr, err = proxmox.NewVmRefFromApi(cli.Context(), cli.ValidateGuestIDset(args, "GuestID"), c)
-		if err != nil {
-			return
-		}
+		vmr = proxmox.NewVmRef(cli.ValidateGuestIDset(args, "GuestID"))
+
+		c := cli.NewClient()
+		c.CheckVmRef(cli.Context(), vmr)
 		config, err = proxmox.NewConfigQemuFromApi(cli.Context(), vmr, c)
 	}
 	cli.PrintFormattedJson(GetCmd.OutOrStdout(), config)
