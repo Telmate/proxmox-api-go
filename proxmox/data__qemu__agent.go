@@ -31,7 +31,7 @@ func (vmr *VmRef) getAgentInformation(ctx context.Context, c *clientNew) (*rawAg
 	}
 	var state GuestAgentState
 	params, err := c.api.getGuestQemuAgent(ctx, vmr, &state)
-	if state == GuestAgentRunning || state == GuestAgentVmNotRunning {
+	if state == GuestAgentNotRunning || state == GuestAgentVmNotRunning {
 		return nil, state, nil
 	}
 	if err != nil {
