@@ -13,7 +13,7 @@ type clientApiInterface interface {
 	deleteHaRule(ctx context.Context, id HaRuleID) error
 	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error)
-	getGuestQemuAgent(ctx context.Context, vmr *VmRef, isRunning *GuestAgentState) (map[string]any, error)
+	getGuestQemuAgent(ctx context.Context, vmr *VmRef, state *GuestAgentState) (map[string]any, error)
 	getHaRule(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfig(ctx context.Context, userId UserID) (map[string]any, error)
