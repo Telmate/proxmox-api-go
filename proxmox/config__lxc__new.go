@@ -18,29 +18,30 @@ func (arch CpuArchitecture) String() string { return string(arch) } // String is
 type OperatingSystem string
 
 type ConfigLXC struct {
-	Architecture    CpuArchitecture   `json:"architecture"` // only returned
-	BootMount       *LxcBootMount     `json:"boot_mount,omitempty"`
-	CPU             *LxcCPU           `json:"cpu,omitempty"`
-	CreateOptions   *LxcCreateOptions `json:"create,omitempty"` // only used during creation, never returned
-	DNS             *GuestDNS         `json:"dns,omitempty"`
-	Description     *string           `json:"description,omitempty"`
-	Digest          [sha1.Size]byte   `json:"digest,omitempty"` // only returned.
-	Features        *LxcFeatures      `json:"features,omitempty"`
-	ID              *GuestID          `json:"id"`               // only used during creation
-	Memory          *LxcMemory        `json:"memory,omitempty"` // Never nil when returned
-	Mounts          LxcMounts         `json:"mounts,omitempty"`
-	Name            *GuestName        `json:"name,omitempty"` // Never nil when returned
-	Networks        LxcNetworks       `json:"networks,omitempty"`
-	Node            *NodeName         `json:"node,omitempty"` // only used during creation
-	OperatingSystem OperatingSystem   `json:"os"`             // only returned
-	Pool            *PoolName         `json:"pool,omitempty"`
-	Privileged      *bool             `json:"privileged,omitempty"` // only used during creation, defaults to false ,never nil when returned
-	Protection      *bool             `json:"protection,omitempty"` // Never nil when returned
-	Startup         *GuestStartup     `json:"startup,omitempty"`
-	State           *PowerState       `json:"state,omitempty"`
-	Swap            *LxcSwap          `json:"swap,omitempty"` // Never nil when returned
-	Tags            *Tags             `json:"tags,omitempty"`
-	rawDigest       digest            `json:"-"`
+	Architecture    CpuArchitecture     `json:"architecture"` // only returned
+	BootMount       *LxcBootMount       `json:"boot_mount,omitempty"`
+	CPU             *LxcCPU             `json:"cpu,omitempty"`
+	CreateOptions   *LxcCreateOptions   `json:"create,omitempty"` // only used during creation, never returned
+	DNS             *GuestDNS           `json:"dns,omitempty"`
+	Description     *string             `json:"description,omitempty"`
+	Digest          [sha1.Size]byte     `json:"digest,omitempty"` // only returned.
+	Features        *LxcFeatures        `json:"features,omitempty"`
+	ID              *GuestID            `json:"id"`               // only used during creation
+	Memory          *LxcMemory          `json:"memory,omitempty"` // Never nil when returned
+	Mounts          LxcMounts           `json:"mounts,omitempty"`
+	Name            *GuestName          `json:"name,omitempty"` // Never nil when returned
+	Networks        LxcNetworks         `json:"networks,omitempty"`
+	Node            *NodeName           `json:"node,omitempty"` // only used during creation
+	OperatingSystem OperatingSystem     `json:"os"`             // only returned
+	Pool            *PoolName           `json:"pool,omitempty"`
+	Privileged      *bool               `json:"privileged,omitempty"`         // only used during creation, defaults to false ,never nil when returned
+	Protection      *bool               `json:"protection,omitempty"`         // Never nil when returned
+	StartAtNodeBoot *bool               `json:"start_at_node_boot,omitempty"` // Never nil when returned
+	StartupShutdown *StartupAndShutdown `json:"startup_shutdown,omitempty"`
+	State           *PowerState         `json:"state,omitempty"`
+	Swap            *LxcSwap            `json:"swap,omitempty"` // Never nil when returned
+	Tags            *Tags               `json:"tags,omitempty"`
+	rawDigest       digest              `json:"-"`
 }
 
 const (
@@ -145,8 +146,11 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 	if config.Protection != nil && *config.Protection {
 		params[lxcAPIKeyProtection] = "1"
 	}
-	if config.Startup != nil {
-		config.Startup.mapToApiCreate(params)
+	if config.StartAtNodeBoot != nil {
+		startAtNodeBootMapToApiCreate(params, *config.StartAtNodeBoot)
+	}
+	if config.StartupShutdown != nil {
+		config.StartupShutdown.mapToApiCreate(params)
 	}
 	if config.Swap != nil {
 		params[lxcApiKeySwap] = int(*config.Swap)
@@ -227,11 +231,18 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 			delete += "," + lxcAPIKeyProtection
 		}
 	}
-	if config.Startup != nil {
-		if current.Startup != nil {
-			delete += config.Startup.mapToApiUpdate(current.Startup, params)
+	if config.StartAtNodeBoot != nil {
+		if current.StartAtNodeBoot != nil {
+			delete += startAtNodeBootMapToApiUpdate(params, *config.StartAtNodeBoot, *current.StartAtNodeBoot)
 		} else {
-			config.Startup.mapToApiCreate(params)
+			startAtNodeBootMapToApiCreate(params, *config.StartAtNodeBoot)
+		}
+	}
+	if config.StartupShutdown != nil {
+		if current.StartupShutdown != nil {
+			delete += config.StartupShutdown.mapToApiUpdate(current.StartupShutdown, params)
+		} else {
+			config.StartupShutdown.mapToApiCreate(params)
 		}
 	}
 	if config.Swap != nil && (current.Swap == nil || *config.Swap != *current.Swap) {
@@ -544,6 +555,8 @@ type RawConfigLXC interface {
 	GetOperatingSystem() OperatingSystem
 	GetPrivileged() bool
 	GetProtection() bool
+	GetStartAtNodeBoot() bool
+	GetStartupShutdown() *StartupAndShutdown
 	GetSwap() LxcSwap
 	GetTags() *Tags
 	get(vmr VmRef) *ConfigLXC
@@ -581,7 +594,8 @@ func (raw *rawConfigLXC) get(vmr VmRef) *ConfigLXC {
 		OperatingSystem: raw.GetOperatingSystem(),
 		Privileged:      &privileged,
 		Protection:      util.Pointer(raw.GetProtection()),
-		Startup:         raw.GetStartup(),
+		StartAtNodeBoot: util.Pointer(raw.GetStartAtNodeBoot()),
+		StartupShutdown: raw.GetStartupShutdown(),
 		Swap:            util.Pointer(raw.GetSwap()),
 		Tags:            raw.GetTags(),
 		rawDigest:       raw.getDigest()}
@@ -660,8 +674,10 @@ func (raw *rawConfigLXC) GetProtection() bool {
 	return false
 }
 
-func (raw *rawConfigLXC) GetStartup() *GuestStartup {
-	return GuestStartup{}.mapToSDK(raw.a)
+func (raw *rawConfigLXC) GetStartAtNodeBoot() bool { return startAtNodeBootMapToSDK(raw.a) }
+
+func (raw *rawConfigLXC) GetStartupShutdown() *StartupAndShutdown {
+	return StartupAndShutdown{}.mapToSDK(raw.a)
 }
 
 func (raw *rawConfigLXC) GetSwap() LxcSwap {

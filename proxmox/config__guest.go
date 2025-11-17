@@ -303,21 +303,43 @@ func (id GuestID) Validate() error {
 	return nil
 }
 
-type GuestStartup struct {
-	Enabled         *bool              `json:"enabled,omitempty"`          // Never nil when returned.
+type StartupAndShutdown struct {
 	Order           *GuestStartupOrder `json:"order,omitempty"`            // Never nil when returned.
 	ShutdownTimeout *TimeDuration      `json:"shutdown_timeout,omitempty"` // Number of seconds of the shutdown timeout. Never nil when returned.
 	StartupDelay    *TimeDuration      `json:"startup_delay,omitempty"`    // Number of seconds of the startup delay. Never nil when returned.
 }
 
+func startAtNodeBootMapToSDK(params map[string]any) bool {
+	if v, isSet := params[guestApiKeyOnBoot]; isSet {
+		return int(v.(float64)) == 1
+	}
+	return false
+}
+
+func startAtNodeBootMapToApiCreate(params map[string]any, startup bool) {
+	if startup {
+		params[guestApiKeyOnBoot] = 1
+	}
+}
+
+func startAtNodeBootMapToApiUpdate(params map[string]any, startup bool, current bool) (delete string) {
+	if startup == current {
+		return
+	}
+	if startup {
+		params[guestApiKeyOnBoot] = 1
+		return
+	}
+	return "," + guestApiKeyOnBoot
+}
+
 const (
-	GuestApiKeyOnBoot  string = "onboot"
-	GuestApiKeyStartup string = "startup"
+	guestApiKeyOnBoot  string = "onboot"
+	guestApiKeyStartup string = "startup"
 )
 
-func (config GuestStartup) combine(current *GuestStartup) GuestStartup {
-	newConfig := GuestStartup{
-		Enabled:         config.Enabled,
+func (config StartupAndShutdown) combine(current *StartupAndShutdown) StartupAndShutdown {
+	newConfig := StartupAndShutdown{
 		Order:           current.Order,
 		StartupDelay:    current.StartupDelay,
 		ShutdownTimeout: current.ShutdownTimeout}
@@ -333,16 +355,13 @@ func (config GuestStartup) combine(current *GuestStartup) GuestStartup {
 	return newConfig
 }
 
-func (config GuestStartup) mapToApiCreate(params map[string]any) {
-	if config.Enabled != nil && *config.Enabled {
-		params[GuestApiKeyOnBoot] = float64(1)
-	}
+func (config StartupAndShutdown) mapToApiCreate(params map[string]any) {
 	if v := config.mapToApiStartupCreate(); len(v) > 0 {
-		params[GuestApiKeyStartup] = v[1:] // remove leading comma
+		params[guestApiKeyStartup] = v[1:] // remove leading comma
 	}
 }
 
-func (config GuestStartup) mapToApiStartupCreate() (parts string) {
+func (config StartupAndShutdown) mapToApiStartupCreate() (parts string) {
 	if config.Order != nil && *config.Order > GuestStartupOrderAny {
 		parts += ",order=" + config.Order.String()
 	}
@@ -355,43 +374,25 @@ func (config GuestStartup) mapToApiStartupCreate() (parts string) {
 	return
 }
 
-func (config GuestStartup) mapToApiUpdate(current *GuestStartup, params map[string]any) (delete string) {
+func (config StartupAndShutdown) mapToApiUpdate(current *StartupAndShutdown, params map[string]any) (delete string) {
 	usedConfig := config.combine(current)
-	if usedConfig.Enabled != nil {
-		if current.Enabled == nil || *usedConfig.Enabled != *current.Enabled {
-			if *usedConfig.Enabled {
-				params[GuestApiKeyOnBoot] = float64(1)
-			} else {
-				delete += "," + GuestApiKeyOnBoot
-			}
-		}
-	}
 	rawStartup := usedConfig.mapToApiStartupCreate()
 	if rawStartup != current.mapToApiStartupCreate() {
 		if rawStartup != "" {
-			params[GuestApiKeyStartup] = rawStartup[1:] // remove leading comma
+			params[guestApiKeyStartup] = rawStartup[1:] // remove leading comma
 		} else {
-			delete += "," + GuestApiKeyStartup
+			delete += "," + guestApiKeyStartup
 		}
 	}
 	return
 }
 
-func (GuestStartup) mapToSDK(params map[string]any) *GuestStartup {
-	config := GuestStartup{
-		Enabled:         util.Pointer(false),
+func (StartupAndShutdown) mapToSDK(params map[string]any) *StartupAndShutdown {
+	config := StartupAndShutdown{
 		Order:           util.Pointer(GuestStartupOrderAny),
 		ShutdownTimeout: util.Pointer(TimeDurationDefault),
 		StartupDelay:    util.Pointer(TimeDurationDefault)}
-	var configPtr *GuestStartup
-	if v, ok := params[GuestApiKeyOnBoot]; ok {
-		configPtr = &config
-		*config.Enabled = int(v.(float64)) == 1
-	}
-	if v, ok := params[GuestApiKeyStartup]; ok {
-		if configPtr == nil {
-			configPtr = &config
-		}
+	if v, ok := params[guestApiKeyStartup]; ok {
 		settings := splitStringOfSettings(v.(string))
 		if vv, ok := settings["order"]; ok {
 			order, _ := strconv.ParseUint(vv, 10, 64)
@@ -405,8 +406,9 @@ func (GuestStartup) mapToSDK(params map[string]any) *GuestStartup {
 			down, _ := strconv.ParseUint(vv, 10, 64)
 			*config.ShutdownTimeout = TimeDuration(down)
 		}
+		return &config
 	}
-	return configPtr
+	return nil
 }
 
 // Negative value means default

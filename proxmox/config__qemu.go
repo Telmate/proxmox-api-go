@@ -66,8 +66,9 @@ type ConfigQemu struct {
 	QemuVga          QemuDevice            `json:"vga,omitempty"`    // TODO should be a struct
 	Scsihw           string                `json:"scsihw,omitempty"` // TODO should be custom type with enum
 	Serials          SerialInterfaces      `json:"serials,omitempty"`
-	Smbios1          string                `json:"smbios1,omitempty"` // TODO should be custom type with enum?
-	Startup          *GuestStartup         `json:"startup,omitempty"`
+	Smbios1          string                `json:"smbios1,omitempty"`            // TODO should be custom type with enum?
+	StartAtNodeBoot  *bool                 `json:"start_at_node_boot,omitempty"` // Never nil when returned
+	StartupShutdown  *StartupAndShutdown   `json:"startup_shutdown,omitempty"`
 	Storage          string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
 	TPM              *TpmState             `json:"tpm,omitempty"`
 	Tablet           *bool                 `json:"tablet,omitempty"` // never nil when returned
@@ -228,11 +229,18 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersi
 	if config.Scsihw != "" {
 		params["scsihw"] = config.Scsihw
 	}
-	if config.Startup != nil {
-		if currentConfig.Startup != nil {
-			itemsToDelete += config.Startup.mapToApiUpdate(currentConfig.Startup, params)
+	if config.StartAtNodeBoot != nil {
+		if currentConfig.StartAtNodeBoot != nil {
+			itemsToDelete += startAtNodeBootMapToApiUpdate(params, *config.StartAtNodeBoot, *currentConfig.StartAtNodeBoot)
 		} else {
-			config.Startup.mapToApiCreate(params)
+			startAtNodeBootMapToApiCreate(params, *config.StartAtNodeBoot)
+		}
+	}
+	if config.StartupShutdown != nil {
+		if currentConfig.StartupShutdown != nil {
+			itemsToDelete += config.StartupShutdown.mapToApiUpdate(currentConfig.StartupShutdown, params)
+		} else {
+			config.StartupShutdown.mapToApiCreate(params)
 		}
 	}
 	if config.Tablet != nil {
@@ -1102,6 +1110,8 @@ type RawConfigQemu interface {
 	GetProtection() bool
 	GetRandomnessDevice() *VirtIoRNG
 	GetSerials() SerialInterfaces
+	GetStartAtNodeBoot() bool
+	GetStartupShutdown() *StartupAndShutdown
 	GetTablet() bool
 	GetTags() *Tags
 	GetUSBs() QemuUSBs
@@ -1132,7 +1142,8 @@ func (raw *rawConfigQemu) get(vmr *VmRef) (*ConfigQemu, error) {
 		Protection:       util.Pointer(raw.GetProtection()),
 		RandomnessDevice: raw.GetRandomnessDevice(),
 		Serials:          raw.GetSerials(),
-		Startup:          raw.GetStartup(),
+		StartAtNodeBoot:  util.Pointer(raw.GetStartAtNodeBoot()),
+		StartupShutdown:  raw.GetStartupShutdown(),
 		Tablet:           util.Pointer(raw.GetTablet()),
 		Tags:             raw.GetTags(),
 		USBs:             raw.GetUSBs(),
@@ -1165,8 +1176,10 @@ func (raw *rawConfigQemu) GetProtection() bool {
 	return false
 }
 
-func (raw *rawConfigQemu) GetStartup() *GuestStartup {
-	return GuestStartup{}.mapToSDK(raw.a)
+func (raw *rawConfigQemu) GetStartAtNodeBoot() bool { return startAtNodeBootMapToSDK(raw.a) }
+
+func (raw *rawConfigQemu) GetStartupShutdown() *StartupAndShutdown {
+	return StartupAndShutdown{}.mapToSDK(raw.a)
 }
 
 func (raw *rawConfigQemu) GetTablet() bool {

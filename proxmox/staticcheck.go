@@ -16,4 +16,7 @@ func X_SuppressStaticCheck_DoNotUse() {
 	lxc.getDigest()
 	lxc.getMounts(true)
 
+	qemu := &RawConfigQemuMock{}
+	qemu.get(&VmRef{})
+
 }
