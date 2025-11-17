@@ -440,9 +440,15 @@ func (c *Client) GetVmSpiceProxy(ctx context.Context, vmr *VmRef) (vmSpiceProxy 
 
 // deprecated use *VmRef.GetAgentInformation() instead
 func (c *Client) GetVmAgentNetworkInterfaces(ctx context.Context, vmr *VmRef) ([]AgentNetworkInterface, error) {
-	raw, err := vmr.GetAgentInformation(ctx, c)
+	raw, state, err := vmr.GetAgentInformation(ctx, c)
 	if err != nil {
 		return nil, err
+	}
+	if state == GuestAgentStateNotRunning {
+		return nil, errors.New("guest agent is not running")
+	}
+	if state == GuestAgentStateVmNotRunning {
+		return nil, errors.New("vm is not running")
 	}
 	return raw.Get(), nil
 }

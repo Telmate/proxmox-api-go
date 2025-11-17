@@ -7,27 +7,37 @@ import (
 	"strings"
 )
 
-func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client) (RawAgentNetworkInterfaces, error) {
+// GuestAgentState is an Enum.
+type GuestAgentState int8
+
+const (
+	GuestAgentStateUnknown GuestAgentState = iota
+	GuestAgentStateRunning
+	GuestAgentStateNotRunning
+	GuestAgentStateVmNotRunning
+)
+
+func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client) (RawAgentNetworkInterfaces, GuestAgentState, error) {
 	return c.new().guestGetRawAgentInformation(ctx, vmr)
 }
 
-func (c *clientNew) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, error) {
+func (c *clientNew) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {
 	return vmr.getAgentInformation(ctx, c)
 }
 
-func (vmr *VmRef) getAgentInformation(ctx context.Context, c *clientNew) (*rawAgentNetworkInterfaces, error) {
+func (vmr *VmRef) getAgentInformation(ctx context.Context, c *clientNew) (*rawAgentNetworkInterfaces, GuestAgentState, error) {
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
-		return nil, err
+		return nil, GuestAgentStateUnknown, err
 	}
-	var isRunning bool
-	params, err := c.api.getGuestQemuAgent(ctx, vmr, &isRunning)
-	if !isRunning {
-		return nil, nil
+	var state GuestAgentState
+	params, err := c.api.getGuestQemuAgent(ctx, vmr, &state)
+	if state == GuestAgentStateNotRunning || state == GuestAgentStateVmNotRunning {
+		return nil, state, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, GuestAgentStateUnknown, err
 	}
-	return &rawAgentNetworkInterfaces{a: params}, nil
+	return &rawAgentNetworkInterfaces{a: params}, GuestAgentStateRunning, nil
 }
 
 type (
