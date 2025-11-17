@@ -63,11 +63,11 @@ func (c *clientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef, state *Gu
 			errStr := err.Error()
 			if strings.HasPrefix(errStr, prefix500) {
 				if strings.HasPrefix(errStr[prefixLen:], "QEMU guest agent is not running") {
-					*state = GuestAgentNotRunning
+					*state = GuestAgentStateNotRunning
 					return true
 				}
 				if strings.HasPrefix(errStr[prefixLen:], "VM "+guestID+" is not running") {
-					*state = GuestAgentVmNotRunning
+					*state = GuestAgentStateVmNotRunning
 					return true
 				}
 			}

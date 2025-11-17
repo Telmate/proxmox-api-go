@@ -444,10 +444,10 @@ func (c *Client) GetVmAgentNetworkInterfaces(ctx context.Context, vmr *VmRef) ([
 	if err != nil {
 		return nil, err
 	}
-	if state == GuestAgentNotRunning {
+	if state == GuestAgentStateNotRunning {
 		return nil, errors.New("guest agent is not running")
 	}
-	if state == GuestAgentVmNotRunning {
+	if state == GuestAgentStateVmNotRunning {
 		return nil, errors.New("vm is not running")
 	}
 	return raw.Get(), nil

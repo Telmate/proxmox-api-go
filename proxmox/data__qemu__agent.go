@@ -11,10 +11,10 @@ import (
 type GuestAgentState int8
 
 const (
-	GuestAgentUnknown GuestAgentState = iota
-	GuestAgentRunning
-	GuestAgentNotRunning
-	GuestAgentVmNotRunning
+	GuestAgentStateUnknown GuestAgentState = iota
+	GuestAgentStateRunning
+	GuestAgentStateNotRunning
+	GuestAgentStateVmNotRunning
 )
 
 func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client) (RawAgentNetworkInterfaces, GuestAgentState, error) {
@@ -27,17 +27,17 @@ func (c *clientNew) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef)
 
 func (vmr *VmRef) getAgentInformation(ctx context.Context, c *clientNew) (*rawAgentNetworkInterfaces, GuestAgentState, error) {
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
-		return nil, GuestAgentUnknown, err
+		return nil, GuestAgentStateUnknown, err
 	}
 	var state GuestAgentState
 	params, err := c.api.getGuestQemuAgent(ctx, vmr, &state)
-	if state == GuestAgentNotRunning || state == GuestAgentVmNotRunning {
+	if state == GuestAgentStateNotRunning || state == GuestAgentStateVmNotRunning {
 		return nil, state, nil
 	}
 	if err != nil {
-		return nil, GuestAgentUnknown, err
+		return nil, GuestAgentStateUnknown, err
 	}
-	return &rawAgentNetworkInterfaces{a: params}, GuestAgentRunning, nil
+	return &rawAgentNetworkInterfaces{a: params}, GuestAgentStateRunning, nil
 }
 
 type (
