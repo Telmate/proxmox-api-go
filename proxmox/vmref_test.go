@@ -440,6 +440,11 @@ func Test_VmRef_pendingChanges(t *testing.T) {
 				map[string]any{"key": string("cores"), "value": float64(2)},
 				map[string]any{"key": string("tpmstate0"), "value": string("local-zfs:vm-1001-disk-2,size=4M,version=v1.2"), "delete": float64(1)}},
 			output: true},
+		{name: `Missing Value Pending (Real-World Case)`,
+			input: []any{
+				map[string]any{"key": string("bios"), "pending": string("ovmf")},
+				map[string]any{"key": string("cores"), "value": float64(2)}},
+			output: true},
 		{name: `Error`,
 			err: errors.New("test")},
 	}
@@ -451,6 +456,65 @@ func Test_VmRef_pendingChanges(t *testing.T) {
 				}})
 			require.Equal(t, test.err, err)
 			require.Equal(t, test.output, pending)
+		})
+	}
+}
+
+func Test_VmRef_pendingConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []any
+		pending bool
+		output  map[string]any
+		err     error
+	}{
+		{name: `No pending`,
+			input: []any{
+				map[string]any{"key": string("test"), "value": string("value")},
+				map[string]any{"key": string("cpu"), "value": float64(2)},
+				map[string]any{"key": string("disks"), "value": string("sata0")}},
+			output: map[string]any{
+				"cpu":   float64(2),
+				"disks": string("sata0"),
+				"test":  string("value")}},
+		{name: `Pending`,
+			input: []any{
+				map[string]any{"key": string("test"), "value": string("value")},
+				map[string]any{"key": string("cores"), "value": float64(2), "pending": float64(3)},
+				map[string]any{"key": string("disks"), "value": string("sata0")}},
+			output: map[string]any{
+				"cores": float64(2),
+				"disks": string("sata0"),
+				"test":  string("value")},
+			pending: true},
+		{name: `Delete`,
+			input: []any{
+				map[string]any{"key": string("test"), "value": string("value")},
+				map[string]any{"key": string("cores"), "value": float64(2)},
+				map[string]any{"key": string("tpmstate0"), "value": string("local-zfs:vm-1001-disk-2,size=4M,version=v1.2"), "delete": float64(1)}},
+			output: map[string]any{
+				"cores":     float64(2),
+				"test":      string("value"),
+				"tpmstate0": string("local-zfs:vm-1001-disk-2,size=4M,version=v1.2")},
+			pending: true},
+		{name: `Missing Value Pending (Real-World Case)`,
+			input: []any{
+				map[string]any{"key": string("bios"), "pending": string("ovmf")},
+				map[string]any{"key": string("cores"), "value": float64(2)}},
+			output:  map[string]any{"cores": float64(2)},
+			pending: true},
+		{name: `Error`,
+			err: errors.New("test")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			output, pending, err := (&VmRef{}).pendingConfig(context.Background(), &mockClientAPI{
+				getGuestPendingChangesFunc: func(ctx context.Context, vmr *VmRef) ([]any, error) {
+					return test.input, test.err
+				}})
+			require.Equal(t, test.err, err)
+			require.Equal(t, test.pending, pending)
+			require.Equal(t, test.output, output)
 		})
 	}
 }
