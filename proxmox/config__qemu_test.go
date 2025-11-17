@@ -4165,96 +4165,100 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						SerialID2: SerialInterface{Path: "/dev/tty78"}}},
 					output: map[string]interface{}{"delete": "serial2"}}},
 		},
-		{category: `Startup`,
+		{category: `StartAtNodeBoot`,
 			create: []test{
-				{name: `Enabled no effect`,
-					config: &ConfigQemu{Startup: &GuestStartup{
-						Enabled: util.Pointer(false)}},
+				{name: `true`,
+					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(true)},
+					output: map[string]any{"onboot": int(1)}},
+				{name: `false`,
+					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(false)},
+					output: map[string]any{}}},
+			update: []test{
+				{name: `true to false`,
+					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(false)},
+					currentConfig: ConfigQemu{
+						StartAtNodeBoot: util.Pointer(true)},
+					output: map[string]any{"delete": string("onboot")}},
+				{name: `false to true`,
+					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(true)},
+					currentConfig: ConfigQemu{
+						StartAtNodeBoot: util.Pointer(false)},
+					output: map[string]any{"onboot": int(1)}},
+				{name: `true to true`,
+					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(true)},
+					currentConfig: ConfigQemu{
+						StartAtNodeBoot: util.Pointer(true)},
 					output: map[string]any{}},
+				{name: `false to false`,
+					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(false)},
+					currentConfig: ConfigQemu{
+						StartAtNodeBoot: util.Pointer(false)},
+					output: map[string]any{}}}},
+		{category: `StartupShutdown`,
+			create: []test{
 				{name: `Order no effect`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order: util.Pointer(GuestStartupOrder(-1))}},
 					output: map[string]any{}},
 				{name: `ShutdownTimeout no effect`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						ShutdownTimeout: util.Pointer(TimeDuration(-1))}},
 					output: map[string]any{}},
 				{name: `StartupDelay no effect`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						StartupDelay: util.Pointer(TimeDuration(-1))}},
 					output: map[string]any{}}},
 			createUpdate: []test{
-				{name: `Enabled true`,
-					config: &ConfigQemu{Startup: &GuestStartup{
-						Enabled: util.Pointer(true)}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
-						Enabled: util.Pointer(false)}},
-					output: map[string]any{"onboot": float64(1)}},
 				{name: `Order`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order: util.Pointer(GuestStartupOrder(10))}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
+					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order: util.Pointer(GuestStartupOrder(20))}},
 					output: map[string]any{"startup": string("order=10")}},
 				{name: `ShutdownTimeout`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						ShutdownTimeout: util.Pointer(TimeDuration(74530))}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
+					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						ShutdownTimeout: util.Pointer(TimeDuration(9362))}},
 					output: map[string]any{"startup": string("down=74530")}},
 				{name: `StartupDelay`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						StartupDelay: util.Pointer(TimeDuration(200))}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
+					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						StartupDelay: util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("up=200")}},
 				{name: `all`,
-					config: &ConfigQemu{Startup: &GuestStartup{
-						Enabled:         util.Pointer(true),
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(10)),
 						StartupDelay:    util.Pointer(TimeDuration(200)),
 						ShutdownTimeout: util.Pointer(TimeDuration(74530))}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
-						Enabled:         util.Pointer(false),
+					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(20)),
 						StartupDelay:    util.Pointer(TimeDuration(50)),
 						ShutdownTimeout: util.Pointer(TimeDuration(9362))}},
 					output: map[string]any{
-						"onboot":  float64(1),
 						"startup": string("order=10,up=200,down=74530")}}},
 			update: []test{
-				{name: `Enabled false`,
-					config: &ConfigQemu{Startup: &GuestStartup{
-						Enabled: util.Pointer(false)}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
-						Enabled: util.Pointer(true)}},
-					output: map[string]any{"delete": string("onboot")}},
-				{name: `Enabled no change`,
-					config: &ConfigQemu{Startup: &GuestStartup{
-						Enabled: util.Pointer(true)}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
-						Enabled: util.Pointer(true)}},
-					output: map[string]any{}},
 				{name: `Order unset`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order: util.Pointer(GuestStartupOrder(-1))}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
+					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(20)),
 						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
 						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("up=50,down=9362")}},
 				{name: `ShutdownTimeout unset`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						ShutdownTimeout: util.Pointer(TimeDuration(-1))}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
+					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(20)),
 						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
 						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("order=20,up=50")}},
 				{name: `StartupDelay unset`,
-					config: &ConfigQemu{Startup: &GuestStartup{
+					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						StartupDelay: util.Pointer(TimeDuration(-1))}},
-					currentConfig: ConfigQemu{Startup: &GuestStartup{
+					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(20)),
 						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
 						StartupDelay:    util.Pointer(TimeDuration(50))}},
@@ -4492,6 +4496,9 @@ func Test_ConfigQemu_get(t *testing.T) {
 		}
 		if config.Tablet == nil {
 			config.Tablet = util.Pointer(true)
+		}
+		if config.StartAtNodeBoot == nil {
+			config.StartAtNodeBoot = util.Pointer(false)
 		}
 		return &config
 	}
@@ -7375,47 +7382,45 @@ func Test_ConfigQemu_get(t *testing.T) {
 				{name: `single socket`,
 					input:  map[string]interface{}{"serial2": "socket"},
 					output: baseConfig(ConfigQemu{Serials: SerialInterfaces{SerialID2: SerialInterface{Socket: true}}})}}},
-		{category: `Startup`,
+		{category: `StartAtNodeBoot`,
 			tests: []test{
-				{name: `Enabled`,
-					input: map[string]any{"onboot": float64(1)},
-					output: baseConfig(ConfigQemu{
-						Startup: &GuestStartup{
-							Enabled:         util.Pointer(true),
-							Order:           util.Pointer(GuestStartupOrder(-1)),
-							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
-							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
+				{name: `true`,
+					input:  map[string]any{"onboot": float64(1)},
+					output: baseConfig(ConfigQemu{StartAtNodeBoot: util.Pointer(true)})},
+				{name: `false`,
+					input:  map[string]any{"onboot": float64(0)},
+					output: baseConfig(ConfigQemu{StartAtNodeBoot: util.Pointer(false)})},
+				{name: `default false`,
+					input:  map[string]any{},
+					output: baseConfig(ConfigQemu{StartAtNodeBoot: util.Pointer(false)})}}},
+		{category: `StartupShutdown`,
+			tests: []test{
 				{name: `Order`,
 					input: map[string]any{"startup": string("order=0")},
 					output: baseConfig(ConfigQemu{
-						Startup: &GuestStartup{
-							Enabled:         util.Pointer(false),
+						StartupShutdown: &StartupAndShutdown{
 							Order:           util.Pointer(GuestStartupOrder(0)),
 							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
 							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
 				{name: `ShutdownTimeout`,
 					input: map[string]any{"startup": string("down=503")},
 					output: baseConfig(ConfigQemu{
-						Startup: &GuestStartup{
-							Enabled:         util.Pointer(false),
+						StartupShutdown: &StartupAndShutdown{
 							Order:           util.Pointer(GuestStartupOrder(-1)),
 							ShutdownTimeout: util.Pointer(TimeDuration(503)),
 							StartupDelay:    util.Pointer(TimeDuration(-1))}})},
 				{name: `StartupDelay`,
 					input: map[string]any{"startup": string("up=7")},
 					output: baseConfig(ConfigQemu{
-						Startup: &GuestStartup{
-							Enabled:         util.Pointer(false),
+						StartupShutdown: &StartupAndShutdown{
 							Order:           util.Pointer(GuestStartupOrder(-1)),
 							ShutdownTimeout: util.Pointer(TimeDuration(-1)),
 							StartupDelay:    util.Pointer(TimeDuration(7))}})},
 				{name: `all`,
 					input: map[string]any{
-						"onboot":  float64(1),
 						"startup": string("up=8454,down=43742,order=75")},
 					output: baseConfig(ConfigQemu{
-						Startup: &GuestStartup{
-							Enabled:         util.Pointer(true),
+						StartupShutdown: &StartupAndShutdown{
 							Order:           util.Pointer(GuestStartupOrder(75)),
 							ShutdownTimeout: util.Pointer(TimeDuration(43742)),
 							StartupDelay:    util.Pointer(TimeDuration(8454))}})}}},
@@ -7550,6 +7555,9 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		}
 		if config.Scsihw == "" {
 			config.Scsihw = "lsi"
+		}
+		if config.StartAtNodeBoot == nil {
+			config.StartAtNodeBoot = util.Pointer(false)
 		}
 		if config.Tablet == nil {
 			config.Tablet = util.Pointer(true)
