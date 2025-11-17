@@ -255,7 +255,13 @@ func (vmr *VmRef) pendingChanges(ctx context.Context, c clientApiInterface) (boo
 		return false, err
 	}
 	for _, item := range changes {
-		if len(item.(map[string]any)) > 2 { // we always have the keys `key` & `value`
+		m := item.(map[string]any)
+		// we always have the key `key`
+		if _, ok := m[pendingApiValueKey]; ok {
+			if len(m) > 2 {
+				return true, nil
+			}
+		} else if len(m) > 1 {
 			return true, nil
 		}
 	}
@@ -275,13 +281,23 @@ func (vmr *VmRef) pendingConfig(ctx context.Context, c clientApiInterface) (map[
 	config := make(map[string]any, len(changes))
 	for _, item := range changes {
 		m := item.(map[string]any)
-		config[m["key"].(string)] = m["value"]
-		if len(m) > 2 {
+		// we always have the key `key`
+		if v, ok := m[pendingApiValueKey]; ok {
+			config[m[pendingApiKeyKey].(string)] = v
+			if len(m) > 2 {
+				pending = true
+			}
+		} else if len(m) > 1 {
 			pending = true
 		}
 	}
 	return config, pending, nil
 }
+
+const (
+	pendingApiKeyKey   string = "key"
+	pendingApiValueKey string = "value"
+)
 
 func (vmr *VmRef) Stop(ctx context.Context, c *Client) error { return c.new().guestStop(ctx, vmr) }
 
