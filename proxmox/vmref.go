@@ -103,9 +103,10 @@ func (c *clientNew) guestDelete(ctx context.Context, vmr *VmRef) error {
 	if err != nil {
 		return err
 	}
-	rawGuest, err := rawGuests.SelectID(guestID)
-	if err != nil {
-		return err
+
+	rawGuest, ok := rawGuests.SelectID(guestID)
+	if !ok {
+		return errorMsg{}.guestDoesNotExist(vmr.vmId)
 	}
 
 	guestType := rawGuest.GetType()

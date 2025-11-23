@@ -70,9 +70,9 @@ func (c *clientNew) guestCheckVmRef_Unsafe(ctx context.Context, vmr *VmRef) erro
 		if err != nil {
 			return err
 		}
-		rawGuest, err := raw.SelectID(vmr.vmId)
-		if err != nil {
-			return err
+		rawGuest, ok := raw.SelectID(vmr.vmId)
+		if !ok {
+			return errorMsg{}.guestDoesNotExist(vmr.vmId)
 		}
 		vmr.node = rawGuest.GetNode()
 		vmr.vmType = rawGuest.GetType()
