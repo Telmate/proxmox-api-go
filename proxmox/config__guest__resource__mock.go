@@ -13,6 +13,7 @@ type RawGuestResourceMock struct {
 	GetDiskWriteTotalFunc     func() uint
 	GetHaStateFunc            func() string
 	GetIDFunc                 func() GuestID
+	GetLockedFunc             func() bool
 	GetMemoryTotalInBytesFunc func() uint
 	GetMemoryUsedInBytesFunc  func() uint
 	GetNameFunc               func() GuestName
@@ -92,6 +93,13 @@ func (m *RawGuestResourceMock) GetID() GuestID {
 		m.panic("GetIDFunc")
 	}
 	return m.GetIDFunc()
+}
+
+func (m *RawGuestResourceMock) GetLocked() bool {
+	if m.GetLockedFunc == nil {
+		m.panic("GetLockedFunc")
+	}
+	return m.GetLockedFunc()
 }
 
 func (m *RawGuestResourceMock) GetMemoryTotalInBytes() uint {
