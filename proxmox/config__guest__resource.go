@@ -37,13 +37,13 @@ func (r RawGuestResources) Get() []GuestResource {
 	return resources
 }
 
-func (r RawGuestResources) SelectID(id GuestID) (RawGuestResource, error) {
+func (r RawGuestResources) SelectID(id GuestID) (RawGuestResource, bool) {
 	for i := range r {
 		if r[i].GetID() == id {
-			return r[i], nil
+			return r[i], true
 		}
 	}
-	return nil, errorMsg{}.guestDoesNotExist(id)
+	return nil, false
 }
 
 type GuestResource struct {
