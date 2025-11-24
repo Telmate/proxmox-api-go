@@ -108,6 +108,11 @@ func (c *clientNew) guestDelete(ctx context.Context, vmr *VmRef) error {
 	if !ok {
 		return errorMsg{}.guestDoesNotExist(vmr.vmId)
 	}
+	if haState := rawGuest.GetHaState(); haState != "" {
+		if _, err = guestID.deleteHaResource(ctx, ca); err != nil {
+			return err
+		}
+	}
 
 	guestType := rawGuest.GetType()
 	vmr.node = rawGuest.GetNode()
