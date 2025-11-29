@@ -9,6 +9,7 @@ import (
 // in the future we might put the interface even lower, but for now this is sufficient
 type clientApiInterface interface {
 	createHaRule(ctx context.Context, params map[string]any) error
+	deleteGuest(ctx context.Context, vmr *VmRef, purge bool) error
 	deleteHaResource(ctx context.Context, id GuestID) error
 	deleteHaRule(ctx context.Context, id HaRuleID) error
 	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)

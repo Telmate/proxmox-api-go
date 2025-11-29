@@ -29,6 +29,19 @@ func (c *clientAPI) delete(ctx context.Context, url string) (err error) {
 	return
 }
 
+// Makes a DELETE request and waits on proxmox for the task to complete.
+// It returns the HTTP error as 'err'.
+func (c *clientAPI) deleteTask(ctx context.Context, url string) error {
+	var resp *http.Response
+	resp, err := c.session.delete(ctx, url, nil, nil)
+	if err != nil {
+		_ = c.handleTaskError(resp)
+		return err
+	}
+	_, err = c.checkTask(ctx, resp)
+	return err
+}
+
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string, ignore errorIgnore) (map[string]any, error) {
 	data, err := c.getRootMap(ctx, url, text, message, ignore)
 	if err != nil {
