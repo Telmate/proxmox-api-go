@@ -617,6 +617,7 @@ func (c *Client) DeleteVm(ctx context.Context, vmr *VmRef) (exitStatus string, e
 	return c.DeleteVmParams(ctx, vmr, nil)
 }
 
+// Deprecated: use VmRef.Delete() instead.
 func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[string]interface{}) (exitStatus string, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
