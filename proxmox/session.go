@@ -157,33 +157,97 @@ func (s *Session) login(ctx context.Context, username string, password string, o
 	if otp != "" {
 		reqUser["otp"] = otp
 	}
-	reqbody := paramsToBody(reqUser)
+
+	loginResp, status, err := s.loginRequest(ctx, reqUser)
+	if err != nil && status != http.StatusUnauthorized {
+		return err
+	}
+
+	// If the first try with OTP was rejected, retry without OTP to discover TFA challenge
+	if err != nil && status == http.StatusUnauthorized && otp != "" {
+		originalErr := err
+		reqUser = map[string]interface{}{"username": username, "password": password}
+		loginResp, status, err = s.loginRequest(ctx, reqUser)
+
+		// If the retry also fails, return the original error
+		if err != nil {
+			return originalErr
+		}
+	}
+
+	// Two-step TOTP flow when server signals NeedTFA
+	if loginResp.needTFA {
+		if otp == "" {
+			return fmt.Errorf("missing TFA code")
+		}
+		if loginResp.ticket == "" {
+			return fmt.Errorf("two-step login: missing challenge ticket in first response")
+		}
+		secondReq := map[string]interface{}{
+			"username":      username,
+			"tfa-challenge": loginResp.ticket,
+			"password":      fmt.Sprintf("totp:%s", otp),
+		}
+		loginResp, status, err = s.loginRequest(ctx, secondReq)
+		if err != nil {
+			return err
+		}
+	}
+
+	s.AuthTicket = loginResp.ticket
+	s.CsrfToken = loginResp.csrfToken
+	return nil
+}
+
+type loginResponse struct {
+	ticket    string
+	csrfToken string
+	needTFA   bool
+}
+
+func (s *Session) loginRequest(ctx context.Context, body map[string]interface{}) (loginResponse, int, error) {
+	reqbody := paramsToBody(body)
 	olddebug := *Debug
 	*Debug = false // don't share passwords in debug log
 	resp, err := s.post(ctx, "/access/ticket", nil, &s.Headers, &reqbody)
 	*Debug = olddebug
 	if err != nil {
-		return err
+		status := 0
+		if resp != nil {
+			status = resp.StatusCode
+		}
+		return loginResponse{}, status, err
 	}
 	if resp == nil {
-		return fmt.Errorf("login error reading response")
+		return loginResponse{}, 0, fmt.Errorf("login error reading response")
 	}
+	status := resp.StatusCode
 	dr, _ := httputil.DumpResponse(resp, true)
 	jbody, err := responseJSON(resp)
 	if err != nil {
-		return err
+		return loginResponse{}, status, err
 	}
 	if jbody == nil || jbody["data"] == nil {
-		return fmt.Errorf("invalid login response:\n-----\n%s\n-----", dr)
+		return loginResponse{}, status, fmt.Errorf("invalid login response:\n-----\n%s\n-----", dr)
 	}
-	dat := jbody["data"].(map[string]interface{})
-	//Check if the 2FA was required
-	if dat["NeedTFA"] == 1.0 {
-		return fmt.Errorf("missing TFA code")
+	dat, ok := jbody["data"].(map[string]interface{})
+	if !ok {
+		return loginResponse{}, status, fmt.Errorf("invalid login response data")
 	}
-	s.AuthTicket = dat["ticket"].(string)
-	s.CsrfToken = dat["CSRFPreventionToken"].(string)
-	return nil
+
+	loginResp := loginResponse{}
+
+	if needTFA, ok := dat["NeedTFA"].(float64); ok && needTFA == 1.0 {
+		loginResp.needTFA = true
+	}
+	if ticket, ok := dat["ticket"].(string); ok {
+		loginResp.ticket = ticket
+	}
+	if csrf, ok := dat["CSRFPreventionToken"].(string); ok {
+		loginResp.csrfToken = csrf
+	}
+
+	return loginResp, status, nil
 }
 
 func (s *Session) NewRequest(ctx context.Context, method, url string, headers *http.Header, body io.Reader) (req *http.Request, err error) {
