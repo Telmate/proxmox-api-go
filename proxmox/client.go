@@ -222,6 +222,15 @@ func (c *Client) GetVersion(ctx context.Context) (Version, error) {
 	return version, nil
 }
 
+// SessionTokens returns the current ticket and CSRF token if present.
+// If the client is not authenticated, ok will be false.
+func (c *Client) SessionTokens() (ticket string, csrf string, ok bool) {
+	if c == nil || c.session == nil || c.session.AuthTicket == "" || c.session.CsrfToken == "" {
+		return "", "", false
+	}
+	return c.session.AuthTicket, c.session.CsrfToken, true
+}
+
 func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[string]any, tries int, ignore ...errorIgnore) error {
 	var statErr error
 	for ii := 0; ii < tries; ii++ {
