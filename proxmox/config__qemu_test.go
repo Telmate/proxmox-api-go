@@ -7424,6 +7424,20 @@ func Test_ConfigQemu_get(t *testing.T) {
 							Order:           util.Pointer(GuestStartupOrder(75)),
 							ShutdownTimeout: util.Pointer(TimeDuration(43742)),
 							StartupDelay:    util.Pointer(TimeDuration(8454))}})}}},
+		{category: `Tags`,
+			tests: []test{
+				{name: `bug`, // in some versions a space is returned when there are no tags.
+					input: map[string]any{"tags": string(" ")},
+					output: baseConfig(ConfigQemu{
+						Tags: util.Pointer(Tags{})})},
+				{name: `empty`,
+					input: map[string]any{"tags": string("")},
+					output: baseConfig(ConfigQemu{
+						Tags: util.Pointer(Tags{})})},
+				{name: `set`,
+					input: map[string]any{"tags": string("a;bb;ccc")},
+					output: baseConfig(ConfigQemu{
+						Tags: util.Pointer(Tags{"a", "bb", "ccc"})})}}},
 		{category: `TPM`,
 			tests: []test{
 				{name: `All`,
