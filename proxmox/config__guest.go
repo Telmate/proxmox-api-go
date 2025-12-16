@@ -279,16 +279,28 @@ func (id GuestID) ExistsNoCheck(ctx context.Context, c *Client) (bool, error) {
 }
 
 func (id GuestID) exists_Unsafe(ctx context.Context, c *Client) (bool, error) {
-	_, err := c.GetItemConfigString(ctx, url_NextID+"?vmid="+id.String(), "API", "cluster/nextid",
-		func(err error) bool {
-			return err.Error() == guestIDexistsError
-		})
+	guests, err := c.GetResourceList(ctx, resourceListGuest)
 	if err != nil {
-		if err.Error() == guestIDexistsError {
+		return false, err
+	}
+	for i := range guests {
+		guest := guests[i].(map[string]any)
+		if id == GuestID(guest["vmid"].(float64)) {
 			return true, nil
 		}
 	}
-	return false, err
+	return false, nil
+	// FIXME: The code below would be more efficient, but for some users we parse the error body and for others the header. This inconsistency needs to be resolved first.
+	// _, err := c.GetItemConfigString(ctx, url_NextID+"?vmid="+id.String(), "API", "cluster/nextid",
+	// 	func(err error) bool {
+	// 		return err.Error() == guestIDexistsError
+	// 	})
+	// if err != nil {
+	// 	if err.Error() == guestIDexistsError {
+	// 		return true, nil
+	// 	}
+	// }
+	// return false, err
 }
 
 func (id GuestID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
