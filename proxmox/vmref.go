@@ -108,11 +108,6 @@ func (c *clientNew) guestDelete(ctx context.Context, vmr *VmRef) error {
 	if !ok {
 		return errorMsg{}.guestDoesNotExist(vmr.vmId)
 	}
-	if haState := rawGuest.GetHaState(); haState != "" {
-		if _, err = guestID.deleteHaResource(ctx, ca); err != nil {
-			return err
-		}
-	}
 
 	guestType := rawGuest.GetType()
 	vmr.node = rawGuest.GetNode()
@@ -142,16 +137,15 @@ func (c *clientNew) guestDelete(ctx context.Context, vmr *VmRef) error {
 		return err
 	}
 
+	haEnabled := rawGuest.GetHaState() != ""
 	if rawGuest.GetStatus() != PowerStateStopped { // Check if guest is running
-		for {
-			var guestStatus RawGuestStatus
-			guestStatus, err = vmr.getRawGuestStatus_Unsafe(ctx, c.oldClient)
-			if err != nil {
+		if haEnabled {
+			if _, err = guestID.deleteHaResource(ctx, ca); err != nil { // It's faster to delete HA resource first, instead of stopping via HA
 				return err
 			}
-			if guestStatus.GetState() == PowerStateStopped {
-				break
-			}
+			haEnabled = false
+		}
+		for {
 			if version.Encode() >= version_8_0_0 { // Try to force stop the guest if supported
 				err = vmr.forceStop_Unsafe(ctx, ca)
 			} else {
@@ -160,21 +154,36 @@ func (c *clientNew) guestDelete(ctx context.Context, vmr *VmRef) error {
 			if err != nil {
 				return err
 			}
+			var guestStatus RawGuestStatus
+			guestStatus, err = vmr.getRawGuestStatus_Unsafe(ctx, c.oldClient)
+			if err != nil {
+				return err
+			}
+			if guestStatus.GetState() == PowerStateStopped {
+				break
+			}
 		}
 	}
-	return vmr.delete_Unsafe(ctx, c.oldClient)
+	return vmr.delete_Unsafe(ctx, c.apiGet(), haEnabled)
 }
 
 func (vmr VmRef) DeleteNoCheck(ctx context.Context, c *Client) error {
 	if err := c.checkInitialized(); err != nil {
 		return err
 	}
-	return vmr.delete_Unsafe(ctx, c)
+	return vmr.delete_Unsafe(ctx, c.new().apiGet(), false)
 }
 
-func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
-	_, err := c.DeleteVmParams(ctx, vmr, nil) // TODO use a more optimized version
-	return err
+func (vmr *VmRef) delete_Unsafe(ctx context.Context, c clientApiInterface, purge bool) error {
+	return c.deleteGuest(ctx, vmr, purge)
+}
+
+func (c *clientAPI) deleteGuest(ctx context.Context, vmr *VmRef, purge bool) error {
+	var urlOptions string
+	if purge {
+		urlOptions = "?purge=1"
+	}
+	return c.deleteTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+urlOptions)
 }
 
 // ForceStop stops the guest immediately without a graceful shutdown and cancels any stop/shutdown operations in progress.
@@ -197,6 +206,9 @@ func (c *clientNew) guestStopForce(ctx context.Context, vmr *VmRef) error {
 	return vmr.forceStop_Unsafe(ctx, c.apiGet())
 }
 
+// forceStop stops the guest immediately without a graceful shutdown and cancels any stop/shutdown operations in progress.
+// This function requires Proxmox VE 8.0 or later.
+// Gives error when HA is enabled.
 func (vmr *VmRef) forceStop_Unsafe(ctx context.Context, c clientApiInterface) error {
 	return c.updateGuestStatus(ctx, vmr, "stop", map[string]any{"overrule-shutdown": int(1)})
 }
