@@ -19,6 +19,15 @@ func (w *errorWrapper[T]) Error() string { return w.err.Error() + ": " + w.id.er
 
 func (w *errorWrapper[T]) Unwrap() error { return w.err }
 
+type errorWrap struct {
+	err     error
+	message string
+}
+
+func (w *errorWrap) Error() string { return w.message + ": " + w.err.Error() }
+
+func (w *errorWrap) Unwrap() error { return w.err }
+
 type errorContext interface{ errorContext() string }
 
 var errGuestDoesNotExist = errors.New("guest does not exist")

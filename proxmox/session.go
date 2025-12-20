@@ -218,9 +218,12 @@ func (s *Session) do(req *http.Request) (*http.Response, error) {
 		log.Printf(">>>>>>>>>> REQUEST:\n%v", string(d))
 	}
 
-	resp, err := s.httpClient.Do(req)
+	resp, err = s.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, true, &errorWrap{
+			err:     err,
+			message: "error performing http request",
+		}
 	}
 
 	// The response body reader needs to be closed, but lots of places call
@@ -229,7 +232,10 @@ func (s *Session) do(req *http.Request) (*http.Response, error) {
 	// a NopCloser over the bytes, which does not need to be closed downsteam.
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, true, &errorWrap{
+			err:     err,
+			message: "error reading response body",
+		}
 	}
 	resp.Body.Close()
 	resp.Body = io.NopCloser(bytes.NewReader(respBody))
