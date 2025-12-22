@@ -49,6 +49,16 @@ func RequestsPost(urlPath Path, expected any) []Request {
 		}}}
 }
 
+func RequestsPostResponse(urlPath Path, expected any, response []byte) []Request {
+	return []Request{{
+		Path:   urlPath,
+		Method: POST,
+		HandlerFunc: func(w http.ResponseWriter, r *http.Request, t *testing.T) {
+			requestsParseParams(expected, r, t)
+			w.Write(response)
+		}}}
+}
+
 // RequestsPut creates a request that expects a PUT with JSON body matching 'expected'
 // all values in 'expected' will be treated as strings or arrays of strings.
 func RequestsPut(urlPath Path, expected any) []Request {
@@ -61,6 +71,10 @@ func RequestsPut(urlPath Path, expected any) []Request {
 }
 
 func requestsParseParams(expected any, r *http.Request, t *testing.T) {
+	if expected == nil {
+		expected = map[string]any{}
+	}
+
 	body, err := io.ReadAll(r.Body)
 	require.NoError(t, err)
 
@@ -81,8 +95,7 @@ func RequestsErrorHandled(url Path, method Method, err HTTPerror) []Request {
 		Path:   url,
 		Method: method,
 		HandlerFunc: func(w http.ResponseWriter, r *http.Request, t *testing.T) {
-			response, _ := json.Marshal(map[string]string{"message": err.Message})
-			http.Error(w, string(response), int(err.Code))
+			http.Error(w, err.Message, int(err.Code))
 		}}}
 }
 
