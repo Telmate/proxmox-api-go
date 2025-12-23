@@ -2,6 +2,8 @@ package proxmox
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 )
 
 // Error serves as a pseudo-namespace for error message generators.
@@ -71,4 +73,33 @@ func functionalityNotSupportedInVersion(functionality string, version Version) e
 		err:           errNotSupportedInVersion,
 		functionality: functionality,
 		version:       version}
+}
+
+type ApiError struct {
+	Errors  map[string]any
+	Message string
+	Code    string
+}
+
+func (e ApiError) Error() string {
+	builder := strings.Builder{}
+
+	builder.WriteString("api error: code: ")
+	builder.WriteString(e.Code)
+	builder.WriteString(" message: ")
+	builder.WriteString(e.Message)
+
+	if len(e.Errors) != 0 {
+		builder.WriteString(" details: ( ")
+
+		for k, v := range e.Errors {
+			builder.WriteString(k)
+			builder.WriteString(":")
+			builder.WriteString(fmt.Sprintf("%v", v))
+			builder.WriteString(" | ")
+		}
+		builder.WriteString(" )")
+	}
+
+	return builder.String()
 }

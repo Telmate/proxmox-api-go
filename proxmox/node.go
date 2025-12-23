@@ -82,7 +82,7 @@ func (c *Client) nodeStatusCommand(ctx context.Context, node, command string) (e
 	url := fmt.Sprintf("/nodes/%s/status", node)
 
 	var resp *http.Response
-	resp, err = c.session.post(ctx, url, nil, nil, &reqbody)
+	resp, _, err = c.session.post(ctx, url, nil, nil, &reqbody)
 	if err != nil {
 		defer resp.Body.Close()
 		// This might not work if we never got a body. We'll ignore errors in trying to read,

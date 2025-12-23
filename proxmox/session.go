@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"slices"
+	"strings"
 )
 
 var Debug = new(bool)
@@ -160,7 +162,7 @@ func (s *Session) login(ctx context.Context, username string, password string, o
 	reqbody := paramsToBody(reqUser)
 	olddebug := *Debug
 	*Debug = false // don't share passwords in debug log
-	resp, err := s.post(ctx, "/access/ticket", nil, &s.Headers, &reqbody)
+	resp, _, err := s.post(ctx, "/access/ticket", nil, &s.Headers, &reqbody)
 	*Debug = olddebug
 	if err != nil {
 		return err
@@ -203,7 +205,7 @@ func (s *Session) NewRequest(ctx context.Context, method, url string, headers *h
 	return
 }
 
-func (s *Session) do(req *http.Request) (*http.Response, error) {
+func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err error) {
 	// Add session headers
 	for k, v := range s.Headers {
 		req.Header[k] = v
@@ -250,10 +252,26 @@ func (s *Session) do(req *http.Request) (*http.Response, error) {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return resp, fmt.Errorf(resp.Status)
+		if len(respBody) > 1 { // we need at least {} to be valid JSON, sometimes a single `\n` is returned.
+			var bodyObj map[string]any
+			err = json.Unmarshal(respBody, &bodyObj)
+			if err == nil {
+				apiErr := ApiError{
+					Code: resp.Status[0:3],
+				}
+				if v, ok := bodyObj["errors"]; ok {
+					apiErr.Errors = v.(map[string]any)
+				}
+				if v, ok := bodyObj["message"]; ok {
+					apiErr.Message = strings.TrimRight(v.(string), "\n")
+				}
+				return resp, false, &apiErr
+			}
+		}
+		return resp, true, errors.New(resp.Status)
 	}
 
-	return resp, nil
+	return resp, false, nil
 }
 
 // Perform a simple get to an endpoint
@@ -264,7 +282,7 @@ func (s *Session) request(
 	params *url.Values,
 	headers *http.Header,
 	body *[]byte,
-) (resp *http.Response, err error) {
+) (resp *http.Response, retry bool, err error) {
 	// add params to url here
 	url = s.ApiUrl + url
 	if params != nil {
@@ -279,7 +297,7 @@ func (s *Session) request(
 
 	req, err := s.NewRequest(ctx, method, url, headers, buf)
 	if err != nil {
-		return nil, err
+		return nil, true, err
 	}
 
 	req.Header.Set("Accept", "application/json")
@@ -294,25 +312,17 @@ func (s *Session) requestJSON(
 	url string,
 	params *url.Values,
 	headers *http.Header,
-	body interface{},
+	body *[]byte,
 	responseContainer interface{},
-) (resp *http.Response, err error) {
-	var bodyjson []byte
-	if body != nil {
-		bodyjson, err = json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-	}
-
+) (resp *http.Response, retry bool, err error) {
 	// if headers == nil {
 	// 	headers = &http.Header{}
 	// 	headers.Add("Content-Type", "application/json")
 	// }
 
-	resp, err = s.request(ctx, method, url, params, headers, &bodyjson)
+	resp, retry, err = s.request(ctx, method, url, params, headers, body)
 	if err != nil {
-		return resp, err
+		return resp, retry, err
 	}
 
 	// err = util.CheckHTTPResponseStatusCode(resp)
@@ -322,13 +332,13 @@ func (s *Session) requestJSON(
 
 	rbody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return resp, fmt.Errorf("error reading response body")
+		return resp, true, fmt.Errorf("error reading response body")
 	}
 	if err = json.Unmarshal(rbody, &responseContainer); err != nil {
-		return resp, err
+		return resp, true, err
 	}
 
-	return resp, nil
+	return resp, false, nil
 }
 
 func (s *Session) delete(
@@ -336,7 +346,7 @@ func (s *Session) delete(
 	url string,
 	params *url.Values,
 	headers *http.Header,
-) (resp *http.Response, err error) {
+) (resp *http.Response, retry bool, err error) {
 	return s.request(ctx, "DELETE", url, params, headers, nil)
 }
 
@@ -345,7 +355,7 @@ func (s *Session) get(
 	url string,
 	params *url.Values,
 	headers *http.Header,
-) (resp *http.Response, err error) {
+) (resp *http.Response, retry bool, err error) {
 	return s.request(ctx, "GET", url, params, headers, nil)
 }
 
@@ -355,7 +365,7 @@ func (s *Session) getJSON(
 	params *url.Values,
 	headers *http.Header,
 	responseContainer interface{},
-) (resp *http.Response, err error) {
+) (resp *http.Response, retry bool, err error) {
 	return s.requestJSON(ctx, "GET", url, params, headers, nil, responseContainer)
 }
 
@@ -365,7 +375,7 @@ func (s *Session) post(
 	params *url.Values,
 	headers *http.Header,
 	body *[]byte,
-) (resp *http.Response, err error) {
+) (resp *http.Response, retry bool, err error) {
 	if headers == nil {
 		headers = &http.Header{}
 		headers.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -378,9 +388,9 @@ func (s *Session) postJSON(
 	url string,
 	params *url.Values,
 	headers *http.Header,
-	body interface{},
+	body *[]byte,
 	responseContainer interface{},
-) (resp *http.Response, err error) {
+) (resp *http.Response, retry bool, err error) {
 	return s.requestJSON(ctx, "POST", url, params, headers, body, responseContainer)
 }
 
@@ -390,7 +400,7 @@ func (s *Session) put(
 	params *url.Values,
 	headers *http.Header,
 	body *[]byte,
-) (resp *http.Response, err error) {
+) (resp *http.Response, retry bool, err error) {
 	if headers == nil {
 		headers = &http.Header{}
 		headers.Add("Content-Type", "application/x-www-form-urlencoded")

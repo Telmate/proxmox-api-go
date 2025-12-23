@@ -242,7 +242,7 @@ func (id GuestID) DeleteHaResource(ctx context.Context, c *Client) (bool, error)
 	return c.new().haDeleteResource(ctx, id)
 }
 
-func (c *clientNew) haDeleteResource(ctx context.Context, id GuestID) (bool, error) {
+func (c *clientNewTest) haDeleteResource(ctx context.Context, id GuestID) (bool, error) {
 	return id.deleteHaResource(ctx, c.apiGet())
 }
 
@@ -279,13 +279,15 @@ func (id GuestID) ExistsNoCheck(ctx context.Context, c *Client) (bool, error) {
 }
 
 func (id GuestID) exists_Unsafe(ctx context.Context, c *Client) (bool, error) {
-	_, err := c.GetItemConfigString(ctx, url_NextID+"?vmid="+id.String(), "API", "cluster/nextid",
-		func(err error) bool {
-			return err.Error() == guestIDexistsError
-		})
+	_, err := c.GetItemConfigString(ctx, url_NextID+"?vmid="+id.String(), "API", "cluster/nextid")
 	if err != nil {
-		if err.Error() == guestIDexistsError {
-			return true, nil
+		var apiErr *ApiError
+		if errors.As(err, &apiErr) {
+			if v, ok := apiErr.Errors["vmid"]; ok {
+				if strings.HasPrefix(v.(string), "VM "+id.String()+" already exists") {
+					return true, nil
+				}
+			}
 		}
 	}
 	return false, err

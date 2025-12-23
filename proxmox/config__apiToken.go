@@ -128,7 +128,7 @@ type ApiTokenConfig struct {
 }
 
 func (token ApiTokenConfig) create(ctx context.Context, c *clientAPI, userID UserID) (ApiTokenSecret, error) {
-	params, err := c.postMap(ctx, "/access/users/"+userID.String()+"/token/"+token.Name.String(), token.mapToApiCreate(), "ApiToken", "config", nil)
+	params, err := c.postMap(ctx, "/access/users/"+userID.String()+"/token/"+token.Name.String(), token.mapToApiCreate(), "ApiToken", "config")
 	if err != nil {
 		return "", err
 	}
@@ -176,7 +176,7 @@ func (token ApiTokenConfig) update(ctx context.Context, c *clientAPI, userID Use
 	if body == nil {
 		return nil
 	}
-	_, err := c.postRawRetry(ctx, "/access/users/"+userID.String()+"/token/"+token.Name.String(), body, 3, nil)
+	_, err := c.postRawRetry(ctx, "/access/users/"+userID.String()+"/token/"+token.Name.String(), body, 3)
 	return err
 }
 
@@ -287,7 +287,7 @@ type ApiTokenID struct {
 }
 
 func (id ApiTokenID) delete(ctx context.Context, c *clientAPI) (bool, error) {
-	err := c.deleteRetry(ctx, "/access/users/"+id.User.String()+"/token/"+id.TokenName.String(), 3, nil)
+	err := c.deleteRetry(ctx, "/access/users/"+id.User.String()+"/token/"+id.TokenName.String(), 3)
 	var apiErr *ApiError
 	if errors.As(err, &apiErr) {
 		if strings.HasPrefix(apiErr.Message, "no such token ") {
@@ -323,7 +323,7 @@ func (id *ApiTokenID) Parse(s string) error {
 }
 
 func (id ApiTokenID) read(ctx context.Context, c *clientAPI) (*rawApiTokenConfig, bool, error) {
-	data, err := c.getMap(ctx, "/access/users/"+id.User.String()+"/token/"+id.TokenName.String(), "api token", "CONFIG", nil)
+	data, err := c.getMap(ctx, "/access/users/"+id.User.String()+"/token/"+id.TokenName.String(), "api token", "CONFIG")
 	if err != nil {
 		var apiErr *ApiError
 		if errors.As(err, &apiErr) {

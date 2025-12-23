@@ -17,7 +17,7 @@ const HaRule_Error_VersionTooLow = "HA rules require Proxmox VE 9.0 or higher"
 
 func ListHaRules(ctx context.Context, c *Client) (HaRules, error) { return c.new().haListRules(ctx) }
 
-func (c *clientNew) haListRules(ctx context.Context) (HaRules, error) {
+func (c *clientNewTest) haListRules(ctx context.Context) (HaRules, error) {
 	if err := haVersionCheck(ctx, c); err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func ListHaRulesNoCheck(ctx context.Context, c *Client) (HaRules, error) {
 	return c.new().haListRulesNoCheck(ctx)
 }
 
-func (c *clientNew) haListRulesNoCheck(ctx context.Context) (HaRules, error) {
+func (c *clientNewTest) haListRulesNoCheck(ctx context.Context) (HaRules, error) {
 	return listHaRules(ctx, c.api)
 }
 
@@ -48,7 +48,7 @@ func NewHaRuleFromApi(ctx context.Context, id HaRuleID, c *Client) (HaRule, erro
 	return c.new().haGetRule(ctx, id)
 }
 
-func (c *clientNew) haGetRule(ctx context.Context, id HaRuleID) (HaRule, error) {
+func (c *clientNewTest) haGetRule(ctx context.Context, id HaRuleID) (HaRule, error) {
 	if err := id.Validate(); err != nil {
 		return nil, err
 	}
@@ -251,7 +251,7 @@ func (config HaNodeAffinityRule) Create(ctx context.Context, c *Client) error {
 	return c.new().haCreateNodeAffinityRule(ctx, config)
 }
 
-func (c *clientNew) haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {
+func (c *clientNewTest) haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {
 	if err := haVersionCheck(ctx, c); err != nil {
 		return err
 	}
@@ -270,7 +270,7 @@ func (config HaNodeAffinityRule) CreateNoCheck(ctx context.Context, c *Client) e
 	return c.new().haCreateNodeAffinityRuleNoCheck(ctx, config)
 }
 
-func (c *clientNew) haCreateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error {
+func (c *clientNewTest) haCreateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error {
 	return ha.create(ctx, c.api)
 }
 
@@ -282,7 +282,7 @@ func (config HaNodeAffinityRule) Update(ctx context.Context, c *Client) error {
 	return c.new().haUpdateNodeAffinityRule(ctx, config)
 }
 
-func (c *clientNew) haUpdateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {
+func (c *clientNewTest) haUpdateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {
 	if err := haVersionCheck(ctx, c); err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (config HaNodeAffinityRule) UpdateNoCheck(ctx context.Context, c *Client) e
 	return c.new().haUpdateNodeAffinityRuleNoCheck(ctx, config)
 }
 
-func (c *clientNew) haUpdateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error {
+func (c *clientNewTest) haUpdateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error {
 	rawRule, err := ha.ID.get(ctx, c.api)
 	if err != nil {
 		return err
@@ -508,7 +508,7 @@ func (config HaResourceAffinityRule) Create(ctx context.Context, c *Client) erro
 	return c.new().haCreateResourceAffinityRule(ctx, config)
 }
 
-func (c *clientNew) haCreateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error {
+func (c *clientNewTest) haCreateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error {
 	if err := haVersionCheck(ctx, c); err != nil {
 		return err
 	}
@@ -519,7 +519,7 @@ func (config HaResourceAffinityRule) CreateNoCheck(ctx context.Context, c *Clien
 	return c.new().haCreateResourceAffinityRuleNoCheck(ctx, config)
 }
 
-func (c *clientNew) haCreateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error {
+func (c *clientNewTest) haCreateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error {
 	return ha.create(ctx, c.api)
 }
 
@@ -531,7 +531,7 @@ func (config HaResourceAffinityRule) Update(ctx context.Context, c *Client) erro
 	return c.new().haUpdateResourceAffinityRule(ctx, config)
 }
 
-func (c *clientNew) haUpdateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error {
+func (c *clientNewTest) haUpdateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error {
 	if err := haVersionCheck(ctx, c); err != nil {
 		return err
 	}
@@ -553,7 +553,7 @@ func (config HaResourceAffinityRule) UpdateNoCheck(ctx context.Context, c *Clien
 	return c.new().haUpdateResourceAffinityRuleNoCheck(ctx, config)
 }
 
-func (c *clientNew) haUpdateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error {
+func (c *clientNewTest) haUpdateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error {
 	rawRule, err := ha.ID.get(ctx, c.api)
 	if err != nil {
 		return err
@@ -839,7 +839,7 @@ func (id HaRuleID) Delete(ctx context.Context, c *Client) error {
 	return c.new().haDeleteRule(ctx, id)
 }
 
-func (c *clientNew) haDeleteRule(ctx context.Context, id HaRuleID) error {
+func (c *clientNewTest) haDeleteRule(ctx context.Context, id HaRuleID) error {
 	if err := id.Validate(); err != nil {
 		return err
 	}
@@ -850,7 +850,7 @@ func (id HaRuleID) DeleteNoCheck(ctx context.Context, c *Client) error {
 	return c.new().haDeleteRuleNoCheck(ctx, id)
 }
 
-func (c *clientNew) haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error {
+func (c *clientNewTest) haDeleteRuleNoCheck(ctx context.Context, id HaRuleID) error {
 	return id.delete(ctx, c.api)
 }
 
@@ -915,7 +915,7 @@ func (n HaNode) Validate() error {
 	return n.Priority.Validate()
 }
 
-func haVersionCheck(ctx context.Context, c *clientNew) error {
+func haVersionCheck(ctx context.Context, c *clientNewTest) error {
 	version, err := c.oldClient.Version(ctx)
 	if err != nil {
 		return err

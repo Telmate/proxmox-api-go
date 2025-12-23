@@ -7,7 +7,6 @@ func X_SuppressStaticCheck_DoNotUse() {
 	_ = mockClientAPI{}.new()
 
 	ca := &clientAPI{}
-	_ = ca.post(context.Background(), "", nil)
 	_, _ = ca.postTask(context.Background(), "", nil)
 
 	lxc := &RawConfigLXCMock{}

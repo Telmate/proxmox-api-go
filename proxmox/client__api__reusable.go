@@ -17,28 +17,28 @@ func (c *clientAPI) getResourceList(ctx context.Context, resourceType string) ([
 	if resourceType != "" {
 		url = url + "?type=" + resourceType
 	}
-	return c.getList(ctx, url, "", "", nil)
+	return c.getList(ctx, url, "", "")
 }
 
 // Primitive methods
 
 // Makes a DELETE request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
-func (c *clientAPI) delete(ctx context.Context, url string) (err error) {
-	_, err = c.session.delete(ctx, url, nil, nil)
+func (c *clientAPI) delete(ctx context.Context, url string) (retry bool, err error) {
+	_, retry, err = c.session.delete(ctx, url, nil, nil)
 	return
 }
 
-func (c *clientAPI) getMap(ctx context.Context, url, text, message string, ignore errorIgnore) (map[string]any, error) {
-	data, err := c.getRootMap(ctx, url, text, message, ignore)
+func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[string]any, error) {
+	data, err := c.getRootMap(ctx, url, text, message)
 	if err != nil {
 		return nil, err
 	}
 	return data["data"].(map[string]any), err
 }
 
-func (c *clientAPI) getList(ctx context.Context, url, text, message string, ignore errorIgnore) ([]any, error) {
-	list, err := c.getRootList(ctx, url, text, message, ignore)
+func (c *clientAPI) getList(ctx context.Context, url, text, message string) ([]any, error) {
+	list, err := c.getRootList(ctx, url, text, message)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +49,9 @@ func (c *clientAPI) getList(ctx context.Context, url, text, message string, igno
 	return data, nil
 }
 
-func (c *clientAPI) getRootMap(ctx context.Context, url, text, message string, ignore errorIgnore) (map[string]any, error) {
+func (c *clientAPI) getRootMap(ctx context.Context, url, text, message string) (map[string]any, error) {
 	var config map[string]any
-	if err := c.getJsonRetry(ctx, url, &config, 3, ignore); err != nil {
+	if err := c.getJsonRetry(ctx, url, &config, 3); err != nil {
 		return nil, err
 	}
 	if config["data"] == nil {
@@ -60,9 +60,9 @@ func (c *clientAPI) getRootMap(ctx context.Context, url, text, message string, i
 	return config, nil
 }
 
-func (c *clientAPI) getRootList(ctx context.Context, url, text, message string, ignore errorIgnore) (map[string]any, error) {
+func (c *clientAPI) getRootList(ctx context.Context, url, text, message string) (map[string]any, error) {
 	var data map[string]any
-	if err := c.getJsonRetry(ctx, url, &data, 3, ignore); err != nil {
+	if err := c.getJsonRetry(ctx, url, &data, 3); err != nil {
 		return nil, err
 	}
 	if data["data"] == nil {
@@ -73,16 +73,16 @@ func (c *clientAPI) getRootList(ctx context.Context, url, text, message string, 
 
 // Makes a POST request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
-func (c *clientAPI) post(ctx context.Context, url string, params map[string]any) (err error) {
+func (c *clientAPI) post(ctx context.Context, url string, params map[string]any) (retry bool, err error) {
 	requestBody := paramsToBody(params)
-	_, err = c.session.post(ctx, url, nil, nil, &requestBody)
+	_, retry, err = c.session.post(ctx, url, nil, nil, &requestBody)
 	return
 }
 
 func (c *clientAPI) postTask(ctx context.Context, url string, params map[string]any) (exitStatus string, err error) {
 	requestBody := paramsToBody(params)
 	var resp *http.Response
-	resp, err = c.session.post(ctx, url, nil, nil, &requestBody)
+	resp, _, err = c.session.post(ctx, url, nil, nil, &requestBody)
 	if err != nil {
 		return c.handleTaskError(resp), err
 	}
@@ -91,9 +91,9 @@ func (c *clientAPI) postTask(ctx context.Context, url string, params map[string]
 
 // Makes a PUT request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
-func (c *clientAPI) put(ctx context.Context, url string, params map[string]any) (err error) {
+func (c *clientAPI) put(ctx context.Context, url string, params map[string]any) (retry bool, err error) {
 	reqbody := paramsToBodyWithAllEmpty(params)
-	_, err = c.session.put(ctx, url, nil, nil, &reqbody)
+	_, retry, err = c.session.put(ctx, url, nil, nil, &reqbody)
 	return
 }
 
@@ -152,7 +152,7 @@ func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (exi
 	node := rxTaskNode.FindStringSubmatch(taskUpID)[1]
 	url := "/nodes/" + node + "/tasks/" + taskUpID + "/status"
 	var data map[string]any
-	_, err = c.session.getJSON(ctx, url, nil, nil, &data)
+	_, _, err = c.session.getJSON(ctx, url, nil, nil, &data)
 	if err == nil {
 		exitStatus = data["data"].(map[string]any)["exitstatus"]
 	}
@@ -162,17 +162,18 @@ func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (exi
 	return
 }
 
-func (c *clientAPI) getJsonRetry(ctx context.Context, url string, data *map[string]any, tries int, ignore errorIgnore) error {
+func (c *clientAPI) getJsonRetry(ctx context.Context, url string, data *map[string]any, tries int) error {
 	var err error
+	var retry bool
 	for i := range time.Duration(tries) {
-		_, err = c.session.getJSON(ctx, url, nil, nil, data)
+		_, retry, err = c.session.getJSON(ctx, url, nil, nil, data)
 		if err == nil {
 			return nil
 		}
-		if ignore != nil && ignore(err) {
+		if !retry {
 			return err
 		}
-		time.Sleep((i + 1) * time.Second)
+		time.Sleep((i + 1) * c.timeUnit)
 	}
 	return err
 }

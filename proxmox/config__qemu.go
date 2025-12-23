@@ -1250,7 +1250,7 @@ func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiIn
 	return &rawConfigQemu{a: rawConfig}, nil
 }
 
-func (c *clientNew) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
+func (c *clientNewTest) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
 	return guestGetRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 
@@ -1269,7 +1269,7 @@ func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clien
 	return &rawConfigQemu{a: tmpConfig}, pending, nil
 }
 
-func (c *clientNew) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error) {
+func (c *clientNewTest) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error) {
 	return guestGetActiveRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 

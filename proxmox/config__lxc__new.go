@@ -828,7 +828,7 @@ func guestGetLxcRawConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInt
 	return &rawConfigLXC{a: rawConfig}, nil
 }
 
-func (c *clientNew) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
+func (c *clientNewTest) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
 	return guestGetLxcRawConfig_Unsafe(ctx, vmr, c.api)
 }
 
@@ -847,6 +847,6 @@ func guestGetActiveRawLxcConfig_Unsafe(ctx context.Context, vmr *VmRef, c client
 	return &rawConfigLXC{a: tmpConfig}, pending, nil
 }
 
-func (c *clientNew) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error) {
+func (c *clientNewTest) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error) {
 	return guestGetActiveRawLxcConfig_Unsafe(ctx, vmr, c.api)
 }

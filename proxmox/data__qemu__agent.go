@@ -21,16 +21,15 @@ func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client) (RawAgentN
 	return c.new().guestGetRawAgentInformation(ctx, vmr)
 }
 
-func (c *clientNew) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {
+func (c *clientNewTest) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {
 	return vmr.getAgentInformation(ctx, c)
 }
 
-func (vmr *VmRef) getAgentInformation(ctx context.Context, c *clientNew) (*rawAgentNetworkInterfaces, GuestAgentState, error) {
+func (vmr *VmRef) getAgentInformation(ctx context.Context, c *clientNewTest) (*rawAgentNetworkInterfaces, GuestAgentState, error) {
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
 		return nil, GuestAgentStateUnknown, err
 	}
-	var state GuestAgentState
-	params, err := c.api.getGuestQemuAgent(ctx, vmr, &state)
+	params, state, err := c.api.getGuestQemuAgent(ctx, vmr)
 	if state == GuestAgentStateNotRunning || state == GuestAgentStateVmNotRunning {
 		return nil, state, nil
 	}

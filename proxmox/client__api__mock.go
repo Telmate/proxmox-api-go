@@ -10,10 +10,10 @@ type mockClientAPI struct {
 	deleteHaRuleFunc           func(ctx context.Context, id HaRuleID) error
 	getGuestConfigFunc         func(ctx context.Context, vmr *VmRef) (map[string]any, error)
 	getGuestPendingChangesFunc func(ctx context.Context, vmr *VmRef) ([]any, error)
-	getGuestQemuAgentFunc      func(ctx context.Context, vmr *VmRef, state *GuestAgentState) (map[string]any, error)
+	getGuestQemuAgentFunc      func(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error)
 	getHaRuleFunc              func(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfigFunc          func(ctx context.Context, pool PoolName) (map[string]any, error)
-	getUserConfigFunc          func(ctx context.Context, userId UserID) (map[string]any, error)
+	getUserConfigFunc          func(ctx context.Context, userId UserID) (map[string]any, bool, error)
 	listGuestResourcesFunc     func(ctx context.Context) ([]any, error)
 	listHaRulesFunc            func(ctx context.Context) ([]any, error)
 	updateGuestStatusFunc      func(ctx context.Context, vmr *VmRef, setStatus string, params map[string]interface{}) error
@@ -61,11 +61,11 @@ func (m *mockClientAPI) getGuestPendingChanges(ctx context.Context, vmr *VmRef) 
 	return m.getGuestPendingChangesFunc(ctx, vmr)
 }
 
-func (m *mockClientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef, state *GuestAgentState) (map[string]any, error) {
+func (m *mockClientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error) {
 	if m.getGuestQemuAgentFunc == nil {
 		m.panic("getGuestQemuAgentFunc")
 	}
-	return m.getGuestQemuAgentFunc(ctx, vmr, state)
+	return m.getGuestQemuAgentFunc(ctx, vmr)
 }
 
 func (m *mockClientAPI) getHaRule(ctx context.Context, id HaRuleID) (haRule map[string]any, err error) {
@@ -82,7 +82,7 @@ func (m *mockClientAPI) getPoolConfig(ctx context.Context, pool PoolName) (poolC
 	return m.getPoolConfigFunc(ctx, pool)
 }
 
-func (m *mockClientAPI) getUserConfig(ctx context.Context, userId UserID) (userConfig map[string]any, err error) {
+func (m *mockClientAPI) getUserConfig(ctx context.Context, userId UserID) (map[string]any, bool, error) {
 	if m.getUserConfigFunc == nil {
 		m.panic("getUserConfigFunc")
 	}
