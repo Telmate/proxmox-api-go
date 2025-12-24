@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Authenticate_ApiKey(t *testing.T) {
+func Test_Token_Create(t *testing.T) {
 	tokenID := pveSDK.ApiTokenID{
-		User:      pveSDK.UserID{Name: "Test_Authenticate_ApiKey", Realm: "pve"},
+		User:      pveSDK.UserID{Name: "Test_Token_Create", Realm: "pve"},
 		TokenName: "testToken"}
 	secret := util.Pointer(pveSDK.ApiTokenSecret(""))
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
@@ -38,9 +38,18 @@ func Test_Authenticate_ApiKey(t *testing.T) {
 		{name: `Create token`,
 			test: func(t *testing.T) {
 				var err error
-				*secret, err = c.ApiToken.Create(ctx, tokenID.User, pveSDK.ApiTokenConfig{Name: tokenID.TokenName, Comment: util.Pointer("This is a test token"), PrivilegeSeparation: util.Pointer(true)})
+				*secret, err = c.ApiToken.Create(ctx, tokenID.User, pveSDK.ApiTokenConfig{
+					Name:                tokenID.TokenName,
+					Comment:             util.Pointer("This is a test token"),
+					PrivilegeSeparation: util.Pointer(true)})
 				require.NoError(t, err)
 				require.NotEmpty(t, *secret)
+			}},
+		{name: `Check token exists`,
+			test: func(t *testing.T) {
+				exists, err := c.ApiToken.Exists(ctx, tokenID)
+				require.NoError(t, err)
+				require.Equal(t, true, exists)
 			}},
 		{name: `Authenticate with token`,
 			test: func(t *testing.T) {
@@ -51,6 +60,18 @@ func Test_Authenticate_ApiKey(t *testing.T) {
 				version, err := cl.Version(ctx)
 				require.NoError(t, err)
 				require.NotEmpty(t, version.String())
+			}},
+		{name: `Delete token`,
+			test: func(t *testing.T) {
+				deleted, err := c.ApiToken.Delete(ctx, tokenID)
+				require.NoError(t, err)
+				require.Equal(t, true, deleted)
+			}},
+		{name: `Check token does not exist`,
+			test: func(t *testing.T) {
+				exists, err := c.ApiToken.Exists(ctx, tokenID)
+				require.NoError(t, err)
+				require.False(t, exists)
 			}},
 		{name: `Delete user`,
 			test: func(t *testing.T) {

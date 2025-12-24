@@ -13,11 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Authenticate_ApiKey(t *testing.T) {
+func Test_Token_Read(t *testing.T) {
 	tokenID := pveSDK.ApiTokenID{
-		User:      pveSDK.UserID{Name: "Test_Authenticate_ApiKey", Realm: "pve"},
+		User:      pveSDK.UserID{Name: "Test_Token_Read", Realm: "pve"},
 		TokenName: "testToken"}
-	secret := util.Pointer(pveSDK.ApiTokenSecret(""))
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
 	require.NoError(t, err)
 	ctx := context.Background()
@@ -37,20 +36,25 @@ func Test_Authenticate_ApiKey(t *testing.T) {
 			}},
 		{name: `Create token`,
 			test: func(t *testing.T) {
-				var err error
-				*secret, err = c.ApiToken.Create(ctx, tokenID.User, pveSDK.ApiTokenConfig{Name: tokenID.TokenName, Comment: util.Pointer("This is a test token"), PrivilegeSeparation: util.Pointer(true)})
+				secret, err := c.ApiToken.Create(ctx, tokenID.User, pveSDK.ApiTokenConfig{
+					Name:                tokenID.TokenName,
+					Comment:             util.Pointer("This is a test token"),
+					Expiration:          util.Pointer(uint(123456)),
+					PrivilegeSeparation: util.Pointer(true)})
 				require.NoError(t, err)
-				require.NotEmpty(t, *secret)
+				require.NotEmpty(t, secret)
 			}},
-		{name: `Authenticate with token`,
+		{name: `Read token`,
 			test: func(t *testing.T) {
-				cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+				raw, err := c.ApiToken.Read(ctx, tokenID)
 				require.NoError(t, err)
-				require.NotNil(t, cl)
-				cl.SetAPIToken(tokenID, *secret)
-				version, err := cl.Version(ctx)
-				require.NoError(t, err)
-				require.NotEmpty(t, version.String())
+				require.NotNil(t, raw)
+				require.Equal(t, pveSDK.ApiTokenConfig{
+					Name:                tokenID.TokenName,
+					Comment:             util.Pointer("This is a test token"),
+					Expiration:          util.Pointer(uint(123456)),
+					PrivilegeSeparation: util.Pointer(true),
+				}, raw.Get())
 			}},
 		{name: `Delete user`,
 			test: func(t *testing.T) {

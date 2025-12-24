@@ -3,7 +3,7 @@ package body
 // Same as net/url.PathEscape()
 func PathEscape(s string) string { return escape(s, encodePathSegment) }
 
-func ApiTokenEscape(s string) string { return escape(s, encodePveApiToken) }
+func Escape(s string) string { return escape(s, encodePveApiToken) }
 
 func QemuSshKeyEscape(s string) string { return escape(s, encodePveQemuSshKey) }
 

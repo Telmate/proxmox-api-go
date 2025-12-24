@@ -13,11 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Authenticate_ApiKey(t *testing.T) {
+func Test_Token_Exists(t *testing.T) {
 	tokenID := pveSDK.ApiTokenID{
-		User:      pveSDK.UserID{Name: "Test_Authenticate_ApiKey", Realm: "pve"},
+		User:      pveSDK.UserID{Name: "Test_Token_Exists", Realm: "pve"},
 		TokenName: "testToken"}
-	secret := util.Pointer(pveSDK.ApiTokenSecret(""))
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
 	require.NoError(t, err)
 	ctx := context.Background()
@@ -35,22 +34,26 @@ func Test_Authenticate_ApiKey(t *testing.T) {
 			test: func(t *testing.T) {
 				require.NoError(t, c.User.Create(ctx, pveSDK.ConfigUser{User: tokenID.User}))
 			}},
+		{name: `Check token does not exist`,
+			test: func(t *testing.T) {
+				exists, err := c.ApiToken.Exists(ctx, tokenID)
+				require.NoError(t, err)
+				require.False(t, exists)
+			}},
 		{name: `Create token`,
 			test: func(t *testing.T) {
-				var err error
-				*secret, err = c.ApiToken.Create(ctx, tokenID.User, pveSDK.ApiTokenConfig{Name: tokenID.TokenName, Comment: util.Pointer("This is a test token"), PrivilegeSeparation: util.Pointer(true)})
+				secret, err := c.ApiToken.Create(ctx, tokenID.User, pveSDK.ApiTokenConfig{
+					Name:                tokenID.TokenName,
+					Comment:             util.Pointer("This is a test token"),
+					PrivilegeSeparation: util.Pointer(true)})
 				require.NoError(t, err)
-				require.NotEmpty(t, *secret)
+				require.NotEmpty(t, secret)
 			}},
-		{name: `Authenticate with token`,
+		{name: `Check token exists`,
 			test: func(t *testing.T) {
-				cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+				exists, err := c.ApiToken.Exists(ctx, tokenID)
 				require.NoError(t, err)
-				require.NotNil(t, cl)
-				cl.SetAPIToken(tokenID, *secret)
-				version, err := cl.Version(ctx)
-				require.NoError(t, err)
-				require.NotEmpty(t, version.String())
+				require.Equal(t, true, exists)
 			}},
 		{name: `Delete user`,
 			test: func(t *testing.T) {

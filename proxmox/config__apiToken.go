@@ -144,11 +144,11 @@ func (token ApiTokenConfig) mapToApiCreate() *[]byte {
 		builder.WriteString("&" + apiTokenApiKeyExpiration + "=" + strconv.FormatUint(uint64(*token.Expiration), 10))
 	}
 	if token.Comment != nil && *token.Comment != "" {
-		builder.WriteString("&" + apiTokenApiKeyComment + "=" + url.QueryEscape(*token.Comment))
+		builder.WriteString("&" + apiTokenApiKeyComment + "=" + body.Escape(*token.Comment))
 	}
 	if builder.Len() > 0 {
-		body := bytes.NewBufferString(builder.String()[1:]).Bytes()
-		return &body
+		b := bytes.NewBufferString(builder.String()[1:]).Bytes()
+		return &b
 	}
 	return nil
 }
@@ -162,11 +162,16 @@ func (token ApiTokenConfig) mapToApiUpdate() *[]byte {
 		builder.WriteString("&" + apiTokenApiKeyExpiration + "=" + strconv.FormatUint(uint64(*token.Expiration), 10))
 	}
 	if token.Comment != nil {
-		builder.WriteString("&" + apiTokenApiKeyComment + "=" + url.QueryEscape(*token.Comment))
+		builder.WriteString("&" + apiTokenApiKeyComment)
+		if *token.Comment == "" { // Bug in PVE API: setting empty comment has no effect, must use "= "
+			builder.WriteString("=%20")
+		} else {
+			builder.WriteString("=" + body.Escape(*token.Comment))
+		}
 	}
 	if builder.Len() > 0 {
-		body := bytes.NewBufferString(builder.String()[1:]).Bytes()
-		return &body
+		b := bytes.NewBufferString(builder.String()[1:]).Bytes()
+		return &b
 	}
 	return nil
 }
@@ -176,7 +181,7 @@ func (token ApiTokenConfig) update(ctx context.Context, c *clientAPI, userID Use
 	if body == nil {
 		return nil
 	}
-	_, err := c.postRawRetry(ctx, "/access/users/"+userID.String()+"/token/"+token.Name.String(), body, 3)
+	err := c.putRawRetry(ctx, "/access/users/"+userID.String()+"/token/"+token.Name.String(), body, 3)
 	return err
 }
 

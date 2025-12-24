@@ -289,7 +289,7 @@ func Test_apiTokenClient_Update(t *testing.T) {
 				Comment:             util.Pointer("test comment"),
 				Expiration:          util.Pointer(uint(123456)),
 				PrivilegeSeparation: util.Pointer(true)},
-			requests: mockServer.RequestsPost(path, map[string]any{
+			requests: mockServer.RequestsPut(path, map[string]any{
 				"comment": "test comment",
 				"expire":  "123456",
 				"privsep": "1",
@@ -312,7 +312,7 @@ func Test_apiTokenClient_Update(t *testing.T) {
 				Comment:             util.Pointer("test comment"),
 				Expiration:          util.Pointer(uint(123456)),
 				PrivilegeSeparation: util.Pointer(true)},
-			requests: mockServer.RequestsError(path, mockServer.POST, 500, 3),
+			requests: mockServer.RequestsError(path, mockServer.PUT, 500, 3),
 			err:      errors.New(mockServer.InternalServerError)},
 	}
 	server, c := testMockServerInit(t)
@@ -343,12 +343,12 @@ func Test_ApiTokenConfig_mapToAPI(t *testing.T) {
 					config: ApiTokenConfig{Comment: util.Pointer("")}}},
 			createUpdate: []test{
 				{name: `set`,
-					config: ApiTokenConfig{Comment: util.Pointer("my comment with symbols !@#$%^&*()")},
-					output: map[string]string{"comment": "my comment with symbols !@#$%^&*()"}}},
+					config: ApiTokenConfig{Comment: util.Pointer("My comment with symbols !@#$%^&*()=@+")},
+					output: map[string]string{"comment": "My comment with symbols !@#$%^&*()=@+"}}},
 			update: []test{
-				{name: `empty`,
+				{name: `empty`, // Bug in Proxmox API: setting empty comment via API leaves previous comment unchanged, prefixed spaces are trimmed from the comment.
 					config: ApiTokenConfig{Comment: util.Pointer("")},
-					output: map[string]string{"comment": ""}}}},
+					output: map[string]string{"comment": " "}}}},
 		{category: `Expiration`,
 			create: []test{
 				{name: `empty`,
