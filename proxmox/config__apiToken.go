@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/Telmate/proxmox-api-go/internal/body"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -217,10 +217,7 @@ func (raw *rawApiTokens) FormatArray() []RawApiTokenConfig {
 	tokenArray := make([]RawApiTokenConfig, len(raw.a))
 	for i := range raw.a {
 		tmpMap := raw.a[i].(map[string]any)
-		var name ApiTokenName
-		if v, ok := tmpMap[apiTokenApiKeyTokenID]; ok {
-			name = ApiTokenName(v.(string))
-		}
+		name := apiTokenGetName(tmpMap)
 		tokenArray[i] = &rawApiTokenConfig{a: tmpMap, name: name}
 	}
 	return tokenArray
@@ -230,10 +227,7 @@ func (raw *rawApiTokens) FormatMap() map[ApiTokenName]RawApiTokenConfig {
 	tokenMap := make(map[ApiTokenName]RawApiTokenConfig, len(raw.a))
 	for i := range raw.a {
 		tmpMap := raw.a[i].(map[string]any)
-		var name ApiTokenName
-		if v, ok := tmpMap[apiTokenApiKeyTokenID]; ok {
-			name = ApiTokenName(v.(string))
-		}
+		name := apiTokenGetName(tmpMap)
 		tokenMap[name] = &rawApiTokenConfig{a: tmpMap, name: name}
 	}
 	return tokenMap
@@ -265,25 +259,12 @@ func (raw *rawApiTokenConfig) Get() ApiTokenConfig {
 
 func (raw *rawApiTokenConfig) GetName() ApiTokenName { return raw.name }
 
-func (raw *rawApiTokenConfig) GetComment() string {
-	if v, ok := raw.a[apiTokenApiKeyComment]; ok {
-		return v.(string)
-	}
-	return ""
-}
+func (raw *rawApiTokenConfig) GetComment() string { return apiTokenGetComment(raw.a) }
 
-func (raw *rawApiTokenConfig) GetExpiration() uint {
-	if v, ok := raw.a[apiTokenApiKeyExpiration]; ok {
-		return uint(v.(float64))
-	}
-	return 0
-}
+func (raw *rawApiTokenConfig) GetExpiration() uint { return apiTokenGetExpiration(raw.a) }
 
 func (raw *rawApiTokenConfig) GetPrivilegeSeparation() bool {
-	if v, ok := raw.a[apiTokenApiKeyPrivilegeSeparation]; ok {
-		return int(v.(float64)) == 1
-	}
-	return false
+	return apiTokenGetPrivilegeSeparation(raw.a)
 }
 
 type ApiTokenID struct {
@@ -375,6 +356,35 @@ func (name ApiTokenName) Validate() error {
 type ApiTokenSecret string
 
 func (s ApiTokenSecret) String() string { return string(s) } // Used for fmt.Stringer interface
+
+func apiTokenGetComment(params map[string]any) string {
+	if v, isSet := params[apiTokenApiKeyComment]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func apiTokenGetExpiration(params map[string]any) uint {
+	if v, isSet := params[apiTokenApiKeyExpiration]; isSet {
+		return uint(v.(float64))
+	}
+	return 0
+}
+
+func apiTokenGetName(params map[string]any) ApiTokenName {
+	var name ApiTokenName
+	if v, isSet := params[apiTokenApiKeyTokenID]; isSet {
+		name = ApiTokenName(v.(string))
+	}
+	return name
+}
+
+func apiTokenGetPrivilegeSeparation(params map[string]any) bool {
+	if v, isSet := params[apiTokenApiKeyPrivilegeSeparation]; isSet {
+		return int(v.(float64)) == 1
+	}
+	return false
+}
 
 const (
 	apiTokenApiKeyTokenID             string = "tokenid"
