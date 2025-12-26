@@ -1,75 +1,263 @@
 package proxmox
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
+
+type (
+	UserInterface interface {
+		Create(context.Context, ConfigUser) error
+		CreateNoCheck(context.Context, ConfigUser) error
+
+		Delete(context.Context, UserID) error
+		DeleteNoCheck(context.Context, UserID) error
+
+		Exists(context.Context, UserID) (bool, error)
+		ExistsNoCheck(context.Context, UserID) (bool, error)
+
+		// List all users.
+		List(ctx context.Context) (RawUsersInfo, error)
+		ListNoCheck(ctx context.Context) (RawUsersInfo, error)
+
+		// List all users including their group membership and API tokens.
+		ListPartial(ctx context.Context) (RawUsersInfo, error)
+		ListPartialNoCheck(ctx context.Context) (RawUsersInfo, error)
+
+		// Read the user configuration for the specified userID.
+		// The boolean return value indicates if the user exists.
+		Read(context.Context, UserID) (RawConfigUser, error)
+		ReadNoCheck(context.Context, UserID) (RawConfigUser, error)
+
+		Set(context.Context, ConfigUser) error
+		SetNoCheck(context.Context, ConfigUser) error
+
+		Update(context.Context, ConfigUser) error
+		UpdateNoCheck(context.Context, ConfigUser) error
+	}
+
+	userClient struct {
+		api       *clientAPI
+		oldClient *Client
+	}
+)
+
+// User options for the Proxmox API
+type ConfigUser struct {
+	Comment   *string       `json:"comment,omitempty"`   // Never nil when returned.
+	Email     *string       `json:"email,omitempty"`     // Never nil when returned.
+	Enable    *bool         `json:"enable"`              // Never nil when returned.
+	Expire    *uint         `json:"expire"`              // Never nil when returned.
+	FirstName *string       `json:"firstname,omitempty"` // Never nil when returned.
+	Groups    *[]GroupName  `json:"groups,omitempty"`    // nil when we did not request group info.
+	Keys      *string       `json:"keys,omitempty"`
+	LastName  *string       `json:"lastname,omitempty"` // Never nil when returned.
+	Password  *UserPassword `json:"password,omitempty"` // Never returned.
+	User      UserID        `json:"user"`
+}
+
+type UserInfo struct {
+	Config ConfigUser
+	Tokens *[]ApiTokenConfig
+}
+
+var _ UserInterface = (*userClient)(nil)
+
+func (c *userClient) Create(ctx context.Context, config ConfigUser) error {
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	return c.CreateNoCheck(ctx, config)
+}
+
+func (c *userClient) CreateNoCheck(ctx context.Context, config ConfigUser) error {
+	return config.create(ctx, c.api)
+}
+
+func (c *userClient) Delete(ctx context.Context, id UserID) error {
+	if err := id.Validate(); err != nil {
+		return err
+	}
+	return c.DeleteNoCheck(ctx, id)
+}
+
+func (c *userClient) DeleteNoCheck(ctx context.Context, id UserID) error {
+	return id.delete(ctx, c.api)
+}
+
+func (c *userClient) Exists(ctx context.Context, id UserID) (bool, error) {
+	if err := id.Validate(); err != nil {
+		return false, err
+	}
+	return c.ExistsNoCheck(ctx, id)
+}
+
+func (c *userClient) ExistsNoCheck(ctx context.Context, id UserID) (bool, error) {
+	return id.exists(ctx, c.api)
+}
+
+func (c *userClient) List(ctx context.Context) (RawUsersInfo, error) {
+	return c.ListNoCheck(ctx)
+}
+
+func (c *userClient) ListNoCheck(ctx context.Context) (RawUsersInfo, error) {
+	return userListFull(ctx, c.api)
+}
+
+func (c *userClient) ListPartial(ctx context.Context) (RawUsersInfo, error) {
+	return c.ListPartialNoCheck(ctx)
+}
+
+func (c *userClient) ListPartialNoCheck(ctx context.Context) (RawUsersInfo, error) {
+	return userListPartial(ctx, c.api)
+}
+
+func (c *userClient) Read(ctx context.Context, id UserID) (RawConfigUser, error) {
+	if err := id.Validate(); err != nil {
+		return nil, err
+	}
+	return c.ReadNoCheck(ctx, id)
+}
+
+func (c *userClient) ReadNoCheck(ctx context.Context, id UserID) (RawConfigUser, error) {
+	raw, exists, err := id.read(ctx, c.api)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.New("user " + id.String() + " does not exist")
+	}
+	return raw, nil
+}
+
+func (c *userClient) Set(ctx context.Context, config ConfigUser) error {
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	return c.SetNoCheck(ctx, config)
+}
+
+func (c *userClient) SetNoCheck(ctx context.Context, config ConfigUser) error {
+	exists, err := config.User.exists(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return config.update(ctx, c.api)
+	}
+	return config.create(ctx, c.api)
+}
+
+func (c *userClient) Update(ctx context.Context, config ConfigUser) error {
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	return c.UpdateNoCheck(ctx, config)
+}
+
+func (c *userClient) UpdateNoCheck(ctx context.Context, config ConfigUser) error {
+	return config.update(ctx, c.api)
+}
 
 const Error_NewUserID string = "no username or realm specified, syntax is \"username@realm\""
 
-// User options for the Proxmox API
-// TODO rework this at some point to use pointers for all optional values
-type ConfigUser struct {
-	User      UserID       `json:"user"`
-	Comment   string       `json:"comment,omitempty"`
-	Email     string       `json:"email,omitempty"`
-	Enable    bool         `json:"enable"`
-	Expire    uint         `json:"expire"`
-	FirstName string       `json:"firstname,omitempty"`
-	Groups    *[]GroupName `json:"groups,omitempty"`
-	Keys      string       `json:"keys,omitempty"`
-	LastName  string       `json:"lastname,omitempty"`
-	// Password is always empty when getting information from Proxmox
-	Password UserPassword `json:"-"`
+// Deprecated: use UserInterface.Create() instead.
+func (config ConfigUser) CreateUser(ctx context.Context, client *Client) error {
+	return client.New().User.Create(ctx, config)
 }
 
-func (config ConfigUser) CreateUser(ctx context.Context, client *Client) (err error) {
-	err = config.Validate()
-	if err != nil {
-		return
+func (config ConfigUser) create(ctx context.Context, c *clientAPI) error {
+	if err := c.postRawRetry(ctx, "/access/users", config.mapToApiCreate(), 3); err != nil {
+		return errors.New("error creating User: " + err.Error())
 	}
-	params := config.mapToApiValues(true)
-	err = client.Post(ctx, params, "/access/users")
-	if err != nil {
-		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error creating User: %v, (params: %v)", err, string(params))
+	if config.Password != nil {
+		return config.User.setPassword(ctx, *config.Password, c)
 	}
-	return
+	return nil
 }
 
-func (config ConfigUser) DeleteUser(ctx context.Context, client *Client) (err error) {
-	existence, err := CheckUserExistence(ctx, config.User, client)
-	if err != nil {
-		return
-	}
-	if !existence {
-		return fmt.Errorf("user (%s) could not be deleted, the user does not exist", config.User.String())
-	}
-	// Proxmox silently fails a user delete if the users does not exist
-	return client.Delete(ctx, "/access/users/"+config.User.String())
+// Deprecated: use UserInterface.Delete() instead.
+func (config ConfigUser) DeleteUser(ctx context.Context, client *Client) error {
+	return client.New().User.Delete(ctx, config.User)
 }
 
-// Maps the struct to the API values proxmox understands
-func (config ConfigUser) mapToApiValues(create bool) (params map[string]interface{}) {
-	params = map[string]interface{}{
-		"comment":   config.Comment,
-		"email":     config.Email,
-		"enable":    config.Enable,
-		"expire":    config.Expire,
-		"firstname": config.FirstName,
-		"groups":    GroupName("").arrayToCsv(config.Groups),
-		"keys":      config.Keys,
-		"lastname":  config.LastName,
+func (config ConfigUser) mapToApiCreate() *[]byte {
+	builder := strings.Builder{}
+	builder.WriteString(userApiKeyUserID + "=" + config.User.String())
+	if config.Comment != nil && *config.Comment != "" {
+		builder.WriteString("&" + userApiKeyComment + "=" + body.Escape(*config.Comment))
 	}
-	if create {
-		params["password"] = config.Password
-		params["userid"] = config.User.String()
+	if config.Email != nil && *config.Email != "" {
+		builder.WriteString("&" + userApiKeyEmail + "=" + body.Escape(*config.Email))
 	}
-	return
+	if config.Enable != nil && !*config.Enable { // defaults to enabled when unset
+		builder.WriteString("&" + userApiKeyEnable + "=0")
+	}
+	if config.Expire != nil && *config.Expire != 0 {
+		builder.WriteString("&" + userApiKeyExpire + "=" + strconv.FormatUint(uint64(*config.Expire), 10))
+	}
+	if config.FirstName != nil && *config.FirstName != "" {
+		builder.WriteString("&" + userApiKeyFirstName + "=" + body.Escape(*config.FirstName))
+	}
+	if config.Groups != nil && len(*config.Groups) != 0 {
+		builder.WriteString("&" + userApiKeyGroups + "=" + body.Escape(GroupName("").arrayToCsv(config.Groups)))
+	}
+	if config.Keys != nil && *config.Keys != "" {
+		builder.WriteString("&" + userApiKeyKeys + "=" + body.Escape(*config.Keys))
+	}
+	if config.LastName != nil && *config.LastName != "" {
+		builder.WriteString("&" + userApiKeyLastName + "=" + body.Escape(*config.LastName))
+	}
+	b := []byte(builder.String())
+	return &b
+}
+
+func (config ConfigUser) mapToApiUpdate() *[]byte {
+	builder := strings.Builder{}
+	if config.Comment != nil {
+		builder.WriteString("&" + userApiKeyComment + "=" + body.Escape(*config.Comment))
+	}
+	if config.Email != nil {
+		builder.WriteString("&" + userApiKeyEmail + "=" + body.Escape(*config.Email))
+	}
+	if config.Enable != nil {
+		builder.WriteString("&" + userApiKeyEnable + "=")
+		if *config.Enable {
+			builder.WriteString("1")
+		} else {
+			builder.WriteString("0")
+		}
+	}
+	if config.Expire != nil {
+		builder.WriteString("&" + userApiKeyExpire + "=" + strconv.FormatUint(uint64(*config.Expire), 10))
+	}
+	if config.FirstName != nil {
+		builder.WriteString("&" + userApiKeyFirstName + "=" + body.Escape(*config.FirstName))
+	}
+	if config.Groups != nil {
+		builder.WriteString("&" + userApiKeyGroups + "=" + body.Escape(GroupName("").arrayToCsv(config.Groups)))
+	}
+	if config.Keys != nil {
+		builder.WriteString("&" + userApiKeyKeys + "=" + body.Escape(*config.Keys))
+	}
+	if config.LastName != nil {
+		builder.WriteString("&" + userApiKeyLastName + "=" + body.Escape(*config.LastName))
+	}
+	if builder.Len() > 0 {
+		b := bytes.NewBufferString(builder.String()[1:]).Bytes()
+		return &b
+	}
+	return nil
 }
 
 func (ConfigUser) mapToArray(params []any) *[]ConfigUser {
@@ -80,12 +268,13 @@ func (ConfigUser) mapToArray(params []any) *[]ConfigUser {
 	return &users
 }
 
+// Deprecated: use UserInterface.Set() instead.
 // Create or update the user depending on if the user already exists or not.
 // "userId" and "password" overwrite what is specified in "*ConfigUser".
 func (config *ConfigUser) SetUser(ctx context.Context, userId UserID, password UserPassword, client *Client) (err error) {
 	if config != nil {
 		config.User = userId
-		config.Password = password
+		config.Password = &password
 	}
 
 	userExists, err := CheckUserExistence(ctx, userId, client)
@@ -104,11 +293,11 @@ func (config *ConfigUser) SetUser(ctx context.Context, userId UserID, password U
 		}
 	} else {
 		config = &ConfigUser{
-			Password: password,
+			Password: &password,
 			User:     userId,
 		}
 		if userExists {
-			if config.Password != "" {
+			if config.Password != nil && *config.Password != "" {
 				err = config.UpdateUserPassword(ctx, client)
 			}
 		} else {
@@ -118,20 +307,12 @@ func (config *ConfigUser) SetUser(ctx context.Context, userId UserID, password U
 	return
 }
 
+// Deprecated: use UserInterface.Update() instead.
 func (config ConfigUser) UpdateUser(ctx context.Context, client *Client) (err error) {
-	// TODO add digest during update to check if the config has changed
-	params := config.mapToApiValues(false)
-	err = client.Put(ctx, params, "/access/users/"+config.User.String())
-	if err != nil {
-		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error updating User: %v, (params: %v)", err, string(params))
-	}
-	if config.Password != "" {
-		err = config.UpdateUserPassword(ctx, client)
-	}
-	return
+	return client.New().User.Update(ctx, config)
 }
 
+// Deprecated: use UserInterface.Update() instead.
 func (config ConfigUser) UpdateUserPassword(ctx context.Context, client *Client) (err error) {
 	err = config.Password.Validate()
 	if err != nil {
@@ -143,54 +324,66 @@ func (config ConfigUser) UpdateUserPassword(ctx context.Context, client *Client)
 	}, "/access/password")
 }
 
-type ApiToken struct {
-	TokenId string `json:"tokenid"`
-	Comment string `json:"comment,omitempty"`
-	Expire  int64  `json:"expire"`
-	Privsep bool   `json:"privsep"`
+func (config ConfigUser) update(ctx context.Context, c *clientAPI) error {
+	if body := config.mapToApiUpdate(); body != nil {
+		if err := c.putRawRetry(ctx, "/access/users/"+config.User.String(), body, 3); err != nil {
+			return err
+		}
+	}
+	if config.Password != nil {
+		return config.User.setPassword(ctx, *config.Password, c)
+	}
+	return nil
 }
+
+// Deprecated: remove when ConfigUser.CreateApiToken() is removed.
 type ApiTokenCreateResult struct {
 	Info  map[string]interface{} `json:"info"`
 	Value string                 `json:"value"`
 }
+
+// Deprecated: remove when ConfigUser.CreateApiToken() is removed.
 type ApiTokenCreateResultWrapper struct {
 	Data ApiTokenCreateResult `json:"data"`
 }
 
+// Deprecated: remove when ConfigUser.ListApiTokens() is removed.
 // Maps the API values from proxmox to a struct
-func (tokens ApiToken) mapToStruct(params map[string]interface{}) *ApiToken {
+func (tokens ApiTokenConfig) mapToStruct(params map[string]interface{}) *ApiTokenConfig {
 	if _, isSet := params["tokenid"]; isSet {
-		tokens.TokenId = params["tokenid"].(string)
+		tokens.Name = ApiTokenName(params["tokenid"].(string))
 	}
 	if _, isSet := params["comment"]; isSet {
-		tokens.Comment = params["comment"].(string)
+		tokens.Comment = util.Pointer(params["comment"].(string))
 	}
 	if _, isSet := params["expire"]; isSet {
-		tokens.Expire = int64(params["expire"].(float64))
+		tokens.Expiration = util.Pointer(uint(params["expire"].(float64)))
 	}
 	if _, isSet := params["privsep"]; isSet {
-		tokens.Privsep = false
+		tokens.PrivilegeSeparation = util.Pointer(false)
 		if params["privsep"] == 1 {
-			tokens.Privsep = true
+			tokens.PrivilegeSeparation = util.Pointer(true)
 		}
 	}
 	return &tokens
 }
 
-func (ApiToken) mapToArray(params []interface{}) *[]ApiToken {
-	tokens := make([]ApiToken, len(params))
+// Deprecated: remove when ConfigUser.ListApiTokens() is removed.
+func (ApiTokenConfig) mapToArray(params []interface{}) *[]ApiTokenConfig {
+	tokens := make([]ApiTokenConfig, len(params))
 	for i, e := range params {
-		tokens[i] = *ApiToken{}.mapToStruct(e.(map[string]interface{}))
+		tokens[i] = *ApiTokenConfig{}.mapToStruct(e.(map[string]interface{}))
 	}
 	return &tokens
 }
 
-func (config ConfigUser) CreateApiToken(ctx context.Context, client *Client, token ApiToken) (value string, err error) {
+// Deprecated: use UserInterface.CreateApiToken() instead.
+func (config ConfigUser) CreateApiToken(ctx context.Context, client *Client, token ApiTokenConfig) (value string, err error) {
 	status, err := client.CreateItemReturnStatus(ctx, map[string]interface{}{
 		"comment": token.Comment,
-		"expire":  token.Expire,
-		"privsep": token.Privsep,
-	}, "/access/users/"+config.User.String()+"/token/"+token.TokenId)
+		"expire":  token.Expiration,
+		"privsep": token.PrivilegeSeparation,
+	}, "/access/users/"+config.User.String()+"/token/"+token.Name.String())
 	if err != nil {
 		return
 	}
@@ -200,26 +393,29 @@ func (config ConfigUser) CreateApiToken(ctx context.Context, client *Client, tok
 	return
 }
 
-func (config ConfigUser) UpdateApiToken(ctx context.Context, client *Client, token ApiToken) (err error) {
+// Deprecated: use ApiTokenInterface.Update() instead.
+func (config ConfigUser) UpdateApiToken(ctx context.Context, client *Client, token ApiTokenConfig) (err error) {
 	err = client.Put(ctx, map[string]interface{}{
 		"comment": token.Comment,
-		"expire":  token.Expire,
-		"privsep": token.Privsep,
-	}, "/access/users/"+config.User.String()+"/token/"+token.TokenId)
+		"expire":  token.Expiration,
+		"privsep": token.PrivilegeSeparation,
+	}, "/access/users/"+config.User.String()+"/token/"+token.Name.String())
 	return
 }
 
-func (config ConfigUser) ListApiTokens(ctx context.Context, client *Client) (tokens *[]ApiToken, err error) {
+// Deprecated: use ApiTokenInterface.List() instead.
+func (config ConfigUser) ListApiTokens(ctx context.Context, client *Client) (tokens *[]ApiTokenConfig, err error) {
 	status, err := client.GetItemListInterfaceArray(ctx, "/access/users/"+config.User.String()+"/token")
 	if err != nil {
 		return
 	}
-	tokens = ApiToken{}.mapToArray(status)
+	tokens = ApiTokenConfig{}.mapToArray(status)
 	return
 }
 
-func (config ConfigUser) DeleteApiToken(ctx context.Context, client *Client, token ApiToken) (err error) {
-	err = client.Delete(ctx, "/access/users/"+config.User.String()+"/token/"+token.TokenId)
+// Deprecated: use ApiTokenInterface.Delete() instead.
+func (config ConfigUser) DeleteApiToken(ctx context.Context, client *Client, token ApiTokenConfig) (err error) {
+	err = client.Delete(ctx, "/access/users/"+config.User.String()+"/token/"+token.Name.String())
 	return
 }
 
@@ -231,15 +427,18 @@ func (config ConfigUser) Validate() (err error) {
 	}
 	if config.Groups != nil {
 		if len(*config.Groups) != 0 {
-			for _, e := range *config.Groups {
-				err = e.Validate()
+			for i := range *config.Groups {
+				err = (*config.Groups)[i].Validate()
 				if err != nil {
 					return
 				}
 			}
 		}
 	}
-	return config.Password.Validate()
+	if config.Password != nil {
+		err = config.Password.Validate()
+	}
+	return
 }
 
 // user config used when only the group group membership needs updating.
@@ -286,6 +485,19 @@ type UserID struct {
 	Realm string `json:"realm"`
 }
 
+func (id UserID) delete(ctx context.Context, client *clientAPI) error {
+	_, err := client.delete(ctx, "/access/users/"+id.String())
+	return err
+}
+
+func (id UserID) exists(ctx context.Context, c clientApiInterface) (bool, error) {
+	_, exists, err := c.getUserConfig(ctx, id)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 // Map the params to an array of UserID objects
 func (UserID) mapToArray(params []interface{}) *[]UserID {
 	members := ArrayToStringType(params)
@@ -296,10 +508,47 @@ func (UserID) mapToArray(params []interface{}) *[]UserID {
 	return &UserList
 }
 
-// transforms the  username@realm to a UserID object
+// transforms the username@realm to a UserID object
 func (UserID) mapToStruct(userId string) UserID {
-	user, _ := NewUserID(userId)
+	var user UserID
+	_ = user.Parse(userId)
 	return user
+}
+
+// Parses "username@realm" to a UserID object
+func (id *UserID) Parse(userID string) error {
+	index := strings.IndexRune(userID, '@')
+	if index == -1 || index == 0 || index == len(userID)-1 {
+		return errors.New(Error_NewUserID)
+	}
+	id.Name = userID[:index]
+	id.Realm = userID[index+1:]
+	return nil
+}
+
+func (id UserID) listApiTokens(ctx context.Context, c *clientAPI) (RawApiTokens, error) {
+	params, err := c.getList(ctx, "/access/users/"+id.String()+"/token", "List", "API Tokens")
+	if err != nil {
+		return nil, err
+	}
+	return &rawApiTokens{a: params}, nil
+}
+
+func (id UserID) read(ctx context.Context, c *clientAPI) (*rawConfigUser, bool, error) {
+	userConfig, exists, err := c.getUserConfig(ctx, id)
+	if err != nil {
+		return nil, false, err
+	}
+	return &rawConfigUser{a: userConfig, user: id}, exists, nil
+}
+
+func (id UserID) setPassword(ctx context.Context, password UserPassword, c *clientAPI) error {
+	body := []byte(userApiKeyUserID + "=" + url.QueryEscape(id.String()) + "&" + userApiKeyPassword + "=" + url.QueryEscape(password.String()))
+	err := c.putRawRetry(ctx, "/access/password", &body, 3)
+	if err != nil {
+		return errors.New("error setting password: " + err.Error())
+	}
+	return nil
 }
 
 // Converts the userID to "username@realm"
@@ -309,11 +558,6 @@ func (id UserID) String() string { // String is for fmt.Stringer.
 		return ""
 	}
 	return id.Name + "@" + id.Realm
-}
-
-// deprecated use String() instead
-func (id UserID) ToString() string {
-	return id.String()
 }
 
 // TODO improve when Name and Realm have their own types
@@ -331,106 +575,201 @@ func (id UserID) Validate() error {
 type UserPassword string
 
 func (password UserPassword) Validate() error {
-	if utf8.RuneCountInString(string(password)) >= 5 || password == "" {
+	if utf8.RuneCountInString(string(password)) >= 8 || password == "" {
 		return nil
 	}
-	return errors.New("the minimum password length is 5")
+	return errors.New("the minimum password length is 8 characters")
 }
 
-type RawConfigUser interface {
-	Get() *ConfigUser
-	GetComment() string
-	GetEmail() string
-	GetEnable() bool
-	GetExpire() uint
-	GetFirstName() string
-	GetGroups() *[]GroupName
-	GetKeys() string
-	GetLastName() string
-	GetUser() UserID
-}
+func (password UserPassword) String() string { return string(password) } // String is for fmt.Stringer.
 
-type rawConfigUser struct {
-	a    map[string]any
-	user UserID
-}
+type (
+	RawConfigUser interface {
+		Get() *ConfigUser
+		GetComment() string
+		GetEmail() string
+		GetEnable() bool
+		GetExpire() uint
+		GetFirstName() string
+		GetGroups() *[]GroupName
+		GetKeys() *string
+		GetLastName() string
+		GetUser() UserID
+	}
+
+	rawConfigUser struct {
+		a    map[string]any
+		user UserID
+	}
+)
+
+var _ RawConfigUser = (*rawConfigUser)(nil)
 
 func (r *rawConfigUser) Get() *ConfigUser {
 	return &ConfigUser{
-		Comment:   r.GetComment(),
-		Email:     r.GetEmail(),
-		Enable:    r.GetEnable(),
-		Expire:    r.GetExpire(),
-		FirstName: r.GetFirstName(),
+		Comment:   util.Pointer(r.GetComment()),
+		Email:     util.Pointer(r.GetEmail()),
+		Enable:    util.Pointer(r.GetEnable()),
+		Expire:    util.Pointer(r.GetExpire()),
+		FirstName: util.Pointer(r.GetFirstName()),
 		Groups:    r.GetGroups(),
 		Keys:      r.GetKeys(),
-		LastName:  r.GetLastName(),
+		LastName:  util.Pointer(r.GetLastName()),
 		User:      r.GetUser()}
 }
 
-func (r *rawConfigUser) GetComment() string {
-	if v, isSet := r.a["comment"]; isSet {
-		return v.(string)
+func (r *rawConfigUser) GetComment() string { return userGetComment(r.a) }
+
+func (r *rawConfigUser) GetEmail() string { return userGetEmail(r.a) }
+
+func (r *rawConfigUser) GetEnable() bool { return userGetEnable(r.a) }
+
+func (r *rawConfigUser) GetExpire() uint { return userGetExpire(r.a) }
+
+func (r *rawConfigUser) GetFirstName() string { return userGetFirstName(r.a) }
+
+func (r *rawConfigUser) GetGroups() *[]GroupName { return userGetGroups(r.a) }
+
+func (r *rawConfigUser) GetKeys() *string { return userGetKeys(r.a) }
+
+func (r *rawConfigUser) GetLastName() string { return userGetLastName(r.a) }
+
+func (r *rawConfigUser) GetUser() UserID { return userGetUser(r.a, r.user) }
+
+type (
+	RawUsersInfo interface {
+		FormatArray() []RawUserInfo
+		FormatMap() map[UserID]RawUserInfo
+		Len() int
+		SelectUser(UserID) (RawUserInfo, bool)
 	}
-	return ""
+
+	rawUsersInfo struct {
+		a    []any
+		full bool
+	}
+)
+
+func (r *rawUsersInfo) FormatArray() []RawUserInfo {
+	raw := make([]RawUserInfo, len(r.a))
+	for i := range r.a {
+		raw[i] = &rawUserInfo{a: r.a[i].(map[string]any), full: r.full}
+	}
+	return raw
 }
 
-func (r *rawConfigUser) GetEmail() string {
-	if v, isSet := r.a["email"]; isSet {
-		return v.(string)
+func (r *rawUsersInfo) FormatMap() map[UserID]RawUserInfo {
+	raw := make(map[UserID]RawUserInfo, len(r.a))
+	for i := range r.a {
+		user := rawUserInfo{a: r.a[i].(map[string]any), full: r.full}
+		var id UserID
+		_ = id.Parse(user.a[userApiKeyUserID].(string))
+		raw[id] = &user
 	}
-	return ""
+	return raw
 }
 
-func (r *rawConfigUser) GetEnable() bool {
-	if v, isSet := r.a["enable"]; isSet {
-		return Itob(int(v.(float64)))
+func (r *rawUsersInfo) Len() int { return len(r.a) }
+
+func (r *rawUsersInfo) SelectUser(user UserID) (RawUserInfo, bool) {
+	for i := range r.a {
+		raw := r.a[i].(map[string]any)
+		if vv, ok := raw[userApiKeyUserID]; ok && vv == user.String() {
+			return &rawUserInfo{a: raw, full: r.full}, true
+		}
 	}
-	return false
+	return nil, false
 }
 
-func (r *rawConfigUser) GetExpire() uint {
-	if v, isSet := r.a["expire"]; isSet {
-		return uint(v.(float64))
+var _ RawUsersInfo = (*rawUsersInfo)(nil)
+
+type (
+	RawUserInfo interface {
+		Get() UserInfo
+		GetConfig() ConfigUser
+		GetConfigComment() string
+		GetConfigEmail() string
+		GetConfigEnable() bool
+		GetConfigExpire() uint
+		GetConfigFirstName() string
+		GetConfigGroups() *[]GroupName
+		GetConfigKeys() *string
+		GetConfigLastName() string
+		GetConfigUser() UserID
+		GetTokens() *[]ApiTokenConfig
 	}
-	return 0
+
+	rawUserInfo struct {
+		a    map[string]any
+		full bool
+	}
+)
+
+var _ RawUserInfo = (*rawUserInfo)(nil)
+
+func (r *rawUserInfo) Get() UserInfo {
+	return UserInfo{
+		Config: r.GetConfig(),
+		Tokens: r.GetTokens()}
 }
 
-func (r *rawConfigUser) GetFirstName() string {
-	if v, isSet := r.a["firstname"]; isSet {
-		return v.(string)
-	}
-	return ""
+func (r *rawUserInfo) GetConfig() ConfigUser {
+	return ConfigUser{
+		Comment:   util.Pointer(r.GetConfigComment()),
+		Email:     util.Pointer(r.GetConfigEmail()),
+		Enable:    util.Pointer(r.GetConfigEnable()),
+		Expire:    util.Pointer(r.GetConfigExpire()),
+		FirstName: util.Pointer(r.GetConfigFirstName()),
+		Groups:    r.GetConfigGroups(),
+		Keys:      r.GetConfigKeys(),
+		LastName:  util.Pointer(r.GetConfigLastName()),
+		User:      r.GetConfigUser()}
 }
 
-func (r *rawConfigUser) GetGroups() *[]GroupName {
-	if v, isSet := r.a["groups"]; isSet {
-		return GroupName("").mapToArray(v)
+func (r *rawUserInfo) GetConfigComment() string { return userGetComment(r.a) }
+
+func (r *rawUserInfo) GetConfigEmail() string { return userGetEmail(r.a) }
+
+func (r *rawUserInfo) GetConfigEnable() bool { return userGetEnable(r.a) }
+
+func (r *rawUserInfo) GetConfigExpire() uint { return userGetExpire(r.a) }
+
+func (r *rawUserInfo) GetConfigFirstName() string { return userGetFirstName(r.a) }
+
+func (r *rawUserInfo) GetConfigGroups() *[]GroupName {
+	if r.full {
+		return userGetGroups(r.a)
 	}
 	return nil
 }
 
-func (r *rawConfigUser) GetKeys() string {
-	if v, isSet := r.a["keys"]; isSet {
-		return v.(string)
+func (r *rawUserInfo) GetConfigKeys() *string { return userGetKeys(r.a) }
+
+func (r *rawUserInfo) GetConfigLastName() string { return userGetLastName(r.a) }
+
+func (r *rawUserInfo) GetConfigUser() UserID { return userGetUser(r.a, UserID{}) }
+
+func (r *rawUserInfo) GetTokens() *[]ApiTokenConfig {
+	if !r.full {
+		return nil
 	}
-	return ""
+	if v, isSet := r.a[userApiKeyTokens]; isSet && v != nil {
+		tmpMaps := v.([]any)
+		results := make([]ApiTokenConfig, len(tmpMaps))
+		for i := range tmpMaps {
+			tmpMap := tmpMaps[i].(map[string]any)
+			results[i] = ApiTokenConfig{
+				Comment:             util.Pointer(apiTokenGetComment(tmpMap)),
+				Expiration:          util.Pointer(apiTokenGetExpiration(tmpMap)),
+				Name:                apiTokenGetName(tmpMap),
+				PrivilegeSeparation: util.Pointer(apiTokenGetPrivilegeSeparation(tmpMap))}
+		}
+		return &results
+	}
+	return &[]ApiTokenConfig{}
 }
 
-func (r *rawConfigUser) GetLastName() string {
-	if v, isSet := r.a["lastname"]; isSet {
-		return v.(string)
-	}
-	return ""
-}
-
-func (r *rawConfigUser) GetUser() UserID {
-	if v, isSet := r.a["userid"]; isSet {
-		return UserID{}.mapToStruct(v.(string))
-	}
-	return r.user
-}
-
+// Deprecated: use UserInterface.Exists() instead.
 // Check if the user already exists in proxmox.
 func CheckUserExistence(ctx context.Context, userId UserID, client *Client) (existence bool, err error) {
 	list, err := listUsersFull(ctx, client)
@@ -445,9 +784,7 @@ func CheckUserExistence(ctx context.Context, userId UserID, client *Client) (exi
 	return
 }
 
-// List all users that exist in proxmox
-// Setting full to TRUE the output wil include group information.
-// Depending on the number of existing groups it take substantially longer to parse
+// Deprecated: use UserInterface.List() instead.
 func ListUsers(ctx context.Context, client *Client, full bool) (*[]ConfigUser, error) {
 	var err error
 	var userList []interface{}
@@ -462,35 +799,49 @@ func ListUsers(ctx context.Context, client *Client, full bool) (*[]ConfigUser, e
 	return ConfigUser{}.mapToArray(userList), nil
 }
 
-// Returns users without group information
+// Deprecated: remove with ListUsers().
 func listUsersPartial(ctx context.Context, client *Client) ([]interface{}, error) {
 	return client.GetItemListInterfaceArray(ctx, "/access/users")
 }
 
-// Returns users with group information
+// Deprecated: remove with ListUsers().
 func listUsersFull(ctx context.Context, client *Client) ([]interface{}, error) {
 	return client.GetItemListInterfaceArray(ctx, "/access/users?full=1")
 }
 
+// Returns users without group information
+func userListFull(ctx context.Context, c *clientAPI) (*rawUsersInfo, error) {
+	params, err := c.getList(ctx, "/access/users?full=1", "List", "Users")
+	if err != nil {
+		return nil, err
+	}
+	return &rawUsersInfo{a: params, full: true}, nil
+}
+
+// Returns users with group information
+func userListPartial(ctx context.Context, c *clientAPI) (*rawUsersInfo, error) {
+	params, err := c.getList(ctx, "/access/users", "List", "Users")
+	if err != nil {
+		return nil, err
+	}
+	return &rawUsersInfo{a: params, full: false}, nil
+}
+
+// Deprecated: use UserInterface.Read() instead.
 func NewRawConfigUserFromApi(ctx context.Context, userID UserID, c *Client) (RawConfigUser, error) {
 	return c.new().userGetRawConfig(ctx, userID)
 }
 
-func (c *clientNew) userGetRawConfig(ctx context.Context, userID UserID) (RawConfigUser, error) {
+// Deprecated: remove when NewRawConfigUserFromApi is removed.
+func (c *clientNewTest) userGetRawConfig(ctx context.Context, userID UserID) (RawConfigUser, error) {
 	if err := userID.Validate(); err != nil {
 		return nil, err
 	}
-	return userGetRawConfigUser_Unsafe(ctx, userID, c.api)
+	raw, _, err := userID.read(ctx, c.apiRaw())
+	return raw, err
 }
 
-func userGetRawConfigUser_Unsafe(ctx context.Context, userID UserID, c clientApiInterface) (*rawConfigUser, error) {
-	userConfig, err := c.getUserConfig(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	return &rawConfigUser{a: userConfig, user: userID}, nil
-}
-
+// Deprecated: use json.Unmarshal() instead.
 func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
 	if len(input) != 0 {
 		config = &ConfigUser{}
@@ -499,6 +850,7 @@ func NewConfigUserFromJson(input []byte) (config *ConfigUser, err error) {
 	return
 }
 
+// Deprecated: use UserID.Parse() instead
 // Converts "username@realm" to a UserID object
 func NewUserID(userId string) (id UserID, err error) {
 	tmpList := strings.Split(userId, "@")
@@ -513,6 +865,7 @@ func NewUserID(userId string) (id UserID, err error) {
 	return UserID{}, errors.New(Error_NewUserID)
 }
 
+// Deprecated:
 // Converts an comma separated list of "username@realm" to a array of UserID objects
 func NewUserIDs(userIds string) (*[]UserID, error) {
 	if userIds == "" {
@@ -534,3 +887,80 @@ func NewUserIDs(userIds string) (*[]UserID, error) {
 func updateUser(ctx context.Context, user UserID, params map[string]interface{}, client *Client) error {
 	return client.Put(ctx, params, "/access/users/"+user.String())
 }
+
+func userGetComment(params map[string]any) string {
+	if v, isSet := params[userApiKeyComment]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func userGetEmail(params map[string]any) string {
+	if v, isSet := params[userApiKeyEmail]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func userGetEnable(params map[string]any) bool {
+	if v, isSet := params[userApiKeyEnable]; isSet {
+		return Itob(int(v.(float64)))
+	}
+	return false
+}
+
+func userGetExpire(params map[string]any) uint {
+	if v, isSet := params[userApiKeyExpire]; isSet {
+		return uint(v.(float64))
+	}
+	return 0
+}
+
+func userGetFirstName(params map[string]any) string {
+	if v, isSet := params[userApiKeyFirstName]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func userGetGroups(params map[string]any) *[]GroupName {
+	if v, isSet := params[userApiKeyGroups]; isSet {
+		return GroupName("").mapToArray(v)
+	}
+	return &[]GroupName{}
+}
+
+func userGetKeys(params map[string]any) *string {
+	if v, isSet := params[userApiKeyKeys]; isSet {
+		return util.Pointer(v.(string))
+	}
+	return nil
+}
+
+func userGetLastName(params map[string]any) string {
+	if v, isSet := params[userApiKeyLastName]; isSet {
+		return v.(string)
+	}
+	return ""
+}
+
+func userGetUser(params map[string]any, id UserID) UserID {
+	if v, isSet := params[userApiKeyUserID]; isSet {
+		return UserID{}.mapToStruct(v.(string))
+	}
+	return id
+}
+
+const (
+	userApiKeyComment   string = "comment"
+	userApiKeyTokens    string = "tokens"
+	userApiKeyEmail     string = "email"
+	userApiKeyEnable    string = "enable"
+	userApiKeyExpire    string = "expire"
+	userApiKeyFirstName string = "firstname"
+	userApiKeyGroups    string = "groups"
+	userApiKeyKeys      string = "keys"
+	userApiKeyLastName  string = "lastname"
+	userApiKeyPassword  string = "password"
+	userApiKeyUserID    string = "userid"
+)
