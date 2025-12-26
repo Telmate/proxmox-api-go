@@ -3,11 +3,11 @@ package proxmox
 import (
 	"encoding/json"
 	"errors"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/Telmate/proxmox-api-go/internal/body"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -108,11 +108,7 @@ func sshKeyUrlEncode(keys []AuthorizedKey) string {
 		if tmpKey == "" {
 			continue
 		}
-		tmpKey = url.PathEscape(tmpKey)
-		tmpKey = strings.ReplaceAll(tmpKey, "+", "%2B")
-		tmpKey = strings.ReplaceAll(tmpKey, "@", "%40")
-		tmpKey = strings.ReplaceAll(tmpKey, "=", "%3D")
-		encodedKeys[i] = strings.ReplaceAll(tmpKey, ":", "%3A") + newlineEncoded
+		encodedKeys[i] = body.QemuSshKeyEscape(tmpKey) + newlineEncoded
 	}
 	return strings.Join(encodedKeys, "")
 }

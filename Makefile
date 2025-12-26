@@ -22,11 +22,19 @@ $(HOME)/.local/share/bash-completion/completions/proxmox-api-go: proxmox-api-go-
 	@mkdir -p $(dir $@)
 	cp $^ $@
 
+UNIT_TEST_PATHS=./internal/... ./proxmox/...
+
 PHONY += test
 test: test-unit test-integration
 
+PHONY += test_coverage
+test_coverage:
+	@go test -coverprofile=_coverage.out $(UNIT_TEST_PATHS) \
+		&& go tool cover -html=_coverage.out -o _coverage.html
+
+.PHONY: test-unit
 test-unit: # Unit tests
-	@go test -race -vet=off ./internal/... ./proxmox/...
+	@go test -race -vet=off $(UNIT_TEST_PATHS)
 
 test-integration: # Integration tests
 	@go test -parallel 1 ./test/...

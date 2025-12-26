@@ -37,13 +37,15 @@ type MockClient struct {
 	UserGetRawConfigFunc func(ctx context.Context, userID UserID) (RawConfigUser, error)
 }
 
-func (m MockClient) New() ClientNew { return &m }
+func (m MockClient) New() ClientNewTest { return &m }
 
 func (m *MockClient) panic(field string) { panic(field + " not set in MockClient") }
 
 func (m *MockClient) old() *Client { panic("old not implemented in MockClient") }
 
 func (m *MockClient) apiGet() clientApiInterface { panic("apiGet not implemented in MockClient") }
+
+func (m *MockClient) apiRaw() *clientAPI { panic("apiRaw not implemented in MockClient") }
 
 func (m *MockClient) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error) {
 	if m.GuestCheckPendingChangesFunc == nil {

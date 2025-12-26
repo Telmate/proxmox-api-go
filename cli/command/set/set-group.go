@@ -2,6 +2,7 @@ package set
 
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
+	"github.com/Telmate/proxmox-api-go/cli/helpers"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +26,7 @@ var (
 			var formattedMembers *[]proxmox.UserID
 			if cmd.Flags().Changed("members") {
 				members, _ := cmd.Flags().GetString("members")
-				formattedMembers, err = proxmox.NewUserIDs(members)
+				formattedMembers, err = helpers.ParseUserIDs(members)
 				if err != nil {
 					return
 				}
@@ -41,8 +42,7 @@ var (
 			}
 			cli.PrintItemSet(setCmd.OutOrStdout(), tmpGroupName, "Group")
 			return
-		},
-	}
+		}}
 )
 
 func init() {

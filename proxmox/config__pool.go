@@ -291,7 +291,7 @@ func (pool PoolName) Get(ctx context.Context, c *Client) (RawConfigPool, error) 
 	return c.new().poolGetRawConfig(ctx, pool)
 }
 
-func (c *clientNew) poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error) {
+func (c *clientNewTest) poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error) {
 	if err := pool.Validate(); err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func (pool PoolName) GetNoCheck(ctx context.Context, c *Client) (RawConfigPool, 
 	return c.new().poolGetRawConfigNoCheck(ctx, pool)
 }
 
-func (c *clientNew) poolGetRawConfigNoCheck(ctx context.Context, pool PoolName) (RawConfigPool, error) {
+func (c *clientNewTest) poolGetRawConfigNoCheck(ctx context.Context, pool PoolName) (RawConfigPool, error) {
 	return pool.getRawConfig(ctx, c.api)
 }
 

@@ -105,7 +105,7 @@ type GroupName string
 const (
 	GroupName_Error_Invalid   string = "variable of type (GroupName) may only contain the following characters: -_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 	GroupName_Error_Empty     string = "variable of type (GroupName) may not be empty"
-	GroupName_Error_MaxLength string = "variable of type (GroupName) may not be more tha 1000 characters long"
+	GroupName_Error_MaxLength string = "variable of type (GroupName) may not be more than 1000 characters long"
 )
 
 // Add users to the specified group

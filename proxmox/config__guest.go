@@ -242,7 +242,7 @@ func (id GuestID) DeleteHaResource(ctx context.Context, c *Client) (bool, error)
 	return c.new().haDeleteResource(ctx, id)
 }
 
-func (c *clientNew) haDeleteResource(ctx context.Context, id GuestID) (bool, error) {
+func (c *clientNewTest) haDeleteResource(ctx context.Context, id GuestID) (bool, error) {
 	return id.deleteHaResource(ctx, c.apiGet())
 }
 

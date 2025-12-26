@@ -10,7 +10,7 @@ func ListGuests(ctx context.Context, c *Client) (RawGuestResources, error) {
 	return c.new().guestListResources(ctx)
 }
 
-func (c *clientNew) guestListResources(ctx context.Context) (RawGuestResources, error) {
+func (c *clientNewTest) guestListResources(ctx context.Context) (RawGuestResources, error) {
 	return listGuests_Unsafe(ctx, c.api)
 
 }

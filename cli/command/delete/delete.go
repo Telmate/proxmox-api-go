@@ -35,13 +35,18 @@ func deleteID(ctx context.Context, args []string, IDtype string) (err error) {
 		err = proxmox.PoolName(id).Delete(ctx, c)
 	case "Storage":
 		err = c.DeleteStorage(ctx, id)
-	case "User":
-		var userId proxmox.UserID
-		userId, err = proxmox.NewUserID(id)
-		if err != nil {
+	case "Token":
+		var token proxmox.ApiTokenID
+		if err = token.Parse(id); err != nil {
 			return
 		}
-		err = proxmox.ConfigUser{User: userId}.DeleteUser(ctx, c)
+		_, err = c.New().ApiToken.Delete(ctx, token)
+	case "User":
+		var user proxmox.UserID
+		if err = user.Parse(id); err != nil {
+			return
+		}
+		c.New().User.Delete(ctx, user)
 	}
 	if err != nil {
 		if exitStatus != "" {

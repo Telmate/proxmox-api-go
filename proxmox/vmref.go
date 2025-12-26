@@ -93,7 +93,7 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 
 func (vmr VmRef) Delete(ctx context.Context, c *Client) error { return c.new().guestDelete(ctx, &vmr) }
 
-func (c *clientNew) guestDelete(ctx context.Context, vmr *VmRef) error {
+func (c *clientNewTest) guestDelete(ctx context.Context, vmr *VmRef) error {
 	guestID := vmr.VmId()
 	if guestID == 0 {
 		return errors.New(VmRef_Error_IDnotSet)
@@ -183,7 +183,7 @@ func (vmr *VmRef) ForceStop(ctx context.Context, c *Client) error {
 	return c.new().guestStopForce(ctx, vmr)
 }
 
-func (c *clientNew) guestStopForce(ctx context.Context, vmr *VmRef) error {
+func (c *clientNewTest) guestStopForce(ctx context.Context, vmr *VmRef) error {
 	version, err := c.oldClient.Version(ctx)
 	if err != nil {
 		return err
@@ -274,7 +274,7 @@ func (vmr *VmRef) pendingChanges(ctx context.Context, c clientApiInterface) (boo
 	return false, nil
 }
 
-func (c *clientNew) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error) {
+func (c *clientNewTest) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error) {
 	return vmr.pendingChanges(ctx, c.apiGet())
 }
 
@@ -307,7 +307,7 @@ const (
 
 func (vmr *VmRef) Stop(ctx context.Context, c *Client) error { return c.new().guestStop(ctx, vmr) }
 
-func (c *clientNew) guestStop(ctx context.Context, vmr *VmRef) error {
+func (c *clientNewTest) guestStop(ctx context.Context, vmr *VmRef) error {
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
 		return err
 	}
