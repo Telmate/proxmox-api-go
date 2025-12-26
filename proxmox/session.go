@@ -144,9 +144,8 @@ func responseJSON(resp *http.Response) (jbody map[string]interface{}, err error)
 	return jbody, err
 }
 
-func (s *Session) setAPIToken(userID, token string) {
-	auth := fmt.Sprintf("%s=%s", userID, token)
-	s.AuthToken = auth
+func (s *Session) setAPIToken(token ApiTokenID, secret ApiTokenSecret) {
+	s.AuthToken = token.String() + "=" + secret.String()
 }
 
 func (s *Session) setTicket(ticket, csrfPreventionToken string) {

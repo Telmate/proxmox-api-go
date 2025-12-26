@@ -59,7 +59,9 @@ func initializeProxmoxClient(ctx context.Context, config AppConfig, insecure boo
 	}
 
 	if userRequiresAPIToken(config.User) {
-		client.SetAPIToken(config.User, config.Password)
+		var token proxmox.ApiTokenID
+		failError(token.Parse(config.User))
+		client.SetAPIToken(token, proxmox.ApiTokenSecret(config.Password))
 		_, err := client.GetVersion(ctx)
 		if err != nil {
 			return nil, err

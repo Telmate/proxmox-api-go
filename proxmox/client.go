@@ -197,8 +197,8 @@ func (c *Client) new() ClientNewTest {
 // - `token` is just the UUID you get when initially creating the token
 //
 // See https://pve.proxmox.com/wiki/User_Management#pveum_tokens
-func (c *Client) SetAPIToken(userID, token string) {
-	c.session.setAPIToken(userID, token)
+func (c *Client) SetAPIToken(token ApiTokenID, secret ApiTokenSecret) {
+	c.session.setAPIToken(token, secret)
 }
 
 // SetTicket let's set directly ticket and csrfPreventionToken obtained in
