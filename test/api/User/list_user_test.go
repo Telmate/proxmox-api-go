@@ -98,7 +98,7 @@ func Test_User_List(t *testing.T) {
 					require.NoError(t, c.User.Create(ctx, user.Config))
 				}
 			}},
-		{name: `Create Tokes`,
+		{name: `Create Tokens`,
 			test: func(t *testing.T) {
 				for _, user := range users {
 					if user.Tokens == nil {

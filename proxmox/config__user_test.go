@@ -971,7 +971,7 @@ func Test_ConfigUser_Validate(t *testing.T) {
 			input: ConfigUser{
 				User:   userId,
 				Groups: &[]GroupName{GroupName(test_data_group.GroupName_Max_Illegal())}},
-			err: errors.New(`variable of type (GroupName) may not be more tha 1000 characters long`)},
+			err: errors.New(`variable of type (GroupName) may not be more than 1000 characters long`)},
 		{name: `Invalid Password too short`,
 			input: ConfigUser{User: userId, Password: util.Pointer(UserPassword("aaaaaaa"))},
 			err:   errors.New(`the minimum password length is 8 characters`)},
