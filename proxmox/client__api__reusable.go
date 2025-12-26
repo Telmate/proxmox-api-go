@@ -29,6 +29,21 @@ func (c *clientAPI) delete(ctx context.Context, url string) (retry bool, err err
 	return
 }
 
+func (c *clientAPI) deleteRetry(ctx context.Context, url string, tries int) (err error) {
+	var retry bool
+	for i := range time.Duration(tries) {
+		_, retry, err = c.session.delete(ctx, url, nil, nil)
+		if err == nil {
+			return nil
+		}
+		if !retry {
+			return
+		}
+		time.Sleep((i + 1) * c.timeUnit)
+	}
+	return
+}
+
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[string]any, error) {
 	data, err := c.getRootMap(ctx, url, text, message)
 	if err != nil {
@@ -79,6 +94,55 @@ func (c *clientAPI) post(ctx context.Context, url string, params map[string]any)
 	return
 }
 
+func (c *clientAPI) postMap(ctx context.Context, url string, body *[]byte, text, message string) (map[string]any, error) {
+	data, err := c.postRootMap(ctx, url, body, text, message)
+	if err != nil {
+		return nil, err
+	}
+	return data["data"].(map[string]any), err
+}
+
+func (c *clientAPI) postRootMap(ctx context.Context, url string, body *[]byte, text, message string) (map[string]any, error) {
+	config, err := c.postJsonRetry(ctx, url, body, 3)
+	if err != nil {
+		return nil, err
+	}
+	if config["data"] == nil {
+		return nil, errors.New(text + " " + message + " not readable")
+	}
+	return config, nil
+}
+
+func (c *clientAPI) postRawRetry(ctx context.Context, url string, body *[]byte, tries int) (err error) {
+	var retry bool
+	for i := range time.Duration(tries) {
+		_, retry, err = c.session.post(ctx, url, nil, nil, body)
+		if err == nil {
+			return
+		}
+		if !retry {
+			return
+		}
+		time.Sleep((i + 1) * c.timeUnit)
+	}
+	return
+}
+
+func (c *clientAPI) postJsonRetry(ctx context.Context, url string, body *[]byte, tries int) (response map[string]any, err error) {
+	var retry bool
+	for i := range time.Duration(tries) {
+		_, retry, err = c.session.postJSON(ctx, url, nil, nil, body, &response)
+		if err == nil {
+			return
+		}
+		if !retry {
+			return
+		}
+		time.Sleep((i + 1) * c.timeUnit)
+	}
+	return
+}
+
 func (c *clientAPI) postTask(ctx context.Context, url string, params map[string]any) (exitStatus string, err error) {
 	requestBody := paramsToBody(params)
 	var resp *http.Response
@@ -94,6 +158,21 @@ func (c *clientAPI) postTask(ctx context.Context, url string, params map[string]
 func (c *clientAPI) put(ctx context.Context, url string, params map[string]any) (retry bool, err error) {
 	reqbody := paramsToBodyWithAllEmpty(params)
 	_, retry, err = c.session.put(ctx, url, nil, nil, &reqbody)
+	return
+}
+
+func (c *clientAPI) putRawRetry(ctx context.Context, url string, body *[]byte, tries int) (err error) {
+	var retry bool
+	for i := range time.Duration(tries) {
+		_, retry, err = c.session.put(ctx, url, nil, nil, body)
+		if err == nil {
+			return
+		}
+		if !retry {
+			return
+		}
+		time.Sleep((i + 1) * c.timeUnit)
+	}
 	return
 }
 

@@ -102,7 +102,7 @@ func paramsToValuesWithAllEmpty(params map[string]interface{}, allowedEmpty []st
 		var v string
 		switch intrV := intrV.(type) {
 		// Convert true/false bool to 1/0 string where Proxmox API can understand it.
-		case bool:
+		case bool: // TODO we shouldn't to this here, but when we do the initial serialization
 			if intrV {
 				v = "1"
 			} else {

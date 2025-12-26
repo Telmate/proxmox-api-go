@@ -144,7 +144,7 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 	return client, err_s
 }
 
-func (c *Client) new() ClientNew {
+func (c *Client) New() ClientNew {
 	var user UserID
 	if c.Username != "" {
 		index := strings.IndexRune(c.Username, '@')
@@ -155,11 +155,36 @@ func (c *Client) new() ClientNew {
 		indexEx := strings.IndexRune(token[indexAt+1:], '!')
 		user = UserID{Name: token[:indexAt], Realm: token[indexAt+1 : indexAt+indexEx+1]}
 	}
-	return &clientNew{
+
+	apiClientPtr := &clientAPI{
+		session:     c.session,
+		taskTimeout: time.Duration(c.TaskTimeout) * time.Second,
+		timeUnit:    c.timeUnit,
+		url:         c.ApiUrl,
+		user:        user}
+
+	return ClientNew{
+		ApiToken: &apiTokenClient{oldClient: c, api: apiClientPtr},
+		User:     &userClient{oldClient: c, api: apiClientPtr}}
+}
+
+func (c *Client) new() ClientNewTest {
+	var user UserID
+	if c.Username != "" {
+		index := strings.IndexRune(c.Username, '@')
+		user = UserID{Name: c.Username[:index], Realm: c.Username[index+1:]}
+	} else {
+		token := c.session.AuthToken
+		indexAt := strings.IndexRune(token, '@')
+		indexEx := strings.IndexRune(token[indexAt+1:], '!')
+		user = UserID{Name: token[:indexAt], Realm: token[indexAt+1 : indexAt+indexEx+1]}
+	}
+	return &clientNewTest{
 		oldClient: c,
 		api: &clientAPI{
 			session:     c.session,
 			taskTimeout: time.Duration(c.TaskTimeout) * time.Second,
+			timeUnit:    c.timeUnit,
 			url:         c.ApiUrl,
 			user:        user}}
 }
@@ -994,8 +1019,6 @@ func (c *Client) getNextID_Unsafe(ctx context.Context) (GuestID, error) {
 	id, err = strconv.Atoi(tmpID)
 	return GuestID(id), err
 }
-
-const guestIDexistsError = "400 Parameter verification failed."
 
 func (c *Client) getNextIDstart_Unsafe(ctx context.Context, guestID GuestID) (GuestID, error) {
 	var tmpID string
