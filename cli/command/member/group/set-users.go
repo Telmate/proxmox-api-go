@@ -2,6 +2,7 @@ package group
 
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
+	"github.com/Telmate/proxmox-api-go/cli/helpers"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +17,7 @@ var group_setCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		var users *[]proxmox.UserID
 		if len(args) == 2 {
-			users, err = proxmox.NewUserIDs(args[1])
+			users, err = helpers.ParseUserIDs(args[1])
 			if err != nil {
 				return
 			}
@@ -28,8 +29,7 @@ var group_setCmd = &cobra.Command{
 		}
 		cli.PrintItemUpdated(member_GroupCmd.OutOrStdout(), args[0], "Group membership of")
 		return
-	},
-}
+	}}
 
 func init() {
 	member_GroupCmd.AddCommand(group_setCmd)

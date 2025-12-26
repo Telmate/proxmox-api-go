@@ -16,9 +16,19 @@ var list_usersCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := cli.NewClient()
 		groups, _ := cmd.Flags().GetBool("groups")
-		users, err := proxmox.ListUsers(cli.Context(), c, groups)
+		var rawUsers proxmox.RawUsersInfo
+		if groups {
+			rawUsers, err = c.New().User.List(cli.Context())
+		} else {
+			rawUsers, err = c.New().User.ListPartial(cli.Context())
+		}
 		if err != nil {
 			return
+		}
+		rawArray := rawUsers.FormatArray()
+		users := make([]proxmox.UserInfo, len(rawArray))
+		for i := range rawArray {
+			users[i] = rawArray[i].Get()
 		}
 		output, err := json.Marshal(users)
 		if err != nil {
@@ -26,8 +36,7 @@ var list_usersCmd = &cobra.Command{
 		}
 		fmt.Fprintln(listCmd.OutOrStdout(), string(output))
 		return
-	},
-}
+	}}
 
 func init() {
 	listCmd.AddCommand(list_usersCmd)

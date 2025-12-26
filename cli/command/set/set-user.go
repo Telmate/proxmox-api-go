@@ -1,6 +1,8 @@
 package set
 
 import (
+	"encoding/json"
+
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
@@ -14,29 +16,27 @@ Depending on the current state of the user, the user will be created or updated.
 The config can be set with the --file flag or piped from stdin.
 For config examples see "example user"`,
 	Args: cobra.RangeArgs(1, 2),
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		id := cli.RequiredIDset(args, 0, "UserID")
-		userId, err := proxmox.NewUserID(id)
-		if err != nil {
-			return
+		var userID proxmox.UserID
+		if err := userID.Parse(id); err != nil {
+			return err
 		}
-		config, err := proxmox.NewConfigUserFromJson(cli.NewConfig())
-		if err != nil {
-			return
+		var config proxmox.ConfigUser
+		if err := json.Unmarshal(cli.NewConfig(), &config); err != nil {
+			return err
 		}
-		var password proxmox.UserPassword
 		if len(args) > 1 {
-			password = proxmox.UserPassword(args[1])
+			v := proxmox.UserPassword(args[1])
+			config.Password = &v
 		}
-		c := cli.NewClient()
-		err = config.SetUser(cli.Context(), userId, password, c)
-		if err != nil {
-			return
+		config.User = userID
+		if err := cli.NewClient().New().User.Set(cli.Context(), config); err != nil {
+			return err
 		}
 		cli.PrintItemSet(setCmd.OutOrStdout(), id, "User")
-		return
-	},
-}
+		return nil
+	}}
 
 func init() {
 	setCmd.AddCommand(set_userCmd)

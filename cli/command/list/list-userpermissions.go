@@ -14,18 +14,17 @@ var list_userPermissionsCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		path := args[1]
-		userId, err := proxmox.NewUserID(args[0])
-		if err != nil {
+		var userID proxmox.UserID
+		if err = userID.Parse(args[0]); err != nil {
 			return
 		}
 
 		client := cli.NewClient()
-		permissions, err := client.GetUserPermissions(cli.Context(), userId, path)
+		permissions, err := client.GetUserPermissions(cli.Context(), userID, path)
 		sort.Strings(permissions)
 		cli.PrintRawJson(listCmd.OutOrStdout(), permissions)
 		return
-	},
-}
+	}}
 
 func init() {
 	listCmd.AddCommand(list_userPermissionsCmd)

@@ -52,14 +52,24 @@ func getConfig(args []string, IDtype string) (err error) {
 		if err != nil {
 			return
 		}
-	case "User":
-		var userId proxmox.UserID
-		userId, err = proxmox.NewUserID(id)
+	case "Token":
+		var token proxmox.ApiTokenID
+		if err = token.Parse(id); err != nil {
+			return
+		}
+		var rawConfig proxmox.RawApiTokenConfig
+		rawConfig, err = c.New().ApiToken.Read(cli.Context(), token)
 		if err != nil {
 			return
 		}
+		config = rawConfig.Get()
+	case "User":
+		var userID proxmox.UserID
+		if err = userID.Parse(id); err != nil {
+			return
+		}
 		var rawConfig proxmox.RawConfigUser
-		rawConfig, err = proxmox.NewRawConfigUserFromApi(cli.Context(), userId, c)
+		rawConfig, err = c.New().User.Read(cli.Context(), userID)
 		if err != nil {
 			return
 		}
