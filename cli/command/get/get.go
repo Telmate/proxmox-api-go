@@ -31,10 +31,12 @@ func getConfig(args []string, IDtype string) (err error) {
 			return
 		}
 	case "Group":
-		config, err = proxmox.NewConfigGroupFromApi(cli.Context(), proxmox.GroupName(id), c)
+		var rawConfig proxmox.RawGroupConfig
+		rawConfig, err = c.New().Group.Read(cli.Context(), proxmox.GroupName(id))
 		if err != nil {
 			return
 		}
+		config = rawConfig.Get()
 	case "MetricServer":
 		config, err = proxmox.NewConfigMetricsFromApi(cli.Context(), id, c)
 		if err != nil {

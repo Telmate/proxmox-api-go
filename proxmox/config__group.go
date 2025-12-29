@@ -2,89 +2,284 @@ package proxmox
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/array"
+	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
+
+type (
+	GroupInterface interface {
+		AddMembers(context.Context, []GroupName, []UserID) error
+		AddMembersNoCheck(context.Context, []GroupName, []UserID) error
+
+		Create(context.Context, ConfigGroup) error
+		CreateNoCheck(context.Context, ConfigGroup) error
+
+		Delete(context.Context, GroupName) (bool, error)
+		DeleteNoCheck(context.Context, GroupName) (bool, error)
+
+		Exists(context.Context, GroupName) (bool, error)
+		ExistsNoCheck(context.Context, GroupName) (bool, error)
+
+		// List all groups.
+		List(ctx context.Context) (RawGroups, error)
+		ListNoCheck(ctx context.Context) (RawGroups, error)
+
+		Read(context.Context, GroupName) (RawGroupConfig, error)
+		ReadNoCheck(context.Context, GroupName) (RawGroupConfig, error)
+
+		RemoveMembers(context.Context, []GroupName, []UserID) error
+		RemoveMembersNoCheck(context.Context, []GroupName, []UserID) error
+
+		Set(context.Context, ConfigGroup) error
+		SetNoCheck(context.Context, ConfigGroup) error
+
+		Update(context.Context, ConfigGroup) error
+		UpdateNoCheck(context.Context, ConfigGroup) error
+	}
+
+	groupClient struct {
+		api       *clientAPI
+		oldClient *Client
+	}
+)
+
+var _ GroupInterface = (*groupClient)(nil)
+
+func (c *groupClient) AddMembers(ctx context.Context, groups []GroupName, members []UserID) error {
+	var err error
+	for i := range groups {
+		if err = groups[i].Validate(); err != nil {
+			return err
+		}
+	}
+	for i := range members {
+		if err := members[i].Validate(); err != nil {
+			return err
+		}
+	}
+	return c.AddMembersNoCheck(ctx, groups, members)
+}
+
+func (c *groupClient) AddMembersNoCheck(ctx context.Context, groups []GroupName, members []UserID) error {
+	var err error
+	for i := range members {
+		if err = members[i].addGroups(ctx, &groups, c.api); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *groupClient) Create(ctx context.Context, config ConfigGroup) error {
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	return c.CreateNoCheck(ctx, config)
+}
+
+func (c *groupClient) CreateNoCheck(ctx context.Context, config ConfigGroup) error {
+	return config.create(ctx, c.api)
+}
+
+func (c *groupClient) Delete(ctx context.Context, name GroupName) (bool, error) {
+	if err := name.Validate(); err != nil {
+		return false, err
+	}
+	return c.DeleteNoCheck(ctx, name)
+}
+
+func (c *groupClient) DeleteNoCheck(ctx context.Context, name GroupName) (bool, error) {
+	return name.delete(ctx, c.api)
+}
+
+func (c *groupClient) Exists(ctx context.Context, name GroupName) (bool, error) {
+	if err := name.Validate(); err != nil {
+		return false, err
+	}
+	return c.ExistsNoCheck(ctx, name)
+}
+
+func (c *groupClient) ExistsNoCheck(ctx context.Context, name GroupName) (bool, error) {
+	return name.exists(ctx, c.api)
+}
+
+func (c *groupClient) List(ctx context.Context) (RawGroups, error) {
+	return c.ListNoCheck(ctx)
+}
+
+func (c *groupClient) ListNoCheck(ctx context.Context) (RawGroups, error) {
+	return groupsList(ctx, c.api)
+}
+
+func (c *groupClient) Read(ctx context.Context, name GroupName) (RawGroupConfig, error) {
+	if err := name.Validate(); err != nil {
+		return nil, err
+	}
+	return c.ReadNoCheck(ctx, name)
+}
+
+func (c *groupClient) ReadNoCheck(ctx context.Context, name GroupName) (RawGroupConfig, error) {
+	raw, exists, err := name.read(ctx, c.api)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.New("group does not exist")
+	}
+	return raw, err
+}
+
+func (c *groupClient) RemoveMembers(ctx context.Context, groups []GroupName, members []UserID) error {
+	for i := range groups {
+		if err := groups[i].Validate(); err != nil {
+			return err
+		}
+	}
+	for i := range members {
+		if err := members[i].Validate(); err != nil {
+			return err
+		}
+	}
+	return c.RemoveMembersNoCheck(ctx, groups, members)
+}
+
+func (c *groupClient) RemoveMembersNoCheck(ctx context.Context, groups []GroupName, members []UserID) error {
+	var err error
+	for i := range members {
+		if err = members[i].removeGroups(ctx, &groups, c.api); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *groupClient) Set(ctx context.Context, config ConfigGroup) error {
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	return c.SetNoCheck(ctx, config)
+}
+
+func (c *groupClient) SetNoCheck(ctx context.Context, config ConfigGroup) error {
+	return config.set(ctx, c.api)
+}
+
+func (c *groupClient) Update(ctx context.Context, config ConfigGroup) error {
+	if err := config.Validate(); err != nil {
+		return err
+	}
+	return c.UpdateNoCheck(ctx, config)
+}
+
+func (c *groupClient) UpdateNoCheck(ctx context.Context, config ConfigGroup) error {
+	var raw *rawGroupConfig
+	if config.Members != nil { // We need the current members to be able to update them.
+		var exists bool
+		var err error
+		raw, exists, err = config.Name.read(ctx, c.api)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return errors.New("group does not exist")
+		}
+	}
+	return config.update(ctx, raw, c.api)
+}
 
 type ConfigGroup struct {
 	Name    GroupName `json:"name"`
-	Comment string    `json:"comment,omitempty"`
+	Comment *string   `json:"comment,omitempty"` // Never nil when returned.
 	// Setting the Members will update the group membership to only include the specified members.
 	Members *[]UserID `json:"members,omitempty"`
 }
 
+// Deprecated: use GroupInterface.Create() instead.
 // Creates the specified group
 func (config ConfigGroup) Create(ctx context.Context, client *Client) error {
-	config.Validate(true)
-	params := config.mapToApiValues(true)
-	err := client.Post(ctx, params, "/access/groups")
-	if err != nil {
-		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error creating Group: %v, (params: %v)", err, string(params))
+	return client.New().Group.Create(ctx, config)
+}
+
+func (config ConfigGroup) create(ctx context.Context, c *clientAPI) error {
+	if err := c.postRawRetry(ctx, "/access/groups", config.mapToApiCreate(), 3); err != nil {
+		return err
 	}
 	if config.Members != nil {
-		return config.Name.SetMembers(ctx, config.Members, client)
+		return config.Name.addMembers(ctx, config.Members, c)
 	}
 	return nil
 }
 
 // Maps the struct to the API values proxmox understands
-func (config ConfigGroup) mapToApiValues(create bool) (params map[string]interface{}) {
-	params = map[string]interface{}{
-		"comment": config.Comment,
+func (config ConfigGroup) mapToApiCreate() *[]byte {
+	builder := strings.Builder{}
+	builder.WriteString(groupApiKeyName + "=" + config.Name.String())
+	if config.Comment != nil {
+		builder.WriteString("&" + groupApiKeyComment + "=" + body.Escape(*config.Comment))
 	}
-	if create {
-		params["groupid"] = string(config.Name)
-	}
-	return
+	b := []byte(builder.String())
+	return &b
 }
 
-func (config ConfigGroup) mapToStruct(params map[string]interface{}) *ConfigGroup {
-	if _, isSet := params["groupid"]; isSet {
-		config.Name = GroupName(params["groupid"].(string))
+// Maps the struct to the API values proxmox understands
+func (config ConfigGroup) mapToApiUpdate(current *rawGroupConfig) *[]byte {
+	if config.Comment == nil {
+		return nil
 	}
-	if _, isSet := params["comment"]; isSet {
-		config.Comment = params["comment"].(string)
+	if current != nil {
+		if *config.Comment == current.GetComment() {
+			return nil
+		}
 	}
-	if _, isSet := params["members"]; isSet {
-		config.Members = UserID{}.mapToArray(params["members"].([]interface{}))
-	}
-	return &config
+	b := []byte(groupApiKeyComment + "=" + body.Escape(*config.Comment))
+	return &b
 }
 
+// Deprecated: use GroupInterface.Set() instead.
 // Created or updates the specified group
-func (config ConfigGroup) Set(ctx context.Context, client *Client) (err error) {
-	existence, err := config.Name.CheckExistence(ctx, client)
+func (config ConfigGroup) Set(ctx context.Context, client *Client) error {
+	return client.New().Group.Set(ctx, config)
+}
+
+func (config ConfigGroup) set(ctx context.Context, c *clientAPI) error {
+	raw, exists, err := config.Name.read(ctx, c)
 	if err != nil {
-		return
+		return err
 	}
-	if existence {
-		return config.Update(ctx, client)
+	if !exists { // Create
+		return config.create(ctx, c)
 	}
-	return config.Create(ctx, client)
+	return config.update(ctx, raw, c)
+}
+
+// Deprecated: use GroupInterface.Update() instead.
+// Updates the specified group
+func (config ConfigGroup) Update(ctx context.Context, client *Client) error {
+	return client.New().Group.Update(ctx, config)
 }
 
 // Updates the specified group
-func (config ConfigGroup) Update(ctx context.Context, client *Client) error {
-	// TODO add digest during update to check if the config has changed
-	config.Validate(false)
-	params := config.mapToApiValues(true)
-	err := client.Put(ctx, params, "/access/groups/"+string(config.Name))
-	if err != nil {
-		params, _ := json.Marshal(&params)
-		return fmt.Errorf("error updating Group: %v, (params: %v)", err, string(params))
+// current is required when we want to update the members
+func (config ConfigGroup) update(ctx context.Context, current *rawGroupConfig, c *clientAPI) error {
+	if b := config.mapToApiUpdate(current); b != nil {
+		if err := c.putRawRetry(ctx, "/access/groups/"+config.Name.String(), b, 3); err != nil {
+			return err
+		}
 	}
 	if config.Members != nil {
-		return config.Name.SetMembers(ctx, config.Members, client)
+		currentMembers := current.GetMembers()
+		return config.Name.setMembers(ctx, &currentMembers, config.Members, c)
 	}
 	return nil
 }
 
 // Validates all items and sub items of the ConfigGroup
-func (config ConfigGroup) Validate(create bool) (err error) {
+func (config ConfigGroup) Validate() (err error) {
 	if err = config.Name.Validate(); err != nil {
 		return
 	}
@@ -99,6 +294,104 @@ func (config ConfigGroup) Validate(create bool) (err error) {
 	return
 }
 
+type (
+	RawGroups interface {
+		FormatArray() []RawGroupConfig
+		FormatMap() map[GroupName]RawGroupConfig
+		Len() int
+		SelectName(GroupName) (RawGroupConfig, bool)
+	}
+	rawGroups struct{ a []any }
+)
+
+var _ RawGroups = (*rawGroups)(nil)
+
+func (r *rawGroups) FormatArray() []RawGroupConfig {
+	groups := make([]RawGroupConfig, len(r.a))
+	for i := range r.a {
+		groups[i] = &rawGroupConfig{a: r.a[i].(map[string]any)}
+	}
+	return groups
+}
+
+func (r *rawGroups) FormatMap() map[GroupName]RawGroupConfig {
+	groups := make(map[GroupName]RawGroupConfig, len(r.a))
+	for i := range r.a {
+		tmpMap := r.a[i].(map[string]any)
+		if v, ok := tmpMap[groupApiKeyName]; ok {
+			groups[GroupName(v.(string))] = &rawGroupConfig{a: tmpMap, group: util.Pointer(GroupName(v.(string)))}
+		}
+	}
+	return groups
+}
+
+func (r *rawGroups) Len() int { return len(r.a) }
+
+func (r *rawGroups) SelectName(name GroupName) (RawGroupConfig, bool) {
+	for i := range r.a {
+		tmpMap := r.a[i].(map[string]any)
+		if v, ok := tmpMap[groupApiKeyName]; ok {
+			if v.(string) == name.String() {
+				return &rawGroupConfig{a: tmpMap, group: util.Pointer(name)}, true
+			}
+		}
+	}
+	return nil, false
+}
+
+type (
+	RawGroupConfig interface {
+		Get() ConfigGroup
+		GetName() GroupName
+		GetComment() string
+		GetMembers() []UserID
+	}
+	rawGroupConfig struct {
+		a     map[string]any
+		group *GroupName // Not always set.
+	}
+)
+
+var _ RawGroupConfig = (*rawGroupConfig)(nil)
+
+func (r *rawGroupConfig) Get() ConfigGroup {
+	return ConfigGroup{
+		Name:    r.GetName(),
+		Comment: util.Pointer(r.GetComment()),
+		Members: util.Pointer(r.GetMembers())}
+}
+
+func (r *rawGroupConfig) GetName() GroupName {
+	if r.group != nil {
+		return *r.group
+	}
+	if v, ok := r.a[groupApiKeyName]; ok {
+		return GroupName(v.(string))
+	}
+	return ""
+}
+
+func (r *rawGroupConfig) GetComment() string {
+	if v, ok := r.a[groupApiKeyComment]; ok {
+		return v.(string)
+	}
+	return ""
+}
+
+func (r *rawGroupConfig) GetMembers() []UserID {
+	if v, ok := r.a[groupApiKeyMembers]; ok {
+		rawMembers := v.([]any)
+		members := make([]UserID, len(rawMembers))
+		for i := range rawMembers {
+			var user UserID
+			_ = user.Parse(rawMembers[i].(string))
+			members[i] = user
+		}
+		return members
+	}
+	return []UserID{}
+}
+
 // GroupName may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
 type GroupName string
 
@@ -108,46 +401,26 @@ const (
 	GroupName_Error_MaxLength string = "variable of type (GroupName) may not be more than 1000 characters long"
 )
 
+// Deprecated: use GroupInterface.AddMembers() instead.
 // Add users to the specified group
 func (group GroupName) AddUsersToGroup(ctx context.Context, members *[]UserID, client *Client) error {
-	users, err := listUsersFull(ctx, client)
-	if err != nil {
-		return err
-	}
-	return configUserShort{}.updateUsersMembership(ctx, group.usersToAddToGroup(users, members), client)
+	return client.New().Group.AddMembers(ctx, []GroupName{group}, *members)
 }
 
-// Convert a array of GroupName to a comma separated string
-func (GroupName) arrayToCsv(groupList *[]GroupName) (groups string) {
-	if groupList == nil {
-		return
-	}
-	switch len(*groupList) {
-	case 0:
-		return
-	case 1:
-		return string((*groupList)[0])
-	}
-	for i, e := range *groupList {
-		if i > 0 {
-			groups = groups + ","
+func (group GroupName) addMembers(ctx context.Context, members *[]UserID, c *clientAPI) error {
+	var err error
+	for i := range *members {
+		if err = (*members)[i].addGroups(ctx, &[]GroupName{group}, c); err != nil {
+			return err
 		}
-		groups = groups + string(e)
 	}
-	return
+	return nil
 }
 
+// Deprecated: use GroupInterface.Exists() instead.
 // Check if the specified group exists.
 func (group GroupName) CheckExistence(ctx context.Context, client *Client) (bool, error) {
-	err := group.Validate()
-	if err != nil {
-		return false, nil
-	}
-	paramArray, err := listGroups(ctx, client)
-	if err != nil {
-		return false, nil
-	}
-	return ItemInKeyOfArray(paramArray, "groupid", string(group)), nil
+	return client.New().Group.Exists(ctx, group)
 }
 
 // Convert a comma separated string to an array of GroupName
@@ -163,25 +436,38 @@ func (GroupName) csvToArray(csv string) []GroupName {
 	return groups
 }
 
+// Deprecated: use GroupInterface.Delete() instead.
 // Deletes the specified group
-func (group GroupName) Delete(ctx context.Context, client *Client) (err error) {
-	err = group.Validate()
+func (group GroupName) Delete(ctx context.Context, client *Client) error {
+	exists, err := client.New().Group.Delete(ctx, group)
 	if err != nil {
-		return
+		return err
 	}
-	return client.Delete(ctx, "/access/groups/"+string(group))
+	if !exists {
+		return errors.New("group does not exist")
+	}
+	return nil
 }
 
-func (group GroupName) inArray(groups []GroupName) bool {
-	if group == "" || groups == nil {
-		return false
-	}
-	for _, e := range groups {
-		if e == group {
-			return true
+func (group GroupName) delete(ctx context.Context, c *clientAPI) (bool, error) {
+	if err := c.deleteRetry(ctx, "/access/groups/"+group.String(), 3); err != nil {
+		var apiErr *ApiError
+		if errors.As(err, &apiErr) {
+			if strings.HasPrefix(apiErr.Message, "delete group failed: group '"+group.String()+"' does not exist") {
+				return false, nil
+			}
 		}
+		return false, err
 	}
-	return false
+	return true, nil
+}
+
+func (group GroupName) exists(ctx context.Context, c *clientAPI) (bool, error) {
+	_, exists, err := group.read(ctx, c)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // params can only be of type []interface{} or string
@@ -205,164 +491,75 @@ func (GroupName) mapToArray(params any) *[]GroupName {
 	return &groupList
 }
 
-// Recursively remove all users from the specified group
-func (group GroupName) RemoveAllUsersFromGroup(ctx context.Context, client *Client) (err error) {
-	users, err := listUsersFull(ctx, client)
+func (group GroupName) read(ctx context.Context, c *clientAPI) (*rawGroupConfig, bool, error) {
+	raw, err := c.getMap(ctx, "/access/groups/"+group.String(), "group", "CONFIG")
 	if err != nil {
-		return
-	}
-	return configUserShort{}.updateUsersMembership(ctx, group.removeAllUsersFromGroup(users), client)
-}
-
-// Generate a array of users with their updated group memberships.
-// This list only includes users who where a member of the specified GroupName.
-func (group GroupName) removeAllUsersFromGroup(allUsers []interface{}) *[]configUserShort {
-	usersToUpdate := []configUserShort{}
-	for _, e := range allUsers {
-		params := e.(map[string]interface{})
-		if _, isSet := params["userid"]; !isSet {
-			continue
-		}
-		if _, isSet := params["groups"]; !isSet {
-			continue
-		}
-		groups := GroupName("").csvToArray(params["groups"].(string))
-		if group.inArray(groups) {
-			groups = group.removeFromArray(groups)
-			usersToUpdate = append(usersToUpdate, configUserShort{User: UserID{}.mapToStruct(params["userid"].(string)), Groups: &groups})
-		}
-	}
-	return &usersToUpdate
-}
-
-func (group GroupName) removeAllUsersFromGroupExcept(allUsers []interface{}, members *[]UserID) *[]configUserShort {
-	if group == "" {
-		return nil
-	}
-	if members == nil {
-		return group.removeAllUsersFromGroup(allUsers)
-	}
-	if len(*members) == 0 {
-		return group.removeAllUsersFromGroup(allUsers)
-	}
-	usersToUpdate := []configUserShort{}
-	for _, e := range allUsers {
-		params := e.(map[string]interface{})
-		if _, isSet := params["userid"]; !isSet {
-			continue
-		}
-		var userInMembers bool
-		for _, ee := range *members {
-			if params["userid"] == ee.String() {
-				userInMembers = true
-				break
+		var apiErr *ApiError
+		if errors.As(err, &apiErr) {
+			if strings.HasPrefix(apiErr.Message, "group '"+group.String()+"' does not exist") {
+				return nil, false, nil
 			}
 		}
-		if !userInMembers {
-			var groups []GroupName
-			if _, isSet := params["groups"]; isSet {
-				groups = GroupName("").csvToArray(params["groups"].(string))
-			}
-			if group.inArray(groups) {
-				groups = group.removeFromArray(groups)
-				usersToUpdate = append(usersToUpdate, configUserShort{User: UserID{}.mapToStruct(params["userid"].(string)), Groups: &groups})
-			}
-		}
+		return nil, false, err
 	}
-	return &usersToUpdate
+	return &rawGroupConfig{a: raw, group: &group}, true, nil
 }
 
-// Remove the specified GroupName from the array of GroupName
-func (group GroupName) removeFromArray(groups []GroupName) []GroupName {
-	newGroups := []GroupName{}
-	for _, e := range groups {
-		if e != group {
-			newGroups = append(newGroups, e)
-		}
-	}
-	return newGroups
-}
-
-// Remove users from the specified group
-func (group GroupName) RemoveUsersFromGroup(ctx context.Context, members *[]UserID, client *Client) (err error) {
-	users, err := listUsersFull(ctx, client)
+// Deprecated:
+// Recursively remove all users from the specified group
+func (group GroupName) RemoveAllUsersFromGroup(ctx context.Context, client *Client) error {
+	raw, err := client.New().Group.Read(ctx, group)
 	if err != nil {
 		return err
 	}
-	return configUserShort{}.updateUsersMembership(ctx, group.usersToRemoveFromGroup(users, members), client)
+	users := raw.GetMembers()
+	for i := range users {
+		if err = users[i].removeGroups(ctx, &[]GroupName{group}, client.new().apiRaw()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
+// Deprecated: use GroupInterface.RemoveMembers() instead.
+// Remove users from the specified group
+func (group GroupName) RemoveUsersFromGroup(ctx context.Context, members *[]UserID, client *Client) error {
+	return client.New().Group.RemoveMembers(ctx, []GroupName{group}, *members)
+}
+
+// Deprecated: use GroupInterface.Set() instead.
 // Recursively add and remove users from the specified group so only the the specified users will be members of the group
-func (group GroupName) SetMembers(ctx context.Context, members *[]UserID, client *Client) (err error) {
-	users, err := listUsersFull(ctx, client)
-	if err != nil {
-		return
-	}
-	err = configUserShort{}.updateUsersMembership(ctx, group.removeAllUsersFromGroupExcept(users, members), client)
-	if err != nil {
-		return
-	}
-	return configUserShort{}.updateUsersMembership(ctx, group.usersToAddToGroup(users, members), client)
+func (group GroupName) SetMembers(ctx context.Context, members *[]UserID, client *Client) error {
+	return client.New().Group.Set(ctx, ConfigGroup{
+		Name:    group,
+		Members: members})
 }
 
-func (group GroupName) usersToAddToGroup(allUsers []interface{}, members *[]UserID) *[]configUserShort {
-	if group == "" || members == nil {
-		return nil
-	}
-	usersToUpdate := []configUserShort{}
-	for _, e := range allUsers {
-		params := e.(map[string]interface{})
-		if _, isSet := params["userid"]; !isSet {
-			continue
-		}
-		for ii, ee := range *members {
-			if params["userid"] == ee.String() {
-				var groups []GroupName
-				if _, isSet := params["groups"]; isSet {
-					groups = GroupName("").csvToArray(params["groups"].(string))
-				}
-				if !group.inArray(groups) {
-					groups = append(groups, group)
-					usersToUpdate = append(usersToUpdate, configUserShort{User: (*members)[ii], Groups: &groups})
-				}
-			}
+func (group GroupName) setMembers(ctx context.Context, current, members *[]UserID, c *clientAPI) error {
+	membersToRemove := array.RemoveItems(*current, *members)
+	membersToAdd := array.RemoveItems(*members, *current)
+	var err error
+	for i := range membersToRemove {
+		if err = membersToRemove[i].removeGroups(ctx, &[]GroupName{group}, c); err != nil {
+			return err
 		}
 	}
-	return &usersToUpdate
+	for i := range membersToAdd {
+		if err = membersToAdd[i].addGroups(ctx, &[]GroupName{group}, c); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (group GroupName) usersToRemoveFromGroup(allUsers []interface{}, members *[]UserID) *[]configUserShort {
-	if group == "" || members == nil {
-		return nil
-	}
-	usersToUpdate := []configUserShort{}
-	for _, e := range allUsers {
-		params := e.(map[string]interface{})
-		if _, isSet := params["userid"]; !isSet {
-			continue
-		}
-		for ii, ee := range *members {
-			if params["userid"] == ee.String() {
-				var groups []GroupName
-				if _, isSet := params["groups"]; isSet {
-					groups = GroupName("").csvToArray(params["groups"].(string))
-				}
-				if group.inArray(groups) {
-					groups = group.removeFromArray(groups)
-					usersToUpdate = append(usersToUpdate, configUserShort{User: (*members)[ii], Groups: &groups})
-				}
-			}
-		}
-	}
-	return &usersToUpdate
-}
+func (group GroupName) String() string { return string(group) } // For fmt.Stringer interface.
 
-// Check if a groupname is valid.
+// Check if a groupName is valid.
 func (group GroupName) Validate() error {
 	if group == "" {
 		return errors.New(GroupName_Error_Empty)
 	}
-	// proxmox does not seem to enforce any limit on the length of a group name. When going over thousands of charters the ui kinda breaks.
+	// proxmox does not seem to enforce any limit on the length of a group name. When going over thousands of characters the ui kinda breaks.
 	if len([]rune(group)) > 1000 {
 		return errors.New(GroupName_Error_MaxLength)
 	}
@@ -373,32 +570,40 @@ func (group GroupName) Validate() error {
 	return nil
 }
 
+// Deprecated: use GroupInterface.List() instead.
 // Returns a list of all existing groups
 func ListGroups(ctx context.Context, client *Client) (*[]ConfigGroup, error) {
-	paramArray, err := listGroups(ctx, client)
+	raw, err := client.New().Group.List(ctx)
 	if err != nil {
 		return nil, err
 	}
-	groups := make([]ConfigGroup, len(paramArray))
-	for i, e := range paramArray {
-		groups[i] = *ConfigGroup{}.mapToStruct(e.(map[string]interface{}))
+	rawGroups := raw.FormatArray()
+	groups := make([]ConfigGroup, len(rawGroups))
+	for i := range rawGroups {
+		groups[i] = rawGroups[i].Get()
 	}
 	return &groups, nil
 }
 
-// list all groups directly from the api without any extra formatting
-func listGroups(ctx context.Context, client *Client) ([]interface{}, error) {
-	return client.GetItemListInterfaceArray(ctx, "/access/groups")
+func groupsList(ctx context.Context, c *clientAPI) (*rawGroups, error) {
+	params, err := c.getList(ctx, "/access/groups", "List", "Groups")
+	if err != nil {
+		return nil, err
+	}
+	return &rawGroups{a: params}, nil
 }
 
+// Deprecated: use GroupInterface.Read() instead.
 func NewConfigGroupFromApi(ctx context.Context, groupId GroupName, client *Client) (*ConfigGroup, error) {
-	err := groupId.Validate()
+	raw, err := client.New().Group.Read(ctx, groupId)
 	if err != nil {
 		return nil, err
 	}
-	config, err := client.GetItemConfigMapStringInterface(ctx, "/access/groups/"+string(groupId), "group", "CONFIG")
-	if err != nil {
-		return nil, err
-	}
-	return ConfigGroup{Name: groupId}.mapToStruct(config), nil
+	return util.Pointer(raw.Get()), nil
 }
+
+const (
+	groupApiKeyComment string = "comment"
+	groupApiKeyMembers string = "members"
+	groupApiKeyName    string = "groupid"
+)

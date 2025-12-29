@@ -10,9 +10,6 @@ var get_groupCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return getConfig(args, "Group")
-	},
-}
+	}}
 
-func init() {
-	GetCmd.AddCommand(get_groupCmd)
-}
+func init() { GetCmd.AddCommand(get_groupCmd) }

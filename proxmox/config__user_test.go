@@ -871,7 +871,7 @@ func Test_rawConfigUser_Get(t *testing.T) {
 	}
 	type input struct {
 		a    map[string]any
-		user UserID
+		user *UserID
 	}
 	tests := []struct {
 		name   string
@@ -902,7 +902,7 @@ func Test_rawConfigUser_Get(t *testing.T) {
 			output: base(ConfigUser{
 				User: UserID{Name: "username", Realm: "pam"}})},
 		{name: `User get user`,
-			input: input{a: map[string]any{}, user: UserID{Name: "test-user", Realm: "pve"}},
+			input: input{a: map[string]any{}, user: util.Pointer(UserID{Name: "test-user", Realm: "pve"})},
 			output: base(ConfigUser{
 				User: UserID{Name: "test-user", Realm: "pve"}})},
 		{name: `Comment`,
@@ -982,86 +982,6 @@ func Test_ConfigUser_Validate(t *testing.T) {
 		t.Run(test.name, func(*testing.T) {
 			require.Equal(t, test.err, test.input.Validate())
 		})
-	}
-}
-
-func Test_configUserShort_mapToApiValues(t *testing.T) {
-	testData := []struct {
-		input  configUserShort
-		output map[string]interface{}
-	}{
-		{
-			input:  configUserShort{},
-			output: map[string]interface{}{"groups": ""},
-		},
-		{
-			input:  configUserShort{Groups: &[]GroupName{"group1"}},
-			output: map[string]interface{}{"groups": "group1"},
-		},
-		{
-			input:  configUserShort{Groups: &[]GroupName{"group1", "group2", "group3"}},
-			output: map[string]interface{}{"groups": "group1,group2,group3"},
-		},
-	}
-	for _, e := range testData {
-		require.Equal(t, e.output, e.input.mapToApiValues())
-	}
-}
-
-func Test_UserID_mapToArray(t *testing.T) {
-	testData := []struct {
-		input  []interface{}
-		Output *[]UserID
-	}{
-		{
-			input:  []interface{}{},
-			Output: &[]UserID{},
-		},
-		{
-			input:  []interface{}{"user1realm"},
-			Output: &[]UserID{{}},
-		},
-		{
-			input: []interface{}{"user1realm", "", "user3@pve"},
-			Output: &[]UserID{
-				{},
-				{},
-				{Name: "user3", Realm: "pve"},
-			},
-		},
-		{
-			input:  []interface{}{"user1@realm"},
-			Output: &[]UserID{{Name: "user1", Realm: "realm"}},
-		},
-		{
-			input: []interface{}{"user1@realm", "user2@pam", "user3@pve"},
-			Output: &[]UserID{
-				{Name: "user1", Realm: "realm"},
-				{Name: "user2", Realm: "pam"},
-				{Name: "user3", Realm: "pve"},
-			},
-		},
-	}
-	for _, e := range testData {
-		require.Equal(t, e.Output, UserID{}.mapToArray(e.input))
-	}
-}
-
-func Test_UserID_mapToStruct(t *testing.T) {
-	testData := []struct {
-		input  string
-		output UserID
-	}{
-		{},
-		{input: "user"},
-		{input: "@realm"},
-		{
-			input:  "user@realm",
-			output: UserID{Name: "user", Realm: "realm"},
-		},
-	}
-	for _, e := range testData {
-		require.Equal(t, e.output, UserID{}.mapToStruct(e.input))
 	}
 }
 
@@ -1236,6 +1156,72 @@ func Test_rawUsersInfo_FormatArray(t *testing.T) {
 	}
 }
 
+func Test_rawUsersInfo_FormatMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  rawUsersInfo
+		output map[UserID]RawUserInfo
+	}{
+		{name: `Single Partial`,
+			input: rawUsersInfo{
+				a: []any{map[string]any{"userid": "user1@pam"}}},
+			output: map[UserID]RawUserInfo{
+				{Name: "user1", Realm: "pam"}: &rawUserInfo{
+					user: util.Pointer(UserID{Name: "user1", Realm: "pam"}),
+					a:    map[string]any{"userid": "user1@pam"}}}},
+		{name: `Single Full`,
+			input: rawUsersInfo{
+				full: true,
+				a:    []any{map[string]any{"userid": "user1@pam"}}},
+			output: map[UserID]RawUserInfo{
+				{Name: "user1", Realm: "pam"}: &rawUserInfo{
+					user: util.Pointer(UserID{Name: "user1", Realm: "pam"}),
+					a:    map[string]any{"userid": "user1@pam"},
+					full: true}}},
+		{name: `Multiple Partial`,
+			input: rawUsersInfo{
+				a: []any{
+					map[string]any{"userid": "user1@pam"},
+					map[string]any{"userid": "user2@pve"},
+					map[string]any{"userid": "user3@ldap"}}},
+			output: map[UserID]RawUserInfo{
+				{Name: "user1", Realm: "pam"}: &rawUserInfo{
+					user: util.Pointer(UserID{Name: "user1", Realm: "pam"}),
+					a:    map[string]any{"userid": "user1@pam"}},
+				{Name: "user2", Realm: "pve"}: &rawUserInfo{
+					user: util.Pointer(UserID{Name: "user2", Realm: "pve"}),
+					a:    map[string]any{"userid": "user2@pve"}},
+				{Name: "user3", Realm: "ldap"}: &rawUserInfo{
+					user: util.Pointer(UserID{Name: "user3", Realm: "ldap"}),
+					a:    map[string]any{"userid": "user3@ldap"}}}},
+		{name: `Multiple Full`,
+			input: rawUsersInfo{
+				full: true,
+				a: []any{
+					map[string]any{"userid": "user1@pam"},
+					map[string]any{"userid": "user2@pve"},
+					map[string]any{"userid": "user3@ldap"}}},
+			output: map[UserID]RawUserInfo{
+				{Name: "user1", Realm: "pam"}: &rawUserInfo{
+					user: util.Pointer(UserID{Name: "user1", Realm: "pam"}),
+					a:    map[string]any{"userid": "user1@pam"},
+					full: true},
+				{Name: "user2", Realm: "pve"}: &rawUserInfo{
+					user: util.Pointer(UserID{Name: "user2", Realm: "pve"}),
+					a:    map[string]any{"userid": "user2@pve"},
+					full: true},
+				{Name: "user3", Realm: "ldap"}: &rawUserInfo{
+					user: util.Pointer(UserID{Name: "user3", Realm: "ldap"}),
+					a:    map[string]any{"userid": "user3@ldap"},
+					full: true}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, test.input.FormatMap())
+		})
+	}
+}
+
 func Test_rawUsersInfo_Len(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -1277,7 +1263,9 @@ func Test_rawUsersInfo_SelectUser(t *testing.T) {
 			user: UserID{Name: "user1", Realm: "pam"},
 			input: rawUsersInfo{
 				a: []any{map[string]any{"userid": "user1@pam"}}},
-			output: RawUserInfo(&rawUserInfo{a: map[string]any{"userid": "user1@pam"}}),
+			output: RawUserInfo(&rawUserInfo{
+				user: util.Pointer(UserID{Name: "user1", Realm: "pam"}),
+				a:    map[string]any{"userid": "user1@pam"}}),
 			exists: true},
 		{name: `Single Full`,
 			user: UserID{Name: "user1", Realm: "pam"},
@@ -1285,6 +1273,7 @@ func Test_rawUsersInfo_SelectUser(t *testing.T) {
 				full: true,
 				a:    []any{map[string]any{"userid": "user1@pam"}}},
 			output: RawUserInfo(&rawUserInfo{
+				user: util.Pointer(UserID{Name: "user1", Realm: "pam"}),
 				a:    map[string]any{"userid": "user1@pam"},
 				full: true}),
 			exists: true},
@@ -1302,7 +1291,9 @@ func Test_rawUsersInfo_SelectUser(t *testing.T) {
 					map[string]any{"userid": "user1@pam"},
 					map[string]any{"userid": "user2@pve"},
 					map[string]any{"userid": "user3@ldap"}}},
-			output: RawUserInfo(&rawUserInfo{a: map[string]any{"userid": "user2@pve"}}),
+			output: RawUserInfo(&rawUserInfo{
+				user: util.Pointer(UserID{Name: "user2", Realm: "pve"}),
+				a:    map[string]any{"userid": "user2@pve"}}),
 			exists: true},
 		{name: `Multiple Full`,
 			user: UserID{Name: "user3", Realm: "ldap"},
@@ -1313,6 +1304,7 @@ func Test_rawUsersInfo_SelectUser(t *testing.T) {
 					map[string]any{"userid": "user2@pve"},
 					map[string]any{"userid": "user3@ldap"}}},
 			output: RawUserInfo(&rawUserInfo{
+				user: util.Pointer(UserID{Name: "user3", Realm: "ldap"}),
 				a:    map[string]any{"userid": "user3@ldap"},
 				full: true}),
 			exists: true},

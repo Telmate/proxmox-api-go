@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/Telmate/proxmox-api-go/internal/array"
 	"github.com/Telmate/proxmox-api-go/internal/body"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
@@ -210,7 +211,7 @@ func (config ConfigUser) mapToApiCreate() *[]byte {
 		builder.WriteString("&" + userApiKeyFirstName + "=" + body.Escape(*config.FirstName))
 	}
 	if config.Groups != nil && len(*config.Groups) != 0 {
-		builder.WriteString("&" + userApiKeyGroups + "=" + body.Escape(GroupName("").arrayToCsv(config.Groups)))
+		builder.WriteString("&" + userApiKeyGroups + "=" + body.Escape(array.CSV(*config.Groups)))
 	}
 	if config.Keys != nil && *config.Keys != "" {
 		builder.WriteString("&" + userApiKeyKeys + "=" + body.Escape(*config.Keys))
@@ -245,7 +246,7 @@ func (config ConfigUser) mapToApiUpdate() *[]byte {
 		builder.WriteString("&" + userApiKeyFirstName + "=" + body.Escape(*config.FirstName))
 	}
 	if config.Groups != nil {
-		builder.WriteString("&" + userApiKeyGroups + "=" + body.Escape(GroupName("").arrayToCsv(config.Groups)))
+		builder.WriteString("&" + userApiKeyGroups + "=" + body.Escape(array.CSV(*config.Groups)))
 	}
 	if config.Keys != nil {
 		builder.WriteString("&" + userApiKeyKeys + "=" + body.Escape(*config.Keys))
@@ -326,7 +327,7 @@ func (config ConfigUser) UpdateUserPassword(ctx context.Context, client *Client)
 
 func (config ConfigUser) update(ctx context.Context, c *clientAPI) error {
 	if body := config.mapToApiUpdate(); body != nil {
-		if err := c.putRawRetry(ctx, "/access/users/"+config.User.String(), body, 3); err != nil {
+		if err := c.updateUser(ctx, config.User, body); err != nil {
 			return err
 		}
 	}
@@ -441,39 +442,6 @@ func (config ConfigUser) Validate() (err error) {
 	return
 }
 
-// user config used when only the group group membership needs updating.
-type configUserShort struct {
-	User   UserID
-	Groups *[]GroupName
-}
-
-func (config configUserShort) mapToApiValues() map[string]interface{} {
-	return map[string]interface{}{
-		"groups": GroupName("").arrayToCsv(config.Groups),
-	}
-}
-
-func (config configUserShort) updateUserMembership(ctx context.Context, client *Client) (err error) {
-	err = updateUser(ctx, config.User, config.mapToApiValues(), client)
-	if err != nil {
-		return fmt.Errorf("error updating User: %v", err)
-	}
-	return
-}
-
-func (configUserShort) updateUsersMembership(ctx context.Context, users *[]configUserShort, client *Client) (err error) {
-	if users == nil {
-		return
-	}
-	for _, e := range *users {
-		err = e.updateUserMembership(ctx, client)
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
 type UserID struct {
 	// TODO create custom type for Name.
 	// the name only seems to allows some characters, and using the string type would imply that all characters are allowed.
@@ -483,6 +451,18 @@ type UserID struct {
 	// the realm only allows some characters, and using the string type would imply that all characters are allowed.
 	// https://bugzilla.proxmox.com/show_bug.cgi?id=4462
 	Realm string `json:"realm"`
+}
+
+func (id UserID) addGroups(ctx context.Context, groups *[]GroupName, c *clientAPI) error {
+	raw, exists, err := id.read(ctx, c)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("user " + id.String() + " does not exist")
+	}
+	newGroups := array.Combine(*(raw.GetGroups()), *groups)
+	return id.setGroups(ctx, &newGroups, c)
 }
 
 func (id UserID) delete(ctx context.Context, client *clientAPI) error {
@@ -496,23 +476,6 @@ func (id UserID) exists(ctx context.Context, c clientApiInterface) (bool, error)
 		return false, err
 	}
 	return exists, nil
-}
-
-// Map the params to an array of UserID objects
-func (UserID) mapToArray(params []interface{}) *[]UserID {
-	members := ArrayToStringType(params)
-	UserList := make([]UserID, len(members))
-	for i := range members {
-		UserList[i] = UserID{}.mapToStruct(members[i])
-	}
-	return &UserList
-}
-
-// transforms the username@realm to a UserID object
-func (UserID) mapToStruct(userId string) UserID {
-	var user UserID
-	_ = user.Parse(userId)
-	return user
 }
 
 // Parses "username@realm" to a UserID object
@@ -539,7 +502,24 @@ func (id UserID) read(ctx context.Context, c *clientAPI) (*rawConfigUser, bool, 
 	if err != nil {
 		return nil, false, err
 	}
-	return &rawConfigUser{a: userConfig, user: id}, exists, nil
+	return &rawConfigUser{a: userConfig, user: &id}, exists, nil
+}
+
+func (id UserID) removeGroups(ctx context.Context, groups *[]GroupName, c *clientAPI) error {
+	raw, exists, err := id.read(ctx, c)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("user " + id.String() + " does not exist")
+	}
+	newGroups := array.RemoveItems(*(raw.GetGroups()), *groups)
+	return id.setGroups(ctx, &newGroups, c)
+}
+
+func (id UserID) setGroups(ctx context.Context, groups *[]GroupName, c *clientAPI) error {
+	b := []byte(userApiKeyGroups + "=" + array.CSV(*groups))
+	return c.updateUser(ctx, id, &b)
 }
 
 func (id UserID) setPassword(ctx context.Context, password UserPassword, c *clientAPI) error {
@@ -599,7 +579,7 @@ type (
 
 	rawConfigUser struct {
 		a    map[string]any
-		user UserID
+		user *UserID
 	}
 )
 
@@ -661,10 +641,10 @@ func (r *rawUsersInfo) FormatArray() []RawUserInfo {
 func (r *rawUsersInfo) FormatMap() map[UserID]RawUserInfo {
 	raw := make(map[UserID]RawUserInfo, len(r.a))
 	for i := range r.a {
-		user := rawUserInfo{a: r.a[i].(map[string]any), full: r.full}
+		tmpMap := r.a[i].(map[string]any)
 		var id UserID
-		_ = id.Parse(user.a[userApiKeyUserID].(string))
-		raw[id] = &user
+		_ = id.Parse(tmpMap[userApiKeyUserID].(string))
+		raw[id] = &rawUserInfo{a: tmpMap, full: r.full, user: &id}
 	}
 	return raw
 }
@@ -675,7 +655,7 @@ func (r *rawUsersInfo) SelectUser(user UserID) (RawUserInfo, bool) {
 	for i := range r.a {
 		raw := r.a[i].(map[string]any)
 		if vv, ok := raw[userApiKeyUserID]; ok && vv == user.String() {
-			return &rawUserInfo{a: raw, full: r.full}, true
+			return &rawUserInfo{a: raw, full: r.full, user: &user}, true
 		}
 	}
 	return nil, false
@@ -702,6 +682,7 @@ type (
 	rawUserInfo struct {
 		a    map[string]any
 		full bool
+		user *UserID
 	}
 )
 
@@ -747,7 +728,7 @@ func (r *rawUserInfo) GetConfigKeys() *string { return userGetKeys(r.a) }
 
 func (r *rawUserInfo) GetConfigLastName() string { return userGetLastName(r.a) }
 
-func (r *rawUserInfo) GetConfigUser() UserID { return userGetUser(r.a, UserID{}) }
+func (r *rawUserInfo) GetConfigUser() UserID { return userGetUser(r.a, r.user) }
 
 func (r *rawUserInfo) GetTokens() *[]ApiTokenConfig {
 	if !r.full {
@@ -761,7 +742,7 @@ func (r *rawUserInfo) GetTokens() *[]ApiTokenConfig {
 			results[i] = ApiTokenConfig{
 				Comment:             util.Pointer(apiTokenGetComment(tmpMap)),
 				Expiration:          util.Pointer(apiTokenGetExpiration(tmpMap)),
-				Name:                apiTokenGetName(tmpMap),
+				Name:                apiTokenGetName(tmpMap, nil),
 				PrivilegeSeparation: util.Pointer(apiTokenGetPrivilegeSeparation(tmpMap))}
 		}
 		return &results
@@ -883,11 +864,6 @@ func NewUserIDs(userIds string) (*[]UserID, error) {
 	return &users, nil
 }
 
-// URL for updating users
-func updateUser(ctx context.Context, user UserID, params map[string]interface{}, client *Client) error {
-	return client.Put(ctx, params, "/access/users/"+user.String())
-}
-
 func userGetComment(params map[string]any) string {
 	if v, isSet := params[userApiKeyComment]; isSet {
 		return v.(string)
@@ -944,11 +920,15 @@ func userGetLastName(params map[string]any) string {
 	return ""
 }
 
-func userGetUser(params map[string]any, id UserID) UserID {
-	if v, isSet := params[userApiKeyUserID]; isSet {
-		return UserID{}.mapToStruct(v.(string))
+func userGetUser(params map[string]any, id *UserID) UserID {
+	if id != nil {
+		return *id
 	}
-	return id
+	var user UserID
+	if v, isSet := params[userApiKeyUserID]; isSet {
+		_ = user.Parse(v.(string))
+	}
+	return user
 }
 
 const (

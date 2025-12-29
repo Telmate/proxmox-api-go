@@ -118,3 +118,7 @@ func (c *clientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[st
 	_, err := c.put(ctx, "/cluster/ha/rules/"+id.String(), params)
 	return err
 }
+
+func (c clientAPI) updateUser(ctx context.Context, user UserID, body *[]byte) error {
+	return c.putRawRetry(ctx, "/access/users/"+user.String(), body, 3)
+}
