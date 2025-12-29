@@ -46,7 +46,7 @@ func Test_Group_Exists(t *testing.T) {
 				require.NoError(t, err)
 				require.True(t, exists)
 			}},
-		{name: `Verify doesn't group exist`,
+		{name: `Verify groep does not exist`,
 			test: func(t *testing.T) {
 				exists, err := c.Group.Exists(ctx, groupName)
 				require.NoError(t, err)
