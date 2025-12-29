@@ -204,7 +204,7 @@ func (raw *rawApiTokens) SelectName(name ApiTokenName) (RawApiTokenConfig, bool)
 		tmpMap := raw.a[i].(map[string]any)
 		if v, ok := tmpMap[apiTokenApiKeyTokenID]; ok {
 			if v.(string) == name.String() {
-				return &rawApiTokenConfig{a: tmpMap, name: name}, true
+				return &rawApiTokenConfig{a: tmpMap, name: &name}, true
 			}
 		}
 	}
@@ -216,9 +216,7 @@ func (raw *rawApiTokens) Len() int { return len(raw.a) }
 func (raw *rawApiTokens) FormatArray() []RawApiTokenConfig {
 	tokenArray := make([]RawApiTokenConfig, len(raw.a))
 	for i := range raw.a {
-		tmpMap := raw.a[i].(map[string]any)
-		name := apiTokenGetName(tmpMap)
-		tokenArray[i] = &rawApiTokenConfig{a: tmpMap, name: name}
+		tokenArray[i] = &rawApiTokenConfig{a: raw.a[i].(map[string]any)}
 	}
 	return tokenArray
 }
@@ -227,8 +225,8 @@ func (raw *rawApiTokens) FormatMap() map[ApiTokenName]RawApiTokenConfig {
 	tokenMap := make(map[ApiTokenName]RawApiTokenConfig, len(raw.a))
 	for i := range raw.a {
 		tmpMap := raw.a[i].(map[string]any)
-		name := apiTokenGetName(tmpMap)
-		tokenMap[name] = &rawApiTokenConfig{a: tmpMap, name: name}
+		name := apiTokenGetName(tmpMap, nil)
+		tokenMap[name] = &rawApiTokenConfig{a: tmpMap, name: &name}
 	}
 	return tokenMap
 }
@@ -243,7 +241,7 @@ type (
 	}
 	rawApiTokenConfig struct {
 		a    map[string]any
-		name ApiTokenName
+		name *ApiTokenName
 	}
 )
 
@@ -257,7 +255,7 @@ func (raw *rawApiTokenConfig) Get() ApiTokenConfig {
 		PrivilegeSeparation: util.Pointer(raw.GetPrivilegeSeparation())}
 }
 
-func (raw *rawApiTokenConfig) GetName() ApiTokenName { return raw.name }
+func (raw *rawApiTokenConfig) GetName() ApiTokenName { return apiTokenGetName(raw.a, raw.name) }
 
 func (raw *rawApiTokenConfig) GetComment() string { return apiTokenGetComment(raw.a) }
 
@@ -319,7 +317,7 @@ func (id ApiTokenID) read(ctx context.Context, c *clientAPI) (*rawApiTokenConfig
 		}
 		return nil, false, err
 	}
-	return &rawApiTokenConfig{a: data, name: id.TokenName}, true, nil
+	return &rawApiTokenConfig{a: data, name: &id.TokenName}, true, nil
 }
 
 func (id ApiTokenID) String() string { return id.User.String() + "!" + id.TokenName.String() } // Used for fmt.Stringer interface
@@ -371,7 +369,10 @@ func apiTokenGetExpiration(params map[string]any) uint {
 	return 0
 }
 
-func apiTokenGetName(params map[string]any) ApiTokenName {
+func apiTokenGetName(params map[string]any, token *ApiTokenName) ApiTokenName {
+	if token != nil {
+		return *token
+	}
 	var name ApiTokenName
 	if v, isSet := params[apiTokenApiKeyTokenID]; isSet {
 		name = ApiTokenName(v.(string))

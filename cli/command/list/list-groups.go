@@ -13,21 +13,23 @@ var list_groupsCmd = &cobra.Command{
 	Use:   "groups",
 	Short: "Prints a list of groups in raw json format",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		c := cli.NewClient()
-		groups, err := proxmox.ListGroups(cli.Context(), c)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		raw, err := cli.NewClient().New().Group.List(cli.Context())
 		if err != nil {
-			return
+			return err
 		}
-		output, err := json.Marshal(groups)
+		rawGroups := raw.FormatArray()
+		groups := make([]proxmox.ConfigGroup, len(rawGroups))
+		for i := range rawGroups {
+			groups[i] = rawGroups[i].Get()
+		}
+		var output []byte
+		output, err = json.Marshal(groups)
 		if err != nil {
-			return
+			return err
 		}
 		fmt.Fprintln(listCmd.OutOrStdout(), string(output))
-		return
-	},
-}
+		return nil
+	}}
 
-func init() {
-	listCmd.AddCommand(list_groupsCmd)
-}
+func init() { listCmd.AddCommand(list_groupsCmd) }

@@ -31,12 +31,11 @@ var (
 					return
 				}
 			}
-			config := proxmox.ConfigGroup{
+			err = cli.NewClient().New().Group.Set(cli.Context(), proxmox.ConfigGroup{
 				Name:    groupname,
-				Comment: comment,
+				Comment: &comment,
 				Members: formattedMembers,
-			}
-			err = config.Set(cli.Context(), cli.NewClient())
+			})
 			if err != nil {
 				return
 			}

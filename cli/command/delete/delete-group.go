@@ -11,9 +11,6 @@ var delete_groupCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return deleteID(cli.Context(), args, "Group")
-	},
-}
+	}}
 
-func init() {
-	deleteCmd.AddCommand(delete_groupCmd)
-}
+func init() { deleteCmd.AddCommand(delete_groupCmd) }

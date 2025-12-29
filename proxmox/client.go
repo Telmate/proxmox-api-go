@@ -165,6 +165,7 @@ func (c *Client) New() ClientNew {
 
 	return ClientNew{
 		ApiToken: &apiTokenClient{oldClient: c, api: apiClientPtr},
+		Group:    &groupClient{oldClient: c, api: apiClientPtr},
 		User:     &userClient{oldClient: c, api: apiClientPtr}}
 }
 

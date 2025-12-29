@@ -28,7 +28,7 @@ func deleteID(ctx context.Context, args []string, IDtype string) (err error) {
 	case "AcmePlugin":
 		err = c.DeleteAcmePlugin(ctx, id)
 	case "Group":
-		err = proxmox.GroupName(id).Delete(ctx, c)
+		_, err = c.New().Group.Delete(ctx, proxmox.GroupName(id))
 	case "MetricServer":
 		err = c.DeleteMetricServer(ctx, id)
 	case "Pool":

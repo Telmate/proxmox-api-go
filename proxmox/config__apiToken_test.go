@@ -469,8 +469,7 @@ func Test_rawApiTokens_FormatArray(t *testing.T) {
 					map[string]any{"tokenid": "token1"}}},
 			output: []RawApiTokenConfig{
 				&rawApiTokenConfig{
-					name: "token1",
-					a:    map[string]any{"tokenid": "token1"}}}},
+					a: map[string]any{"tokenid": "token1"}}}},
 		{name: `Multiple tokens`,
 			input: rawApiTokens{
 				a: []any{
@@ -485,17 +484,14 @@ func Test_rawApiTokens_FormatArray(t *testing.T) {
 						"tokenid": "token3"}}},
 			output: []RawApiTokenConfig{
 				&rawApiTokenConfig{
-					name: "token1",
 					a: map[string]any{
 						"comment": "comment2",
 						"tokenid": "token1"}},
 				&rawApiTokenConfig{
-					name: "token2",
 					a: map[string]any{
 						"expire":  float64(1000),
 						"tokenid": "token2"}},
 				&rawApiTokenConfig{
-					name: "token3",
 					a: map[string]any{
 						"privsep": float64(1),
 						"tokenid": "token3"}}}},
@@ -526,7 +522,12 @@ func Test_rawApiTokenConfig_Get(t *testing.T) {
 		output ApiTokenConfig
 	}{
 		{name: `Name`,
-			input:  rawApiTokenConfig{name: "test"},
+			input: rawApiTokenConfig{a: map[string]any{
+				"tokenid": "test",
+			}},
+			output: base(ApiTokenConfig{Name: "test"})},
+		{name: `Name pointer`,
+			input:  rawApiTokenConfig{name: util.Pointer(ApiTokenName("test"))},
 			output: base(ApiTokenConfig{Name: "test"})},
 		{name: `Comment`,
 			input: rawApiTokenConfig{
@@ -546,7 +547,7 @@ func Test_rawApiTokenConfig_Get(t *testing.T) {
 			output: base(ApiTokenConfig{PrivilegeSeparation: util.Pointer(false)})},
 		{name: `all`,
 			input: rawApiTokenConfig{
-				name: "testName",
+				name: util.Pointer(ApiTokenName("testName")),
 				a: map[string]any{
 					"comment": string("test comment"),
 					"expire":  float64(654321),

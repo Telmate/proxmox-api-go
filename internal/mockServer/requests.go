@@ -70,22 +70,35 @@ func RequestsPut(urlPath Path, expected any) []Request {
 		}}}
 }
 
-func requestsParseParams(expected any, r *http.Request, t *testing.T) {
-	if expected == nil {
-		expected = map[string]any{}
-	}
+func RequestsPutHandler(urlPath Path, handler func(t *testing.T, v url.Values)) []Request {
+	return []Request{{
+		Path:   urlPath,
+		Method: PUT,
+		HandlerFunc: func(w http.ResponseWriter, r *http.Request, t *testing.T) {
+			values := requestsParseParamsPartial(t, r)
+			handler(t, values)
+		}}}
+}
 
+func requestsParseParamsPartial(t *testing.T, r *http.Request) url.Values {
 	body, err := io.ReadAll(r.Body)
 	require.NoError(t, err)
 
 	values, err := url.ParseQuery(string(body))
 	require.NoError(t, err)
+	return values
+}
 
+func requestsParseParams(expected any, r *http.Request, t *testing.T) {
+	values := requestsParseParamsPartial(t, r)
 	out := make(map[string]any)
 	for k, v := range values {
 		if len(v) > 0 {
 			out[k] = v[0]
 		}
+	}
+	if expected == nil {
+		expected = map[string]any{}
 	}
 	require.Equal(t, expected, out)
 }

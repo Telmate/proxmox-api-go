@@ -3,7 +3,7 @@ package group
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
 	"github.com/Telmate/proxmox-api-go/cli/helpers"
-	"github.com/Telmate/proxmox-api-go/proxmox"
+	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
@@ -12,18 +12,16 @@ var group_addCmd = &cobra.Command{
 	Short:   "Add members to the specified group",
 	Example: "add myGroup admin@pve,root@pam",
 	Args:    cobra.ExactArgs(2),
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		users, err := helpers.ParseUserIDs(args[1])
 		if err != nil {
-			return
+			return err
 		}
-		c := cli.NewClient()
-		err = proxmox.GroupName(args[0]).AddUsersToGroup(cli.Context(), users, c)
-		if err != nil {
-			return
+		if err = cli.NewClient().New().Group.AddMembers(cli.Context(), []pveSDK.GroupName{pveSDK.GroupName(args[0])}, *users); err != nil {
+			return err
 		}
 		cli.PrintItemUpdated(member_GroupCmd.OutOrStdout(), args[0], "Group membership of")
-		return
+		return nil
 	}}
 
 func init() {
