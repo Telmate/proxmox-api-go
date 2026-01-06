@@ -616,7 +616,7 @@ func (limit QemuDiskBandwidthIopsLimit) Validate() (err error) {
 type QemuDiskBandwidthIopsLimitBurst uint
 
 const (
-	Error_QemuDiskBandwidthIopsLimitBurst string = "burst may not be lower then 10 except for 0"
+	Error_QemuDiskBandwidthIopsLimitBurst string = "burst may not be lower than 10 except for 0"
 )
 
 func (limit QemuDiskBandwidthIopsLimitBurst) Validate() error {
@@ -629,7 +629,7 @@ func (limit QemuDiskBandwidthIopsLimitBurst) Validate() error {
 type QemuDiskBandwidthIopsLimitConcurrent uint
 
 const (
-	Error_QemuDiskBandwidthIopsLimitConcurrent string = "concurrent may not be lower then 10 except for 0"
+	Error_QemuDiskBandwidthIopsLimitConcurrent string = "concurrent may not be lower than 10 except for 0"
 )
 
 func (limit QemuDiskBandwidthIopsLimitConcurrent) Validate() error {
@@ -666,7 +666,7 @@ func (limit QemuDiskBandwidthMBpsLimit) Validate() (err error) {
 }
 
 const (
-	Error_QemuDiskBandwidthMBpsLimitBurst string = "burst may not be lower then 1 except for 0"
+	Error_QemuDiskBandwidthMBpsLimitBurst string = "burst may not be lower than 1 except for 0"
 )
 
 type QemuDiskBandwidthMBpsLimitBurst float32
@@ -679,7 +679,7 @@ func (limit QemuDiskBandwidthMBpsLimitBurst) Validate() error {
 }
 
 const (
-	Error_QemuDiskBandwidthMBpsLimitConcurrent string = "concurrent may not be lower then 1 except for 0"
+	Error_QemuDiskBandwidthMBpsLimitConcurrent string = "concurrent may not be lower than 1 except for 0"
 )
 
 type QemuDiskBandwidthMBpsLimitConcurrent float32
@@ -859,11 +859,11 @@ func (serial QemuDiskSerial) Validate() error {
 }
 
 // Amount of Kibibytes the disk should be.
-// Disk size must be greater then 4096.
+// Disk size must be greater than 4096.
 type QemuDiskSize uint
 
 const (
-	QemuDiskSize_Error_Minimum string       = "disk size must be greater then 4096"
+	QemuDiskSize_Error_Minimum string       = "disk size must be greater than 4096"
 	qemuDiskSize_Minimum       QemuDiskSize = 4097
 	mebibyte                   QemuDiskSize = 1024
 	gibibyte                   QemuDiskSize = 1048576
