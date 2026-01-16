@@ -217,13 +217,10 @@ func (config ConfigGroup) create(ctx context.Context, c *clientAPI) error {
 
 // Maps the struct to the API values proxmox understands
 func (config ConfigGroup) mapToApiCreate() *[]byte {
-	builder := strings.Builder{}
-	builder.WriteString(groupApiKeyName + "=" + config.Name.String())
-	if config.Comment != nil {
-		builder.WriteString("&" + groupApiKeyComment + "=" + body.Escape(*config.Comment))
+	if config.Comment != nil && *config.Comment != "" {
+		return util.Pointer([]byte(groupApiKeyName + "=" + config.Name.String() + "&" + groupApiKeyComment + "=" + body.Escape(*config.Comment)))
 	}
-	b := []byte(builder.String())
-	return &b
+	return util.Pointer([]byte(groupApiKeyName + "=" + config.Name.String()))
 }
 
 // Maps the struct to the API values proxmox understands
@@ -231,10 +228,8 @@ func (config ConfigGroup) mapToApiUpdate(current *rawGroupConfig) *[]byte {
 	if config.Comment == nil {
 		return nil
 	}
-	if current != nil {
-		if *config.Comment == current.GetComment() {
-			return nil
-		}
+	if current != nil && *config.Comment == current.GetComment() {
+		return nil
 	}
 	b := []byte(groupApiKeyComment + "=" + body.Escape(*config.Comment))
 	return &b
@@ -317,10 +312,10 @@ func (r *rawGroups) FormatArray() []RawGroupConfig {
 func (r *rawGroups) FormatMap() map[GroupName]RawGroupConfig {
 	groups := make(map[GroupName]RawGroupConfig, len(r.a))
 	for i := range r.a {
-		tmpMap := r.a[i].(map[string]any)
-		if v, ok := tmpMap[groupApiKeyName]; ok {
-			groups[GroupName(v.(string))] = &rawGroupConfig{a: tmpMap, group: util.Pointer(GroupName(v.(string)))}
-		}
+		raw := rawGroupConfig{a: r.a[i].(map[string]any)}
+		group := GroupName(raw.a[groupApiKeyName].(string))
+		raw.group = &group
+		groups[group] = &raw
 	}
 	return groups
 }

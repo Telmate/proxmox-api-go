@@ -669,8 +669,7 @@ func Test_ConfigGroup_mapToAPI(t *testing.T) {
 				{name: `empty`,
 					input: ConfigGroup{Comment: util.Pointer("")},
 					output: map[string]string{
-						"groupid": "",
-						"comment": ""}}},
+						"groupid": ""}}},
 			update: []test{
 				{name: `set`,
 					input:  ConfigGroup{Comment: util.Pointer("Test Comment " + body.Symbols)},
@@ -684,9 +683,7 @@ func Test_ConfigGroup_mapToAPI(t *testing.T) {
 					output:  map[string]string{"comment": "test comment"}},
 				{name: `no change`,
 					input:   ConfigGroup{Comment: util.Pointer("same comment")},
-					current: &rawGroupConfig{a: map[string]any{"comment": string("same comment")}}},
-			},
-		},
+					current: &rawGroupConfig{a: map[string]any{"comment": string("same comment")}}}}},
 	}
 	for _, test := range tests {
 		for _, subTest := range append(test.create, test.createUpdate...) {
