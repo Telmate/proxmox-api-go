@@ -1,4 +1,4 @@
-package create
+package update
 
 import (
 	"encoding/json"
@@ -8,9 +8,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var create_poolCmd = &cobra.Command{
+var update_poolCmd = &cobra.Command{
 	Use:   "pool POOLID",
-	Short: "Creates a new pool",
+	Short: "Updates the comment on the specified pool",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := cli.RequiredIDset(args, 0, "PoolID")
@@ -19,11 +19,11 @@ var create_poolCmd = &cobra.Command{
 			return err
 		}
 		config.Name = proxmox.PoolName(id)
-		if err := cli.NewClient().New().Pool.Create(cli.Context(), config); err != nil {
+		if err := cli.NewClient().New().Pool.Update(cli.Context(), config); err != nil {
 			return err
 		}
-		cli.PrintItemCreated(CreateCmd.OutOrStdout(), id, "Pool")
+		cli.PrintItemUpdated(updateCmd.OutOrStdout(), id, "Pool")
 		return nil
 	}}
 
-func init() { CreateCmd.AddCommand(create_poolCmd) }
+func init() { updateCmd.AddCommand(update_poolCmd) }

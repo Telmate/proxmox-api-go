@@ -32,7 +32,7 @@ func deleteID(ctx context.Context, args []string, IDtype string) (err error) {
 	case "MetricServer":
 		err = c.DeleteMetricServer(ctx, id)
 	case "Pool":
-		err = proxmox.PoolName(id).Delete(ctx, c)
+		_, err = c.New().Pool.Delete(ctx, proxmox.PoolName(id))
 	case "Storage":
 		err = c.DeleteStorage(ctx, id)
 	case "Token":

@@ -10,17 +10,19 @@ var list_poolsCmd = &cobra.Command{
 	Use:   "pools",
 	Short: "Prints a list of Pools in raw json format",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		c := cli.NewClient()
-		pools, err := proxmox.ListPools(cli.Context(), c)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		raw, err := cli.NewClient().New().Pool.List(cli.Context())
 		if err != nil {
-			return
+			return err
+		}
+		rawPools := raw.AsArray()
+
+		pools := make([]proxmox.PoolName, len(rawPools))
+		for i := range rawPools {
+			pools[i] = rawPools[i].GetName()
 		}
 		cli.PrintFormattedJson(listCmd.OutOrStdout(), pools)
-		return
-	},
-}
+		return nil
+	}}
 
-func init() {
-	listCmd.AddCommand(list_poolsCmd)
-}
+func init() { listCmd.AddCommand(list_poolsCmd) }

@@ -461,12 +461,14 @@ func main() {
 
 	//Pool
 	case "getPoolList":
-		pools, err := proxmox.ListPoolsWithComments(ctx, c)
-		if err != nil {
-			log.Printf("Error listing pools %+v\n", err)
-			os.Exit(1)
+		raw, err := c.New().Pool.List(ctx)
+		failError(err)
+		rawPools := raw.AsArray()
+		poolMap := make(map[proxmox.PoolName]string, len(rawPools))
+		for i := range rawPools {
+			poolMap[rawPools[i].GetName()] = rawPools[i].GetComment()
 		}
-		poolList, err := json.Marshal(pools)
+		poolList, err := json.Marshal(poolMap)
 		failError(err)
 		fmt.Println(string(poolList))
 
@@ -476,12 +478,24 @@ func main() {
 			os.Exit(1)
 		}
 		poolid := flag.Args()[1]
-		raw, err := proxmox.PoolName(poolid).Get(ctx, c)
-		if err != nil {
-			log.Printf("Error getting pool info %+v\n", err)
-			os.Exit(1)
+		rawInfo, err := c.New().Pool.Read(ctx, proxmox.PoolName(poolid))
+		failError(err)
+		info := rawInfo.Get()
+		rawGuests, rawStorages := info.Members.AsArrays()
+		guests := make([]proxmox.GuestID, len(rawGuests))
+		for i := range rawGuests {
+			guests[i] = rawGuests[i].GetID()
 		}
-		poolList, err := json.Marshal(raw.Get())
+		storages := make([]proxmox.StorageName, len(rawStorages))
+		for i := range rawStorages {
+			storages[i] = rawStorages[i].GetName()
+		}
+		poolList, err := json.Marshal(proxmox.ConfigPool{
+			Name:     proxmox.PoolName(poolid),
+			Comment:  util.Pointer(info.Comment),
+			Guests:   &guests,
+			Storages: &storages,
+		})
 		failError(err)
 		fmt.Println(string(poolList))
 
@@ -497,10 +511,10 @@ func main() {
 			comment = flag.Args()[2]
 		}
 
-		failError(proxmox.ConfigPool{
+		failError(c.New().Pool.Create(ctx, proxmox.ConfigPool{
 			Name:    proxmox.PoolName(poolid),
 			Comment: &comment,
-		}.Create(ctx, c))
+		}))
 		fmt.Printf("Pool %s created\n", poolid)
 
 	case "deletePool":
@@ -510,7 +524,8 @@ func main() {
 		}
 		poolid := flag.Args()[1]
 
-		failError(proxmox.PoolName(poolid).Delete(ctx, c))
+		_, err := c.New().Pool.Delete(ctx, proxmox.PoolName(poolid))
+		failError(err)
 		fmt.Printf("Pool %s removed\n", poolid)
 
 	case "updatePoolComment":
@@ -522,10 +537,10 @@ func main() {
 		poolid := flag.Args()[1]
 		comment := flag.Args()[2]
 
-		failError(proxmox.ConfigPool{
+		failError(c.New().Pool.Update(ctx, proxmox.ConfigPool{
 			Name:    proxmox.PoolName(poolid),
 			Comment: &comment,
-		}.Update(ctx, c))
+		}))
 		fmt.Printf("Pool %s updated\n", poolid)
 
 	//Users
