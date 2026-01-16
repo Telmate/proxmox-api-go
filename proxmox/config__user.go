@@ -31,12 +31,11 @@ type (
 		List(ctx context.Context) (RawUsersInfo, error)
 		ListNoCheck(ctx context.Context) (RawUsersInfo, error)
 
-		// List all users including their group membership and API tokens.
+		// List all users without their group membership and API tokens.
 		ListPartial(ctx context.Context) (RawUsersInfo, error)
 		ListPartialNoCheck(ctx context.Context) (RawUsersInfo, error)
 
 		// Read the user configuration for the specified userID.
-		// The boolean return value indicates if the user exists.
 		Read(context.Context, UserID) (RawConfigUser, error)
 		ReadNoCheck(context.Context, UserID) (RawConfigUser, error)
 
