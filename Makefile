@@ -36,8 +36,18 @@ test_coverage:
 test-unit: # Unit tests
 	@go test -race -vet=off $(UNIT_TEST_PATHS)
 
+.PHONY: test-integration
 test-integration: # Integration tests
 	@go test -parallel 1 ./test/...
+
+.PHONY: test_integration_api
+test_integration_api: # Integration
+	@go test ./test/api/ApiToken/... \
+		./test/api/Authentication/... \
+		./test/api/Connection/... \
+		./test/api/Group/... \
+		./test/api/Pool/... \
+		./test/api/User/...
 
 PHONY += clean
 clean:
