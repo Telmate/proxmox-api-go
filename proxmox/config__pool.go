@@ -242,14 +242,6 @@ func (config ConfigPool) mapToApiCreate() *[]byte {
 	return util.Pointer([]byte(poolApiKeyName + "=" + string(config.Name)))
 }
 
-type poolUpdateState int
-
-const (
-	poolUpdateStateNoChange poolUpdateState = iota
-	poolUpdateStateAdded
-	poolUpdateStateRemoved
-)
-
 func (config ConfigPool) mapToApiUpdate(current *rawPoolInfo, currentGuests map[GuestID]struct{}, currentStorages map[StorageName]struct{}, version Version) (b *[]byte, guestsAddPtr *[]GuestID, storagesAddPtr *[]StorageName) {
 	if current != nil {
 		builder := strings.Builder{}
@@ -561,11 +553,7 @@ var _ RawPoolMembers = (*rawPoolMembers)(nil)
 func (raw *rawPoolMembers) AsArray() []RawPoolMember {
 	members := make([]RawPoolMember, len(raw.a))
 	for i := range raw.a {
-		if raw.a[i].(map[string]any)[poolApiKeyMemberType].(string) == "storage" {
-			members[i] = &rawPoolMember{a: raw.a[i].(map[string]any)}
-		} else {
-			members[i] = &rawPoolMember{a: raw.a[i].(map[string]any)}
-		}
+		members[i] = &rawPoolMember{a: raw.a[i].(map[string]any)}
 	}
 	return members
 }
