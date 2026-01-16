@@ -51,8 +51,8 @@ func Map[T comparable](array []T) map[T]struct{} {
 
 func Nil[T any]() []T { return nil }
 
-// RemoveItem removes all occurrences of the specified item from the array.
-func RemoveItem[T comparable](array []T, remove T) []T {
+// Remove removes all occurrences of the specified item from the array.
+func Remove[T comparable](array []T, remove T) []T {
 	var length int
 	for i := range array {
 		if array[i] != remove {
@@ -70,16 +70,16 @@ func RemoveItem[T comparable](array []T, remove T) []T {
 	return newArray
 }
 
-// RemoveItems removes all occurrences of the specified items from the array.
+// Subtract removes the items in array b from array a.
 // Duplicate items are reduced to a single instance.
 // The order of the remaining items is not guaranteed.
-func RemoveItems[T comparable](array []T, remove []T) []T {
+func Subtract[T comparable](a []T, b []T) []T {
 	removeMap := make(map[T]struct{})
-	for i := range array {
-		removeMap[array[i]] = struct{}{}
+	for i := range a {
+		removeMap[a[i]] = struct{}{}
 	}
-	for i := range remove {
-		delete(removeMap, remove[i])
+	for i := range b {
+		delete(removeMap, b[i])
 	}
 	result := make([]T, len(removeMap))
 	var index int

@@ -127,7 +127,7 @@ func Test_Map(t *testing.T) {
 	}
 }
 
-func Test_RemoveItem(t *testing.T) {
+func Test_Remove(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []string
@@ -157,12 +157,12 @@ func Test_RemoveItem(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, RemoveItem(test.input, test.remove))
+			require.Equal(t, test.output, Remove(test.input, test.remove))
 		})
 	}
 }
 
-func Test_RemoveItems(t *testing.T) {
+func Test_Subtract(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []string
@@ -192,7 +192,7 @@ func Test_RemoveItems(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			result := RemoveItems(test.input, test.remove)
+			result := Subtract(test.input, test.remove)
 			resultMap := make(map[string]struct{}, len(result))
 			for i := range result {
 				resultMap[result[i]] = struct{}{}

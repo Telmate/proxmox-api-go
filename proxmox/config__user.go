@@ -511,7 +511,7 @@ func (id UserID) removeGroups(ctx context.Context, groups *[]GroupName, c *clien
 	if !exists {
 		return errors.New("user " + id.String() + " does not exist")
 	}
-	newGroups := array.RemoveItems(*(raw.GetGroups()), *groups)
+	newGroups := array.Subtract(*(raw.GetGroups()), *groups)
 	return id.setGroups(ctx, &newGroups, c)
 }
 

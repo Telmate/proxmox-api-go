@@ -531,8 +531,8 @@ func (group GroupName) SetMembers(ctx context.Context, members *[]UserID, client
 }
 
 func (group GroupName) setMembers(ctx context.Context, current, members *[]UserID, c *clientAPI) error {
-	membersToRemove := array.RemoveItems(*current, *members)
-	membersToAdd := array.RemoveItems(*members, *current)
+	membersToRemove := array.Subtract(*current, *members)
+	membersToAdd := array.Subtract(*members, *current)
 	var err error
 	for i := range membersToRemove {
 		if err = membersToRemove[i].removeGroups(ctx, &[]GroupName{group}, c); err != nil {
