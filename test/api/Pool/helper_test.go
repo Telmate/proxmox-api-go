@@ -40,7 +40,7 @@ func guestCreate(t *testing.T, ctx context.Context, cl *pveSDK.Client, guest pve
 		CPU:    &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
 		ID:     &guest,
 		Memory: &pveSDK.QemuMemory{CapacityMiB: util.Pointer(pveSDK.QemuMemoryCapacity(16))},
-		Name:   util.Pointer(pveSDK.GuestName("Test-Pool-Create-VM")),
+		Name:   util.Pointer(name),
 		Node:   util.Pointer(node),
 	}
 	vmRef, err := config.Create(ctx, cl)
