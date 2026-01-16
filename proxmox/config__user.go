@@ -466,8 +466,7 @@ func (id UserID) addGroups(ctx context.Context, groups *[]GroupName, c *clientAP
 }
 
 func (id UserID) delete(ctx context.Context, client *clientAPI) error {
-	_, err := client.delete(ctx, "/access/users/"+id.String())
-	return err
+	return client.deleteRetry(ctx, "/access/users/"+id.String(), 3)
 }
 
 func (id UserID) exists(ctx context.Context, c clientApiInterface) (bool, error) {

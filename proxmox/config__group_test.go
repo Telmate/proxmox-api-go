@@ -78,6 +78,7 @@ func Test_groupClient_AddMembers(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Group.AddMembers(context.Background(), test.groups, test.users)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
@@ -177,6 +178,7 @@ func Test_groupClient_Create(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Group.Create(context.Background(), test.input)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
@@ -214,6 +216,7 @@ func Test_groupClient_Delete(t *testing.T) {
 			exists, err := c.New().Group.Delete(context.Background(), test.input)
 			require.Equal(t, test.err, err)
 			require.Equal(t, test.exists, exists)
+			server.Clear(t)
 		})
 	}
 }
@@ -253,6 +256,7 @@ func Test_groupClient_Exists(t *testing.T) {
 			exists, err := c.New().Group.Exists(context.Background(), test.input)
 			require.Equal(t, test.err, err)
 			require.Equal(t, test.exists, exists)
+			server.Clear(t)
 		})
 	}
 }
@@ -291,6 +295,7 @@ func Test_groupClient_List(t *testing.T) {
 			} else {
 				require.Equal(t, test.output, raw)
 			}
+			server.Clear(t)
 		})
 	}
 }
@@ -342,6 +347,7 @@ func Test_groupClient_Read(t *testing.T) {
 			} else {
 				require.Equal(t, test.output, raw)
 			}
+			server.Clear(t)
 		})
 	}
 }
@@ -410,6 +416,7 @@ func Test_groupClient_RemoveMembers(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Group.RemoveMembers(context.Background(), test.groups, test.users)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
@@ -451,6 +458,7 @@ func Test_groupClient_Set(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Group.Set(context.Background(), test.input)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
@@ -609,22 +617,6 @@ func Test_groupClient_Update(t *testing.T) {
 						tmpMap[a[i]] = struct{}{}
 					}
 					require.Equal(t, map[string]struct{}{"group2": {}, "group3": {}}, tmpMap)
-				}),
-
-				mockServer.RequestsGetJson("/access/users/root@pam", map[string]any{"data": map[string]any{
-					"groups": "group1,group4",
-				}}),
-
-				mockServer.RequestsGetJson("/access/users/test@pve", map[string]any{"data": map[string]any{
-					"groups": "group2,group3",
-				}}),
-				mockServer.RequestsPutHandler("/access/users/test@pve", func(t *testing.T, v url.Values) {
-					a := strings.Split(v.Get("groups"), ",")
-					tmpMap := make(map[string]struct{})
-					for i := range a {
-						tmpMap[a[i]] = struct{}{}
-					}
-					require.Equal(t, map[string]struct{}{"group1": {}, "group2": {}, "group3": {}}, tmpMap)
 				}))},
 		{name: `validate error empty groupname`,
 			err: errors.New("variable of type (GroupName) may not be empty")},
@@ -640,6 +632,7 @@ func Test_groupClient_Update(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Group.Update(context.Background(), test.input)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
