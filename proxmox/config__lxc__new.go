@@ -427,7 +427,7 @@ func (config ConfigLXC) update_Unsafe(
 		}
 	}
 	if config.Pool != nil {
-		err = guestSetPoolNoCheck(ctx, c, vmr.vmId, *config.Pool, current.Pool, version)
+		err = vmr.vmId.setPool(ctx, c.new().apiRaw(), *config.Pool, current.Pool, version)
 	}
 	return err
 }

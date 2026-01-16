@@ -1210,3 +1210,12 @@ func NewConfigStorageFromJson(input []byte) (config *ConfigStorage, err error) {
 	config.SetDefaults()
 	return
 }
+
+type StorageName string
+
+// TODO implement proper validations
+func (name StorageName) Validate() error {
+	return nil
+}
+
+func (name StorageName) String() string { return string(name) } // for fmt.Stringer interface.

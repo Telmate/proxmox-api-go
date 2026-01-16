@@ -233,6 +233,40 @@ const (
 	GuestIdMinimum        = 100
 )
 
+func (guestID GuestID) setPool(ctx context.Context, c *clientAPI, newPool PoolName, currentPool *PoolName, version EncodedVersion) (err error) {
+	if newPool == "" {
+		if currentPool != nil && *currentPool != "" { // leave pool
+			if err = (*currentPool).removeMembers(ctx, c, &[]GuestID{guestID}, nil); err != nil {
+				return
+			}
+		}
+	} else {
+		if currentPool == nil || *currentPool == "" { // join pool
+			if version < version_8_0_0 {
+				if err = newPool.addGuestsV7(ctx, c, &[]GuestID{guestID}, nil); err != nil {
+					return
+				}
+			} else {
+				newPool.addGuestsV8(ctx, c, &[]GuestID{guestID}, nil)
+			}
+		} else if newPool != *currentPool { // change pool
+			if version < version_8_0_0 {
+				if err = (*currentPool).removeMembers(ctx, c, &[]GuestID{guestID}, nil); err != nil {
+					return
+				}
+				if err = newPool.addGuestsV7(ctx, c, &[]GuestID{guestID}, nil); err != nil {
+					return
+				}
+			} else {
+				if err = newPool.addGuestsV8(ctx, c, &[]GuestID{guestID}, nil); err != nil {
+					return
+				}
+			}
+		}
+	}
+	return
+}
+
 // DeleteHaResource deletes an HA resource. Returns false if the resource does not exist and was not deleted, true if successfully deleted.
 func (id GuestID) DeleteHaResource(ctx context.Context, c *Client) (bool, error) {
 	err := id.Validate()
@@ -510,40 +544,6 @@ func GuestHasPendingChanges(ctx context.Context, vmr *VmRef, client *Client) (bo
 // Reboot the specified guest
 func GuestReboot(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	_, err = client.RebootVm(ctx, vmr)
-	return
-}
-
-func guestSetPoolNoCheck(ctx context.Context, c *Client, guestID GuestID, newPool PoolName, currentPool *PoolName, version EncodedVersion) (err error) {
-	if newPool == "" {
-		if currentPool != nil && *currentPool != "" { // leave pool
-			if err = (*currentPool).removeGuestsNoCheck(ctx, c, []GuestID{guestID}, version); err != nil {
-				return
-			}
-		}
-	} else {
-		if currentPool == nil || *currentPool == "" { // join pool
-			if version < version_8_0_0 {
-				if err = newPool.addGuestsNoCheckV7(ctx, c, []GuestID{guestID}); err != nil {
-					return
-				}
-			} else {
-				newPool.addGuestsNoCheckV8(ctx, c, []GuestID{guestID})
-			}
-		} else if newPool != *currentPool { // change pool
-			if version < version_8_0_0 {
-				if err = (*currentPool).removeGuestsNoCheck(ctx, c, []GuestID{guestID}, version); err != nil {
-					return
-				}
-				if err = newPool.addGuestsNoCheckV7(ctx, c, []GuestID{guestID}); err != nil {
-					return
-				}
-			} else {
-				if err = newPool.addGuestsNoCheckV8(ctx, c, []GuestID{guestID}); err != nil {
-					return
-				}
-			}
-		}
-	}
 	return
 }
 

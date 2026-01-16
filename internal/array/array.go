@@ -41,6 +41,14 @@ func CSV[T fmt.Stringer](array []T) string {
 
 func Empty[T any]() []T { return []T{} }
 
+func Map[T comparable](array []T) map[T]struct{} {
+	result := make(map[T]struct{}, len(array))
+	for i := range array {
+		result[array[i]] = struct{}{}
+	}
+	return result
+}
+
 func Nil[T any]() []T { return nil }
 
 // RemoveItem removes all occurrences of the specified item from the array.

@@ -99,6 +99,34 @@ func Test_CSV(t *testing.T) {
 	}
 }
 
+func Test_Map(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []string
+		output map[string]struct{}
+	}{
+		{name: "empty input",
+			input:  []string{},
+			output: map[string]struct{}{}},
+		{name: "single element",
+			input:  []string{"a"},
+			output: map[string]struct{}{"a": {}}},
+		{name: "multiple elements",
+			input:  []string{"a", "b", "c"},
+			output: map[string]struct{}{"a": {}, "b": {}, "c": {}}},
+		{name: "multiple elements with duplicates",
+			input:  []string{"a", "b", "c", "a", "b"},
+			output: map[string]struct{}{"a": {}, "b": {}, "c": {}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			result := Map(test.input)
+			require.Len(t, result, len(test.output))
+			require.Equal(t, test.output, result)
+		})
+	}
+}
+
 func Test_RemoveItem(t *testing.T) {
 	tests := []struct {
 		name   string

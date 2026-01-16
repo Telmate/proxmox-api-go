@@ -222,20 +222,6 @@ func (m *MockClient) haUpdateResourceAffinityRuleNoCheck(ctx context.Context, ha
 	return m.HaUpdateResourceAffinityRuleNoCheckFunc(ctx, ha)
 }
 
-func (m *MockClient) poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error) {
-	if m.PoolGetRawConfigFunc == nil {
-		m.panic("PoolGetRawConfigFunc")
-	}
-	return m.PoolGetRawConfigFunc(ctx, pool)
-}
-
-func (m *MockClient) poolGetRawConfigNoCheck(ctx context.Context, pool PoolName) (RawConfigPool, error) {
-	if m.PoolGetRawConfigNoCheckFunc == nil {
-		m.panic("PoolGetRawConfigNoCheckFunc")
-	}
-	return m.PoolGetRawConfigNoCheckFunc(ctx, pool)
-}
-
 func (m *MockClient) userGetRawConfig(ctx context.Context, userID UserID) (RawConfigUser, error) {
 	if m.UserGetRawConfigFunc == nil {
 		m.panic("UserGetRawConfigFunc")
