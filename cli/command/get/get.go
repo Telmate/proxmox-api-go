@@ -2,6 +2,7 @@ package get
 
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
@@ -43,12 +44,25 @@ func getConfig(args []string, IDtype string) (err error) {
 			return
 		}
 	case "Pool":
-		var rawConfig proxmox.RawConfigPool
-		rawConfig, err = proxmox.PoolName(id).Get(cli.Context(), c)
+		var rawConfig proxmox.RawPoolInfo
+		rawConfig, err = c.New().Pool.Read(cli.Context(), proxmox.PoolName(id))
 		if err != nil {
 			return
 		}
-		config = rawConfig.Get()
+		rawGuests, rawStorages := rawConfig.GetMembers().AsArrays()
+		guests := make([]proxmox.GuestID, len(rawGuests))
+		for i := range rawGuests {
+			guests[i] = rawGuests[i].GetID()
+		}
+		storages := make([]proxmox.StorageName, len(rawStorages))
+		for i := range rawStorages {
+			storages[i] = rawStorages[i].GetName()
+		}
+		config = proxmox.ConfigPool{
+			Comment:  util.Pointer(rawConfig.GetComment()),
+			Guests:   &guests,
+			Name:     proxmox.PoolName(id),
+			Storages: &storages}
 	case "Storage":
 		config, err = proxmox.NewConfigStorageFromApi(cli.Context(), id, c)
 		if err != nil {

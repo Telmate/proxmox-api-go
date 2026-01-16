@@ -31,12 +31,11 @@ type (
 		List(ctx context.Context) (RawUsersInfo, error)
 		ListNoCheck(ctx context.Context) (RawUsersInfo, error)
 
-		// List all users including their group membership and API tokens.
+		// List all users without their group membership and API tokens.
 		ListPartial(ctx context.Context) (RawUsersInfo, error)
 		ListPartialNoCheck(ctx context.Context) (RawUsersInfo, error)
 
 		// Read the user configuration for the specified userID.
-		// The boolean return value indicates if the user exists.
 		Read(context.Context, UserID) (RawConfigUser, error)
 		ReadNoCheck(context.Context, UserID) (RawConfigUser, error)
 
@@ -466,8 +465,7 @@ func (id UserID) addGroups(ctx context.Context, groups *[]GroupName, c *clientAP
 }
 
 func (id UserID) delete(ctx context.Context, client *clientAPI) error {
-	_, err := client.delete(ctx, "/access/users/"+id.String())
-	return err
+	return client.deleteRetry(ctx, "/access/users/"+id.String(), 3)
 }
 
 func (id UserID) exists(ctx context.Context, c clientApiInterface) (bool, error) {
@@ -513,7 +511,7 @@ func (id UserID) removeGroups(ctx context.Context, groups *[]GroupName, c *clien
 	if !exists {
 		return errors.New("user " + id.String() + " does not exist")
 	}
-	newGroups := array.RemoveItems(*(raw.GetGroups()), *groups)
+	newGroups := array.Subtract(*(raw.GetGroups()), *groups)
 	return id.setGroups(ctx, &newGroups, c)
 }
 

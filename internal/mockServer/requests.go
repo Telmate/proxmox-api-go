@@ -38,6 +38,16 @@ func RequestsGetJson(urlPath Path, v any) []Request {
 		}}}
 }
 
+func RequestsVersion(version string) []Request {
+	return []Request{{
+		Path:   "/version",
+		Method: GET,
+		HandlerFunc: func(w http.ResponseWriter, r *http.Request, t *testing.T) {
+			tmp, _ := json.Marshal(map[string]any{"data": map[string]any{"version": version}})
+			w.Write(tmp)
+		}}}
+}
+
 // RequestsPost creates a request that expects a POST with JSON body matching 'expected'
 // all values in 'expected' will be treated as strings or arrays of strings.
 func RequestsPost(urlPath Path, expected any) []Request {

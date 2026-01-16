@@ -293,20 +293,6 @@ func splitStringOfSettings(settings string) map[string]string {
 	return settingMap
 }
 
-// subtracts array B from array A
-func subtractArray[T comparable](A, B []T) (result []T) {
-	elements := make(map[T]bool)
-	for _, item := range B {
-		elements[item] = true
-	}
-	for _, item := range A {
-		if !elements[item] {
-			result = append(result, item)
-		}
-	}
-	return
-}
-
 // To be used during testing
 func uninitializedArray[T any]() []T {
 	var x []T

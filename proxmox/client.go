@@ -164,6 +164,7 @@ func (c *Client) New() ClientNew {
 		user:        user}
 
 	return ClientNew{
+		Pool:     &poolClient{oldClient: c, api: apiClientPtr},
 		ApiToken: &apiTokenClient{oldClient: c, api: apiClientPtr},
 		Group:    &groupClient{oldClient: c, api: apiClientPtr},
 		User:     &userClient{oldClient: c, api: apiClientPtr}}
@@ -244,6 +245,13 @@ func (c *Client) GetVersion(ctx context.Context) (Version, error) {
 	c.version = &cachedVersion
 	c.versionMutex.Unlock()
 	return version, nil
+}
+
+// Clears the cached version information. Used for end-to-end testing.
+func (c *Client) clearVersion() {
+	c.versionMutex.Lock()
+	defer c.versionMutex.Unlock()
+	c.version = nil
 }
 
 func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[string]any, tries int) error {

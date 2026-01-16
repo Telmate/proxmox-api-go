@@ -99,7 +99,35 @@ func Test_CSV(t *testing.T) {
 	}
 }
 
-func Test_RemoveItem(t *testing.T) {
+func Test_Map(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  []string
+		output map[string]struct{}
+	}{
+		{name: "empty input",
+			input:  []string{},
+			output: map[string]struct{}{}},
+		{name: "single element",
+			input:  []string{"a"},
+			output: map[string]struct{}{"a": {}}},
+		{name: "multiple elements",
+			input:  []string{"a", "b", "c"},
+			output: map[string]struct{}{"a": {}, "b": {}, "c": {}}},
+		{name: "multiple elements with duplicates",
+			input:  []string{"a", "b", "c", "a", "b"},
+			output: map[string]struct{}{"a": {}, "b": {}, "c": {}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			result := Map(test.input)
+			require.Len(t, result, len(test.output))
+			require.Equal(t, test.output, result)
+		})
+	}
+}
+
+func Test_Remove(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []string
@@ -129,12 +157,12 @@ func Test_RemoveItem(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, RemoveItem(test.input, test.remove))
+			require.Equal(t, test.output, Remove(test.input, test.remove))
 		})
 	}
 }
 
-func Test_RemoveItems(t *testing.T) {
+func Test_Subtract(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []string
@@ -164,7 +192,7 @@ func Test_RemoveItems(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			result := RemoveItems(test.input, test.remove)
+			result := Subtract(test.input, test.remove)
 			resultMap := make(map[string]struct{}, len(result))
 			for i := range result {
 				resultMap[result[i]] = struct{}{}

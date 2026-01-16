@@ -42,9 +42,6 @@ type ClientNewTest interface {
 	haUpdateNodeAffinityRuleNoCheck(ctx context.Context, ha HaNodeAffinityRule) error
 	haUpdateResourceAffinityRule(ctx context.Context, ha HaResourceAffinityRule) error
 	haUpdateResourceAffinityRuleNoCheck(ctx context.Context, ha HaResourceAffinityRule) error
-	// Pool
-	poolGetRawConfig(ctx context.Context, pool PoolName) (RawConfigPool, error)
-	poolGetRawConfigNoCheck(ctx context.Context, pool PoolName) (RawConfigPool, error)
 	// User
 	userGetRawConfig(ctx context.Context, userID UserID) (RawConfigUser, error)
 }

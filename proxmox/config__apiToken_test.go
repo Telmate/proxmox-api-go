@@ -55,6 +55,7 @@ func Test_apiTokenClient_Create(t *testing.T) {
 			secret, err := c.New().ApiToken.Create(context.Background(), test.userID, test.apiToken)
 			require.Equal(t, test.err, err)
 			require.Equal(t, test.secret, secret)
+			server.Clear(t)
 		})
 	}
 }
@@ -99,6 +100,7 @@ func Test_apiTokenClient_Delete(t *testing.T) {
 			deleted, err := c.New().ApiToken.Delete(context.Background(), test.apiToken)
 			require.Equal(t, test.err, err)
 			require.Equal(t, test.deleted, deleted)
+			server.Clear(t)
 		})
 	}
 }
@@ -144,6 +146,7 @@ func Test_apiTokenClient_Exists(t *testing.T) {
 			exists, err := c.New().ApiToken.Exists(context.Background(), test.apiToken)
 			require.Equal(t, test.err, err)
 			require.Equal(t, exists, exists)
+			server.Clear(t)
 		})
 	}
 }
@@ -217,6 +220,7 @@ func Test_apiTokenClient_List(t *testing.T) {
 				testCompareRawMap(t, test.output, raw.FormatMap())
 				require.Equal(t, len(test.output), raw.Len())
 			}
+			server.Clear(t)
 		})
 	}
 }
@@ -268,6 +272,7 @@ func Test_apiTokenClient_Read(t *testing.T) {
 			if test.err == nil {
 				require.Equal(t, test.output, raw.Get())
 			}
+			server.Clear(t)
 		})
 	}
 }
@@ -321,6 +326,7 @@ func Test_apiTokenClient_Update(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().ApiToken.Update(context.Background(), test.user, test.token)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }

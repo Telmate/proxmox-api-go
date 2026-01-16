@@ -88,6 +88,7 @@ func Test_userClient_Create(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().User.Create(context.Background(), test.input)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
@@ -117,6 +118,7 @@ func Test_userClient_Delete(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().User.Delete(context.Background(), test.input)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
@@ -155,6 +157,7 @@ func Test_userClient_Exists(t *testing.T) {
 			exists, err := c.New().User.Exists(context.Background(), test.input)
 			require.Equal(t, test.err, err)
 			require.Equal(t, test.exists, exists)
+			server.Clear(t)
 		})
 	}
 }
@@ -269,6 +272,7 @@ func Test_userClient_List(t *testing.T) {
 			if err == nil {
 				testCompareRawMap(t, test.output, raw.FormatMap())
 			}
+			server.Clear(t)
 		})
 	}
 }
@@ -344,6 +348,7 @@ func Test_userClient_ListPartial(t *testing.T) {
 			if err == nil {
 				testCompareRawMap(t, test.output, raw.FormatMap())
 			}
+			server.Clear(t)
 		})
 	}
 }
@@ -395,6 +400,7 @@ func Test_userClient_Read(t *testing.T) {
 			if err == nil {
 				require.Equal(t, test.output, raw.Get())
 			}
+			server.Clear(t)
 		})
 	}
 }
@@ -490,6 +496,7 @@ func Test_userClient_Set(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().User.Set(context.Background(), test.input)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
@@ -574,6 +581,7 @@ func Test_userClient_Update(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().User.Update(context.Background(), test.input)
 			require.Equal(t, test.err, err)
+			server.Clear(t)
 		})
 	}
 }
