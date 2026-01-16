@@ -157,32 +157,3 @@ func Test_splitStringOfSettings(t *testing.T) {
 		require.Equal(t, e.Output, splitStringOfSettings(e.Input))
 	}
 }
-
-func Test_subtractArray(t *testing.T) {
-	type testInput struct {
-		A []string
-		B []string
-	}
-	tests := []struct {
-		name   string
-		input  testInput
-		output []string
-	}{
-		{name: "A and B different",
-			input:  testInput{A: []string{"a", "b", "c"}, B: []string{"a", "b"}},
-			output: []string{"c"}},
-		{name: "A and B empty"},
-		{name: "A and B same",
-			input: testInput{A: []string{"a", "b", "c"}, B: []string{"a", "b", "c"}}},
-		{name: "A empty",
-			input: testInput{B: []string{"a", "b", "c"}}},
-		{name: "B empty",
-			input:  testInput{A: []string{"a", "b", "c"}},
-			output: []string{"a", "b", "c"}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, subtractArray(test.input.A, test.input.B))
-		})
-	}
-}
