@@ -47,7 +47,7 @@ func Test_Group_List(t *testing.T) {
 				raw, err := c.Group.List(ctx)
 				require.NoError(t, err)
 				require.GreaterOrEqual(t, raw.Len(), len(groups))
-				_, exists := raw.SelectName(groups[0])
+				_, exists := raw.AsMap()[groups[0]]
 				require.True(t, exists)
 			}},
 		{name: `Delete groups`,

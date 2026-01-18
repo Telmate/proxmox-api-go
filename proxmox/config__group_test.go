@@ -701,8 +701,12 @@ func Test_ConfigGroup_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_RawGroups_FormatArray(t *testing.T) {
-	tests := []struct {
+func test_RawGroups_Array_Data() []struct {
+	name   string
+	input  rawGroups
+	output []RawGroupConfig
+} {
+	return []struct {
 		name   string
 		input  rawGroups
 		output []RawGroupConfig
@@ -725,7 +729,7 @@ func Test_RawGroups_FormatArray(t *testing.T) {
 						"groupid": "group1"},
 					map[string]any{
 						"comment": "",
-						"members": "user1@pam,user2@pve",
+						"members": []any{"user1@pam", "user2@pve"},
 						"groupid": "group2"},
 					map[string]any{
 						"comment": "",
@@ -736,7 +740,7 @@ func Test_RawGroups_FormatArray(t *testing.T) {
 					"groupid": "group1"}},
 				&rawGroupConfig{a: map[string]any{
 					"comment": "",
-					"members": "user1@pam,user2@pve",
+					"members": []any{"user1@pam", "user2@pve"},
 					"groupid": "group2"}},
 				&rawGroupConfig{a: map[string]any{
 					"comment": "",
@@ -745,14 +749,42 @@ func Test_RawGroups_FormatArray(t *testing.T) {
 			input:  rawGroups{a: []any{}},
 			output: []RawGroupConfig{}},
 	}
-	for _, test := range tests {
+}
+
+func Test_RawGroups_AsArray(t *testing.T) {
+	for _, test := range test_RawGroups_Array_Data() {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, (&test.input).FormatArray())
+			require.Equal(t, test.output, (&test.input).AsArray())
 		})
 	}
 }
 
-func Test_RawGroups_FormatMap(t *testing.T) {
+func Test_RawGroups_Iter(t *testing.T) {
+	for _, test := range test_RawGroups_Array_Data() {
+		t.Run(test.name, func(t *testing.T) {
+			// Test iterating over all items
+			var result []RawGroupConfig
+			for group := range RawGroups(&test.input).Iter() {
+				result = append(result, group)
+			}
+			require.Len(t, result, len(test.output))
+			for i := range result {
+				require.Equal(t, test.output[i].Get(), result[i].Get())
+			}
+			// Test early termination (break after first item)
+			if len(test.output) > 0 {
+				count := 0
+				for range RawGroups(&test.input).Iter() {
+					count++
+					break
+				}
+				require.Equal(t, 1, count)
+			}
+		})
+	}
+}
+
+func Test_RawGroups_AsMap(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  rawGroups
@@ -807,7 +839,7 @@ func Test_RawGroups_FormatMap(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, (&test.input).FormatMap())
+			require.Equal(t, test.output, (&test.input).AsMap())
 		})
 	}
 }
@@ -845,89 +877,6 @@ func Test_RawGroups_Len(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
 			require.Equal(t, test.output, (&test.input).Len())
-		})
-	}
-}
-
-func Test_RawGroups_SelectName(t *testing.T) {
-	tests := []struct {
-		name     string
-		selected GroupName
-		exists   bool
-		input    rawGroups
-		output   RawGroupConfig
-	}{
-		{name: `single exists`,
-			selected: "group1",
-			exists:   true,
-			input: rawGroups{
-				a: []any{
-					map[string]any{
-						"comment": "Test Comment",
-						"groupid": "group1"}}},
-			output: &rawGroupConfig{
-				group: util.Pointer(GroupName("group1")),
-				a: map[string]any{
-					"comment": "Test Comment",
-					"groupid": "group1"}}},
-		{name: `single not exists`,
-			selected: "group2",
-			exists:   false,
-			input: rawGroups{
-				a: []any{
-					map[string]any{
-						"comment": "Test Comment",
-						"groupid": "group1"}}}},
-		{name: `multiple exists`,
-			selected: "group2",
-			exists:   true,
-			input: rawGroups{
-				a: []any{
-					map[string]any{
-						"comment": "Test Comment",
-						"groupid": "group1"},
-					map[string]any{
-						"comment": "",
-						"members": "user1@pam,user2@pve",
-						"groupid": "group2"},
-					map[string]any{
-						"comment": "",
-						"groupid": "group3"}}},
-			output: &rawGroupConfig{
-				group: util.Pointer(GroupName("group2")),
-				a: map[string]any{
-					"comment": "",
-					"members": "user1@pam,user2@pve",
-					"groupid": "group2"}}},
-		{name: `multiple not exists`,
-			selected: "group7",
-			exists:   false,
-			input: rawGroups{
-				a: []any{
-					map[string]any{
-						"comment": "Test Comment",
-						"groupid": "group1"},
-					map[string]any{
-						"comment": "",
-						"members": "user1@pam,user2@pve",
-						"groupid": "group2"},
-					map[string]any{
-						"comment": "",
-						"groupid": "group3"}}}},
-		{name: `empty`,
-			selected: "group1",
-			exists:   false,
-			input:    rawGroups{a: []any{}}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			raw, exists := (&test.input).SelectName(test.selected)
-			require.Equal(t, test.exists, exists)
-			if test.output == nil {
-				require.Nil(t, raw)
-			} else {
-				require.Equal(t, test.output, raw)
-			}
 		})
 	}
 }

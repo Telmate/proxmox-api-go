@@ -25,7 +25,7 @@ var list_usersCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		rawArray := rawUsers.FormatArray()
+		rawArray := rawUsers.AsArray()
 		users := make([]proxmox.UserInfo, len(rawArray))
 		for i := range rawArray {
 			users[i] = rawArray[i].Get()

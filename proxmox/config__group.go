@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"errors"
+	"iter"
 	"regexp"
 	"strings"
 
@@ -291,17 +292,17 @@ func (config ConfigGroup) Validate() (err error) {
 
 type (
 	RawGroups interface {
-		FormatArray() []RawGroupConfig
-		FormatMap() map[GroupName]RawGroupConfig
+		AsArray() []RawGroupConfig
+		AsMap() map[GroupName]RawGroupConfig
+		Iter() iter.Seq[RawGroupConfig]
 		Len() int
-		SelectName(GroupName) (RawGroupConfig, bool)
 	}
 	rawGroups struct{ a []any }
 )
 
 var _ RawGroups = (*rawGroups)(nil)
 
-func (r *rawGroups) FormatArray() []RawGroupConfig {
+func (r *rawGroups) AsArray() []RawGroupConfig {
 	groups := make([]RawGroupConfig, len(r.a))
 	for i := range r.a {
 		groups[i] = &rawGroupConfig{a: r.a[i].(map[string]any)}
@@ -309,7 +310,7 @@ func (r *rawGroups) FormatArray() []RawGroupConfig {
 	return groups
 }
 
-func (r *rawGroups) FormatMap() map[GroupName]RawGroupConfig {
+func (r *rawGroups) AsMap() map[GroupName]RawGroupConfig {
 	groups := make(map[GroupName]RawGroupConfig, len(r.a))
 	for i := range r.a {
 		raw := rawGroupConfig{a: r.a[i].(map[string]any)}
@@ -320,19 +321,19 @@ func (r *rawGroups) FormatMap() map[GroupName]RawGroupConfig {
 	return groups
 }
 
-func (r *rawGroups) Len() int { return len(r.a) }
-
-func (r *rawGroups) SelectName(name GroupName) (RawGroupConfig, bool) {
-	for i := range r.a {
-		tmpMap := r.a[i].(map[string]any)
-		if v, ok := tmpMap[groupApiKeyName]; ok {
-			if v.(string) == name.String() {
-				return &rawGroupConfig{a: tmpMap, group: util.Pointer(name)}, true
+func (raw *rawGroups) Iter() iter.Seq[RawGroupConfig] {
+	return func(yield func(RawGroupConfig) bool) {
+		for i := range raw.a {
+			if !yield(&rawGroupConfig{
+				a: raw.a[i].(map[string]any),
+			}) {
+				return
 			}
 		}
 	}
-	return nil, false
 }
+
+func (r *rawGroups) Len() int { return len(r.a) }
 
 type (
 	RawGroupConfig interface {
@@ -572,7 +573,7 @@ func ListGroups(ctx context.Context, client *Client) (*[]ConfigGroup, error) {
 	if err != nil {
 		return nil, err
 	}
-	rawGroups := raw.FormatArray()
+	rawGroups := raw.AsArray()
 	groups := make([]ConfigGroup, len(rawGroups))
 	for i := range rawGroups {
 		groups[i] = rawGroups[i].Get()

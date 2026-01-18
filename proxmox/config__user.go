@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
 	"net/url"
 	"strconv"
 	"strings"
@@ -616,10 +617,10 @@ func (r *rawConfigUser) GetUser() UserID { return userGetUser(r.a, r.user) }
 
 type (
 	RawUsersInfo interface {
-		FormatArray() []RawUserInfo
-		FormatMap() map[UserID]RawUserInfo
+		AsArray() []RawUserInfo
+		AsMap() map[UserID]RawUserInfo
+		Iter() iter.Seq[RawUserInfo]
 		Len() int
-		SelectUser(UserID) (RawUserInfo, bool)
 	}
 
 	rawUsersInfo struct {
@@ -628,36 +629,39 @@ type (
 	}
 )
 
-func (r *rawUsersInfo) FormatArray() []RawUserInfo {
-	raw := make([]RawUserInfo, len(r.a))
-	for i := range r.a {
-		raw[i] = &rawUserInfo{a: r.a[i].(map[string]any), full: r.full}
+func (raw *rawUsersInfo) AsArray() []RawUserInfo {
+	rawUsers := make([]RawUserInfo, len(raw.a))
+	for i := range raw.a {
+		rawUsers[i] = &rawUserInfo{a: raw.a[i].(map[string]any), full: raw.full}
 	}
-	return raw
+	return rawUsers
 }
 
-func (r *rawUsersInfo) FormatMap() map[UserID]RawUserInfo {
-	raw := make(map[UserID]RawUserInfo, len(r.a))
-	for i := range r.a {
-		tmpMap := r.a[i].(map[string]any)
+func (raw *rawUsersInfo) AsMap() map[UserID]RawUserInfo {
+	rawUsers := make(map[UserID]RawUserInfo, len(raw.a))
+	for i := range raw.a {
+		tmpMap := raw.a[i].(map[string]any)
 		var id UserID
 		_ = id.Parse(tmpMap[userApiKeyUserID].(string))
-		raw[id] = &rawUserInfo{a: tmpMap, full: r.full, user: &id}
+		rawUsers[id] = &rawUserInfo{a: tmpMap, full: raw.full, user: &id}
 	}
-	return raw
+	return rawUsers
 }
 
-func (r *rawUsersInfo) Len() int { return len(r.a) }
-
-func (r *rawUsersInfo) SelectUser(user UserID) (RawUserInfo, bool) {
-	for i := range r.a {
-		raw := r.a[i].(map[string]any)
-		if vv, ok := raw[userApiKeyUserID]; ok && vv == user.String() {
-			return &rawUserInfo{a: raw, full: r.full, user: &user}, true
+func (raw *rawUsersInfo) Iter() iter.Seq[RawUserInfo] {
+	return func(yield func(RawUserInfo) bool) {
+		for i := range raw.a {
+			if !yield(&rawUserInfo{
+				a:    raw.a[i].(map[string]any),
+				full: raw.full,
+			}) {
+				return
+			}
 		}
 	}
-	return nil, false
 }
+
+func (raw *rawUsersInfo) Len() int { return len(raw.a) }
 
 var _ RawUsersInfo = (*rawUsersInfo)(nil)
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"iter"
 	"regexp"
 	"strconv"
 	"strings"
@@ -189,31 +190,17 @@ func (token ApiTokenConfig) Validate() error { return token.Name.Validate() }
 
 type (
 	RawApiTokens interface {
-		FormatArray() []RawApiTokenConfig
-		FormatMap() map[ApiTokenName]RawApiTokenConfig
+		AsArray() []RawApiTokenConfig
+		AsMap() map[ApiTokenName]RawApiTokenConfig
+		Iter() iter.Seq[RawApiTokenConfig]
 		Len() int
-		SelectName(ApiTokenName) (RawApiTokenConfig, bool)
 	}
 	rawApiTokens struct{ a []any }
 )
 
 var _ RawApiTokens = (*rawApiTokens)(nil)
 
-func (raw *rawApiTokens) SelectName(name ApiTokenName) (RawApiTokenConfig, bool) {
-	for i := range raw.a {
-		tmpMap := raw.a[i].(map[string]any)
-		if v, ok := tmpMap[apiTokenApiKeyTokenID]; ok {
-			if v.(string) == name.String() {
-				return &rawApiTokenConfig{a: tmpMap, name: &name}, true
-			}
-		}
-	}
-	return nil, false
-}
-
-func (raw *rawApiTokens) Len() int { return len(raw.a) }
-
-func (raw *rawApiTokens) FormatArray() []RawApiTokenConfig {
+func (raw *rawApiTokens) AsArray() []RawApiTokenConfig {
 	tokenArray := make([]RawApiTokenConfig, len(raw.a))
 	for i := range raw.a {
 		tokenArray[i] = &rawApiTokenConfig{a: raw.a[i].(map[string]any)}
@@ -221,7 +208,7 @@ func (raw *rawApiTokens) FormatArray() []RawApiTokenConfig {
 	return tokenArray
 }
 
-func (raw *rawApiTokens) FormatMap() map[ApiTokenName]RawApiTokenConfig {
+func (raw *rawApiTokens) AsMap() map[ApiTokenName]RawApiTokenConfig {
 	tokenMap := make(map[ApiTokenName]RawApiTokenConfig, len(raw.a))
 	for i := range raw.a {
 		tmpMap := raw.a[i].(map[string]any)
@@ -230,6 +217,20 @@ func (raw *rawApiTokens) FormatMap() map[ApiTokenName]RawApiTokenConfig {
 	}
 	return tokenMap
 }
+
+func (raw *rawApiTokens) Iter() iter.Seq[RawApiTokenConfig] {
+	return func(yield func(RawApiTokenConfig) bool) {
+		for i := range raw.a {
+			if !yield(&rawApiTokenConfig{
+				a: raw.a[i].(map[string]any),
+			}) {
+				return
+			}
+		}
+	}
+}
+
+func (raw *rawApiTokens) Len() int { return len(raw.a) }
 
 type (
 	RawApiTokenConfig interface {

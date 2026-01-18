@@ -217,7 +217,7 @@ func Test_apiTokenClient_List(t *testing.T) {
 			raw, err := c.New().ApiToken.List(context.Background(), test.user)
 			require.Equal(t, test.err, err)
 			if test.err == nil {
-				testCompareRawMap(t, test.output, raw.FormatMap())
+				testCompareRawMap(t, test.output, raw.AsMap())
 				require.Equal(t, len(test.output), raw.Len())
 			}
 			server.Clear(t)
@@ -407,60 +407,12 @@ func Test_ApiTokenConfig_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_rawApiTokens_SelectName(t *testing.T) {
-	tests := []struct {
-		name     string
-		token    ApiTokenName
-		selected bool
-		input    rawApiTokens
-		output   ApiTokenConfig
-	}{
-		{name: `select existing`,
-			token:    ApiTokenName("token2"),
-			selected: true,
-			input: rawApiTokens{
-				a: []any{
-					map[string]any{
-						"tokenid": "token1"},
-					map[string]any{
-						"comment": "comment2",
-						"expire":  float64(1000),
-						"privsep": float64(1),
-						"tokenid": "token2"},
-					map[string]any{
-						"tokenid": "token3"}}},
-			output: ApiTokenConfig{
-				Name:                "token2",
-				Comment:             util.Pointer("comment2"),
-				Expiration:          util.Pointer(uint(1000)),
-				PrivilegeSeparation: util.Pointer(true)}},
-		{name: `select non-existing`,
-			token:    ApiTokenName("token4"),
-			selected: false,
-			input: rawApiTokens{
-				a: []any{
-					map[string]any{
-						"tokenid": "token1"},
-					map[string]any{
-						"comment": "comment2"},
-					map[string]any{
-						"tokenid": "token3"}}}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			tmpOut, tmpSelected := RawApiTokens(&test.input).SelectName(test.token)
-			require.Equal(t, test.selected, tmpSelected)
-			if test.selected {
-				require.Equal(t, test.output, tmpOut.Get())
-			} else {
-				require.Nil(t, tmpOut)
-			}
-		})
-	}
-}
-
-func Test_rawApiTokens_FormatArray(t *testing.T) {
-	tests := []struct {
+func test_rawApiTokens_Array_Data() []struct {
+	name   string
+	input  rawApiTokens
+	output []RawApiTokenConfig
+} {
+	return []struct {
 		name   string
 		input  rawApiTokens
 		output []RawApiTokenConfig
@@ -502,9 +454,37 @@ func Test_rawApiTokens_FormatArray(t *testing.T) {
 						"privsep": float64(1),
 						"tokenid": "token3"}}}},
 	}
-	for _, test := range tests {
+}
+
+func Test_rawApiTokens_AsArray(t *testing.T) {
+	for _, test := range test_rawApiTokens_Array_Data() {
 		t.Run(test.name, func(*testing.T) {
-			require.ElementsMatch(t, test.output, RawApiTokens(&test.input).FormatArray())
+			require.ElementsMatch(t, test.output, RawApiTokens(&test.input).AsArray())
+		})
+	}
+}
+
+func Test_rawApiTokens_Iter(t *testing.T) {
+	for _, test := range test_rawApiTokens_Array_Data() {
+		t.Run(test.name, func(t *testing.T) {
+			// Test iterating over all items
+			var result []RawApiTokenConfig
+			for token := range RawApiTokens(&test.input).Iter() {
+				result = append(result, token)
+			}
+			require.Equal(t, len(test.output), len(result))
+			for i := range result {
+				require.Equal(t, test.output[i].Get(), result[i].Get())
+			}
+			// Test early termination (break after first item)
+			if len(test.output) > 0 {
+				count := 0
+				for range RawApiTokens(&test.input).Iter() {
+					count++
+					break
+				}
+				require.Equal(t, 1, count)
+			}
 		})
 	}
 }

@@ -23,7 +23,7 @@ var list_tokensCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		rawArray := data.FormatArray()
+		rawArray := data.AsArray()
 		tokens := make([]proxmox.ApiTokenConfig, len(rawArray))
 		for i := range rawArray {
 			tokens[i] = rawArray[i].Get()
