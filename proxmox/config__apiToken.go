@@ -189,8 +189,8 @@ func (token ApiTokenConfig) Validate() error { return token.Name.Validate() }
 
 type (
 	RawApiTokens interface {
-		FormatArray() []RawApiTokenConfig
-		FormatMap() map[ApiTokenName]RawApiTokenConfig
+		AsArray() []RawApiTokenConfig
+		AsMap() map[ApiTokenName]RawApiTokenConfig
 		Len() int
 		SelectName(ApiTokenName) (RawApiTokenConfig, bool)
 	}
@@ -213,7 +213,7 @@ func (raw *rawApiTokens) SelectName(name ApiTokenName) (RawApiTokenConfig, bool)
 
 func (raw *rawApiTokens) Len() int { return len(raw.a) }
 
-func (raw *rawApiTokens) FormatArray() []RawApiTokenConfig {
+func (raw *rawApiTokens) AsArray() []RawApiTokenConfig {
 	tokenArray := make([]RawApiTokenConfig, len(raw.a))
 	for i := range raw.a {
 		tokenArray[i] = &rawApiTokenConfig{a: raw.a[i].(map[string]any)}
@@ -221,7 +221,7 @@ func (raw *rawApiTokens) FormatArray() []RawApiTokenConfig {
 	return tokenArray
 }
 
-func (raw *rawApiTokens) FormatMap() map[ApiTokenName]RawApiTokenConfig {
+func (raw *rawApiTokens) AsMap() map[ApiTokenName]RawApiTokenConfig {
 	tokenMap := make(map[ApiTokenName]RawApiTokenConfig, len(raw.a))
 	for i := range raw.a {
 		tmpMap := raw.a[i].(map[string]any)

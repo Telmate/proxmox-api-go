@@ -562,7 +562,7 @@ func main() {
 			log.Printf("Error listing users %+v\n", err)
 			os.Exit(1)
 		}
-		rawArray := rawUsers.FormatArray()
+		rawArray := rawUsers.AsArray()
 		users := make([]proxmox.UserInfo, len(rawArray))
 		for i := range rawArray {
 			users[i] = rawArray[i].Get()

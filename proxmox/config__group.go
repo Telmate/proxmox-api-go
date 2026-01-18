@@ -291,8 +291,8 @@ func (config ConfigGroup) Validate() (err error) {
 
 type (
 	RawGroups interface {
-		FormatArray() []RawGroupConfig
-		FormatMap() map[GroupName]RawGroupConfig
+		AsArray() []RawGroupConfig
+		AsMap() map[GroupName]RawGroupConfig
 		Len() int
 		SelectName(GroupName) (RawGroupConfig, bool)
 	}
@@ -301,7 +301,7 @@ type (
 
 var _ RawGroups = (*rawGroups)(nil)
 
-func (r *rawGroups) FormatArray() []RawGroupConfig {
+func (r *rawGroups) AsArray() []RawGroupConfig {
 	groups := make([]RawGroupConfig, len(r.a))
 	for i := range r.a {
 		groups[i] = &rawGroupConfig{a: r.a[i].(map[string]any)}
@@ -309,7 +309,7 @@ func (r *rawGroups) FormatArray() []RawGroupConfig {
 	return groups
 }
 
-func (r *rawGroups) FormatMap() map[GroupName]RawGroupConfig {
+func (r *rawGroups) AsMap() map[GroupName]RawGroupConfig {
 	groups := make(map[GroupName]RawGroupConfig, len(r.a))
 	for i := range r.a {
 		raw := rawGroupConfig{a: r.a[i].(map[string]any)}
@@ -572,7 +572,7 @@ func ListGroups(ctx context.Context, client *Client) (*[]ConfigGroup, error) {
 	if err != nil {
 		return nil, err
 	}
-	rawGroups := raw.FormatArray()
+	rawGroups := raw.AsArray()
 	groups := make([]ConfigGroup, len(rawGroups))
 	for i := range rawGroups {
 		groups[i] = rawGroups[i].Get()

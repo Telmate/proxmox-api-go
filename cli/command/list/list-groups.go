@@ -18,7 +18,7 @@ var list_groupsCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		rawGroups := raw.FormatArray()
+		rawGroups := raw.AsArray()
 		groups := make([]proxmox.ConfigGroup, len(rawGroups))
 		for i := range rawGroups {
 			groups[i] = rawGroups[i].Get()

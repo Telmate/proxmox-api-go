@@ -88,7 +88,7 @@ func Test_Token_List(t *testing.T) {
 			test: func(t *testing.T) {
 				raw, err := c.ApiToken.List(ctx, user)
 				require.NoError(t, err)
-				rawMap := raw.FormatMap()
+				rawMap := raw.AsMap()
 				for i := range tokens {
 					rawToken, exists := rawMap[tokens[i].output.Name]
 					require.True(t, exists)

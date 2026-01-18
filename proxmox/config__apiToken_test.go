@@ -217,7 +217,7 @@ func Test_apiTokenClient_List(t *testing.T) {
 			raw, err := c.New().ApiToken.List(context.Background(), test.user)
 			require.Equal(t, test.err, err)
 			if test.err == nil {
-				testCompareRawMap(t, test.output, raw.FormatMap())
+				testCompareRawMap(t, test.output, raw.AsMap())
 				require.Equal(t, len(test.output), raw.Len())
 			}
 			server.Clear(t)
@@ -459,7 +459,7 @@ func Test_rawApiTokens_SelectName(t *testing.T) {
 	}
 }
 
-func Test_rawApiTokens_FormatArray(t *testing.T) {
+func Test_rawApiTokens_AsArray(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  rawApiTokens
@@ -504,7 +504,7 @@ func Test_rawApiTokens_FormatArray(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.ElementsMatch(t, test.output, RawApiTokens(&test.input).FormatArray())
+			require.ElementsMatch(t, test.output, RawApiTokens(&test.input).AsArray())
 		})
 	}
 }

@@ -616,8 +616,8 @@ func (r *rawConfigUser) GetUser() UserID { return userGetUser(r.a, r.user) }
 
 type (
 	RawUsersInfo interface {
-		FormatArray() []RawUserInfo
-		FormatMap() map[UserID]RawUserInfo
+		AsArray() []RawUserInfo
+		AsMap() map[UserID]RawUserInfo
 		Len() int
 		SelectUser(UserID) (RawUserInfo, bool)
 	}
@@ -628,7 +628,7 @@ type (
 	}
 )
 
-func (r *rawUsersInfo) FormatArray() []RawUserInfo {
+func (r *rawUsersInfo) AsArray() []RawUserInfo {
 	raw := make([]RawUserInfo, len(r.a))
 	for i := range r.a {
 		raw[i] = &rawUserInfo{a: r.a[i].(map[string]any), full: r.full}
@@ -636,7 +636,7 @@ func (r *rawUsersInfo) FormatArray() []RawUserInfo {
 	return raw
 }
 
-func (r *rawUsersInfo) FormatMap() map[UserID]RawUserInfo {
+func (r *rawUsersInfo) AsMap() map[UserID]RawUserInfo {
 	raw := make(map[UserID]RawUserInfo, len(r.a))
 	for i := range r.a {
 		tmpMap := r.a[i].(map[string]any)

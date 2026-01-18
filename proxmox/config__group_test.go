@@ -701,7 +701,7 @@ func Test_ConfigGroup_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_RawGroups_FormatArray(t *testing.T) {
+func Test_RawGroups_AsArray(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  rawGroups
@@ -747,12 +747,12 @@ func Test_RawGroups_FormatArray(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, (&test.input).FormatArray())
+			require.Equal(t, test.output, (&test.input).AsArray())
 		})
 	}
 }
 
-func Test_RawGroups_FormatMap(t *testing.T) {
+func Test_RawGroups_AsMap(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  rawGroups
@@ -807,7 +807,7 @@ func Test_RawGroups_FormatMap(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, (&test.input).FormatMap())
+			require.Equal(t, test.output, (&test.input).AsMap())
 		})
 	}
 }

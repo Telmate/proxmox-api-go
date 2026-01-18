@@ -270,7 +270,7 @@ func Test_userClient_List(t *testing.T) {
 			raw, err := c.New().User.List(context.Background())
 			require.Equal(t, test.err, err)
 			if err == nil {
-				testCompareRawMap(t, test.output, raw.FormatMap())
+				testCompareRawMap(t, test.output, raw.AsMap())
 			}
 			server.Clear(t)
 		})
@@ -346,7 +346,7 @@ func Test_userClient_ListPartial(t *testing.T) {
 			raw, err := c.New().User.ListPartial(context.Background())
 			require.Equal(t, test.err, err)
 			if err == nil {
-				testCompareRawMap(t, test.output, raw.FormatMap())
+				testCompareRawMap(t, test.output, raw.AsMap())
 			}
 			server.Clear(t)
 		})
@@ -1110,7 +1110,7 @@ func Test_UserPassword_Validate(t *testing.T) {
 	}
 }
 
-func Test_rawUsersInfo_FormatArray(t *testing.T) {
+func Test_rawUsersInfo_AsArray(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  rawUsersInfo
@@ -1159,12 +1159,12 @@ func Test_rawUsersInfo_FormatArray(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, test.input.FormatArray())
+			require.Equal(t, test.output, test.input.AsArray())
 		})
 	}
 }
 
-func Test_rawUsersInfo_FormatMap(t *testing.T) {
+func Test_rawUsersInfo_AsMap(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  rawUsersInfo
@@ -1225,7 +1225,7 @@ func Test_rawUsersInfo_FormatMap(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, test.input.FormatMap())
+			require.Equal(t, test.output, test.input.AsMap())
 		})
 	}
 }
