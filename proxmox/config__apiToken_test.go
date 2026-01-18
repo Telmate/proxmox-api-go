@@ -407,8 +407,12 @@ func Test_ApiTokenConfig_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_rawApiTokens_AsArray(t *testing.T) {
-	tests := []struct {
+func test_rawApiTokens_Array_Data() []struct {
+	name   string
+	input  rawApiTokens
+	output []RawApiTokenConfig
+} {
+	return []struct {
 		name   string
 		input  rawApiTokens
 		output []RawApiTokenConfig
@@ -450,9 +454,37 @@ func Test_rawApiTokens_AsArray(t *testing.T) {
 						"privsep": float64(1),
 						"tokenid": "token3"}}}},
 	}
-	for _, test := range tests {
+}
+
+func Test_rawApiTokens_AsArray(t *testing.T) {
+	for _, test := range test_rawApiTokens_Array_Data() {
 		t.Run(test.name, func(*testing.T) {
 			require.ElementsMatch(t, test.output, RawApiTokens(&test.input).AsArray())
+		})
+	}
+}
+
+func Test_rawApiTokens_Iter(t *testing.T) {
+	for _, test := range test_rawApiTokens_Array_Data() {
+		t.Run(test.name, func(t *testing.T) {
+			// Test iterating over all items
+			var result []RawApiTokenConfig
+			for token := range RawApiTokens(&test.input).Iter() {
+				result = append(result, token)
+			}
+			require.Equal(t, len(test.output), len(result))
+			for i := range result {
+				require.Equal(t, test.output[i].Get(), result[i].Get())
+			}
+			// Test early termination (break after first item)
+			if len(test.output) > 0 {
+				count := 0
+				for range RawApiTokens(&test.input).Iter() {
+					count++
+					break
+				}
+				require.Equal(t, 1, count)
+			}
 		})
 	}
 }

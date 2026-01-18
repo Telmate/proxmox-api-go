@@ -701,8 +701,12 @@ func Test_ConfigGroup_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_RawGroups_AsArray(t *testing.T) {
-	tests := []struct {
+func test_RawGroups_Array_Data() []struct {
+	name   string
+	input  rawGroups
+	output []RawGroupConfig
+} {
+	return []struct {
 		name   string
 		input  rawGroups
 		output []RawGroupConfig
@@ -725,7 +729,7 @@ func Test_RawGroups_AsArray(t *testing.T) {
 						"groupid": "group1"},
 					map[string]any{
 						"comment": "",
-						"members": "user1@pam,user2@pve",
+						"members": []any{"user1@pam", "user2@pve"},
 						"groupid": "group2"},
 					map[string]any{
 						"comment": "",
@@ -736,7 +740,7 @@ func Test_RawGroups_AsArray(t *testing.T) {
 					"groupid": "group1"}},
 				&rawGroupConfig{a: map[string]any{
 					"comment": "",
-					"members": "user1@pam,user2@pve",
+					"members": []any{"user1@pam", "user2@pve"},
 					"groupid": "group2"}},
 				&rawGroupConfig{a: map[string]any{
 					"comment": "",
@@ -745,9 +749,37 @@ func Test_RawGroups_AsArray(t *testing.T) {
 			input:  rawGroups{a: []any{}},
 			output: []RawGroupConfig{}},
 	}
-	for _, test := range tests {
+}
+
+func Test_RawGroups_AsArray(t *testing.T) {
+	for _, test := range test_RawGroups_Array_Data() {
 		t.Run(test.name, func(*testing.T) {
 			require.Equal(t, test.output, (&test.input).AsArray())
+		})
+	}
+}
+
+func Test_RawGroups_Iter(t *testing.T) {
+	for _, test := range test_RawGroups_Array_Data() {
+		t.Run(test.name, func(t *testing.T) {
+			// Test iterating over all items
+			var result []RawGroupConfig
+			for group := range RawGroups(&test.input).Iter() {
+				result = append(result, group)
+			}
+			require.Len(t, result, len(test.output))
+			for i := range result {
+				require.Equal(t, test.output[i].Get(), result[i].Get())
+			}
+			// Test early termination (break after first item)
+			if len(test.output) > 0 {
+				count := 0
+				for range RawGroups(&test.input).Iter() {
+					count++
+					break
+				}
+				require.Equal(t, 1, count)
+			}
 		})
 	}
 }

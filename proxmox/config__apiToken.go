@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"iter"
 	"regexp"
 	"strconv"
 	"strings"
@@ -191,14 +192,13 @@ type (
 	RawApiTokens interface {
 		AsArray() []RawApiTokenConfig
 		AsMap() map[ApiTokenName]RawApiTokenConfig
+		Iter() iter.Seq[RawApiTokenConfig]
 		Len() int
 	}
 	rawApiTokens struct{ a []any }
 )
 
 var _ RawApiTokens = (*rawApiTokens)(nil)
-
-func (raw *rawApiTokens) Len() int { return len(raw.a) }
 
 func (raw *rawApiTokens) AsArray() []RawApiTokenConfig {
 	tokenArray := make([]RawApiTokenConfig, len(raw.a))
@@ -217,6 +217,20 @@ func (raw *rawApiTokens) AsMap() map[ApiTokenName]RawApiTokenConfig {
 	}
 	return tokenMap
 }
+
+func (raw *rawApiTokens) Iter() iter.Seq[RawApiTokenConfig] {
+	return func(yield func(RawApiTokenConfig) bool) {
+		for i := range raw.a {
+			if !yield(&rawApiTokenConfig{
+				a: raw.a[i].(map[string]any),
+			}) {
+				return
+			}
+		}
+	}
+}
+
+func (raw *rawApiTokens) Len() int { return len(raw.a) }
 
 type (
 	RawApiTokenConfig interface {

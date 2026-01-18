@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
 	"net/url"
 	"strconv"
 	"strings"
@@ -618,6 +619,7 @@ type (
 	RawUsersInfo interface {
 		AsArray() []RawUserInfo
 		AsMap() map[UserID]RawUserInfo
+		Iter() iter.Seq[RawUserInfo]
 		Len() int
 	}
 
@@ -627,26 +629,39 @@ type (
 	}
 )
 
-func (r *rawUsersInfo) AsArray() []RawUserInfo {
-	raw := make([]RawUserInfo, len(r.a))
-	for i := range r.a {
-		raw[i] = &rawUserInfo{a: r.a[i].(map[string]any), full: r.full}
+func (raw *rawUsersInfo) AsArray() []RawUserInfo {
+	rawUsers := make([]RawUserInfo, len(raw.a))
+	for i := range raw.a {
+		rawUsers[i] = &rawUserInfo{a: raw.a[i].(map[string]any), full: raw.full}
 	}
-	return raw
+	return rawUsers
 }
 
-func (r *rawUsersInfo) AsMap() map[UserID]RawUserInfo {
-	raw := make(map[UserID]RawUserInfo, len(r.a))
-	for i := range r.a {
-		tmpMap := r.a[i].(map[string]any)
+func (raw *rawUsersInfo) AsMap() map[UserID]RawUserInfo {
+	rawUsers := make(map[UserID]RawUserInfo, len(raw.a))
+	for i := range raw.a {
+		tmpMap := raw.a[i].(map[string]any)
 		var id UserID
 		_ = id.Parse(tmpMap[userApiKeyUserID].(string))
-		raw[id] = &rawUserInfo{a: tmpMap, full: r.full, user: &id}
+		rawUsers[id] = &rawUserInfo{a: tmpMap, full: raw.full, user: &id}
 	}
-	return raw
+	return rawUsers
 }
 
-func (r *rawUsersInfo) Len() int { return len(r.a) }
+func (raw *rawUsersInfo) Iter() iter.Seq[RawUserInfo] {
+	return func(yield func(RawUserInfo) bool) {
+		for i := range raw.a {
+			if !yield(&rawUserInfo{
+				a:    raw.a[i].(map[string]any),
+				full: raw.full,
+			}) {
+				return
+			}
+		}
+	}
+}
+
+func (raw *rawUsersInfo) Len() int { return len(raw.a) }
 
 var _ RawUsersInfo = (*rawUsersInfo)(nil)
 

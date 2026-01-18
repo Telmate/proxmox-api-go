@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"errors"
+	"iter"
 	"regexp"
 	"strings"
 
@@ -293,6 +294,7 @@ type (
 	RawGroups interface {
 		AsArray() []RawGroupConfig
 		AsMap() map[GroupName]RawGroupConfig
+		Iter() iter.Seq[RawGroupConfig]
 		Len() int
 	}
 	rawGroups struct{ a []any }
@@ -317,6 +319,18 @@ func (r *rawGroups) AsMap() map[GroupName]RawGroupConfig {
 		groups[group] = &raw
 	}
 	return groups
+}
+
+func (raw *rawGroups) Iter() iter.Seq[RawGroupConfig] {
+	return func(yield func(RawGroupConfig) bool) {
+		for i := range raw.a {
+			if !yield(&rawGroupConfig{
+				a: raw.a[i].(map[string]any),
+			}) {
+				return
+			}
+		}
+	}
 }
 
 func (r *rawGroups) Len() int { return len(r.a) }
