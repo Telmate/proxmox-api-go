@@ -294,7 +294,6 @@ type (
 		AsArray() []RawGroupConfig
 		AsMap() map[GroupName]RawGroupConfig
 		Len() int
-		SelectName(GroupName) (RawGroupConfig, bool)
 	}
 	rawGroups struct{ a []any }
 )
@@ -321,18 +320,6 @@ func (r *rawGroups) AsMap() map[GroupName]RawGroupConfig {
 }
 
 func (r *rawGroups) Len() int { return len(r.a) }
-
-func (r *rawGroups) SelectName(name GroupName) (RawGroupConfig, bool) {
-	for i := range r.a {
-		tmpMap := r.a[i].(map[string]any)
-		if v, ok := tmpMap[groupApiKeyName]; ok {
-			if v.(string) == name.String() {
-				return &rawGroupConfig{a: tmpMap, group: util.Pointer(name)}, true
-			}
-		}
-	}
-	return nil, false
-}
 
 type (
 	RawGroupConfig interface {

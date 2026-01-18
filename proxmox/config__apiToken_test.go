@@ -407,58 +407,6 @@ func Test_ApiTokenConfig_mapToAPI(t *testing.T) {
 	}
 }
 
-func Test_rawApiTokens_SelectName(t *testing.T) {
-	tests := []struct {
-		name     string
-		token    ApiTokenName
-		selected bool
-		input    rawApiTokens
-		output   ApiTokenConfig
-	}{
-		{name: `select existing`,
-			token:    ApiTokenName("token2"),
-			selected: true,
-			input: rawApiTokens{
-				a: []any{
-					map[string]any{
-						"tokenid": "token1"},
-					map[string]any{
-						"comment": "comment2",
-						"expire":  float64(1000),
-						"privsep": float64(1),
-						"tokenid": "token2"},
-					map[string]any{
-						"tokenid": "token3"}}},
-			output: ApiTokenConfig{
-				Name:                "token2",
-				Comment:             util.Pointer("comment2"),
-				Expiration:          util.Pointer(uint(1000)),
-				PrivilegeSeparation: util.Pointer(true)}},
-		{name: `select non-existing`,
-			token:    ApiTokenName("token4"),
-			selected: false,
-			input: rawApiTokens{
-				a: []any{
-					map[string]any{
-						"tokenid": "token1"},
-					map[string]any{
-						"comment": "comment2"},
-					map[string]any{
-						"tokenid": "token3"}}}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			tmpOut, tmpSelected := RawApiTokens(&test.input).SelectName(test.token)
-			require.Equal(t, test.selected, tmpSelected)
-			if test.selected {
-				require.Equal(t, test.output, tmpOut.Get())
-			} else {
-				require.Nil(t, tmpOut)
-			}
-		})
-	}
-}
-
 func Test_rawApiTokens_AsArray(t *testing.T) {
 	tests := []struct {
 		name   string

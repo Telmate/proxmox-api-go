@@ -192,24 +192,11 @@ type (
 		AsArray() []RawApiTokenConfig
 		AsMap() map[ApiTokenName]RawApiTokenConfig
 		Len() int
-		SelectName(ApiTokenName) (RawApiTokenConfig, bool)
 	}
 	rawApiTokens struct{ a []any }
 )
 
 var _ RawApiTokens = (*rawApiTokens)(nil)
-
-func (raw *rawApiTokens) SelectName(name ApiTokenName) (RawApiTokenConfig, bool) {
-	for i := range raw.a {
-		tmpMap := raw.a[i].(map[string]any)
-		if v, ok := tmpMap[apiTokenApiKeyTokenID]; ok {
-			if v.(string) == name.String() {
-				return &rawApiTokenConfig{a: tmpMap, name: &name}, true
-			}
-		}
-	}
-	return nil, false
-}
 
 func (raw *rawApiTokens) Len() int { return len(raw.a) }
 

@@ -60,7 +60,7 @@ func Test_Group_Create(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, raw)
 				require.GreaterOrEqual(t, raw.Len(), 1)
-				_, exists := raw.SelectName(groupName)
+				_, exists := raw.AsMap()[groupName]
 				require.True(t, exists)
 			}},
 		{name: `Delete group`,

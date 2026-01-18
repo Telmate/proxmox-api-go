@@ -619,7 +619,6 @@ type (
 		AsArray() []RawUserInfo
 		AsMap() map[UserID]RawUserInfo
 		Len() int
-		SelectUser(UserID) (RawUserInfo, bool)
 	}
 
 	rawUsersInfo struct {
@@ -648,16 +647,6 @@ func (r *rawUsersInfo) AsMap() map[UserID]RawUserInfo {
 }
 
 func (r *rawUsersInfo) Len() int { return len(r.a) }
-
-func (r *rawUsersInfo) SelectUser(user UserID) (RawUserInfo, bool) {
-	for i := range r.a {
-		raw := r.a[i].(map[string]any)
-		if vv, ok := raw[userApiKeyUserID]; ok && vv == user.String() {
-			return &rawUserInfo{a: raw, full: r.full, user: &user}, true
-		}
-	}
-	return nil, false
-}
 
 var _ RawUsersInfo = (*rawUsersInfo)(nil)
 

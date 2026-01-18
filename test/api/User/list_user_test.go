@@ -116,8 +116,9 @@ func Test_User_List(t *testing.T) {
 				raw, err := c.User.List(ctx)
 				require.NoError(t, err)
 				require.GreaterOrEqual(t, raw.Len(), len(users))
+				userMap := raw.AsMap()
 				for _, user := range users {
-					rawUser, exists := raw.SelectUser(user.Config.User)
+					rawUser, exists := userMap[user.Config.User]
 					require.True(t, exists)
 					require.Equal(t, base(user), rawUser.Get())
 				}
@@ -127,8 +128,9 @@ func Test_User_List(t *testing.T) {
 				raw, err := c.User.ListPartial(ctx)
 				require.NoError(t, err)
 				require.GreaterOrEqual(t, raw.Len(), len(users))
+				userMap := raw.AsMap()
 				for _, user := range users {
-					rawUser, exists := raw.SelectUser(user.Config.User)
+					rawUser, exists := userMap[user.Config.User]
 					require.True(t, exists)
 					require.Equal(t, stripGroupAndTokens(base(user)), rawUser.Get())
 				}
