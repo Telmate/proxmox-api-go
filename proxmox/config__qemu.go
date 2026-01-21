@@ -566,8 +566,15 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		if err = vmr.migrate_Unsafe(ctx, client, *config.Node, true); err != nil {
 			return
 		}
+
 		// Set node to the node the VM was migrated to
 		vmr.node = *config.Node
+
+		// After migration, we must wait for the lock to be released.
+		err = waitForMigrationLockRelease(ctx, client, vmr)
+		if err != nil {
+			return
+		}
 	}
 
 	versionEncoded := version.Encode()
@@ -1321,4 +1328,44 @@ func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (conf
 		return config, nil
 	}
 	return
+}
+
+func waitForMigrationLockRelease(ctx context.Context, client *Client, vmr *VmRef) error {
+	// Give a little time for the lock to potentially appear before we start polling.
+	time.Sleep(5 * time.Second)
+
+	timeout := time.After(10 * time.Minute) // 10 minutes, as large migrations can take a while.
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	targetNode := vmr.Node()
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for VM %d to unlock on node %s after migration", vmr.VmId(), targetNode)
+		case <-ticker.C:
+			// We need to create a new VmRef for GetVmInfo as it updates the node info in the ref.
+			currentStatusVmr := NewVmRef(vmr.VmId())
+			vmInfo, err := client.GetVmInfo(ctx, currentStatusVmr)
+			if err != nil {
+				log.Printf("[DEBUG] Waiting for VM %d to be available after migration, current error: %v", vmr.VmId(), err)
+				continue
+			}
+
+			// Check if the VM is on the target node yet.
+			if currentStatusVmr.Node() != targetNode {
+				log.Printf("[DEBUG] Waiting for VM %d to appear on node %s, currently on %s", vmr.VmId(), targetNode, currentStatusVmr.Node())
+				continue
+			}
+
+			// Once on the target node, check for a lock.
+			if lock, ok := vmInfo["lock"]; !ok {
+				log.Printf("[DEBUG] VM %d is on node %s and has no lock.", vmr.VmId(), targetNode)
+				return nil // Success!
+			} else {
+				log.Printf("[DEBUG] Waiting for VM %d on node %s to unlock. Current lock: %v", vmr.VmId(), targetNode, lock)
+			}
+		}
+	}
 }
