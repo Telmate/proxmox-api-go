@@ -3,6 +3,7 @@ package proxmox
 import (
 	"encoding/json"
 	"errors"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -84,17 +85,15 @@ func sshKeyUrlDecode(encodedKeys string) (keys []AuthorizedKey) {
 	encodedKeys = regexMultipleSpacesEncoded.ReplaceAllString(encodedKeys, spaceEncoded)
 	encodedKeys = strings.TrimSuffix(encodedKeys, newlineEncoded)
 	encodedKeys = regexMultipleNewlineEncoded.ReplaceAllString(encodedKeys, newlineEncoded)
-	encodedKeys = strings.ReplaceAll(encodedKeys, `%2B`, `+`)
-	encodedKeys = strings.ReplaceAll(encodedKeys, `%40`, `@`)
-	encodedKeys = strings.ReplaceAll(encodedKeys, `%3D`, `=`)
-	encodedKeys = strings.ReplaceAll(encodedKeys, `%3A`, `:`)
-	encodedKeys = strings.ReplaceAll(encodedKeys, `%20`, ` `)
-	encodedKeys = strings.ReplaceAll(encodedKeys, `%2F`, `/`)
-	encodedKeys = strings.ReplaceAll(encodedKeys, `%2C`, `,`)
-	encodedKeys = strings.ReplaceAll(encodedKeys, `%22`, `"`)
+
 	rawKeys := strings.Split(encodedKeys, newlineEncoded)
 	keys = make([]AuthorizedKey, len(rawKeys))
+
 	for i := range rawKeys {
+		if decoded, err := url.PathUnescape(rawKeys[i]); err == nil {
+			rawKeys[i] = decoded
+		}
+
 		keys[i].PublicKey, keys[i].Comment, keys[i].Options, _, _ = ssh.ParseAuthorizedKey([]byte(rawKeys[i]))
 	}
 	return
