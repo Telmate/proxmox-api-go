@@ -7,7 +7,7 @@ func X_SuppressStaticCheck_DoNotUse() {
 	_ = mockClientAPI{}.new()
 
 	ca := &clientAPI{}
-	_, _ = ca.postTask(context.Background(), "", nil)
+	_ = ca.postTask(context.Background(), "", nil)
 
 	lxc := &RawConfigLXCMock{}
 	lxc.get(VmRef{})

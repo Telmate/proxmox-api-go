@@ -103,3 +103,12 @@ func (e ApiError) Error() string {
 
 	return builder.String()
 }
+
+type TaskError struct {
+	TaskID  string
+	Message string
+}
+
+func (e TaskError) Error() string {
+	return "task error: task id: " + e.TaskID + " message: " + e.Message
+}

@@ -6,3 +6,5 @@ proxmox-api-go
 
 *coverage.html
 *coverage.out
+
+*.log
