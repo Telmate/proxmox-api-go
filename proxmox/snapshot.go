@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"errors"
+	"iter"
 	"regexp"
 	"slices"
 	"strconv"
@@ -236,6 +237,8 @@ type (
 	RawSnapshots interface {
 		AsArray() []RawSnapshotInfo
 		AsMap() map[SnapshotName]RawSnapshotInfo
+		Iter() iter.Seq[RawSnapshotInfo]
+		Len() int
 
 		// Tree builds a tree structure of snapshots.
 		//
@@ -271,6 +274,18 @@ func (r *rawSnapshots) AsMap() map[SnapshotName]RawSnapshotInfo {
 	}
 	return snapshots
 }
+
+func (r *rawSnapshots) Iter() iter.Seq[RawSnapshotInfo] {
+	return func(yield func(RawSnapshotInfo) bool) {
+		for i := range r.a {
+			if !yield(&rawSnapshotInfo{a: r.a[i].(map[string]any)}) {
+				return
+			}
+		}
+	}
+}
+
+func (r *rawSnapshots) Len() int { return len(r.a) }
 
 func (r *rawSnapshots) Tree() RawSnapshotTree {
 	const maxTime = 68043243391 // Package time, Const maxWall

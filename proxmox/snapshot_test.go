@@ -782,6 +782,116 @@ func Test_RawSnapshots_AsArray(t *testing.T) {
 	}
 }
 
+func Test_RawSnapshots_Iter(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		input  rawSnapshots
+		output []SnapshotName
+	}{
+		{name: `Empty`,
+			input:  rawSnapshots{a: []any{}},
+			output: nil},
+		{name: `One snapshot`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+			}},
+			output: []SnapshotName{"snap1"}},
+		{name: `Multiple snapshots`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+			}},
+			output: []SnapshotName{"snap1", "snap2", "snap3"}},
+		{name: `Snapshots with full data`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "snapshot1",
+					"description": "First snapshot",
+					"snaptime":    float64(1609459200),
+					"vmstate":     float64(1),
+				},
+				map[string]any{
+					"name":        "snapshot2",
+					"description": "Second snapshot",
+					"snaptime":    float64(1609545600),
+					"parent":      "snapshot1",
+				},
+			}},
+			output: []SnapshotName{"snapshot1", "snapshot2"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			var names []SnapshotName
+			for info := range RawSnapshots(&test.input).Iter() {
+				names = append(names, info.GetName())
+			}
+			require.Equal(t, test.output, names)
+		})
+	}
+	// Test early termination
+	t.Run("Early termination", func(*testing.T) {
+		input := rawSnapshots{a: []any{
+			map[string]any{"name": "snap1"},
+			map[string]any{"name": "snap2"},
+			map[string]any{"name": "snap3"},
+		}}
+		count := 0
+		for range RawSnapshots(&input).Iter() {
+			count++
+			if count == 2 {
+				break
+			}
+		}
+		require.Equal(t, 2, count)
+	})
+}
+
+func Test_RawSnapshots_Len(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		input  rawSnapshots
+		output int
+	}{
+		{name: `Empty`,
+			input:  rawSnapshots{a: []any{}},
+			output: 0},
+		{name: `One snapshot`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+			}},
+			output: 1},
+		{name: `Multiple snapshots`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+			}},
+			output: 3},
+		{name: `Many snapshots`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+				map[string]any{"name": "snap4"},
+				map[string]any{"name": "snap5"},
+				map[string]any{"name": "snap6"},
+				map[string]any{"name": "snap7"},
+				map[string]any{"name": "snap8"},
+				map[string]any{"name": "snap9"},
+				map[string]any{"name": "snap10"},
+			}},
+			output: 10},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, RawSnapshots(&test.input).Len())
+		})
+	}
+}
+
 func test_RawSnapshotTree_Current_and_Root_data() []struct {
 	name    string
 	input   rawSnapshots
