@@ -239,6 +239,7 @@ type (
 		AsMap() map[SnapshotName]RawSnapshotInfo
 		Iter() iter.Seq[RawSnapshotInfo]
 		Len() int
+		SelectSnapshot(SnapshotName) (RawSnapshotInfo, bool)
 
 		// Tree builds a tree structure of snapshots.
 		//
@@ -286,6 +287,16 @@ func (r *rawSnapshots) Iter() iter.Seq[RawSnapshotInfo] {
 }
 
 func (r *rawSnapshots) Len() int { return len(r.a) }
+
+func (r *rawSnapshots) SelectSnapshot(name SnapshotName) (RawSnapshotInfo, bool) {
+	for i := range r.a {
+		params := r.a[i].(map[string]any)
+		if params[snapshotListApiKeyName] == name.String() {
+			return &rawSnapshotInfo{a: params}, true
+		}
+	}
+	return nil, false
+}
 
 func (r *rawSnapshots) Tree() RawSnapshotTree {
 	const maxTime = 68043243391 // Package time, Const maxWall

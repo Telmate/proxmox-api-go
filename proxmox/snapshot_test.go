@@ -892,6 +892,192 @@ func Test_RawSnapshots_Len(t *testing.T) {
 	}
 }
 
+func Test_RawSnapshots_SelectSnapshot(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    rawSnapshots
+		snapshot SnapshotName
+		exists   bool
+		output   RawSnapshotInfo
+	}{
+		{name: `Empty list`,
+			input:    rawSnapshots{a: []any{}},
+			snapshot: SnapshotName("snap1")},
+		{name: `Single snapshot - found`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "snap1",
+					"description": "First snapshot",
+					"snaptime":    float64(1700000000)},
+			}},
+			snapshot: SnapshotName("snap1"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "snap1",
+				"description": "First snapshot",
+				"snaptime":    float64(1700000000)}}},
+		{name: `Single snapshot - not found`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+			}},
+			snapshot: SnapshotName("snap2")},
+		{name: `Multiple snapshots - found first`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "snap1",
+					"description": "First snapshot",
+					"snaptime":    float64(1700000000)},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+			}},
+			snapshot: SnapshotName("snap1"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "snap1",
+				"description": "First snapshot",
+				"snaptime":    float64(1700000000)}}},
+		{name: `Multiple snapshots - found middle`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{
+					"name":        "snap2",
+					"description": "Middle snapshot",
+					"snaptime":    float64(1700000100),
+					"vmstate":     float64(1)},
+				map[string]any{"name": "snap3"},
+			}},
+			snapshot: SnapshotName("snap2"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "snap2",
+				"description": "Middle snapshot",
+				"snaptime":    float64(1700000100),
+				"vmstate":     float64(1)}}},
+		{name: `Multiple snapshots - found last`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{
+					"name":        "snap3",
+					"description": "Last snapshot",
+					"snaptime":    float64(1700000200),
+					"parent":      "snap2"},
+			}},
+			snapshot: SnapshotName("snap3"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "snap3",
+				"description": "Last snapshot",
+				"snaptime":    float64(1700000200),
+				"parent":      "snap2"}}},
+		{name: `Multiple snapshots - not found`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+			}},
+			snapshot: SnapshotName("snap4")},
+		{name: `Current snapshot`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{
+					"name":        "current",
+					"description": "You are here!",
+					"parent":      "snap1"},
+			}},
+			snapshot: SnapshotName("current"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "current",
+				"description": "You are here!",
+				"parent":      "snap1"}}},
+		{name: `Snapshot with all fields`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "full-snap",
+					"description": "Complete snapshot" + body.Symbols,
+					"snaptime":    float64(1700000300),
+					"vmstate":     float64(1),
+					"parent":      "previous-snap"},
+			}},
+			snapshot: SnapshotName("full-snap"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "full-snap",
+				"description": "Complete snapshot" + body.Symbols,
+				"snaptime":    float64(1700000300),
+				"vmstate":     float64(1),
+				"parent":      "previous-snap"}}},
+		{name: `Many snapshots - found`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+				map[string]any{"name": "snap4"},
+				map[string]any{"name": "snap5"},
+				map[string]any{
+					"name":        "target-snap",
+					"description": "Target snapshot",
+					"snaptime":    float64(1700001000)},
+				map[string]any{"name": "snap7"},
+				map[string]any{"name": "snap8"},
+				map[string]any{"name": "snap9"},
+				map[string]any{"name": "snap10"},
+			}},
+			snapshot: SnapshotName("target-snap"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "target-snap",
+				"description": "Target snapshot",
+				"snaptime":    float64(1700001000)}}},
+		{name: `Snapshot with vmstate 0`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":     "no-vmstate",
+					"vmstate":  float64(0),
+					"snaptime": float64(1700000400)},
+			}},
+			snapshot: SnapshotName("no-vmstate"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":     "no-vmstate",
+				"vmstate":  float64(0),
+				"snaptime": float64(1700000400)}}},
+		{name: `Snapshot with special characters in name`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "Test_Case-123_456_789_0",
+					"description": "Special chars in name"},
+			}},
+			snapshot: SnapshotName("Test_Case-123_456_789_0"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "Test_Case-123_456_789_0",
+				"description": "Special chars in name"}}},
+		{name: `Case sensitive - exact match`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "MySnap"},
+				map[string]any{"name": "mysnap"},
+			}},
+			snapshot: SnapshotName("MySnap"),
+			exists:   true,
+			output:   &rawSnapshotInfo{a: map[string]any{"name": "MySnap"}}},
+		{name: `Case sensitive - no match`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "MySnap"},
+			}},
+			snapshot: SnapshotName("mysnap")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			output, exists := RawSnapshots(&test.input).SelectSnapshot(test.snapshot)
+			require.Equal(t, test.exists, exists)
+			require.Equal(t, test.output, output)
+		})
+	}
+}
+
 func test_RawSnapshotTree_Current_and_Root_data() []struct {
 	name    string
 	input   rawSnapshots
