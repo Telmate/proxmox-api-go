@@ -17,7 +17,7 @@ func Test_Token_Exists(t *testing.T) {
 	tokenID := pveSDK.ApiTokenID{
 		User:      pveSDK.UserID{Name: "Test_Token_Exists", Realm: "pve"},
 		TokenName: "testToken"}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

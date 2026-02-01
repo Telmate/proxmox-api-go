@@ -40,7 +40,7 @@ func Test_User_Update(t *testing.T) {
 		return user
 	}
 	userID := pveSDK.UserID{Name: "Test_User_Update", Realm: "pve"}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

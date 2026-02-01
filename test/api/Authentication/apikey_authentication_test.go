@@ -18,7 +18,7 @@ func Test_Authenticate_ApiKey(t *testing.T) {
 		User:      pveSDK.UserID{Name: "Test_Authenticate_ApiKey", Realm: "pve"},
 		TokenName: "testToken"}
 	secret := util.Pointer(pveSDK.ApiTokenSecret(""))
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
@@ -44,7 +44,7 @@ func Test_Authenticate_ApiKey(t *testing.T) {
 			}},
 		{name: `Authenticate with token`,
 			test: func(t *testing.T) {
-				cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+				cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 				require.NoError(t, err)
 				require.NotNil(t, cl)
 				cl.SetAPIToken(tokenID, *secret)

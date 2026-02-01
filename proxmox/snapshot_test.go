@@ -80,7 +80,7 @@ func Test_snapshotClient_CreateLxc(t *testing.T) {
 	}
 	server, c := testMockServerInit(t)
 	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Snapshot.CreateLxc(context.Background(), test.guest, test.snapshotName, test.description)
 			require.Equal(t, test.err, err)
@@ -158,7 +158,7 @@ func Test_snapshotClient_CreateQemu(t *testing.T) {
 	}
 	server, c := testMockServerInit(t)
 	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Snapshot.CreateQemu(context.Background(), test.guest, test.snapshotName, test.description, test.vmState)
 			require.Equal(t, test.err, err)
@@ -228,7 +228,7 @@ func Test_snapshotClient_Delete(t *testing.T) {
 	}
 	server, c := testMockServerInit(t)
 	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			server.Set(test.requests, t)
 			deleted, err := c.New().Snapshot.Delete(context.Background(), test.guest, test.snapshotName)
 			require.Equal(t, test.err, err)
@@ -346,7 +346,7 @@ func Test_snapshotClient_List(t *testing.T) {
 	}
 	server, c := testMockServerInit(t)
 	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			server.Set(test.requests, t)
 			rawSnapshots, err := c.New().Snapshot.List(context.Background(), test.guest)
 			require.Equal(t, test.err, err)
@@ -447,7 +447,7 @@ func Test_snapshotClient_ReadLxc(t *testing.T) {
 	}
 	server, c := testMockServerInit(t)
 	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			server.Set(test.requests, t)
 			raw, err := c.New().Snapshot.ReadLxc(context.Background(), test.guest, test.snapName)
 			require.Equal(t, test.err, err)
@@ -566,7 +566,7 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 	}
 	server, c := testMockServerInit(t)
 	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			server.Set(test.requests, t)
 			raw, err := c.New().Snapshot.ReadQemu(context.Background(), test.guest, test.snapName)
 			require.Equal(t, test.err, err)
@@ -626,7 +626,7 @@ func Test_snapshotClient_Rollback(t *testing.T) {
 	}
 	server, c := testMockServerInit(t)
 	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Snapshot.Rollback(context.Background(), test.guest, test.snapName, test.start)
 			require.Equal(t, test.err, err)
@@ -686,7 +686,7 @@ func Test_snapshotClient_Update(t *testing.T) {
 	}
 	server, c := testMockServerInit(t)
 	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			server.Set(test.requests, t)
 			err := c.New().Snapshot.Update(context.Background(), test.guest, test.snapName, test.description)
 			require.Equal(t, test.err, err)

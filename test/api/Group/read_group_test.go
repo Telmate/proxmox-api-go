@@ -26,7 +26,7 @@ func Test_Group_Read(t *testing.T) {
 		Members: &users,
 		Comment: util.Pointer("Test Comment " + body.Symbols),
 	}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

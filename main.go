@@ -47,13 +47,13 @@ func loadAppConfig() AppConfig {
 	}
 }
 
-func initializeProxmoxClient(ctx context.Context, config AppConfig, insecure bool, proxyURL string, taskTimeout int) (*proxmox.Client, error) {
+func initializeProxmoxClient(ctx context.Context, config AppConfig, insecure bool, proxyURL string, taskTimeout int, debug bool) (*proxmox.Client, error) {
 	tlsconf := &tls.Config{InsecureSkipVerify: insecure}
 	if !insecure {
 		tlsconf = nil
 	}
 
-	client, err := proxmox.NewClient(config.APIURL, nil, config.HTTPHeaders, tlsconf, proxyURL, taskTimeout)
+	client, err := proxmox.NewClient(config.APIURL, nil, config.HTTPHeaders, tlsconf, proxyURL, taskTimeout, debug)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func main() {
 
 	// Command-line flags
 	insecure := flag.Bool("insecure", false, "TLS insecure mode")
-	proxmox.Debug = flag.Bool("debug", false, "debug mode")
+	debug := flag.Bool("debug", false, "debug mode")
 	fConfigFile := flag.String("file", "", "file to get the config from")
 	taskTimeout := flag.Int("timeout", 300, "API task timeout in seconds")
 	proxyURL := flag.String("proxy", "", "proxy URL to connect to")
@@ -100,7 +100,7 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize Proxmox client
-	c, err := initializeProxmoxClient(ctx, config, *insecure, *proxyURL, *taskTimeout)
+	c, err := initializeProxmoxClient(ctx, config, *insecure, *proxyURL, *taskTimeout, *debug)
 	if err != nil {
 		log.Fatalf("Failed to initialize Proxmox client: %v", err)
 	}

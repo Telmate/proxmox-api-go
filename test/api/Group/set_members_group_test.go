@@ -20,7 +20,7 @@ func Test_Group_Set(t *testing.T) {
 		{Name: "Test_Group_Set_1", Realm: "pve"},
 		{Name: "Test_Group_Set_2", Realm: "pve"},
 	}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

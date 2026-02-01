@@ -130,13 +130,14 @@ func NewVmRef(vmId GuestID) (vmr *VmRef) {
 	return
 }
 
-func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tls.Config, proxyString string, taskTimeout int) (client *Client, err error) {
+func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tls.Config, proxyString string, taskTimeout int, debug bool) (client *Client, err error) {
 	var sess *Session
 	sess, err_s := NewSession(apiUrl, hclient, proxyString, tls)
 	sess, err = createHeaderList(http_headers, sess)
 	if err != nil {
 		return nil, err
 	}
+	sess.Debug = debug
 	if err_s == nil {
 		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout, permissions: make(map[permissionPath]privileges), timeUnit: time.Second}
 	}

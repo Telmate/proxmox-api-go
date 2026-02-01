@@ -21,7 +21,7 @@ func Test_Pool_Create(t *testing.T) {
 		Guests:  &[]pveSDK.GuestID{510, 511, 512},
 	}
 	const node = pveSDK.NodeName(test.FirstNode)
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

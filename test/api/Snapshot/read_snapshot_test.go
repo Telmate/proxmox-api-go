@@ -24,7 +24,7 @@ func Test_Snapshot_ReadQemu(t *testing.T) {
 		Name:        snap1,
 		Description: "Test snapshot" + body.Symbols,
 		VmState:     util.Pointer(false)}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

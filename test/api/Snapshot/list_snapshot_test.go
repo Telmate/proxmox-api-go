@@ -30,7 +30,7 @@ func Test_Snapshot_List(t *testing.T) {
 			Parent:      util.Pointer(pveSDK.SnapshotName("mySnap"))}}
 	const guest = pveSDK.GuestID(802)
 	const node = pveSDK.NodeName(test.FirstNode)
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
