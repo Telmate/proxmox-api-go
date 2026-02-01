@@ -28,6 +28,16 @@ func RequestsDelete(urlPath Path, expected any) []Request {
 		}}}
 }
 
+func RequestsDeleteResponse(urlPath Path, expected any, response []byte) []Request {
+	return []Request{{
+		Path:   urlPath,
+		Method: DELETE,
+		HandlerFunc: func(w http.ResponseWriter, r *http.Request, t *testing.T) {
+			requestsParseParams(expected, r, t)
+			w.Write(response)
+		}}}
+}
+
 func RequestsGetJson(urlPath Path, v any) []Request {
 	return []Request{{
 		Path:   urlPath,

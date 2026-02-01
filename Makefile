@@ -42,11 +42,13 @@ test-integration: # Integration tests
 
 .PHONY: test_integration_api
 test_integration_api: # Integration
-	@go test ./test/api/ApiToken/... \
+	@go test \
+		./test/api/ApiToken/... \
 		./test/api/Authentication/... \
 		./test/api/Connection/... \
 		./test/api/Group/... \
 		./test/api/Pool/... \
+		./test/api/Snapshot/... \
 		./test/api/User/...
 
 PHONY += clean

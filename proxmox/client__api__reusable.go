@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
 // Reusable low-level API methods
+
+const RequestRetryCount = 3
 
 func (c *clientAPI) getResourceList(ctx context.Context, resourceType string) ([]any, error) {
 	url := "/cluster/resources"
@@ -42,6 +45,23 @@ func (c *clientAPI) deleteRetry(ctx context.Context, url string, tries int) (err
 		time.Sleep((i + 1) * c.timeUnit)
 	}
 	return
+}
+
+func (c *clientAPI) deleteTask(ctx context.Context, url string) error {
+	var response *http.Response
+	var retry bool
+	var err error
+	for i := range time.Duration(RequestRetryCount) {
+		response, retry, err = c.session.delete(ctx, url, nil, nil)
+		if err == nil || !retry {
+			break
+		}
+		time.Sleep((i + 1) * c.timeUnit)
+	}
+	if err != nil {
+		return err
+	}
+	return c.checkTask(ctx, response)
 }
 
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[string]any, error) {
@@ -143,14 +163,30 @@ func (c *clientAPI) postJsonRetry(ctx context.Context, url string, body *[]byte,
 	return
 }
 
-func (c *clientAPI) postTask(ctx context.Context, url string, params map[string]any) (exitStatus string, err error) {
+func (c *clientAPI) postTask(ctx context.Context, url string, params map[string]any) error {
 	requestBody := paramsToBody(params)
-	var resp *http.Response
-	resp, _, err = c.session.post(ctx, url, nil, nil, &requestBody)
+	resp, _, err := c.session.post(ctx, url, nil, nil, &requestBody)
 	if err != nil {
-		return c.handleTaskError(resp), err
+		return err
 	}
 	return c.checkTask(ctx, resp)
+}
+
+func (c *clientAPI) postRawTask(ctx context.Context, url string, body *[]byte) error {
+	var response *http.Response
+	var retry bool
+	var err error
+	for i := range time.Duration(RequestRetryCount) {
+		response, retry, err = c.session.post(ctx, url, nil, nil, body)
+		if err == nil || !retry {
+			break
+		}
+		time.Sleep((i + 1) * c.timeUnit)
+	}
+	if err != nil {
+		return err
+	}
+	return c.checkTask(ctx, response)
 }
 
 // Makes a PUT request without waiting on proxmox for the task to complete.
@@ -176,69 +212,85 @@ func (c *clientAPI) putRawRetry(ctx context.Context, url string, body *[]byte, t
 	return
 }
 
-// handleTaskError reads the body from the passed in HTTP response and closes it.
-// It returns the body of the passed in HTTP response.
-func (c *clientAPI) handleTaskError(resp *http.Response) (exitStatus string) {
-	// Only attempt to read the body if it is available.
-	if resp == nil || resp.Body == nil {
-		return "no body available for HTTP response"
-	}
-	defer resp.Body.Close()
-	// This might not work if we never got a body. We'll ignore errors in trying to read,
-	// but extract the body if possible to give any error information back in the exitStatus
-	b, _ := io.ReadAll(resp.Body)
-	return string(b)
-}
-
 // checkTask polls the API to check if the Proxmox task has been completed.
 // It returns the body of the HTTP response and any HTTP error occurred during the request.
-func (c *clientAPI) checkTask(ctx context.Context, resp *http.Response) (exitStatus string, err error) {
+func (c *clientAPI) checkTask(ctx context.Context, resp *http.Response) error {
 	taskResponse, err := responseJSON(resp)
 	if err != nil {
-		return "", err
+		return err
 	}
 	return c.waitForCompletion(ctx, taskResponse)
 }
 
 // waitForCompletion - poll the API for task completion
-func (c *clientAPI) waitForCompletion(ctx context.Context, taskResponse map[string]any) (string, error) {
+func (c *clientAPI) waitForCompletion(ctx context.Context, taskResponse map[string]any) error {
 	if taskResponse["errors"] != nil {
-		errJSON, _ := json.MarshalIndent(taskResponse["errors"], "", "  ")
-		return string(errJSON), fmt.Errorf("error response")
+		err, _ := json.MarshalIndent(taskResponse["errors"], "", "  ")
+		return errors.New(string(err))
 	}
 	if taskResponse["data"] == nil {
-		return "", nil
+		return nil
 	}
 	waited := time.Duration(0)
 	taskUpid := taskResponse["data"].(string)
 	for waited < c.taskTimeout {
-		exitStatus, err := c.getTaskExitStatus(ctx, taskUpid)
+		retry, err := c.getTaskExitStatus(ctx, taskUpid)
 		if err != nil {
-			if err != io.ErrUnexpectedEOF { // don't give up on ErrUnexpectedEOF
-				return "", err
-			}
+			return err
 		}
-		if exitStatus != nil {
-			return exitStatus.(string), nil
+		if !retry {
+			return nil
 		}
 		time.Sleep(TaskStatusCheckInterval * time.Second)
 		waited = waited + TaskStatusCheckInterval
 	}
-	return "", fmt.Errorf("Wait timeout for:" + taskUpid)
+	return fmt.Errorf("Wait timeout for:" + taskUpid)
 }
 
-func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (exitStatus any, err error) {
-	node := rxTaskNode.FindStringSubmatch(taskUpID)[1]
-	url := "/nodes/" + node + "/tasks/" + taskUpID + "/status"
+func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (bool, error) {
+
+	// "UPID:pve-01:00068180:17BE8318:697285F2:qmdelsnapshot:801:root@pam:"
+	const prefixLen = len("UPID:")
+	secondColon := strings.IndexByte(taskUpID[prefixLen:], ':') // find position of second colon
+	node := taskUpID[prefixLen : prefixLen+secondColon]
+
+	var err error
 	var data map[string]any
-	_, _, err = c.session.getJSON(ctx, url, nil, nil, &data)
-	if err == nil {
-		exitStatus = data["data"].(map[string]any)["exitstatus"]
+	dataPtr := &data
+	url := "/nodes/" + node + "/tasks/" + taskUpID + "/status"
+	for i := range time.Duration(RequestRetryCount) {
+		var retry bool
+		_, retry, err = c.session.getJSON(ctx, url, nil, nil, dataPtr)
+		if err == nil || !retry {
+			break
+		}
+		if err == io.ErrUnexpectedEOF { // Early EOF can happen, don't retry
+			return true, nil
+		}
+		time.Sleep((i + 1) * c.timeUnit)
 	}
-	if exitStatus != nil && rxExitStatusSuccess.FindString(exitStatus.(string)) == "" {
-		err = fmt.Errorf(exitStatus.(string))
+	if err != nil {
+		return false, err
 	}
-	return
+	var exitStatus string
+	if v, isSet := data["data"].(map[string]any)["exitstatus"]; isSet {
+		exitStatus = v.(string)
+	} else {
+		return true, nil // still running
+	}
+
+	const taskSuccess = "OK"
+	const taskWarning = "WARNING"
+
+	if exitStatus == taskSuccess {
+		return false, nil
+	}
+	if strings.HasPrefix(exitStatus, taskWarning) {
+		return false, nil
+	}
+	return false, TaskError{
+		Message: exitStatus,
+		TaskID:  taskUpID}
 }
 
 func (c *clientAPI) getJsonRetry(ctx context.Context, url string, data *map[string]any, tries int) error {

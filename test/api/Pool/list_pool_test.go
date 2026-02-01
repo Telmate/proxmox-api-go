@@ -20,7 +20,7 @@ func Test_Pool_List(t *testing.T) {
 		{Name: "Test_Pool_List_02",
 			Comment: util.Pointer("Test Comment")},
 		{Name: "Test_Pool_List_03"}}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

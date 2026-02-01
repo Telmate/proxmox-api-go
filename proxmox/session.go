@@ -19,8 +19,6 @@ import (
 	"strings"
 )
 
-var Debug = new(bool)
-
 const debugLargeBodyThreshold = 5 * 1024 * 1024
 
 type Session struct {
@@ -30,6 +28,7 @@ type Session struct {
 	CsrfToken  string
 	AuthToken  string // Combination of user, realm, token ID and UUID
 	Headers    http.Header
+	Debug      bool
 }
 
 func NewSession(apiUrl string, hclient *http.Client, proxyString string, tls *tls.Config) (session *Session, err error) {
@@ -159,10 +158,10 @@ func (s *Session) login(ctx context.Context, username string, password string, o
 		reqUser["otp"] = otp
 	}
 	reqbody := paramsToBody(reqUser)
-	olddebug := *Debug
-	*Debug = false // don't share passwords in debug log
+	olddebug := s.Debug
+	s.Debug = false // don't share passwords in debug log
 	resp, _, err := s.post(ctx, "/access/ticket", nil, &s.Headers, &reqbody)
-	*Debug = olddebug
+	s.Debug = olddebug
 	if err != nil {
 		return err
 	}
@@ -210,7 +209,7 @@ func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err er
 		req.Header[k] = v
 	}
 
-	if *Debug {
+	if s.Debug {
 		includeBody := req.ContentLength < debugLargeBodyThreshold
 		d, _ := httputil.DumpRequestOut(req, includeBody)
 		if !includeBody {
@@ -241,7 +240,7 @@ func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err er
 	resp.Body.Close()
 	resp.Body = io.NopCloser(bytes.NewReader(respBody))
 
-	if *Debug {
+	if s.Debug {
 		includeBody := resp.ContentLength < debugLargeBodyThreshold
 		dr, _ := httputil.DumpResponse(resp, includeBody)
 		if !includeBody {

@@ -1,15 +1,702 @@
 package proxmox
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/mockServer"
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_snapshot"
 	"github.com/stretchr/testify/require"
 )
 
+func Test_snapshotClient_CreateLxc(t *testing.T) {
+	t.Parallel()
+	const UPID = "UPID:testNode:0006E4CB:17C8E729:6972A08C:qmsnapshot:198:root@pam:"
+	tests := []struct {
+		name         string
+		guest        VmRef
+		snapshotName SnapshotName
+		description  string
+		requests     []mockServer.Request
+		err          error
+	}{
+		{name: `Create minimal`,
+			guest:        VmRef{vmId: 100, node: "testNode"},
+			snapshotName: SnapshotName("snap1"),
+			requests: mockServer.Append(
+				mockServer.RequestsPostResponse("/nodes/testNode/lxc/100/snapshot",
+					map[string]any{
+						"snapname": "snap1"},
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+			)},
+		{name: `Create maximal`,
+			guest:        VmRef{vmId: 100, node: "testNode"},
+			snapshotName: SnapshotName("snap1"),
+			description:  "This is a test snapshot" + body.Symbols,
+			requests: mockServer.Append(
+				mockServer.RequestsPostResponse("/nodes/testNode/lxc/100/snapshot",
+					map[string]any{
+						"snapname":    "snap1",
+						"description": "This is a test snapshot" + body.Symbols},
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+			)},
+		{name: `Incomplete VmRef`,
+			guest:        VmRef{vmId: 100},
+			snapshotName: SnapshotName("mySnap"),
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": float64(100), "node": "myNode", "type": "lxc"},
+					map[string]any{"vmid": float64(200), "node": "testNode", "type": "qemu"},
+					map[string]any{"vmid": float64(300), "node": "myNode", "type": "lxc"},
+				}}),
+				mockServer.RequestsPostResponse("/nodes/myNode/lxc/100/snapshot",
+					map[string]any{
+						"snapname": "mySnap"},
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+			)},
+		{name: `Validate error`,
+			err: errors.New(SnapshotName_Error_MinLength)},
+		{name: `Error Listing VMs`,
+			guest:        VmRef{vmId: 100},
+			snapshotName: SnapshotName("mySnap"),
+			requests:     mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
+			err:          errors.New(mockServer.InternalServerError)},
+		{name: `Error Creating snapshot`,
+			guest:        VmRef{vmId: 100, node: "testNode"},
+			snapshotName: SnapshotName("snap1"),
+			requests:     mockServer.RequestsError("/nodes/testNode/lxc/100/snapshot", mockServer.POST, 500, 3),
+			err:          errors.New(mockServer.InternalServerError)},
+	}
+	server, c := testMockServerInit(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server.Set(test.requests, t)
+			err := c.New().Snapshot.CreateLxc(context.Background(), test.guest, test.snapshotName, test.description)
+			require.Equal(t, test.err, err)
+			server.Clear(t)
+		})
+	}
+}
+
+func Test_snapshotClient_CreateQemu(t *testing.T) {
+	t.Parallel()
+	const UPID = "UPID:testNode:0006E4CB:17C8E729:6972A08C:qmsnapshot:198:root@pam:"
+	tests := []struct {
+		name         string
+		guest        VmRef
+		snapshotName SnapshotName
+		description  string
+		vmState      bool
+		requests     []mockServer.Request
+		err          error
+	}{
+		{name: `Create minimal`,
+			guest:        VmRef{vmId: 100, node: "testNode"},
+			snapshotName: SnapshotName("snap1"),
+			requests: mockServer.Append(
+				mockServer.RequestsPostResponse("/nodes/testNode/qemu/100/snapshot",
+					map[string]any{
+						"snapname": "snap1"},
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+			)},
+		{name: `Create maximal`,
+			guest:        VmRef{vmId: 100, node: "testNode"},
+			snapshotName: SnapshotName("snap1"),
+			description:  "This is a test snapshot" + body.Symbols,
+			vmState:      true,
+			requests: mockServer.Append(
+				mockServer.RequestsPostResponse("/nodes/testNode/qemu/100/snapshot",
+					map[string]any{
+						"snapname":    "snap1",
+						"description": "This is a test snapshot" + body.Symbols,
+						"vmstate":     "1"},
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+			)},
+		{name: `Incomplete VmRef`,
+			guest:        VmRef{vmId: 100},
+			snapshotName: SnapshotName("mySnap"),
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": float64(100), "node": "myNode", "type": "qemu"},
+					map[string]any{"vmid": float64(200), "node": "testNode", "type": "lxc"},
+					map[string]any{"vmid": float64(300), "node": "myNode", "type": "qemu"},
+				}}),
+				mockServer.RequestsPostResponse("/nodes/myNode/qemu/100/snapshot",
+					map[string]any{
+						"snapname": "mySnap"},
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+			)},
+		{name: `Validate error`,
+			err: errors.New(SnapshotName_Error_MinLength)},
+		{name: `Error Listing VMs`,
+			guest:        VmRef{vmId: 100},
+			snapshotName: SnapshotName("mySnap"),
+			requests:     mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
+			err:          errors.New(mockServer.InternalServerError)},
+		{name: `Error Creating snapshot`,
+			guest:        VmRef{vmId: 100, node: "testNode"},
+			snapshotName: SnapshotName("snap1"),
+			requests:     mockServer.RequestsError("/nodes/testNode/qemu/100/snapshot", mockServer.POST, 500, 3),
+			err:          errors.New(mockServer.InternalServerError)},
+	}
+	server, c := testMockServerInit(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server.Set(test.requests, t)
+			err := c.New().Snapshot.CreateQemu(context.Background(), test.guest, test.snapshotName, test.description, test.vmState)
+			require.Equal(t, test.err, err)
+			server.Clear(t)
+		})
+	}
+}
+
+func Test_snapshotClient_Delete(t *testing.T) {
+	t.Parallel()
+	const UPID = "UPID:testNode:0006E4CB:17C8E729:6972A08C:qmsnapshot:198:root@pam:"
+	tests := []struct {
+		name         string
+		guest        VmRef
+		exists       bool
+		snapshotName SnapshotName
+		requests     []mockServer.Request
+		err          error
+	}{
+		{name: `Delete existing`,
+			guest:        VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapshotName: SnapshotName("snap1"),
+			exists:       true,
+			requests: mockServer.Append(
+				mockServer.RequestsDeleteResponse("/nodes/testNode/qemu/100/snapshot/snap1", nil,
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+			)},
+		{name: `Delete existing without node and vmType in VmRef`,
+			guest:        VmRef{vmId: 200},
+			snapshotName: SnapshotName("snap1"),
+			exists:       true,
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": float64(100), "node": "myNode", "type": "qemu"},
+					map[string]any{"vmid": float64(200), "node": "testNode", "type": "lxc"},
+					map[string]any{"vmid": float64(300), "node": "myNode", "type": "qemu"},
+				}}),
+				mockServer.RequestsDeleteResponse("/nodes/testNode/lxc/200/snapshot/snap1", nil,
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+			)},
+		{name: `Delete non-existing`,
+			guest:        VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapshotName: SnapshotName("snap1"),
+			exists:       false,
+			requests: mockServer.Append(
+				mockServer.RequestsDeleteResponse("/nodes/testNode/qemu/100/snapshot/snap1", nil,
+					[]byte(`{"data":"`+UPID+`"}`)),
+				mockServer.RequestsGetJson("/nodes/testNode/tasks/"+UPID+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string(`snapshot 'snap1' does not exist`)}}),
+			)},
+		{name: `Validate error`,
+			err: errors.New(SnapshotName_Error_MinLength)},
+		{name: `Error Listing VMs`,
+			guest:        VmRef{vmId: 100},
+			snapshotName: SnapshotName("mySnap"),
+			requests:     mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
+			err:          errors.New(mockServer.InternalServerError)},
+		{name: `Error Deleting snapshot`,
+			guest:        VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapshotName: SnapshotName("snap2"),
+			requests:     mockServer.RequestsError("/nodes/testNode/qemu/100/snapshot/snap2", mockServer.DELETE, 500, 3),
+			err:          errors.New(mockServer.InternalServerError)},
+	}
+	server, c := testMockServerInit(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server.Set(test.requests, t)
+			deleted, err := c.New().Snapshot.Delete(context.Background(), test.guest, test.snapshotName)
+			require.Equal(t, test.err, err)
+			require.Equal(t, test.exists, deleted)
+			server.Clear(t)
+		})
+	}
+}
+
+func Test_snapshotClient_List(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		guest     VmRef
+		snapshots []SnapshotInfo
+		requests  []mockServer.Request
+		err       error
+	}{
+		{name: `List empty`,
+			guest: VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapshots: []SnapshotInfo{
+				{Name: "current",
+					Description: "You are here!"}},
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/nodes/testNode/qemu/100/snapshot", map[string]any{
+					"data": []any{
+						map[string]any{"name": "current",
+							"description": "You are here!"},
+					}}),
+			)},
+		{name: `List minimal VmRef`,
+			guest: VmRef{vmId: 200},
+			snapshots: []SnapshotInfo{
+				{Name: "current",
+					Description: "You are here!"}},
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": float64(100), "node": "myNode", "type": "lxc"},
+					map[string]any{"vmid": float64(200), "node": "testNode", "type": "qemu"},
+					map[string]any{"vmid": float64(300), "node": "myNode", "type": "lxc"},
+				}}),
+				mockServer.RequestsGetJson("/nodes/testNode/qemu/200/snapshot", map[string]any{
+					"data": []any{
+						map[string]any{"name": "current",
+							"description": "You are here!"},
+					}}),
+			)},
+		{name: `List multiple Lxc`,
+			guest: VmRef{vmId: 100, node: "testNode", vmType: GuestLxc},
+			snapshots: []SnapshotInfo{
+				{Name: "snap1",
+					Time: util.Pointer(time.Unix(1700000000, 0))},
+				{Name: "snap2",
+					Description: "This is snap2",
+					Parent:      util.Pointer(SnapshotName("snap1")),
+					Time:        util.Pointer(time.Unix(1700000100, 0))},
+				{Name: "current",
+					Description: "You are here!",
+					Parent:      util.Pointer(SnapshotName("snap2"))}},
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/nodes/testNode/lxc/100/snapshot", map[string]any{
+					"data": []any{
+						map[string]any{"name": "snap1",
+							"snaptime": float64(1700000000)},
+						map[string]any{"name": "snap2",
+							"description": "This is snap2",
+							"parent":      "snap1",
+							"snaptime":    float64(1700000100)},
+						map[string]any{"name": "current",
+							"description": "You are here!",
+							"parent":      "snap2"},
+					}}),
+			)},
+		{name: `List multiple Qemu`,
+			guest: VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapshots: []SnapshotInfo{
+				{Name: "snap1",
+					Time:    util.Pointer(time.Unix(1700000000, 0)),
+					VmState: util.Pointer(true)},
+				{Name: "snap2",
+					Description: "This is snap2",
+					Parent:      util.Pointer(SnapshotName("snap1")),
+					Time:        util.Pointer(time.Unix(1700000100, 0)),
+					VmState:     util.Pointer(false)},
+				{Name: "current",
+					Description: "You are here!",
+					Parent:      util.Pointer(SnapshotName("snap2"))}},
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/nodes/testNode/qemu/100/snapshot", map[string]any{
+					"data": []any{
+						map[string]any{"name": "snap1",
+							"snaptime": float64(1700000000),
+							"vmstate":  float64(1)},
+						map[string]any{"name": "snap2",
+							"description": "This is snap2",
+							"parent":      "snap1",
+							"snaptime":    float64(1700000100),
+							"vmstate":     float64(0)},
+						map[string]any{"name": "current",
+							"description": "You are here!",
+							"parent":      "snap2"},
+					}}),
+			)},
+		{name: `Error Listing VMs`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestLxc},
+			requests: mockServer.RequestsError("/nodes/testNode/lxc/100/snapshot", mockServer.GET, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+		{name: `Error getting VmRef`,
+			guest: VmRef{vmId: 200},
+			snapshots: []SnapshotInfo{
+				{Name: "current",
+					Description: "You are here!"}},
+			requests: mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+	}
+	server, c := testMockServerInit(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server.Set(test.requests, t)
+			rawSnapshots, err := c.New().Snapshot.List(context.Background(), test.guest)
+			require.Equal(t, test.err, err)
+			if test.err != nil {
+				require.Nil(t, rawSnapshots)
+			} else {
+				snapshotMap := rawSnapshots.AsMap()
+				for _, snapshot := range test.snapshots {
+					raw, exists := snapshotMap[snapshot.Name]
+					require.True(t, exists, "snapshot %q not found in list", snapshot.Name)
+					require.NotNil(t, raw)
+					require.Equal(t, snapshot, raw.Get(), "snapshot %q does not match", snapshot.Name)
+				}
+			}
+			server.Clear(t)
+		})
+	}
+}
+
+func Test_snapshotClient_ReadLxc(t *testing.T) {
+	t.Parallel()
+	baseConfig := func(c ConfigLXC) *ConfigLXC {
+		if c.Memory == nil {
+			c.Memory = util.Pointer(LxcMemory(0))
+		}
+		if c.Networks == nil {
+			c.Networks = LxcNetworks{}
+		}
+		if c.Privileged == nil {
+			c.Privileged = util.Pointer(true)
+		}
+		if c.Protection == nil {
+			c.Protection = util.Pointer(false)
+		}
+		if c.StartAtNodeBoot == nil {
+			c.StartAtNodeBoot = util.Pointer(false)
+		}
+		if c.Swap == nil {
+			c.Swap = util.Pointer(LxcSwap(0))
+		}
+		if c.State == nil {
+			c.State = util.Pointer(PowerStateRunning)
+		}
+		return &c
+	}
+	tests := []struct {
+		name     string
+		guest    VmRef
+		snapName SnapshotName
+		config   *ConfigLXC
+		requests []mockServer.Request
+		err      error
+	}{
+		{name: `Read LXC snapshot`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestLxc},
+			snapName: SnapshotName("snap1"),
+			config: baseConfig(ConfigLXC{
+				ID:   util.Pointer(GuestID(100)),
+				Name: util.Pointer(GuestName("lxc-name")),
+				Node: util.Pointer(NodeName("testNode")),
+			}),
+			requests: mockServer.RequestsGetJson("/nodes/testNode/lxc/100/snapshot/snap1/config", map[string]any{
+				"data": map[string]any{
+					"hostname": "lxc-name"},
+			})},
+		{name: `Read LXC snapshot, minimal VmRef`,
+			guest:    VmRef{vmId: 300},
+			snapName: SnapshotName("snap1"),
+			config: baseConfig(ConfigLXC{
+				ID:   util.Pointer(GuestID(300)),
+				Name: util.Pointer(GuestName("lxc-name")),
+				Node: util.Pointer(NodeName("")),
+			}),
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": float64(100), "node": "myNode", "type": "lxc"},
+					map[string]any{"vmid": float64(200), "node": "testNode", "type": "qemu"},
+					map[string]any{"vmid": float64(300), "node": "myNode", "type": "lxc"},
+				}}),
+				mockServer.RequestsGetJson("/nodes/myNode/lxc/300/snapshot/snap1/config", map[string]any{
+					"data": map[string]any{
+						"hostname": "lxc-name",
+					},
+				}))},
+		{name: `Validate error`,
+			snapName: SnapshotName(""),
+			err:      errors.New(SnapshotName_Error_MinLength)},
+		{name: `Error during getting VmRef`,
+			guest:    VmRef{vmId: 200},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+		{name: `Error during config read`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestLxc},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsError("/nodes/testNode/lxc/100/snapshot/snap1/config", mockServer.GET, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+	}
+	server, c := testMockServerInit(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server.Set(test.requests, t)
+			raw, err := c.New().Snapshot.ReadLxc(context.Background(), test.guest, test.snapName)
+			require.Equal(t, test.err, err)
+			if err == nil {
+				require.Equal(t, test.config, raw.Get(test.guest, PowerStateRunning))
+			}
+			server.Clear(t)
+		})
+	}
+}
+
+func Test_snapshotClient_ReadQemu(t *testing.T) {
+	t.Parallel()
+	baseConfig := func(c ConfigQemu) *ConfigQemu {
+		if c.Bios == "" {
+			c.Bios = "seabios"
+		}
+		if c.Boot == "" {
+			c.Boot = "cdn"
+		}
+		if c.CPU == nil {
+			c.CPU = &QemuCPU{}
+		}
+		if c.Description == nil {
+			c.Description = util.Pointer("")
+		}
+		if c.EFIDisk == nil {
+			c.EFIDisk = QemuDevice{}
+		}
+		if c.Hotplug == "" {
+			c.Hotplug = "network,disk,usb"
+		}
+		if c.Memory == nil {
+			c.Memory = &QemuMemory{}
+		}
+		if c.Protection == nil {
+			c.Protection = util.Pointer(false)
+		}
+		if c.QemuDisks == nil {
+			c.QemuDisks = QemuDevices{}
+		}
+		if c.QemuKVM == nil {
+			c.QemuKVM = util.Pointer(true)
+		}
+		if c.QemuOs == "" {
+			c.QemuOs = "other"
+		}
+		if c.QemuUnusedDisks == nil {
+			c.QemuUnusedDisks = QemuDevices{}
+		}
+		if c.QemuVga == nil {
+			c.QemuVga = QemuDevice{}
+		}
+		if c.Scsihw == "" {
+			c.Scsihw = "lsi"
+		}
+		if c.StartAtNodeBoot == nil {
+			c.StartAtNodeBoot = util.Pointer(false)
+		}
+		if c.Tablet == nil {
+			c.Tablet = util.Pointer(true)
+		}
+		return &c
+	}
+	tests := []struct {
+		name     string
+		guest    VmRef
+		snapName SnapshotName
+		config   *ConfigQemu
+		requests []mockServer.Request
+		err      error
+	}{
+		{name: `Read Qemu snapshot`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapName: SnapshotName("snap1"),
+			config: baseConfig(ConfigQemu{
+				ID:   util.Pointer(GuestID(100)),
+				Name: util.Pointer(GuestName("test-qemu")),
+				Node: util.Pointer(NodeName("testNode")),
+			}),
+			requests: mockServer.RequestsGetJson("/nodes/testNode/qemu/100/snapshot/snap1/config", map[string]any{
+				"data": map[string]any{
+					"name": "test-qemu"},
+			})},
+		{name: `Read Qemu snapshot, minimal VmRef`,
+			guest:    VmRef{vmId: 200},
+			snapName: SnapshotName("snap1"),
+			config: baseConfig(ConfigQemu{
+				ID:   util.Pointer(GuestID(200)),
+				Name: util.Pointer(GuestName("test-qemu")),
+			}),
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": float64(100), "node": "myNode", "type": "lxc"},
+					map[string]any{"vmid": float64(200), "node": "testNode", "type": "qemu"},
+					map[string]any{"vmid": float64(300), "node": "myNode", "type": "lxc"},
+				}}),
+				mockServer.RequestsGetJson("/nodes/testNode/qemu/200/snapshot/snap1/config", map[string]any{
+					"data": map[string]any{
+						"name": "test-qemu",
+					},
+				}))},
+		{name: `Validate error`,
+			snapName: SnapshotName(""),
+			err:      errors.New(SnapshotName_Error_MinLength)},
+		{name: `Error during getting VmRef`,
+			guest:    VmRef{vmId: 200},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+		{name: `Error during config read`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsError("/nodes/testNode/qemu/100/snapshot/snap1/config", mockServer.GET, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+	}
+	server, c := testMockServerInit(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server.Set(test.requests, t)
+			raw, err := c.New().Snapshot.ReadQemu(context.Background(), test.guest, test.snapName)
+			require.Equal(t, test.err, err)
+			if err == nil {
+				config, err := raw.Get(&test.guest)
+				require.NoError(t, err)
+				require.Equal(t, test.config, config)
+			}
+			server.Clear(t)
+		})
+	}
+}
+
+func Test_snapshotClient_Rollback(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		guest    VmRef
+		snapName SnapshotName
+		start    bool
+		requests []mockServer.Request
+		err      error
+	}{
+		{name: `Rollback false`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsPost("/nodes/testNode/qemu/100/snapshot/snap1/rollback", nil)},
+		{name: `Rollback true`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapName: SnapshotName("snap1"),
+			start:    true,
+			requests: mockServer.RequestsPost("/nodes/testNode/qemu/100/snapshot/snap1/rollback", map[string]any{"start": "1"})},
+		{name: `No VmRef node and vmType`,
+			guest:    VmRef{vmId: 200},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": float64(100), "node": "myNode", "type": "lxc"},
+					map[string]any{"vmid": float64(200), "node": "testNode", "type": "qemu"},
+					map[string]any{"vmid": float64(300), "node": "myNode", "type": "lxc"},
+				}}),
+				mockServer.RequestsPost("/nodes/testNode/qemu/200/snapshot/snap1/rollback", nil),
+			)},
+		{name: `Validate error`,
+			snapName: SnapshotName(""),
+			err:      errors.New(SnapshotName_Error_MinLength)},
+		{name: `Error during getting VmRef`,
+			guest:    VmRef{vmId: 200},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+		{name: `Error during Rollback`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsError("/nodes/testNode/qemu/100/snapshot/snap1/rollback", mockServer.POST, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+	}
+	server, c := testMockServerInit(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server.Set(test.requests, t)
+			err := c.New().Snapshot.Rollback(context.Background(), test.guest, test.snapName, test.start)
+			require.Equal(t, test.err, err)
+			server.Clear(t)
+		})
+	}
+}
+
+func Test_snapshotClient_Update(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		guest       VmRef
+		snapName    SnapshotName
+		description string
+		requests    []mockServer.Request
+		err         error
+	}{
+		{name: `Update description`,
+			guest:       VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapName:    SnapshotName("snap1"),
+			description: "update description" + body.Symbols,
+			requests: mockServer.RequestsPut("/nodes/testNode/qemu/100/snapshot/snap1/config",
+				map[string]any{"description": "update description" + body.Symbols})},
+		{name: `Update empty description`,
+			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsPut("/nodes/testNode/qemu/100/snapshot/snap1/config",
+				map[string]any{"description": ""})},
+		{name: `Minimal VmRef`,
+			guest:       VmRef{vmId: 200},
+			snapName:    SnapshotName("snap1"),
+			description: "update description",
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": float64(100), "node": "myNode", "type": "lxc"},
+					map[string]any{"vmid": float64(200), "node": "testNode", "type": "qemu"},
+					map[string]any{"vmid": float64(300), "node": "myNode", "type": "lxc"},
+				}}),
+				mockServer.RequestsPut("/nodes/testNode/qemu/200/snapshot/snap1/config",
+					map[string]any{"description": "update description"}),
+			)},
+		{name: `Validate error`,
+			snapName: SnapshotName(""),
+			err:      errors.New(SnapshotName_Error_MinLength)},
+		{name: `Error during getting VmRef`,
+			guest:    VmRef{vmId: 200},
+			snapName: SnapshotName("snap1"),
+			requests: mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
+			err:      errors.New(mockServer.InternalServerError)},
+		{name: `Error during Update`,
+			guest:       VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
+			snapName:    SnapshotName("snap1"),
+			description: "update description",
+			requests:    mockServer.RequestsError("/nodes/testNode/qemu/100/snapshot/snap1/config", mockServer.PUT, 500, 3),
+			err:         errors.New(mockServer.InternalServerError)},
+	}
+	server, c := testMockServerInit(t)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server.Set(test.requests, t)
+			err := c.New().Snapshot.Update(context.Background(), test.guest, test.snapName, test.description)
+			require.Equal(t, test.err, err)
+			server.Clear(t)
+		})
+	}
+}
+
 func Test_ConfigSnapshot_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input ConfigSnapshot
@@ -17,13 +704,11 @@ func Test_ConfigSnapshot_Validate(t *testing.T) {
 	}{
 		// Valid
 		{name: "Valid ConfigSnapshot",
-			input: ConfigSnapshot{Name: SnapshotName(test_data_snapshot.SnapshotName_Max_Legal())},
-		},
+			input: ConfigSnapshot{Name: SnapshotName(test_data_snapshot.SnapshotName_Max_Legal())}},
 		// Invalid
 		{name: "Invalid ConfigSnapshot",
 			input: ConfigSnapshot{Name: SnapshotName(test_data_snapshot.SnapshotName_Max_Illegal())},
-			err:   true,
-		},
+			err:   true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
@@ -36,207 +721,908 @@ func Test_ConfigSnapshot_Validate(t *testing.T) {
 	}
 }
 
-// TODO rename this test
-// Test the formatting logic to build the tree of snapshots
-func Test_FormatSnapshotsTree(t *testing.T) {
-	input := test_FormatSnapshots_Input()
-	output := test_FormatSnapshotsTree_Output()
-	for i, e := range input {
-		result, _ := json.Marshal(e.FormatSnapshotsTree())
-		require.JSONEq(t, output[i], string(result))
+func Test_RawSnapshots_AsArray(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		input  rawSnapshots
+		output []SnapshotInfo
+	}{
+		{name: `missing name, should never happen`,
+			input: rawSnapshots{
+				a: []any{map[string]any{
+					"description": "You are here!",
+				}}},
+			output: []SnapshotInfo{{Description: "You are here!"}}},
+		{name: `only current snapshot`,
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{
+						"name":        "current",
+						"description": "You are here!"}}},
+			output: []SnapshotInfo{
+				{Name: "current", Description: "You are here!"}}},
+		{name: `multiple snapshots`,
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{
+						"name":        "snap1",
+						"snaptime":    float64(1700000000),
+						"description": "First snapshot",
+						"vmstate":     float64(1)},
+					map[string]any{
+						"name":     "snap2",
+						"snaptime": float64(1700000100),
+						"parent":   "snap1",
+						"vmstate":  float64(0)},
+					map[string]any{
+						"name":        "current",
+						"description": "You are here!",
+						"parent":      "snap2"}}},
+			output: []SnapshotInfo{
+				{Name: "snap1",
+					Time:        util.Pointer(time.Unix(1700000000, 0)),
+					Description: "First snapshot", VmState: util.Pointer(true)},
+				{Name: "snap2",
+					Time:    util.Pointer(time.Unix(1700000100, 0)),
+					VmState: util.Pointer(false),
+					Parent:  util.Pointer(SnapshotName("snap1"))},
+				{Name: "current",
+					Description: "You are here!",
+					Parent:      util.Pointer(SnapshotName("snap2"))}}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			array := RawSnapshots(&test.input).AsArray()
+			require.NotNil(t, array)
+			for i, snap := range test.output {
+				require.Equal(t, snap, array[i].Get())
+			}
+		})
 	}
 }
 
-// TODO rename this test
-// Test the formatting logic to build the list of snapshots
-func Test_FormatSnapshotsList(t *testing.T) {
-	input := test_FormatSnapshots_Input()
-	output := test_FormatSnapshotsList_Output()
-	for i, e := range input {
-		result, _ := json.Marshal(e.FormatSnapshotsList())
-		require.JSONEq(t, output[i], string(result))
+func Test_RawSnapshots_Iter(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		input  rawSnapshots
+		output []SnapshotName
+	}{
+		{name: `Empty`,
+			input:  rawSnapshots{a: []any{}},
+			output: nil},
+		{name: `One snapshot`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+			}},
+			output: []SnapshotName{"snap1"}},
+		{name: `Multiple snapshots`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+			}},
+			output: []SnapshotName{"snap1", "snap2", "snap3"}},
+		{name: `Snapshots with full data`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "snapshot1",
+					"description": "First snapshot",
+					"snaptime":    float64(1609459200),
+					"vmstate":     float64(1),
+				},
+				map[string]any{
+					"name":        "snapshot2",
+					"description": "Second snapshot",
+					"snaptime":    float64(1609545600),
+					"parent":      "snapshot1",
+				},
+			}},
+			output: []SnapshotName{"snapshot1", "snapshot2"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			var names []SnapshotName
+			for info := range RawSnapshots(&test.input).Iter() {
+				names = append(names, info.GetName())
+			}
+			require.Equal(t, test.output, names)
+		})
+	}
+	// Test early termination
+	t.Run("Early termination", func(*testing.T) {
+		input := rawSnapshots{a: []any{
+			map[string]any{"name": "snap1"},
+			map[string]any{"name": "snap2"},
+			map[string]any{"name": "snap3"},
+		}}
+		count := 0
+		for range RawSnapshots(&input).Iter() {
+			count++
+			if count == 2 {
+				break
+			}
+		}
+		require.Equal(t, 2, count)
+	})
+}
+
+func Test_RawSnapshots_Len(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		input  rawSnapshots
+		output int
+	}{
+		{name: `Empty`,
+			input:  rawSnapshots{a: []any{}},
+			output: 0},
+		{name: `One snapshot`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+			}},
+			output: 1},
+		{name: `Multiple snapshots`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+			}},
+			output: 3},
+		{name: `Many snapshots`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+				map[string]any{"name": "snap4"},
+				map[string]any{"name": "snap5"},
+				map[string]any{"name": "snap6"},
+				map[string]any{"name": "snap7"},
+				map[string]any{"name": "snap8"},
+				map[string]any{"name": "snap9"},
+				map[string]any{"name": "snap10"},
+			}},
+			output: 10},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, RawSnapshots(&test.input).Len())
+		})
 	}
 }
 
-func test_FormatSnapshots_Input() []rawSnapshots {
-	return []rawSnapshots{{map[string]interface{}{
-		"name":        "aa",
-		"snaptime":    float64(1666361849),
-		"description": "",
-		"parent":      "",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aaa",
-		"snaptime":    float64(1666361866),
-		"description": "",
-		"parent":      "aa",
-		"vmstate":     float64(1),
-	}, map[string]interface{}{
-		"name":        "aaaa",
-		"snaptime":    float64(1666362071),
-		"description": "123456",
-		"parent":      "aaa",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aaab",
-		"snaptime":    float64(1666362062),
-		"description": "",
-		"parent":      "aaa",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aaac",
-		"snaptime":    float64(1666361873),
-		"description": "",
-		"parent":      "aaa",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aaad",
-		"snaptime":    float64(1666361937),
-		"description": "abcdefg",
-		"parent":      "aaa",
-		"vmstate":     float64(1),
-	}, map[string]interface{}{
-		"name":        "aaae",
-		"snaptime":    float64(1666362084),
-		"description": "",
-		"parent":      "aaa",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "current",
-		"description": "You are here!",
-		"parent":      "aaae",
-	}, map[string]interface{}{
-		"name":        "aab",
-		"snaptime":    float64(1666361920),
-		"description": "",
-		"parent":      "aa",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aaba",
-		"snaptime":    float64(1666361952),
-		"description": "",
-		"parent":      "aab",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aabaa",
-		"snaptime":    float64(1666361960),
-		"description": "",
-		"parent":      "aaba",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aac",
-		"snaptime":    float64(1666361896),
-		"description": "",
-		"parent":      "aa",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aaca",
-		"snaptime":    float64(1666361988),
-		"description": "!@#()&",
-		"parent":      "aac",
-		"vmstate":     float64(1),
-	}, map[string]interface{}{
-		"name":        "aacaa",
-		"snaptime":    float64(1666362006),
-		"description": "",
-		"parent":      "aaca",
-		"vmstate":     float64(1),
-	}, map[string]interface{}{
-		"name":        "aacb",
-		"snaptime":    float64(1666361977),
-		"description": "",
-		"parent":      "aac",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aacba",
-		"snaptime":    float64(1666362021),
-		"description": "QWERTY",
-		"parent":      "aacb",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aacc",
-		"snaptime":    float64(1666361904),
-		"description": "",
-		"parent":      "aac",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "aacca",
-		"snaptime":    float64(1666361910),
-		"description": "",
-		"parent":      "aacc",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "bb",
-		"snaptime":    float64(1666361866),
-		"description": "aA1!",
-		"parent":      "",
-		"vmstate":     float64(1),
-	}, map[string]interface{}{
-		"name":        "bba",
-		"snaptime":    float64(1666362071),
-		"description": "",
-		"parent":      "bb",
-		"vmstate":     float64(0),
-	}, map[string]interface{}{
-		"name":        "bbb",
-		"snaptime":    float64(1666362062),
-		"description": "",
-		"parent":      "bb",
-		"vmstate":     float64(0),
-	}}}
+func Test_RawSnapshots_SelectSnapshot(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    rawSnapshots
+		snapshot SnapshotName
+		exists   bool
+		output   RawSnapshotInfo
+	}{
+		{name: `Empty list`,
+			input:    rawSnapshots{a: []any{}},
+			snapshot: SnapshotName("snap1")},
+		{name: `Single snapshot - found`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "snap1",
+					"description": "First snapshot",
+					"snaptime":    float64(1700000000)},
+			}},
+			snapshot: SnapshotName("snap1"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "snap1",
+				"description": "First snapshot",
+				"snaptime":    float64(1700000000)}}},
+		{name: `Single snapshot - not found`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+			}},
+			snapshot: SnapshotName("snap2")},
+		{name: `Multiple snapshots - found first`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "snap1",
+					"description": "First snapshot",
+					"snaptime":    float64(1700000000)},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+			}},
+			snapshot: SnapshotName("snap1"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "snap1",
+				"description": "First snapshot",
+				"snaptime":    float64(1700000000)}}},
+		{name: `Multiple snapshots - found middle`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{
+					"name":        "snap2",
+					"description": "Middle snapshot",
+					"snaptime":    float64(1700000100),
+					"vmstate":     float64(1)},
+				map[string]any{"name": "snap3"},
+			}},
+			snapshot: SnapshotName("snap2"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "snap2",
+				"description": "Middle snapshot",
+				"snaptime":    float64(1700000100),
+				"vmstate":     float64(1)}}},
+		{name: `Multiple snapshots - found last`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{
+					"name":        "snap3",
+					"description": "Last snapshot",
+					"snaptime":    float64(1700000200),
+					"parent":      "snap2"},
+			}},
+			snapshot: SnapshotName("snap3"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "snap3",
+				"description": "Last snapshot",
+				"snaptime":    float64(1700000200),
+				"parent":      "snap2"}}},
+		{name: `Multiple snapshots - not found`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+			}},
+			snapshot: SnapshotName("snap4")},
+		{name: `Current snapshot`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{
+					"name":        "current",
+					"description": "You are here!",
+					"parent":      "snap1"},
+			}},
+			snapshot: SnapshotName("current"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "current",
+				"description": "You are here!",
+				"parent":      "snap1"}}},
+		{name: `Snapshot with all fields`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "full-snap",
+					"description": "Complete snapshot" + body.Symbols,
+					"snaptime":    float64(1700000300),
+					"vmstate":     float64(1),
+					"parent":      "previous-snap"},
+			}},
+			snapshot: SnapshotName("full-snap"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "full-snap",
+				"description": "Complete snapshot" + body.Symbols,
+				"snaptime":    float64(1700000300),
+				"vmstate":     float64(1),
+				"parent":      "previous-snap"}}},
+		{name: `Many snapshots - found`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "snap1"},
+				map[string]any{"name": "snap2"},
+				map[string]any{"name": "snap3"},
+				map[string]any{"name": "snap4"},
+				map[string]any{"name": "snap5"},
+				map[string]any{
+					"name":        "target-snap",
+					"description": "Target snapshot",
+					"snaptime":    float64(1700001000)},
+				map[string]any{"name": "snap7"},
+				map[string]any{"name": "snap8"},
+				map[string]any{"name": "snap9"},
+				map[string]any{"name": "snap10"},
+			}},
+			snapshot: SnapshotName("target-snap"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "target-snap",
+				"description": "Target snapshot",
+				"snaptime":    float64(1700001000)}}},
+		{name: `Snapshot with vmstate 0`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":     "no-vmstate",
+					"vmstate":  float64(0),
+					"snaptime": float64(1700000400)},
+			}},
+			snapshot: SnapshotName("no-vmstate"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":     "no-vmstate",
+				"vmstate":  float64(0),
+				"snaptime": float64(1700000400)}}},
+		{name: `Snapshot with special characters in name`,
+			input: rawSnapshots{a: []any{
+				map[string]any{
+					"name":        "Test_Case-123_456_789_0",
+					"description": "Special chars in name"},
+			}},
+			snapshot: SnapshotName("Test_Case-123_456_789_0"),
+			exists:   true,
+			output: &rawSnapshotInfo{a: map[string]any{
+				"name":        "Test_Case-123_456_789_0",
+				"description": "Special chars in name"}}},
+		{name: `Case sensitive - exact match`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "MySnap"},
+				map[string]any{"name": "mysnap"},
+			}},
+			snapshot: SnapshotName("MySnap"),
+			exists:   true,
+			output:   &rawSnapshotInfo{a: map[string]any{"name": "MySnap"}}},
+		{name: `Case sensitive - no match`,
+			input: rawSnapshots{a: []any{
+				map[string]any{"name": "MySnap"},
+			}},
+			snapshot: SnapshotName("mysnap")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			output, exists := RawSnapshots(&test.input).SelectSnapshot(test.snapshot)
+			require.Equal(t, test.exists, exists)
+			require.Equal(t, test.output, output)
+		})
+	}
 }
 
-func test_FormatSnapshotsTree_Output() []string {
-	return []string{`[{
-		"name":"aa","time":1666361849,"children":[{
-			"name":"aaa","time":1666361866,"ram":true,"children":[{
-				"name":"aaaa","time":1666362071,"description":"123456"},{
-				"name":"aaab","time":1666362062},{
-				"name":"aaac","time":1666361873},{
-				"name":"aaad","time":1666361937,"description":"abcdefg","ram":true},{
-				"name":"aaae","time":1666362084,"children":[{
-					"name":"current","description":"You are here!"}]}]},{
-			"name":"aab","time":1666361920,"children":[{
-				"name":"aaba","time":1666361952,"children":[{
-					"name":"aabaa","time":1666361960}]}]},{
-			"name":"aac","time":1666361896,"children":[{
-				"name":"aaca","time":1666361988,"description":"!@#()\u0026","ram":true,"children":[{
-					"name":"aacaa","time":1666362006,"ram":true}]},{
-				"name":"aacb","time":1666361977,"children":[{
-					"name":"aacba","time":1666362021,"description":"QWERTY"}]},{
-				"name":"aacc","time":1666361904,"children":[{
-					"name":"aacca","time":1666361910}]}]}]},{
-		"name":"bb","time":1666361866,"description":"aA1!","ram":true,"children":[{
-			"name":"bba","time":1666362071},{
-			"name":"bbb","time":1666362062}]}]`}
+func test_RawSnapshotTree_Current_and_Root_data() []struct {
+	name    string
+	input   rawSnapshots
+	current *Snapshot
+	root    []*Snapshot
+} {
+	// Helpers
+	root := func(roots []string, snapshots map[string]*Snapshot) []*Snapshot {
+		rootSnapshots := make([]*Snapshot, len(roots))
+		for i := range roots {
+			rootSnapshots[i] = snapshots[roots[i]]
+		}
+		return rootSnapshots
+	}
+	current := func(snapshots map[string]*Snapshot) *Snapshot { return snapshots["current"] }
+
+	// Datasets
+	single_chain_of_5_snapshots := func() map[string]*Snapshot {
+		// root1 → a → b → c → current
+		snaps := map[string]*Snapshot{
+			"root1":   {Name: "root1", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"a":       {Name: "a", Time: util.Pointer(time.Unix(1700000100, 0)), Description: "This is snap2"},
+			"b":       {Name: "b", Time: util.Pointer(time.Unix(1700000200, 0))},
+			"c":       {Name: "c", Time: util.Pointer(time.Unix(1700000300, 0))},
+			"current": {Name: "current", Description: "You are here!"}}
+		snaps["root1"].Children = []*Snapshot{snaps["a"]}
+		snaps["a"].Parent = snaps["root1"]
+		snaps["a"].Children = []*Snapshot{snaps["b"]}
+		snaps["b"].Parent = snaps["a"]
+		snaps["b"].Children = []*Snapshot{snaps["c"]}
+		snaps["c"].Parent = snaps["b"]
+		snaps["c"].Children = []*Snapshot{snaps["current"]}
+		snaps["current"].Parent = snaps["c"]
+		return snaps
+	}
+
+	single_chain_of_25_snapshots := func() map[string]*Snapshot {
+		// root1 → snap1 → snap2 → ... → snap23 → current
+		snaps := map[string]*Snapshot{
+			"root1":   {Name: "root1", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"current": {Name: "current", Description: "You are here!"}}
+		for i := 1; i <= 23; i++ {
+			snapName := fmt.Sprintf("snap%d", i)
+			snaps[snapName] = &Snapshot{Name: SnapshotName(snapName), Time: util.Pointer(time.Unix(1700000000+int64(i*100), 0))}
+		}
+
+		// Build relationships
+		snaps["root1"].Children = []*Snapshot{snaps["snap1"]}
+		snaps["snap1"].Parent = snaps["root1"]
+		for i := 1; i <= len(snaps)-3; i++ {
+			snapName := fmt.Sprintf("snap%d", i)
+			nextSnapName := fmt.Sprintf("snap%d", i+1)
+			snaps[snapName].Children = []*Snapshot{snaps[nextSnapName]}
+			snaps[nextSnapName].Parent = snaps[snapName]
+		}
+		snaps["snap23"].Children = []*Snapshot{snaps["current"]}
+		snaps["current"].Parent = snaps["snap23"]
+
+		return snaps
+	}
+
+	wide_25_snapshots := func() map[string]*Snapshot {
+		// root1
+		// ├─ snap1
+		// ├─ snap2
+		// ├─ snap3
+		// ...
+		// ├─ snap24
+		// └─ current
+		snaps := map[string]*Snapshot{
+			"root1":   {Name: "root1", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"current": {Name: "current", Description: "You are here!"}}
+		for i := 1; i <= 3; i++ {
+			snapName := fmt.Sprintf("snap%d", i)
+			snaps[snapName] = &Snapshot{Name: SnapshotName(snapName), Time: util.Pointer(time.Unix(1700000000+int64(i*100), 0))}
+		}
+
+		// Build relationships
+		children := make([]*Snapshot, 0, len(snaps)-2)
+		for i := 1; i <= len(snaps)-2; i++ {
+			snapName := fmt.Sprintf("snap%d", i)
+			children = append(children, snaps[snapName])
+			snaps[snapName].Parent = snaps["root1"]
+		}
+		children = append(children, snaps["current"])
+		snaps["current"].Parent = snaps["root1"]
+		snaps["root1"].Children = children
+
+		return snaps
+	}
+
+	multiple_root_snapshots_trees := func() map[string]*Snapshot {
+		// root1
+		// ├─ 1a
+		// │  ├─ 1aa
+		// │  │  ├─ 1aaa
+		// │  │  ├─ 1aab
+		// │  │  │  └─ 1aaba
+		// │  │  └─ 1aac
+		// │  │     └─ current
+		// │  ├─ 1ab
+		// │  │  └─ 1aba
+		// │  └─ 1ac
+		// ├─ 1b
+		// │  ├─ 1ba
+		// │  │  └─ 1bab
+		// │  ├─ 1bb
+		// │  │  └─ 1bba
+		// │  └─ 1bc
+		// ├─ 1b
+		// │  └─ 1ba
+		// └─ 1c
+		// root2
+		// ├─ 2a
+		// │  └─ 2aa
+		// └─ 2c
+		// root3
+		// └─ 3a
+
+		snaps := map[string]*Snapshot{
+			"root1":   {Name: "root1", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"1a":      {Name: "1a", Time: util.Pointer(time.Unix(1700000100, 0))},
+			"1aa":     {Name: "1aa", Time: util.Pointer(time.Unix(1700000200, 0))},
+			"1aaa":    {Name: "1aaa", Time: util.Pointer(time.Unix(1700000300, 0))},
+			"1aab":    {Name: "1aab", Time: util.Pointer(time.Unix(1700000400, 0))},
+			"1aaba":   {Name: "1aaba", Time: util.Pointer(time.Unix(1700000500, 0))},
+			"1aac":    {Name: "1aac", Time: util.Pointer(time.Unix(1700000600, 0))},
+			"1ab":     {Name: "1ab", Time: util.Pointer(time.Unix(1700000700, 0)), VmState: util.Pointer(true)},
+			"1aba":    {Name: "1aba", Time: util.Pointer(time.Unix(1700000800, 0))},
+			"1ac":     {Name: "1ac", Time: util.Pointer(time.Unix(1700000900, 0))},
+			"1b":      {Name: "1b", Time: util.Pointer(time.Unix(1700001000, 0))},
+			"1ba":     {Name: "1ba", Time: util.Pointer(time.Unix(1700001100, 0))},
+			"1bab":    {Name: "1bab", Time: util.Pointer(time.Unix(1700001200, 0))},
+			"1bb":     {Name: "1bb", Time: util.Pointer(time.Unix(1700001300, 0))},
+			"1bba":    {Name: "1bba", Time: util.Pointer(time.Unix(1700001400, 0))},
+			"1bc":     {Name: "1bc", Time: util.Pointer(time.Unix(1700001500, 0))},
+			"1c":      {Name: "1c", Time: util.Pointer(time.Unix(1700001600, 0))},
+			"root2":   {Name: "root2", Time: util.Pointer(time.Unix(1700002000, 0)), VmState: util.Pointer(true)},
+			"2a":      {Name: "2a", Time: util.Pointer(time.Unix(1700002100, 0))},
+			"2aa":     {Name: "2aa", Time: util.Pointer(time.Unix(1700002200, 0))},
+			"2c":      {Name: "2c", Time: util.Pointer(time.Unix(1700002300, 0))},
+			"root3":   {Name: "root3", Time: util.Pointer(time.Unix(1700003000, 0))},
+			"3a":      {Name: "3a", Time: util.Pointer(time.Unix(1700003100, 0))},
+			"current": {Name: "current", Description: "You are here!"}}
+		// Build relationships
+		snaps["root1"].Children = []*Snapshot{snaps["1a"], snaps["1b"], snaps["1c"]}
+		snaps["1a"].Parent = snaps["root1"]
+		snaps["1a"].Children = []*Snapshot{snaps["1aa"], snaps["1ab"], snaps["1ac"]}
+		snaps["1aa"].Parent = snaps["1a"]
+		snaps["1aa"].Children = []*Snapshot{snaps["1aaa"], snaps["1aab"], snaps["1aac"]}
+		snaps["1aaa"].Parent = snaps["1aa"]
+		snaps["1aab"].Parent = snaps["1aa"]
+		snaps["1aab"].Children = []*Snapshot{snaps["1aaba"]}
+		snaps["1aaba"].Parent = snaps["1aab"]
+		snaps["1aac"].Parent = snaps["1aa"]
+		snaps["1aac"].Children = []*Snapshot{snaps["current"]}
+		snaps["current"].Parent = snaps["1aac"]
+		snaps["1ab"].Parent = snaps["1a"]
+		snaps["1ab"].Children = []*Snapshot{snaps["1aba"]}
+		snaps["1aba"].Parent = snaps["1ab"]
+		snaps["1ac"].Parent = snaps["1a"]
+		snaps["1b"].Parent = snaps["root1"]
+		snaps["1b"].Children = []*Snapshot{snaps["1ba"], snaps["1bb"], snaps["1bc"]}
+		snaps["1ba"].Parent = snaps["1b"]
+		snaps["1ba"].Children = []*Snapshot{snaps["1bab"]}
+		snaps["1bab"].Parent = snaps["1ba"]
+		snaps["1bb"].Parent = snaps["1b"]
+		snaps["1bb"].Children = []*Snapshot{snaps["1bba"]}
+		snaps["1bba"].Parent = snaps["1bb"]
+		snaps["1bc"].Parent = snaps["1b"]
+		snaps["1c"].Parent = snaps["root1"]
+
+		snaps["root2"].Children = []*Snapshot{snaps["2a"], snaps["2c"]}
+		snaps["2a"].Parent = snaps["root2"]
+		snaps["2a"].Children = []*Snapshot{snaps["2aa"]}
+		snaps["2aa"].Parent = snaps["2a"]
+		snaps["2c"].Parent = snaps["root2"]
+
+		snaps["root3"].Children = []*Snapshot{snaps["3a"]}
+		snaps["3a"].Parent = snaps["root3"]
+
+		return snaps
+	}
+
+	roots_with_same_time := func() map[string]*Snapshot {
+		return map[string]*Snapshot{
+			"root1":   {Name: "root1", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"root2":   {Name: "root2", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"rOOt2":   {Name: "rOOt2", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"root222": {Name: "root222", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"rOot222": {Name: "rOot222", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"current": {Name: "current", Description: "You are here!"}}
+	}
+
+	children_with_same_time := func() map[string]*Snapshot {
+		snaps := map[string]*Snapshot{
+			"root1":   {Name: "root1", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"snap1":   {Name: "snap1", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"snap2":   {Name: "snap2", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"sNAp2":   {Name: "sNAp2", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"snap222": {Name: "snap222", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"sNap222": {Name: "sNap222", Time: util.Pointer(time.Unix(1700000000, 0))},
+			"current": {Name: "current", Description: "You are here!"}}
+		snaps["current"].Parent = snaps["root1"]
+		snaps["snap1"].Parent = snaps["root1"]
+		snaps["snap2"].Parent = snaps["root1"]
+		snaps["sNAp2"].Parent = snaps["root1"]
+		snaps["snap222"].Parent = snaps["root1"]
+		snaps["sNap222"].Parent = snaps["root1"]
+		snaps["root1"].Children = []*Snapshot{
+			snaps["sNAp2"],
+			snaps["sNap222"],
+			snaps["snap1"],
+			snaps["snap2"],
+			snaps["snap222"],
+			snaps["current"],
+		}
+
+		return snaps
+	}
+
+	return []struct {
+		name    string
+		input   rawSnapshots
+		current *Snapshot
+		root    []*Snapshot
+	}{
+		{name: "Single current snapshot",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "current", "description": "You are here!"}}},
+			current: &Snapshot{Name: "current", Description: "You are here!"},
+			root: []*Snapshot{
+				util.Pointer(Snapshot{
+					Name:        "current",
+					Description: "You are here!",
+				})}},
+		{name: "single chain of 5 snapshots",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "a", "snaptime": float64(1700000100), "parent": "root1", "description": "This is snap2"},
+					map[string]any{"name": "b", "snaptime": float64(1700000200), "parent": "a"},
+					map[string]any{"name": "c", "snaptime": float64(1700000300), "parent": "b"},
+					map[string]any{"name": "current", "parent": "c", "description": "You are here!"},
+				}},
+			root:    root([]string{"root1"}, single_chain_of_5_snapshots()),
+			current: current(single_chain_of_5_snapshots())},
+		{name: "single chain of 25 snapshots",
+			input: rawSnapshots{
+				a: func() []any {
+					snaps := []any{
+						map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					}
+					for i := 1; i <= 23; i++ {
+						snapName := fmt.Sprintf("snap%d", i)
+						snaps = append(snaps, map[string]any{
+							"name":     snapName,
+							"snaptime": float64(1700000000 + i*100),
+							"parent": func() string {
+								if i == 1 {
+									return "root1"
+								}
+								return fmt.Sprintf("snap%d", i-1)
+							}(),
+						})
+					}
+					snaps = append(snaps, map[string]any{
+						"name":        "current",
+						"parent":      "snap23",
+						"description": "You are here!",
+					})
+					return snaps
+				}(),
+			},
+			root:    root([]string{"root1"}, single_chain_of_25_snapshots()),
+			current: current(single_chain_of_25_snapshots())},
+		{name: "wide 25 snapshots",
+			input: rawSnapshots{
+				a: func() []any {
+					snaps := []any{
+						map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					}
+					for i := 1; i <= 3; i++ {
+						snapName := fmt.Sprintf("snap%d", i)
+						snaps = append(snaps, map[string]any{
+							"name":     snapName,
+							"snaptime": float64(1700000000 + i*100),
+							"parent":   "root1",
+						})
+					}
+					return append(snaps, map[string]any{
+						"name":        "current",
+						"parent":      "root1",
+						"description": "You are here!",
+					})
+				}(),
+			},
+			root:    root([]string{"root1"}, wide_25_snapshots()),
+			current: current(wide_25_snapshots())},
+		{name: "Multiple root snapshots trees",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "1aaba", "snaptime": float64(1700000500), "parent": "1aab"},
+					map[string]any{"name": "1aa", "snaptime": float64(1700000200), "parent": "1a"},
+					map[string]any{"name": "1aab", "snaptime": float64(1700000400), "parent": "1aa"},
+					map[string]any{"name": "1aaa", "snaptime": float64(1700000300), "parent": "1aa"},
+					map[string]any{"name": "1bb", "snaptime": float64(1700001300), "parent": "1b"},
+					map[string]any{"name": "1aac", "snaptime": float64(1700000600), "parent": "1aa"},
+					map[string]any{"name": "1ac", "snaptime": float64(1700000900), "parent": "1a"},
+					map[string]any{"name": "1ab", "snaptime": float64(1700000700), "parent": "1a", "vmstate": float64(1)},
+					map[string]any{"name": "1aba", "snaptime": float64(1700000800), "parent": "1ab"},
+					map[string]any{"name": "1bba", "snaptime": float64(1700001400), "parent": "1bb"},
+					map[string]any{"name": "1ba", "snaptime": float64(1700001100), "parent": "1b"},
+					map[string]any{"name": "1bab", "snaptime": float64(1700001200), "parent": "1ba"},
+					map[string]any{"name": "root3", "snaptime": float64(1700003000)},
+					map[string]any{"name": "1bc", "snaptime": float64(1700001500), "parent": "1b"},
+					map[string]any{"name": "1b", "snaptime": float64(1700001000), "parent": "root1"},
+					map[string]any{"name": "1a", "snaptime": float64(1700000100), "parent": "root1"},
+					map[string]any{"name": "1c", "snaptime": float64(1700001600), "parent": "root1"},
+					map[string]any{"name": "current", "parent": "1aac", "description": "You are here!"},
+					map[string]any{"name": "root2", "snaptime": float64(1700002000), "vmstate": float64(1)},
+					map[string]any{"name": "2a", "snaptime": float64(1700002100), "parent": "root2"},
+					map[string]any{"name": "2aa", "snaptime": float64(1700002200), "parent": "2a"},
+					map[string]any{"name": "2c", "snaptime": float64(1700002300), "parent": "root2"},
+					map[string]any{"name": "3a", "snaptime": float64(1700003100), "parent": "root3"},
+				}},
+			root:    root([]string{"root1", "root2", "root3"}, multiple_root_snapshots_trees()),
+			current: current(multiple_root_snapshots_trees())},
+		{name: `Edgecase roots with same snaptime`,
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "current", "description": "You are here!"},
+					map[string]any{"name": "root2", "snaptime": float64(1700000000)},
+					map[string]any{"name": "root222", "snaptime": float64(1700000000)},
+					map[string]any{"name": "rOot222", "snaptime": float64(1700000000)},
+					map[string]any{"name": "rOOt2", "snaptime": float64(1700000000)},
+				}},
+			root:    root([]string{"rOOt2", "rOot222", "root1", "root2", "root222", "current"}, roots_with_same_time()),
+			current: current(roots_with_same_time())},
+		{name: `Edgecase children with same snaptime`,
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "sNAp2", "parent": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "current", "parent": "root1", "description": "You are here!"},
+					map[string]any{"name": "sNap222", "parent": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "snap1", "parent": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "snap222", "parent": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "snap2", "parent": "root1", "snaptime": float64(1700000000)},
+				}},
+			root:    root([]string{"root1"}, children_with_same_time()),
+			current: current(children_with_same_time())},
+	}
 }
 
-func test_FormatSnapshotsList_Output() []string {
-	return []string{`[{
-		"name":"aa","time":1666361849},{
-		"name":"aaa","time":1666361866,"ram":true,"parent":"aa"},{
-		"name":"aaaa","time":1666362071,"description":"123456","parent":"aaa"},{
-		"name":"aaab","time":1666362062,"parent":"aaa"},{
-		"name":"aaac","time":1666361873,"parent":"aaa"},{
-		"name":"aaad","time":1666361937,"description":"abcdefg","ram":true,"parent":"aaa"},{
-		"name":"aaae","time":1666362084,"parent":"aaa"},{
-		"name":"current","description":"You are here!","parent":"aaae"},{
-		"name":"aab","time":1666361920,"parent":"aa"},{
-		"name":"aaba","time":1666361952,"parent":"aab"},{
-		"name":"aabaa","time":1666361960,"parent":"aaba"},{
-		"name":"aac","time":1666361896,"parent":"aa"},{
-		"name":"aaca","time":1666361988,"description":"!@#()\u0026","ram":true,"parent":"aac"},{
-		"name":"aacaa","time":1666362006,"ram":true,"parent":"aaca"},{
-		"name":"aacb","time":1666361977,"parent":"aac"},{
-		"name":"aacba","time":1666362021,"description":"QWERTY","parent":"aacb"},{
-		"name":"aacc","time":1666361904,"parent":"aac"},{
-		"name":"aacca","time":1666361910,"parent":"aacc"},{
-		"name":"bb","time":1666361866,"description":"aA1!","ram":true},{
-		"name":"bba","time":1666362071,"parent":"bb"},{
-		"name":"bbb","time":1666362062,"parent":"bb"}]`}
+func Test_RawSnapshotTree_Current_and_Root(t *testing.T) {
+	t.Parallel()
+	tests := test_RawSnapshotTree_Current_and_Root_data()
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			tree := RawSnapshots(&test.input).Tree()
+			require.NotNil(t, tree)
+			require.Equal(t, test.current, tree.Current())
+			require.Equal(t, test.root, tree.Root())
+		})
+	}
+}
+
+func Benchmark_RawSnapshotTree_Current_and_Root(b *testing.B) {
+	tests := test_RawSnapshotTree_Current_and_Root_data()
+	b.ResetTimer()
+	var result RawSnapshotTree
+	for i := 0; i < b.N; i++ {
+		for _, test := range tests {
+			result = RawSnapshots(&test.input).Tree()
+		}
+	}
+	if result == nil {
+		b.Fatal("unexpected nil")
+	}
+}
+
+func Test_RawSnapshotTree_Walk(t *testing.T) {
+	t.Parallel()
+
+	// Helper to collect snapshot names in order
+	collect := func(tree RawSnapshotTree) []SnapshotName {
+		var names []SnapshotName
+		tree.Walk(func(s *Snapshot) bool {
+			names = append(names, s.Name)
+			return true
+		})
+		return names
+	}
+
+	// Helper to collect names until condition met
+	collectUntil := func(tree RawSnapshotTree, stopAt SnapshotName) []SnapshotName {
+		var names []SnapshotName
+		tree.Walk(func(s *Snapshot) bool {
+			names = append(names, s.Name)
+			return s.Name != stopAt
+		})
+		return names
+	}
+
+	tests := []struct {
+		name            string
+		input           rawSnapshots
+		expectedOrder   []SnapshotName
+		stopAt          SnapshotName
+		expectedStopped []SnapshotName
+	}{
+		{name: "Single current snapshot",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "current", "description": "You are here!"}}},
+			expectedOrder: []SnapshotName{"current"}},
+		{name: "Single chain of 5 snapshots",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "a", "snaptime": float64(1700000100), "parent": "root1"},
+					map[string]any{"name": "b", "snaptime": float64(1700000200), "parent": "a"},
+					map[string]any{"name": "c", "snaptime": float64(1700000300), "parent": "b"},
+					map[string]any{"name": "current", "parent": "c", "description": "You are here!"},
+				}},
+			expectedOrder:   []SnapshotName{"root1", "a", "b", "c", "current"},
+			stopAt:          "b",
+			expectedStopped: []SnapshotName{"root1", "a", "b"}},
+		{name: "Wide tree with multiple children",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "snap1", "snaptime": float64(1700000100), "parent": "root1"},
+					map[string]any{"name": "snap2", "snaptime": float64(1700000200), "parent": "root1"},
+					map[string]any{"name": "snap3", "snaptime": float64(1700000300), "parent": "root1"},
+					map[string]any{"name": "current", "parent": "root1", "description": "You are here!"},
+				}},
+			expectedOrder:   []SnapshotName{"root1", "snap1", "snap2", "snap3", "current"},
+			stopAt:          "snap2",
+			expectedStopped: []SnapshotName{"root1", "snap1", "snap2"}},
+		{name: "Multiple root snapshots trees",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "1a", "snaptime": float64(1700000100), "parent": "root1"},
+					map[string]any{"name": "1aa", "snaptime": float64(1700000200), "parent": "1a"},
+					map[string]any{"name": "1aaa", "snaptime": float64(1700000300), "parent": "1aa"},
+					map[string]any{"name": "1aab", "snaptime": float64(1700000400), "parent": "1aa"},
+					map[string]any{"name": "1aaba", "snaptime": float64(1700000500), "parent": "1aab"},
+					map[string]any{"name": "1aac", "snaptime": float64(1700000600), "parent": "1aa"},
+					map[string]any{"name": "1ab", "snaptime": float64(1700000700), "parent": "1a"},
+					map[string]any{"name": "1aba", "snaptime": float64(1700000800), "parent": "1ab"},
+					map[string]any{"name": "1ac", "snaptime": float64(1700000900), "parent": "1a"},
+					map[string]any{"name": "1b", "snaptime": float64(1700001000), "parent": "root1"},
+					map[string]any{"name": "1ba", "snaptime": float64(1700001100), "parent": "1b"},
+					map[string]any{"name": "1bab", "snaptime": float64(1700001200), "parent": "1ba"},
+					map[string]any{"name": "1bb", "snaptime": float64(1700001300), "parent": "1b"},
+					map[string]any{"name": "1bba", "snaptime": float64(1700001400), "parent": "1bb"},
+					map[string]any{"name": "1bc", "snaptime": float64(1700001500), "parent": "1b"},
+					map[string]any{"name": "1c", "snaptime": float64(1700001600), "parent": "root1"},
+					map[string]any{"name": "root2", "snaptime": float64(1700002000)},
+					map[string]any{"name": "2a", "snaptime": float64(1700002100), "parent": "root2"},
+					map[string]any{"name": "2aa", "snaptime": float64(1700002200), "parent": "2a"},
+					map[string]any{"name": "2c", "snaptime": float64(1700002300), "parent": "root2"},
+					map[string]any{"name": "root3", "snaptime": float64(1700003000)},
+					map[string]any{"name": "3a", "snaptime": float64(1700003100), "parent": "root3"},
+					map[string]any{"name": "current", "parent": "1aac", "description": "You are here!"},
+				}},
+			expectedOrder: []SnapshotName{
+				// First root tree (depth-first, oldest to newest children)
+				"root1", "1a", "1aa", "1aaa", "1aab", "1aaba", "1aac", "current", "1ab", "1aba", "1ac", "1b", "1ba", "1bab", "1bb", "1bba", "1bc", "1c",
+				// Second root tree
+				"root2", "2a", "2aa", "2c",
+				// Third root tree
+				"root3", "3a"},
+			stopAt: "1ab",
+			expectedStopped: []SnapshotName{
+				"root1", "1a", "1aa", "1aaa", "1aab", "1aaba", "1aac", "current", "1ab"}},
+		{name: "Stop at first snapshot",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "a", "snaptime": float64(1700000100), "parent": "root1"},
+					map[string]any{"name": "b", "snaptime": float64(1700000200), "parent": "a"},
+					map[string]any{"name": "current", "description": "You are here!", "parent": "a"},
+				}},
+			expectedOrder:   []SnapshotName{"root1", "a", "b", "current"},
+			stopAt:          "root1",
+			expectedStopped: []SnapshotName{"root1"}},
+		{name: "Children with same snaptime ordered by name",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "snap1", "parent": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "snap2", "parent": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "sNAp2", "parent": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "current", "parent": "root1", "description": "You are here!"},
+				}},
+			expectedOrder: []SnapshotName{"root1", "sNAp2", "snap1", "snap2", "current"}},
+		{name: "Multiple roots with same snaptime ordered by name",
+			input: rawSnapshots{
+				a: []any{
+					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+					map[string]any{"name": "root2", "snaptime": float64(1700000000)},
+					map[string]any{"name": "rOOt2", "snaptime": float64(1700000000)},
+					map[string]any{"name": "current", "description": "You are here!"},
+				}},
+			expectedOrder: []SnapshotName{"rOOt2", "root1", "root2", "current"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tree := RawSnapshots(&test.input).Tree()
+			require.NotNil(t, tree)
+
+			// Test full walk
+			names := collect(tree)
+			require.Equal(t, test.expectedOrder, names, "Walk should visit snapshots in depth-first order, oldest to newest")
+
+			// Test early termination if stopAt is specified
+			if test.stopAt != "" {
+				stoppedNames := collectUntil(tree, test.stopAt)
+				require.Equal(t, test.expectedStopped, stoppedNames, "Walk should stop early when function returns false")
+			}
+		})
+	}
+
+	// Test edge case: empty tree
+	t.Run("Empty tree", func(t *testing.T) {
+		emptyTree := &rawSnapshotTree{root: []*Snapshot{}, current: nil}
+		var visited bool
+		emptyTree.Walk(func(s *Snapshot) bool {
+			visited = true
+			return true
+		})
+		require.False(t, visited, "Walk should not visit any snapshots in an empty tree")
+	})
 }
 
 func Test_SnapshotName_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input []string
