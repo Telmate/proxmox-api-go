@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Group_Delete(t *testing.T) {
+	t.Parallel()
 	groupName := pveSDK.GroupName("Test_Group_Delete")
 	group := pveSDK.ConfigGroup{
 		Name: groupName,

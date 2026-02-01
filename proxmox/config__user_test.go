@@ -13,6 +13,7 @@ import (
 )
 
 func Test_userClient_Create(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users"
 	tests := []struct {
 		name     string
@@ -94,6 +95,7 @@ func Test_userClient_Create(t *testing.T) {
 }
 
 func Test_userClient_Delete(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users/test@pve"
 	tests := []struct {
 		name     string
@@ -124,6 +126,7 @@ func Test_userClient_Delete(t *testing.T) {
 }
 
 func Test_userClient_Exists(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users/test@pve"
 	tests := []struct {
 		name     string
@@ -163,6 +166,7 @@ func Test_userClient_Exists(t *testing.T) {
 }
 
 func Test_userClient_List(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users?full=1"
 	baseUser := func(user ConfigUser) ConfigUser {
 		if user.Comment == nil {
@@ -278,6 +282,7 @@ func Test_userClient_List(t *testing.T) {
 }
 
 func Test_userClient_ListPartial(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users"
 	base := func(info UserInfo) UserInfo {
 		if info.Config.Comment == nil {
@@ -354,6 +359,7 @@ func Test_userClient_ListPartial(t *testing.T) {
 }
 
 func Test_userClient_Read(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users/test@pve"
 	tests := []struct {
 		name     string
@@ -406,6 +412,7 @@ func Test_userClient_Read(t *testing.T) {
 }
 
 func Test_userClient_Set(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users"
 	noSuchUser := func(user string) []mockServer.Request {
 		return mockServer.RequestsErrorHandled(mockServer.Path(path+"/"+user), mockServer.GET, mockServer.HTTPerror{
@@ -502,6 +509,7 @@ func Test_userClient_Set(t *testing.T) {
 }
 
 func Test_userClient_Update(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users/test@pve"
 	tests := []struct {
 		name     string
@@ -587,6 +595,7 @@ func Test_userClient_Update(t *testing.T) {
 }
 
 func Test_ConfigUser_mapToAPI(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name   string
 		input  ConfigUser
@@ -774,6 +783,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 }
 
 func Test_ConfigUser_mapToArray(t *testing.T) {
+	t.Parallel()
 	base := func(user ConfigUser) ConfigUser {
 		if user.Comment == nil {
 			user.Comment = util.Pointer("")
@@ -853,6 +863,7 @@ func Test_ConfigUser_mapToArray(t *testing.T) {
 }
 
 func Test_rawConfigUser_Get(t *testing.T) {
+	t.Parallel()
 	base := func(user ConfigUser) *ConfigUser {
 		if user.Comment == nil {
 			user.Comment = util.Pointer("")
@@ -959,6 +970,7 @@ func Test_rawConfigUser_Get(t *testing.T) {
 
 // TODO improve when Name and Realm have their own types
 func Test_ConfigUser_Validate(t *testing.T) {
+	t.Parallel()
 	userId := UserID{Name: "user", Realm: "pam"}
 	tests := []struct {
 		name  string
@@ -994,6 +1006,7 @@ func Test_ConfigUser_Validate(t *testing.T) {
 }
 
 func Test_UserID_Parse(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  string
@@ -1028,6 +1041,7 @@ func Test_UserID_Parse(t *testing.T) {
 
 // TODO improve test when a validation function for the UserID exists
 func Test_UserID_String(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  UserID
 		Output string
@@ -1050,6 +1064,7 @@ func Test_UserID_String(t *testing.T) {
 
 // TODO improve when Name and Realm have their own types
 func Test_UserID_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input UserID
 		err   bool
@@ -1074,6 +1089,7 @@ func Test_UserID_Validate(t *testing.T) {
 }
 
 func Test_UserPassword_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input UserPassword
 		err   bool
@@ -1164,6 +1180,7 @@ func test_rawUsersInfo_Array_Data() []struct {
 }
 
 func Test_rawUsersInfo_AsArray(t *testing.T) {
+	t.Parallel()
 	for _, test := range test_rawUsersInfo_Array_Data() {
 		t.Run(test.name, func(*testing.T) {
 			require.Equal(t, test.output, test.input.AsArray())
@@ -1172,6 +1189,7 @@ func Test_rawUsersInfo_AsArray(t *testing.T) {
 }
 
 func Test_rawUsersInfo_AsMap(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawUsersInfo
@@ -1238,6 +1256,7 @@ func Test_rawUsersInfo_AsMap(t *testing.T) {
 }
 
 func Test_rawUsersInfo_Iter(t *testing.T) {
+	t.Parallel()
 	for _, test := range test_rawUsersInfo_Array_Data() {
 		t.Run(test.name, func(t *testing.T) {
 			// Test iterating over all items
@@ -1263,6 +1282,7 @@ func Test_rawUsersInfo_Iter(t *testing.T) {
 }
 
 func Test_rawUsersInfo_Len(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawUsersInfo
@@ -1288,6 +1308,7 @@ func Test_rawUsersInfo_Len(t *testing.T) {
 }
 
 func Test_rawUserInfo_Get(t *testing.T) {
+	t.Parallel()
 	base := func(user UserInfo) UserInfo {
 		if user.Config.Comment == nil {
 			user.Config.Comment = util.Pointer("")
@@ -1407,6 +1428,7 @@ func Test_rawUserInfo_Get(t *testing.T) {
 }
 
 func Test_NewUserID(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  string
 		output struct {
@@ -1462,6 +1484,7 @@ func Test_NewUserID(t *testing.T) {
 }
 
 func Test_NewUserIDs(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  string
 		output *[]UserID

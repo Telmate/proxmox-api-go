@@ -9,6 +9,7 @@ import (
 )
 
 func Test_NodeName_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string
@@ -45,6 +46,7 @@ func Test_NodeName_Validate(t *testing.T) {
 }
 
 func Test_NodeName_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  NodeName

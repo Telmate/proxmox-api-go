@@ -13,6 +13,7 @@ import (
 )
 
 func Test_Pool_Delete(t *testing.T) {
+	t.Parallel()
 	pool := pveSDK.ConfigPool{
 		Name: "Test_Pool_Delete",
 	}

@@ -9,6 +9,7 @@ import (
 )
 
 func Test_QemuPciDevices_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		config  QemuPciDevices
 		current QemuPciDevices
@@ -160,6 +161,7 @@ func Test_QemuPciDevices_Validate(t *testing.T) {
 }
 
 func Test_QemuPciID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuPciID
@@ -179,6 +181,7 @@ func Test_QemuPciID_Validate(t *testing.T) {
 }
 
 func Test_QemuPci_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		config  QemuPci
 		current QemuPci
@@ -286,6 +289,7 @@ func Test_QemuPci_Validate(t *testing.T) {
 }
 
 func Test_PciDeviceID_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciDeviceID
@@ -307,6 +311,7 @@ func Test_PciDeviceID_String(t *testing.T) {
 }
 
 func Test_PciDeviceID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciDeviceID
@@ -335,6 +340,7 @@ func Test_PciDeviceID_Validate(t *testing.T) {
 }
 
 func Test_PciMediatedDevice_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciMediatedDevice
@@ -354,6 +360,7 @@ func Test_PciMediatedDevice_Validate(t *testing.T) {
 }
 
 func Test_PciSubDeviceID_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciSubDeviceID
@@ -375,6 +382,7 @@ func Test_PciSubDeviceID_String(t *testing.T) {
 }
 
 func Test_PciSubDeviceID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciSubDeviceID
@@ -403,6 +411,7 @@ func Test_PciSubDeviceID_Validate(t *testing.T) {
 }
 
 func Test_PciSubVendorID_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciSubVendorID
@@ -424,6 +433,7 @@ func Test_PciSubVendorID_String(t *testing.T) {
 }
 
 func Test_PciSubVendorID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciSubVendorID
@@ -452,6 +462,7 @@ func Test_PciSubVendorID_Validate(t *testing.T) {
 }
 
 func Test_PciVendorID_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciVendorID
@@ -473,6 +484,7 @@ func Test_PciVendorID_String(t *testing.T) {
 }
 
 func Test_PciVendorID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PciVendorID
@@ -501,6 +513,7 @@ func Test_PciVendorID_Validate(t *testing.T) {
 }
 
 func Test_PciID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []PciID

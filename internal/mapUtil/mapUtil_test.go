@@ -7,6 +7,7 @@ import (
 )
 
 func Test_Difference(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		a       map[string]struct{}
@@ -50,6 +51,7 @@ func Test_Difference(t *testing.T) {
 }
 
 func Test_SameKeys(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		a      map[string]struct{}
@@ -93,6 +95,7 @@ func Test_SameKeys(t *testing.T) {
 }
 
 func Test_Array(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  map[string]struct{}

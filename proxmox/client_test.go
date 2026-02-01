@@ -9,6 +9,7 @@ import (
 )
 
 func Test_Client_checkInitialized(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  *Client
@@ -30,6 +31,7 @@ func Test_Client_checkInitialized(t *testing.T) {
 }
 
 func Test_Client_CheckPermissions(t *testing.T) {
+	t.Parallel()
 	type input struct {
 		client *Client
 		perms  []Permission
@@ -69,6 +71,7 @@ func Test_Client_CheckPermissions(t *testing.T) {
 }
 
 func Test_Version_Greater(t *testing.T) {
+	t.Parallel()
 	type input struct {
 		a Version
 		b Version
@@ -94,6 +97,7 @@ func Test_Version_Greater(t *testing.T) {
 }
 
 func Test_Version_mapToSDK(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  map[string]any
@@ -125,6 +129,7 @@ func Test_Version_mapToSDK(t *testing.T) {
 }
 
 func Test_Version_max(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  Version
@@ -157,6 +162,7 @@ func Test_Version_max(t *testing.T) {
 }
 
 func Test_Version_Smaller(t *testing.T) {
+	t.Parallel()
 	type input struct {
 		a Version
 		b Version
@@ -182,6 +188,7 @@ func Test_Version_Smaller(t *testing.T) {
 }
 
 func Test_EncodedVersion_const(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input  Version
 		output EncodedVersion

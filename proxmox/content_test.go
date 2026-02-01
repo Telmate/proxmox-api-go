@@ -15,6 +15,7 @@ type test_Content_ContentType struct {
 
 // test if the ContentType value is properly converted to API values
 func Test_Content_ContentType_toApiValue(t *testing.T) {
+	t.Parallel()
 	input := test_Content_ContentType_Input()
 	output := test_Content_ContentType_Output()
 	for i := range input {
@@ -24,6 +25,7 @@ func Test_Content_ContentType_toApiValue(t *testing.T) {
 
 // test if the ContentType value is properly converted to API values and test if its a valid enum
 func Test_Content_ContentType_toApiValueAndValidate(t *testing.T) {
+	t.Parallel()
 	input := test_Content_ContentType_Input()
 	output := test_Content_ContentType_Output()
 	for i := range input {
@@ -35,6 +37,7 @@ func Test_Content_ContentType_toApiValueAndValidate(t *testing.T) {
 
 // test if the ContentType value is a valid enum
 func Test_Content_ContentType_Validate(t *testing.T) {
+	t.Parallel()
 	input := test_Content_ContentType_Input()
 	output := test_Content_ContentType_Output()
 	for i := range input {
@@ -100,6 +103,7 @@ func test_Content_ContentType_Output() []test_Content_ContentType {
 
 // test the formatting of the file object into a single string
 func Test_Content_File_format(t *testing.T) {
+	t.Parallel()
 	input := []Content_File{
 		{
 			Storage:     "Local",
@@ -121,6 +125,7 @@ func Test_Content_File_format(t *testing.T) {
 
 // test if the existence of the file wil be detected
 func Test_Content_CheckFileExistence(t *testing.T) {
+	t.Parallel()
 	fileList := func() []Content_FileProperties {
 		return []Content_FileProperties{
 			{
@@ -172,6 +177,7 @@ func Test_Content_CheckFileExistence(t *testing.T) {
 
 // test the conversion from a volumeID to a file path
 func Test_Content_createFilesList(t *testing.T) {
+	t.Parallel()
 	input := [][]interface{}{
 		{
 			map[string]interface{}{
@@ -231,6 +237,7 @@ func Test_Content_createFilesList(t *testing.T) {
 
 // test the conversion from a volumeID to a file path
 func Test_Content_volumeIdToFileName(t *testing.T) {
+	t.Parallel()
 	input := []string{"local:vztmpl/alpine-3.16-default_20220622_amd64.tar.xz"}
 	output := []string{"alpine-3.16-default_20220622_amd64.tar.xz"}
 	for i := range input {

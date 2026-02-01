@@ -9,6 +9,7 @@ import (
 )
 
 func Test_LxcCPU_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcCPU
@@ -39,10 +40,12 @@ func Test_LxcCPU_Validate(t *testing.T) {
 }
 
 func Test_LxcCpuCores_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, string("10"), LxcCpuCores(10).String())
 }
 
 func Test_LxcCpuCores_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcCpuCores
@@ -64,10 +67,12 @@ func Test_LxcCpuCores_Validate(t *testing.T) {
 }
 
 func Test_LxcCpuLimit_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, string("10"), LxcCpuLimit(10).String())
 }
 
 func Test_LxcCpuLimit_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcCpuLimit
@@ -89,10 +94,12 @@ func Test_LxcCpuLimit_Validate(t *testing.T) {
 }
 
 func Test_LxcCpuUnits_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, string("10"), LxcCpuUnits(10).String())
 }
 
 func Test_LxcCpuUnits_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcCpuUnits

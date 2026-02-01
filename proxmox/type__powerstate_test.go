@@ -8,6 +8,7 @@ import (
 )
 
 func Test_PowerState_combine(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   *PowerState
@@ -31,6 +32,7 @@ func Test_PowerState_combine(t *testing.T) {
 }
 
 func Test_PowerState_parse(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  string
@@ -54,6 +56,7 @@ func Test_PowerState_parse(t *testing.T) {
 }
 
 func Test_PowerState_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PowerState

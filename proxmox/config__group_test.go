@@ -15,6 +15,7 @@ import (
 )
 
 func Test_groupClient_AddMembers(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		groups   []GroupName
@@ -84,6 +85,7 @@ func Test_groupClient_AddMembers(t *testing.T) {
 }
 
 func Test_groupClient_Create(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    ConfigGroup
@@ -184,6 +186,7 @@ func Test_groupClient_Create(t *testing.T) {
 }
 
 func Test_groupClient_Delete(t *testing.T) {
+	t.Parallel()
 	const path = "/access/groups/group1"
 	tests := []struct {
 		name     string
@@ -222,6 +225,7 @@ func Test_groupClient_Delete(t *testing.T) {
 }
 
 func Test_groupClient_Exists(t *testing.T) {
+	t.Parallel()
 	const path = "/access/groups/group1"
 	tests := []struct {
 		name     string
@@ -262,6 +266,7 @@ func Test_groupClient_Exists(t *testing.T) {
 }
 
 func Test_groupClient_List(t *testing.T) {
+	t.Parallel()
 	const path = "/access/groups"
 	tests := []struct {
 		name     string
@@ -301,6 +306,7 @@ func Test_groupClient_List(t *testing.T) {
 }
 
 func Test_groupClient_Read(t *testing.T) {
+	t.Parallel()
 	const path = "/access/groups/group1"
 	tests := []struct {
 		name     string
@@ -353,6 +359,7 @@ func Test_groupClient_Read(t *testing.T) {
 }
 
 func Test_groupClient_RemoveMembers(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		groups   []GroupName
@@ -422,6 +429,7 @@ func Test_groupClient_RemoveMembers(t *testing.T) {
 }
 
 func Test_groupClient_Set(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    ConfigGroup
@@ -464,6 +472,7 @@ func Test_groupClient_Set(t *testing.T) {
 }
 
 func Test_groupClient_Update(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    ConfigGroup
@@ -638,6 +647,7 @@ func Test_groupClient_Update(t *testing.T) {
 }
 
 func Test_ConfigGroup_mapToAPI(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name    string
 		input   ConfigGroup
@@ -752,6 +762,7 @@ func test_RawGroups_Array_Data() []struct {
 }
 
 func Test_RawGroups_AsArray(t *testing.T) {
+	t.Parallel()
 	for _, test := range test_RawGroups_Array_Data() {
 		t.Run(test.name, func(*testing.T) {
 			require.Equal(t, test.output, (&test.input).AsArray())
@@ -760,6 +771,7 @@ func Test_RawGroups_AsArray(t *testing.T) {
 }
 
 func Test_RawGroups_Iter(t *testing.T) {
+	t.Parallel()
 	for _, test := range test_RawGroups_Array_Data() {
 		t.Run(test.name, func(t *testing.T) {
 			// Test iterating over all items
@@ -785,6 +797,7 @@ func Test_RawGroups_Iter(t *testing.T) {
 }
 
 func Test_RawGroups_AsMap(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawGroups
@@ -845,6 +858,7 @@ func Test_RawGroups_AsMap(t *testing.T) {
 }
 
 func Test_RawGroups_Len(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawGroups
@@ -882,6 +896,7 @@ func Test_RawGroups_Len(t *testing.T) {
 }
 
 func Test_RawGroupConfig_Get(t *testing.T) {
+	t.Parallel()
 	base := func(group ConfigGroup) ConfigGroup {
 		if group.Comment == nil {
 			group.Comment = util.Pointer("")
@@ -936,6 +951,7 @@ func Test_RawGroupConfig_Get(t *testing.T) {
 
 // TODO improve when Name and Realm have their own types
 func Test_ConfigGroup_Validate(t *testing.T) {
+	t.Parallel()
 	validGroupName := GroupName("groupName")
 	False := 0
 	TrueAndFalse := 1
@@ -1009,6 +1025,7 @@ func Test_ConfigGroup_Validate(t *testing.T) {
 }
 
 func Test_GroupName_csvToArray(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  string
 		output []GroupName
@@ -1029,6 +1046,7 @@ func Test_GroupName_csvToArray(t *testing.T) {
 }
 
 func Test_GroupName_mapToArray(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  any
 		output *[]GroupName
@@ -1071,6 +1089,7 @@ func Test_GroupName_mapToArray(t *testing.T) {
 }
 
 func Test_GroupName_Validate(t *testing.T) {
+	t.Parallel()
 	testRunes := struct {
 		legal   []string
 		illegal []string

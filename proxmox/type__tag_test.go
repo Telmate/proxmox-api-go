@@ -9,6 +9,7 @@ import (
 )
 
 func Test_Tag_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string

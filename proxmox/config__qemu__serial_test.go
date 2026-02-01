@@ -8,6 +8,7 @@ import (
 )
 
 func Test_SerialID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  SerialID
@@ -27,6 +28,7 @@ func Test_SerialID_Validate(t *testing.T) {
 }
 
 func Test_SerialPort_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  SerialInterface
@@ -58,6 +60,7 @@ func Test_SerialPort_Validate(t *testing.T) {
 }
 
 func Test_SerialInterfaces_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  SerialInterfaces
@@ -93,6 +96,7 @@ func Test_SerialInterfaces_Validate(t *testing.T) {
 }
 
 func Test_SerialPath_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  SerialPath

@@ -13,6 +13,7 @@ import (
 )
 
 func Test_poolClient_AddMembers(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		pool     PoolName
@@ -157,6 +158,7 @@ func Test_poolClient_AddMembers(t *testing.T) {
 }
 
 func Test_poolClient_Create(t *testing.T) {
+	t.Parallel()
 	const path = "/pools"
 	tests := []struct {
 		name     string
@@ -274,6 +276,7 @@ func Test_poolClient_Create(t *testing.T) {
 }
 
 func Test_poolClient_List(t *testing.T) {
+	t.Parallel()
 	const path = "/pools"
 	tests := []struct {
 		name     string
@@ -321,6 +324,7 @@ func Test_poolClient_List(t *testing.T) {
 }
 
 func Test_poolClient_Delete(t *testing.T) {
+	t.Parallel()
 	const path = "/pools/test_pool"
 	tests := []struct {
 		name     string
@@ -412,6 +416,7 @@ func Test_poolClient_Delete(t *testing.T) {
 }
 
 func Test_poolClient_Exists(t *testing.T) {
+	t.Parallel()
 	const path = "/pools/test_pool"
 	tests := []struct {
 		name     string
@@ -450,6 +455,7 @@ func Test_poolClient_Exists(t *testing.T) {
 }
 
 func Test_poolClient_Read(t *testing.T) {
+	t.Parallel()
 	const path = "/pools/test_pool"
 	data := func() map[string]any {
 		return map[string]any{
@@ -503,6 +509,7 @@ func Test_poolClient_Read(t *testing.T) {
 }
 
 func Test_poolClient_RemoveMembers(t *testing.T) {
+	t.Parallel()
 	const path = "/pools/test_pool"
 	tests := []struct {
 		name     string
@@ -559,6 +566,7 @@ func Test_poolClient_RemoveMembers(t *testing.T) {
 }
 
 func Test_poolClient_Update(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		pool     ConfigPool
@@ -788,6 +796,7 @@ func Test_poolClient_Update(t *testing.T) {
 }
 
 func Test_poolClient_Set(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		pool     ConfigPool
@@ -1051,6 +1060,7 @@ func Test_poolClient_Set(t *testing.T) {
 }
 
 func Test_ConfigPool_mapToApi(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		new     ConfigPool
 		current *ConfigPool
@@ -1125,6 +1135,7 @@ func Test_ConfigPool_mapToApi(t *testing.T) {
 }
 
 func Test_RawConfigPool_Get(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   map[string]any
@@ -1161,6 +1172,7 @@ func Test_RawConfigPool_Get(t *testing.T) {
 }
 
 func Test_ConfigPool_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  ConfigPool
@@ -1186,6 +1198,7 @@ func Test_ConfigPool_Validate(t *testing.T) {
 }
 
 func Test_RawPools_AsArray(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawPools
@@ -1222,6 +1235,7 @@ func Test_RawPools_AsArray(t *testing.T) {
 }
 
 func Test_RawPools_AsMap(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawPools
@@ -1268,6 +1282,7 @@ func Test_RawPools_AsMap(t *testing.T) {
 }
 
 func Test_RawPools_Iter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawPools
@@ -1324,6 +1339,7 @@ func Test_RawPools_Iter(t *testing.T) {
 }
 
 func Test_RawPools_Len(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawPools
@@ -1351,6 +1367,7 @@ func Test_RawPools_Len(t *testing.T) {
 }
 
 func Test_RawPoolInfo_Get(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawPoolInfo
@@ -1406,6 +1423,7 @@ func Test_RawPoolInfo_Get(t *testing.T) {
 }
 
 func Test_RawPoolMembers_AsArray(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  RawPoolInfo
@@ -1490,6 +1508,7 @@ func Test_RawPoolMembers_AsArray(t *testing.T) {
 }
 
 func Test_RawPoolMembers_AsArrays(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		input         RawPoolInfo
@@ -1575,6 +1594,7 @@ func Test_RawPoolMembers_AsArrays(t *testing.T) {
 }
 
 func Test_RawPoolMembers_AsMaps(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		input         RawPoolInfo
@@ -1680,6 +1700,7 @@ func Test_RawPoolMembers_AsMaps(t *testing.T) {
 }
 
 func Test_RawPoolMembers_Iter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  RawPoolInfo
@@ -1767,6 +1788,7 @@ func Test_RawPoolMembers_Iter(t *testing.T) {
 }
 
 func Test_RawPoolMembers_Len(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawPoolMembers
@@ -1794,6 +1816,7 @@ func Test_RawPoolMembers_Len(t *testing.T) {
 }
 
 func Test_RawPoolGuest_GetID(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawPoolGuest
@@ -1822,6 +1845,7 @@ func Test_RawPoolGuest_GetID(t *testing.T) {
 }
 
 func Test_RawPoolStorage_GetName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  rawPoolStorage
@@ -1850,6 +1874,7 @@ func Test_RawPoolStorage_GetName(t *testing.T) {
 }
 
 func Test_PoolName_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string
@@ -1956,6 +1981,7 @@ func test_guestsToAddAndRemoveFromPools_data() []struct {
 }
 
 func Test_guestsToAddAndRemoveFromPools(t *testing.T) {
+	t.Parallel()
 	for _, test := range test_guestsToAddAndRemoveFromPools_data() {
 		t.Run(test.name, func(t *testing.T) {
 			add, remove := guestsToAddAndRemoveFromPools(test.guests, test.guestsToAdd, test.pool)

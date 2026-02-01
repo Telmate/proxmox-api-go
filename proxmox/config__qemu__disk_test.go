@@ -11,6 +11,7 @@ import (
 )
 
 func Test_IsoFile_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input IsoFile
@@ -36,6 +37,7 @@ func Test_IsoFile_Validate(t *testing.T) {
 }
 
 func Test_QemuCdRom_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuCdRom
@@ -64,6 +66,7 @@ func Test_QemuCdRom_Validate(t *testing.T) {
 }
 
 func Test_QemuCloudInitDisk_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuCloudInitDisk
@@ -89,6 +92,7 @@ func Test_QemuCloudInitDisk_Validate(t *testing.T) {
 }
 
 func Test_qemuDisk_formatDisk(t *testing.T) {
+	t.Parallel()
 	type localInput struct {
 		vmID           GuestID
 		linkedVmId     GuestID
@@ -172,6 +176,7 @@ func Test_qemuDisk_formatDisk(t *testing.T) {
 }
 
 func Test_qemuDisk_mapToStruct(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		input      string
@@ -206,6 +211,7 @@ func Test_qemuDisk_mapToStruct(t *testing.T) {
 }
 
 func Test_qemuDisk_parseDisk(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  string
@@ -265,6 +271,7 @@ func Test_qemuDisk_parseDisk(t *testing.T) {
 }
 
 func Test_QemuDiskAsyncIO_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskAsyncIO
@@ -292,6 +299,7 @@ func Test_QemuDiskAsyncIO_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidth_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidth
@@ -343,6 +351,7 @@ func Test_QemuDiskBandwidth_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthIops_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidthIops
@@ -378,6 +387,7 @@ func Test_QemuDiskBandwidthIops_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthIopsLimit_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidthIopsLimit
@@ -405,6 +415,7 @@ func Test_QemuDiskBandwidthIopsLimit_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthIopsLimitBurst_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidthIopsLimitBurst
@@ -428,6 +439,7 @@ func Test_QemuDiskBandwidthIopsLimitBurst_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthIopsLimitConcurrent_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidthIopsLimitConcurrent
@@ -451,6 +463,7 @@ func Test_QemuDiskBandwidthIopsLimitConcurrent_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthMBps_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidthMBps
@@ -486,6 +499,7 @@ func Test_QemuDiskBandwidthMBps_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthMBpsLimit_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidthMBpsLimit
@@ -513,6 +527,7 @@ func Test_QemuDiskBandwidthMBpsLimit_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthMBpsLimitBurst_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidthMBpsLimitBurst
@@ -536,6 +551,7 @@ func Test_QemuDiskBandwidthMBpsLimitBurst_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskBandwidthMBpsLimitConcurrent_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskBandwidthMBpsLimitConcurrent
@@ -559,6 +575,7 @@ func Test_QemuDiskBandwidthMBpsLimitConcurrent_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskCache_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskCache
@@ -588,6 +605,7 @@ func Test_QemuDiskCache_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskFormat_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input QemuDiskFormat
@@ -618,6 +636,7 @@ func Test_QemuDiskFormat_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskId_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name  string
 		input QemuDiskId
@@ -710,6 +729,7 @@ func Test_QemuDiskId_Validate(t *testing.T) {
 }
 
 func Test_QemuDiskSerial_Validate(t *testing.T) {
+	t.Parallel()
 	testRunes := struct {
 		legal   []string
 		illegal []string
@@ -732,6 +752,7 @@ func Test_QemuDiskSerial_Validate(t *testing.T) {
 }
 
 func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
+	t.Parallel()
 	format_Raw := QemuDiskFormat_Raw
 	format_Qcow2 := QemuDiskFormat_Qcow2
 	tests := []struct {
@@ -797,6 +818,7 @@ func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
 }
 
 func Test_qemuDiskShort_Validate(t *testing.T) {
+	t.Parallel()
 	format_Raw := QemuDiskFormat_Raw
 	format_Invalid := QemuDiskFormat("invalid")
 	format_Empty := QemuDiskFormat("")
@@ -837,6 +859,7 @@ func Test_qemuDiskShort_Validate(t *testing.T) {
 }
 
 func Test_QemuStorages_cloudInitRemove(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		currentStorages QemuStorages
 		newStorages     QemuStorages
@@ -900,6 +923,7 @@ func Test_QemuStorages_cloudInitRemove(t *testing.T) {
 }
 
 func Test_QemuStorages_markDiskChanges(t *testing.T) {
+	t.Parallel()
 	format_Raw := QemuDiskFormat_Raw
 	tests := []struct {
 		name            string
@@ -1052,6 +1076,7 @@ func Test_QemuStorages_markDiskChanges(t *testing.T) {
 }
 
 func Test_QemuStorages_selectInitialResize(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		currentStorages *QemuStorages
 		newStorages     QemuStorages
@@ -1229,6 +1254,7 @@ func Test_QemuStorages_selectInitialResize(t *testing.T) {
 }
 
 func Test_QemuWorldWideName_Validate(t *testing.T) {
+	t.Parallel()
 	testRunes := struct {
 		legal   []string
 		illegal []string

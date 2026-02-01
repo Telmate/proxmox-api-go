@@ -11,6 +11,7 @@ import (
 )
 
 func Test_apiTokenClient_Create(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users/test@pve/token/testToken"
 	tests := []struct {
 		name     string
@@ -61,6 +62,7 @@ func Test_apiTokenClient_Create(t *testing.T) {
 }
 
 func Test_apiTokenClient_Delete(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users/test@pve/token/testToken"
 	tests := []struct {
 		name     string
@@ -106,6 +108,7 @@ func Test_apiTokenClient_Delete(t *testing.T) {
 }
 
 func Test_apiTokenClient_Exists(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users/test@pve/token/testToken"
 	tests := []struct {
 		name     string
@@ -152,6 +155,7 @@ func Test_apiTokenClient_Exists(t *testing.T) {
 }
 
 func Test_apiTokenClient_List(t *testing.T) {
+	t.Parallel()
 	const path = "/access/users/test@pve/token"
 	base := func(token ApiTokenConfig) ApiTokenConfig {
 		if token.Comment == nil {
@@ -226,6 +230,7 @@ func Test_apiTokenClient_List(t *testing.T) {
 }
 
 func Test_apiTokenClient_Read(t *testing.T) {
+	t.Parallel()
 	const token = "token1"
 	const path = "/access/users/test@pve/token/" + token
 	tests := []struct {
@@ -278,6 +283,7 @@ func Test_apiTokenClient_Read(t *testing.T) {
 }
 
 func Test_apiTokenClient_Update(t *testing.T) {
+	t.Parallel()
 	const token = "token1"
 	const path = "/access/users/test@pve/token/" + token
 	tests := []struct {
@@ -332,6 +338,7 @@ func Test_apiTokenClient_Update(t *testing.T) {
 }
 
 func Test_ApiTokenConfig_mapToAPI(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name   string
 		config ApiTokenConfig
@@ -457,6 +464,7 @@ func test_rawApiTokens_Array_Data() []struct {
 }
 
 func Test_rawApiTokens_AsArray(t *testing.T) {
+	t.Parallel()
 	for _, test := range test_rawApiTokens_Array_Data() {
 		t.Run(test.name, func(*testing.T) {
 			require.ElementsMatch(t, test.output, RawApiTokens(&test.input).AsArray())
@@ -465,6 +473,7 @@ func Test_rawApiTokens_AsArray(t *testing.T) {
 }
 
 func Test_rawApiTokens_Iter(t *testing.T) {
+	t.Parallel()
 	for _, test := range test_rawApiTokens_Array_Data() {
 		t.Run(test.name, func(t *testing.T) {
 			// Test iterating over all items
@@ -490,6 +499,7 @@ func Test_rawApiTokens_Iter(t *testing.T) {
 }
 
 func Test_rawApiTokenConfig_Get(t *testing.T) {
+	t.Parallel()
 	base := func(config ApiTokenConfig) ApiTokenConfig {
 		if config.Comment == nil {
 			config.Comment = util.Pointer("")
@@ -552,6 +562,7 @@ func Test_rawApiTokenConfig_Get(t *testing.T) {
 }
 
 func Test_ApiTokenID_Parse(t *testing.T) {
+	t.Parallel()
 	err := errors.New("api token ID must be in the format user@realm!tokenname")
 	tests := []struct {
 		name   string
@@ -588,12 +599,14 @@ func Test_ApiTokenID_Parse(t *testing.T) {
 }
 
 func Test_ApiTokenID_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, string("test@pve!TokeName"), ApiTokenID{
 		User:      UserID{Name: "test", Realm: "pve"},
 		TokenName: "TokeName"}.String())
 }
 
 func Test_ApiTokenID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input ApiTokenID
@@ -632,5 +645,6 @@ func Test_ApiTokenID_Validate(t *testing.T) {
 }
 
 func Test_ApiTokenSecret_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, string("secretValue"), ApiTokenSecret("secretValue").String())
 }

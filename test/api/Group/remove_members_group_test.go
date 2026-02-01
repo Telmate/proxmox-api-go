@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Group_RemoveMembers(t *testing.T) {
+	t.Parallel()
 	groupName := pveSDK.GroupName("Test_Group_RemoveMembers")
 	users := []pveSDK.UserID{
 		{Name: "Test_Group_RemoveMembers_1", Realm: "pve"},

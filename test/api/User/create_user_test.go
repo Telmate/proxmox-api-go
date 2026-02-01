@@ -16,6 +16,7 @@ import (
 )
 
 func Test_User_Create(t *testing.T) {
+	t.Parallel()
 	userID := pveSDK.UserID{Name: "Test_User_Create", Realm: "pve"}
 	user := pveSDK.ConfigUser{
 		Comment:   util.Pointer("My Comment" + body.Symbols),

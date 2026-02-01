@@ -15,10 +15,12 @@ import (
 )
 
 func Test_CpuArchitecture_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, "amd64", CpuArchitecture("amd64").String())
 }
 
 func Test_ConfigLXC_mapToAPI(t *testing.T) {
+	t.Parallel()
 	baseDataMount := func(m LxcDataMount) *LxcDataMount {
 		m.Storage = util.Pointer("local-zfs")
 		m.SizeInKibibytes = util.Pointer(LxcMountSize(1048576))
@@ -2056,6 +2058,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 }
 
 func Test_ConfigLXC_Validate(t *testing.T) {
+	t.Parallel()
 	baseConfig := func(config ConfigLXC) ConfigLXC {
 		if config.BootMount == nil {
 			config.BootMount = &LxcBootMount{
@@ -2753,6 +2756,7 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 }
 
 func Test_ConfigLXC_Update(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		vmr    *VmRef
@@ -2776,6 +2780,7 @@ func Test_ConfigLXC_Update(t *testing.T) {
 }
 
 func Test_ConfigLXC_UpdateNoCheck(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		vmr    *VmRef
@@ -2799,6 +2804,7 @@ func Test_ConfigLXC_UpdateNoCheck(t *testing.T) {
 }
 
 func Test_RawConfigLXC_Get(t *testing.T) {
+	t.Parallel()
 	parseIP := func(rawIP string) netip.Addr {
 		ip, err := netip.ParseAddr(rawIP)
 		failPanic(err)
@@ -3785,6 +3791,7 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 }
 
 func Test_ActiveRawConfigLXC_Get(t *testing.T) {
+	t.Parallel()
 	baseConfig := func(config ConfigLXC) *ConfigLXC {
 		if config.ID == nil {
 			config.ID = util.Pointer(GuestID(0))
@@ -3893,6 +3900,7 @@ func Test_ActiveRawConfigLXC_Get(t *testing.T) {
 }
 
 func Test_RawConfigLXC_GetDigest(t *testing.T) {
+	t.Parallel()
 	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	require.Equal(t,
 		[sha1.Size]byte{
@@ -3902,14 +3910,17 @@ func Test_RawConfigLXC_GetDigest(t *testing.T) {
 }
 
 func Test_RawConfigLXC_GetPrivileged(t *testing.T) {
+	t.Parallel()
 	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	require.Equal(t, true, set(map[string]any{}).GetPrivileged())
 }
 
 func Test_LxcMemory_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, "583421", LxcMemory(583421).String())
 }
 
 func Test_LxcSwap_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, "8423", LxcSwap(8423).String())
 }

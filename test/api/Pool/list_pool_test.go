@@ -14,7 +14,7 @@ import (
 )
 
 func Test_Pool_List(t *testing.T) {
-
+	t.Parallel()
 	pools := []pveSDK.ConfigPool{
 		{Name: "Test_Pool_List_01"},
 		{Name: "Test_Pool_List_02",

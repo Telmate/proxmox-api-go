@@ -10,6 +10,7 @@ import (
 )
 
 func Test_CloudInit_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   CloudInit
@@ -172,6 +173,7 @@ func Test_CloudInit_Validate(t *testing.T) {
 }
 
 func Test_CloudInitCustom_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CloudInitCustom
@@ -207,6 +209,7 @@ func Test_CloudInitCustom_Validate(t *testing.T) {
 }
 
 func Test_CloudInitSnippet_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CloudInitSnippet
@@ -236,6 +239,7 @@ func Test_CloudInitSnippet_Validate(t *testing.T) {
 }
 
 func Test_CloudInitSnippetPath_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string
@@ -269,6 +273,7 @@ func Test_CloudInitSnippetPath_Validate(t *testing.T) {
 }
 
 func Test_CloudInitNetworkInterfaces_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CloudInitNetworkInterfaces
@@ -395,6 +400,7 @@ func Test_CloudInitNetworkInterfaces_Validate(t *testing.T) {
 }
 
 func Test_CloudInitIPv4Config_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CloudInitIPv4Config
@@ -441,6 +447,7 @@ func Test_CloudInitIPv4Config_Validate(t *testing.T) {
 }
 
 func Test_CloudInitIPv6Config_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CloudInitIPv6Config

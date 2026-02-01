@@ -7,6 +7,7 @@ import (
 )
 
 func Test_escape(t *testing.T) {
+	t.Parallel()
 	tests := map[encoding]map[byte]string{
 		encodePathSegment: {
 			' ':         "%20",

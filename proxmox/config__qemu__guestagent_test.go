@@ -9,6 +9,7 @@ import (
 )
 
 func Test_QemuGuestAgent_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuGuestAgent
@@ -28,6 +29,7 @@ func Test_QemuGuestAgent_Validate(t *testing.T) {
 }
 
 func Test_QemuGuestAgentType_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuGuestAgentType

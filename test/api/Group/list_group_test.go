@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Group_List(t *testing.T) {
+	t.Parallel()
 	groups := []pveSDK.GroupName{
 		pveSDK.GroupName("Test_Group_List_1"),
 		pveSDK.GroupName("Test_Group_List_2"),

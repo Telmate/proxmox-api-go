@@ -8,6 +8,7 @@ import (
 )
 
 func Test_RawGuestResources_Get(t *testing.T) {
+	t.Parallel()
 	set := func(raw []rawGuestResource) RawGuestResources {
 		interfaces := make([]RawGuestResource, len(raw))
 		for i := range raw {

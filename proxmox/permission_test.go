@@ -7,6 +7,7 @@ import (
 )
 
 func Test_Permission_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  Permission
@@ -23,6 +24,7 @@ func Test_Permission_Validate(t *testing.T) {
 }
 
 func Test_PermissionCategory_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  PermissionCategory

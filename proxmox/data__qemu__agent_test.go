@@ -8,6 +8,7 @@ import (
 )
 
 func Test_rawAgentNetworkInterfaces_SelectMacAddress(t *testing.T) {
+	t.Parallel()
 	parseMAC := func(mac string) net.HardwareAddr {
 		parsedMac, _ := net.ParseMAC(mac)
 		return parsedMac
@@ -62,6 +63,7 @@ func Test_rawAgentNetworkInterfaces_SelectMacAddress(t *testing.T) {
 }
 
 func Test_rawAgentNetworkInterfaces_SelectName(t *testing.T) {
+	t.Parallel()
 	parseMAC := func(mac string) net.HardwareAddr {
 		parsedMac, _ := net.ParseMAC(mac)
 		return parsedMac
@@ -116,6 +118,7 @@ func Test_rawAgentNetworkInterfaces_SelectName(t *testing.T) {
 }
 
 func Test_rawAgentNetworkInterfaces_Get(t *testing.T) {
+	t.Parallel()
 	parseMAC := func(mac string) net.HardwareAddr {
 		parsedMac, _ := net.ParseMAC(mac)
 		return parsedMac

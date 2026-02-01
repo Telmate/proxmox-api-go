@@ -10,6 +10,7 @@ import (
 )
 
 func Test_QemuUsbID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuUsbID
@@ -32,6 +33,7 @@ func Test_QemuUsbID_Validate(t *testing.T) {
 }
 
 func Test_QemuUSB_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		config  QemuUSB
 		current *QemuUSB
@@ -52,6 +54,7 @@ func Test_QemuUSB_Validate(t *testing.T) {
 }
 
 func Test_QemuUsbDevice_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuUsbDevice
@@ -83,6 +86,7 @@ func Test_QemuUsbDevice_Validate(t *testing.T) {
 }
 
 func Test_QemuUsbMapped_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuUsbMapping
@@ -118,6 +122,7 @@ func Test_QemuUsbMapped_Validate(t *testing.T) {
 }
 
 func Test_QemuUsbPort_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuUsbPort
@@ -139,6 +144,7 @@ func Test_QemuUsbPort_Validate(t *testing.T) {
 }
 
 func Test_UsbDeviceID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  UsbDeviceID
@@ -165,6 +171,7 @@ func Test_UsbDeviceID_Validate(t *testing.T) {
 }
 
 func Test_UsbPortID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  UsbPortID

@@ -9,6 +9,7 @@ import (
 )
 
 func Test_TriBool_MarshalJSON(t *testing.T) {
+	t.Parallel()
 	type testData struct {
 		TriBool TriBool `json:"triBool"`
 	}
@@ -45,6 +46,7 @@ func Test_TriBool_MarshalJSON(t *testing.T) {
 }
 
 func Test_TriBool_UnmarshalJSON(t *testing.T) {
+	t.Parallel()
 	type testData struct {
 		TriBool TriBool `json:"triBool"`
 	}
@@ -93,6 +95,7 @@ func Test_TriBool_UnmarshalJSON(t *testing.T) {
 }
 
 func Test_TriBool_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  TriBool

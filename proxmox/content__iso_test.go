@@ -8,10 +8,12 @@ import (
 )
 
 func Test_ConfigContent_Iso_error(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, errors.New("the value of (Node) may not be empty"), ConfigContent_Iso{}.error("Node"))
 }
 
 func Test_ConfigContent_Iso_mapToApiValues(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  ConfigContent_Iso
 		output map[string]interface{}
@@ -40,6 +42,7 @@ func Test_ConfigContent_Iso_mapToApiValues(t *testing.T) {
 }
 
 func Test_ConfigContent_Iso_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  ConfigContent_Iso
 		output error

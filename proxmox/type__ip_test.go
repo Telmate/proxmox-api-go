@@ -8,6 +8,7 @@ import (
 )
 
 func Test_IPv4Address_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  IPv4Address
@@ -34,6 +35,7 @@ func Test_IPv4Address_Validate(t *testing.T) {
 }
 
 func Test_IPv4CIDR_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  IPv4CIDR
@@ -60,6 +62,7 @@ func Test_IPv4CIDR_Validate(t *testing.T) {
 }
 
 func Test_IPv6Address_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  IPv6Address
@@ -86,6 +89,7 @@ func Test_IPv6Address_Validate(t *testing.T) {
 }
 
 func Test_IPv6CIDR_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  IPv6CIDR
