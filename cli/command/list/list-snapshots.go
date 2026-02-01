@@ -12,7 +12,7 @@ var (
 	noTree            bool
 	list_snapshotsCmd = &cobra.Command{
 		Use:              "snapshots GuestID",
-		Short:            "Prints a list of QemuSnapshots in json format",
+		Short:            "Prints a list of Snapshots in json format",
 		TraverseChildren: true,
 		Args:             cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {

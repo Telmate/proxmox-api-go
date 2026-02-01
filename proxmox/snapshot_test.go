@@ -220,7 +220,7 @@ func Test_snapshotClient_Delete(t *testing.T) {
 			snapshotName: SnapshotName("mySnap"),
 			requests:     mockServer.RequestsError("/cluster/resources?type=vm", mockServer.GET, 500, 3),
 			err:          errors.New(mockServer.InternalServerError)},
-		{name: `Error Deleteing snapshot`,
+		{name: `Error Deleting snapshot`,
 			guest:        VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
 			snapshotName: SnapshotName("snap2"),
 			requests:     mockServer.RequestsError("/nodes/testNode/qemu/100/snapshot/snap2", mockServer.DELETE, 500, 3),
@@ -590,11 +590,11 @@ func Test_snapshotClient_Rollback(t *testing.T) {
 		requests []mockServer.Request
 		err      error
 	}{
-		{name: `Rolback false`,
+		{name: `Rollback false`,
 			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
 			snapName: SnapshotName("snap1"),
 			requests: mockServer.RequestsPost("/nodes/testNode/qemu/100/snapshot/snap1/rollback", nil)},
-		{name: `Rolback true`,
+		{name: `Rollback true`,
 			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
 			snapName: SnapshotName("snap1"),
 			start:    true,
@@ -648,9 +648,9 @@ func Test_snapshotClient_Update(t *testing.T) {
 		{name: `Update description`,
 			guest:       VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
 			snapName:    SnapshotName("snap1"),
-			description: "upate description" + body.Symbols,
+			description: "update description" + body.Symbols,
 			requests: mockServer.RequestsPut("/nodes/testNode/qemu/100/snapshot/snap1/config",
-				map[string]any{"description": "upate description" + body.Symbols})},
+				map[string]any{"description": "update description" + body.Symbols})},
 		{name: `Update empty description`,
 			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
 			snapName: SnapshotName("snap1"),
@@ -659,7 +659,7 @@ func Test_snapshotClient_Update(t *testing.T) {
 		{name: `Minimal VmRef`,
 			guest:       VmRef{vmId: 200},
 			snapName:    SnapshotName("snap1"),
-			description: "upate description",
+			description: "update description",
 			requests: mockServer.Append(
 				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
 					map[string]any{"vmid": float64(100), "node": "myNode", "type": "lxc"},
@@ -667,7 +667,7 @@ func Test_snapshotClient_Update(t *testing.T) {
 					map[string]any{"vmid": float64(300), "node": "myNode", "type": "lxc"},
 				}}),
 				mockServer.RequestsPut("/nodes/testNode/qemu/200/snapshot/snap1/config",
-					map[string]any{"description": "upate description"}),
+					map[string]any{"description": "update description"}),
 			)},
 		{name: `Validate error`,
 			snapName: SnapshotName(""),
@@ -680,7 +680,7 @@ func Test_snapshotClient_Update(t *testing.T) {
 		{name: `Error during Update`,
 			guest:       VmRef{vmId: 100, node: "testNode", vmType: GuestQemu},
 			snapName:    SnapshotName("snap1"),
-			description: "upate description",
+			description: "update description",
 			requests:    mockServer.RequestsError("/nodes/testNode/qemu/100/snapshot/snap1/config", mockServer.PUT, 500, 3),
 			err:         errors.New(mockServer.InternalServerError)},
 	}

@@ -643,10 +643,10 @@ func (snap SnapshotName) UpdateDescriptionNoCheck(ctx context.Context, c *Client
 	return c.New().Snapshot.UpdateNoCheck(ctx, *vmr, snap, description)
 }
 
-var snapShotNameRegex = regexp.MustCompile(`^([a-zA-Z])([a-z]|[A-Z]|[0-9]|_|-){2,39}$`)
+var snapshotNameRegex = regexp.MustCompile(`^([a-zA-Z])([a-z]|[A-Z]|[0-9]|_|-){2,39}$`)
 
 func (name SnapshotName) Validate() error {
-	if !snapShotNameRegex.Match([]byte(name)) {
+	if !snapshotNameRegex.Match([]byte(name)) {
 		if len(name) < 3 {
 			return errors.New(SnapshotName_Error_MinLength)
 		}
