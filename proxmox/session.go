@@ -197,7 +197,7 @@ func (s *Session) NewRequest(ctx context.Context, method, url string, headers *h
 	if s.AuthToken != "" {
 		req.Header["Authorization"] = []string{"PVEAPIToken=" + s.AuthToken}
 	} else if s.AuthTicket != "" {
-		req.Header["Authorization"] = []string{"PVEAuthCookie=" + s.AuthTicket}
+		req.Header["Cookie"] = []string{"PVEAuthCookie=" + s.AuthTicket}
 		req.Header["CSRFPreventionToken"] = []string{s.CsrfToken}
 	}
 	return
