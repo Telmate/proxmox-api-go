@@ -14,6 +14,7 @@ import (
 )
 
 func Test_User_List(t *testing.T) {
+	t.Parallel()
 	base := func(info pveSDK.UserInfo) pveSDK.UserInfo {
 		if info.Config.Comment == nil {
 			info.Config.Comment = util.Pointer("")

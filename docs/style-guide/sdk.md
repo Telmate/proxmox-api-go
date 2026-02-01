@@ -489,6 +489,7 @@ Each struct must encompass, at a minimum, the following attributes:
 
 ```go
 func Test_UserID_Validate(t *testing.T) {
+    t.Parallel()
     tests:= []struct {
         name string
         input UserID

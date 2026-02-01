@@ -11,6 +11,7 @@ import (
 )
 
 func Test_AuthorizedKey_Parse(t *testing.T) {
+	t.Parallel()
 	const key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY5T2JQgiL5Z5Yuy4yXuUYglVJlpsokHFXR1hvnCVYW"
 	parsePublicKey := func(rawKey string) ssh.PublicKey {
 		key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(rawKey))
@@ -65,6 +66,7 @@ func Test_AuthorizedKey_Parse(t *testing.T) {
 }
 
 func Test_AuthorizedKey_MarshalJSON(t *testing.T) {
+	t.Parallel()
 	const key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY5T2JQgiL5Z5Yuy4yXuUYglVJlpsokHFXR1hvnCVYW"
 	parsePublicKey := func(rawKey string) ssh.PublicKey {
 		key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(rawKey))
@@ -111,6 +113,7 @@ func Test_AuthorizedKey_MarshalJSON(t *testing.T) {
 }
 
 func Test_AuthorizedKey_String(t *testing.T) {
+	t.Parallel()
 	const key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY5T2JQgiL5Z5Yuy4yXuUYglVJlpsokHFXR1hvnCVYW"
 	parsePublicKey := func(rawKey string) ssh.PublicKey {
 		key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(rawKey))
@@ -155,6 +158,7 @@ func Test_AuthorizedKey_String(t *testing.T) {
 }
 
 func Test_AuthorizedKey_UnmarshalJSON(t *testing.T) {
+	t.Parallel()
 	const key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEY5T2JQgiL5Z5Yuy4yXuUYglVJlpsokHFXR1hvnCVYW"
 	parsePublicKey := func(rawKey string) ssh.PublicKey {
 		key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(rawKey))
@@ -211,6 +215,7 @@ func Test_AuthorizedKey_UnmarshalJSON(t *testing.T) {
 }
 
 func Test_sshKeyUrlDecode(t *testing.T) {
+	t.Parallel()
 	rawOutput := test_data_guest.AuthorizedKey_Decoded_Output()
 	input := test_data_guest.AuthorizedKey_Encoded_Input()
 	output := make([]AuthorizedKey, len(rawOutput))
@@ -222,6 +227,7 @@ func Test_sshKeyUrlDecode(t *testing.T) {
 
 // Test the encoding logic to encode the ssh keys
 func Test_sshKeyUrlEncode(t *testing.T) {
+	t.Parallel()
 	rawInput := test_data_guest.AuthorizedKey_Decoded_Input()
 	input := make([]AuthorizedKey, len(rawInput))
 	for i := range rawInput {

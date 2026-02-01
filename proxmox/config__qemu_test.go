@@ -17,6 +17,7 @@ import (
 )
 
 func Test_ConfigQemu_mapToAPI(t *testing.T) {
+	t.Parallel()
 	cloudInitCustom := func() *CloudInitCustom {
 		return &CloudInitCustom{
 			Meta: &CloudInitSnippet{
@@ -4478,6 +4479,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 }
 
 func Test_ConfigQemu_get(t *testing.T) {
+	t.Parallel()
 	baseConfig := func(config ConfigQemu) *ConfigQemu {
 		if config.CPU == nil {
 			config.CPU = &QemuCPU{}
@@ -7524,6 +7526,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 }
 
 func Test_ActiveRawConfigQemu_Get(t *testing.T) {
+	t.Parallel()
 	baseConfig := func(config ConfigQemu) *ConfigQemu {
 		if config.Bios == "" {
 			config.Bios = ("seabios")
@@ -7659,6 +7662,7 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 }
 
 func Test_ConfigQemu_Validate(t *testing.T) {
+	t.Parallel()
 	BandwidthValid0 := func() QemuDiskBandwidth {
 		return QemuDiskBandwidth{
 			MBps: QemuDiskBandwidthMBps{

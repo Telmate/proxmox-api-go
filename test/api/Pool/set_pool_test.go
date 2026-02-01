@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Pool_Set(t *testing.T) {
+	t.Parallel()
 	guests := []pveSDK.GuestID{520, 521, 522}
 	pool := pveSDK.PoolName("Test_Pool_Set")
 	const node = pveSDK.NodeName(test.FirstNode)

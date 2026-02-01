@@ -8,6 +8,7 @@ import (
 )
 
 func Test_Connection_Certificate_No_Validation(t *testing.T) {
+	t.Parallel()
 	Test := api_test.Test{
 		RequireSSL: false,
 	}
@@ -16,6 +17,7 @@ func Test_Connection_Certificate_No_Validation(t *testing.T) {
 }
 
 func Test_Connection_Certificate_Validation(t *testing.T) {
+	t.Parallel()
 	Test := api_test.Test{
 		RequireSSL: true,
 	}

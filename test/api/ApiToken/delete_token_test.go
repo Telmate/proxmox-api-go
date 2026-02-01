@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Token_Delete(t *testing.T) {
+	t.Parallel()
 	tokenID := pveSDK.ApiTokenID{
 		User:      pveSDK.UserID{Name: "Test_Token_Delete", Realm: "pve"},
 		TokenName: "testToken"}

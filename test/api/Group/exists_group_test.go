@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Group_Exists(t *testing.T) {
+	t.Parallel()
 	groupName := pveSDK.GroupName("Test_Group_Exists")
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)

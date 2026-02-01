@@ -10,6 +10,7 @@ import (
 )
 
 func Test_LxcNetwork_Validate(t *testing.T) {
+	t.Parallel()
 	baseConfig := func(config LxcNetwork) LxcNetwork {
 		if config.Bridge == nil {
 			config.Bridge = util.Pointer("vmbr0")
@@ -119,6 +120,7 @@ func Test_LxcNetwork_Validate(t *testing.T) {
 }
 
 func Test_LxcNetworks_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		config  LxcNetworks
 		current LxcNetworks
@@ -178,6 +180,7 @@ func Test_LxcNetworks_Validate(t *testing.T) {
 }
 
 func Test_LxcNetworkID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcNetworkID
@@ -199,6 +202,7 @@ func Test_LxcNetworkID_Validate(t *testing.T) {
 }
 
 func Test_LxcNetworkName_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string
@@ -229,6 +233,7 @@ func Test_LxcNetworkName_Validate(t *testing.T) {
 }
 
 func Test_LxcIPv4_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcIPv4
@@ -289,6 +294,7 @@ func Test_LxcIPv4_Validate(t *testing.T) {
 }
 
 func Test_LxcIPv6_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcIPv6

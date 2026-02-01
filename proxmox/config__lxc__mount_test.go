@@ -10,6 +10,7 @@ import (
 )
 
 func Test_LxcBootMount_markMountChanges_Unsafe(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   LxcBootMount
@@ -43,6 +44,7 @@ func Test_LxcBootMount_markMountChanges_Unsafe(t *testing.T) {
 }
 
 func Test_LxcBindMount_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   LxcBindMount
@@ -80,6 +82,7 @@ func Test_LxcBindMount_Validate(t *testing.T) {
 }
 
 func Test_LxcDataMount_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		input      LxcDataMount
@@ -106,10 +109,12 @@ func Test_LxcDataMount_Validate(t *testing.T) {
 }
 
 func Test_LxcHostPath_String(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, string("/mnt/test"), LxcHostPath("/mnt/test").String())
 }
 
 func Test_LxcMounts_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		input      LxcMounts
@@ -158,6 +163,7 @@ func Test_LxcMounts_Validate(t *testing.T) {
 }
 
 func Test_LxcMount_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		input      LxcMount
@@ -200,6 +206,7 @@ func Test_LxcMount_Validate(t *testing.T) {
 }
 
 func Test_LxcMountPath_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcMountPath
@@ -225,6 +232,7 @@ func Test_LxcMountPath_Validate(t *testing.T) {
 }
 
 func Test_LxcMounts_markMountChanges(t *testing.T) {
+	t.Parallel()
 	baseMount := func() LxcMount {
 		return LxcMount{
 			DataMount: &LxcDataMount{
@@ -449,6 +457,7 @@ func Test_LxcMounts_markMountChanges(t *testing.T) {
 }
 
 func Test_LxcMountSize_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  LxcMountSize
@@ -475,6 +484,7 @@ func Test_LxcMountSize_String(t *testing.T) {
 }
 
 func Test_lxcMountMove_mapToAPI(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  lxcMountMove
@@ -506,6 +516,7 @@ func Test_lxcMountMove_mapToAPI(t *testing.T) {
 }
 
 func Test_RawConfigLXC_GetBootMount(t *testing.T) {
+	t.Parallel()
 	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	require.Equal(t,
 		&LxcBootMount{
@@ -524,6 +535,7 @@ func Test_RawConfigLXC_GetBootMount(t *testing.T) {
 }
 
 func Test_RawConfigLXC_Mounts(t *testing.T) {
+	t.Parallel()
 	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	require.Equal(t,
 		LxcMounts{

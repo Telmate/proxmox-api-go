@@ -8,6 +8,7 @@ import (
 )
 
 func Test_Bool(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  any
@@ -49,6 +50,7 @@ func Test_Bool(t *testing.T) {
 }
 
 func Test_Int(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  any
@@ -88,6 +90,7 @@ func Test_Int(t *testing.T) {
 }
 
 func Test_Uint(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  any

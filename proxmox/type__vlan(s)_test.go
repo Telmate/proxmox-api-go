@@ -8,6 +8,7 @@ import (
 )
 
 func Test_Vlan_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  Vlan
@@ -28,6 +29,7 @@ func Test_Vlan_String(t *testing.T) {
 }
 
 func Test_Vlan_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  Vlan
@@ -50,6 +52,7 @@ func Test_Vlan_Validate(t *testing.T) {
 }
 
 func Test_Vlans_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  Vlans

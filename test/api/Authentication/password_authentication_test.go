@@ -16,6 +16,7 @@ import (
 )
 
 func Test_Authenticate_Password(t *testing.T) {
+	t.Parallel()
 	userID := pveSDK.UserID{Name: "Test_Authenticate_Password", Realm: "pve"}
 	password := pveSDK.UserPassword("Enter123!" + body.Symbols)
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)

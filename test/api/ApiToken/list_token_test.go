@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Token_List(t *testing.T) {
+	t.Parallel()
 	base := func(in pveSDK.ApiTokenConfig) pveSDK.ApiTokenConfig {
 		if in.Comment == nil {
 			in.Comment = util.Pointer("")

@@ -18,6 +18,7 @@ import (
 // Getting the actual config from the specific rule types.
 // This way we test the full path from the API to the actual config that the user wants.
 func Test_HaRule_Get(t *testing.T) {
+	t.Parallel()
 	baseNodeRule := func(r HaNodeAffinityRule) HaNodeAffinityRule {
 		if r.Comment == nil {
 			r.Comment = util.Pointer("")
@@ -399,6 +400,7 @@ func Test_HaRule_Get(t *testing.T) {
 }
 
 func Test_HaNodeAffinityRule_create(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name   string
 		config HaNodeAffinityRule
@@ -526,6 +528,7 @@ func Test_HaNodeAffinityRule_create(t *testing.T) {
 }
 
 func Test_HaNodeAffinityRule_Get(t *testing.T) {
+	t.Parallel()
 	baseRule := func(r HaNodeAffinityRule) HaNodeAffinityRule {
 		if r.Comment == nil {
 			r.Comment = util.Pointer("")
@@ -724,6 +727,7 @@ func Test_HaNodeAffinityRule_Get(t *testing.T) {
 }
 
 func Test_HaNodeAffinityRule_update(t *testing.T) {
+	t.Parallel()
 	baseConfig := func(current *rawHaNodeAffinityRule) *rawHaNodeAffinityRule {
 		if current == nil {
 			current = &rawHaNodeAffinityRule{a: map[string]any{}}
@@ -945,6 +949,7 @@ func Test_HaNodeAffinityRule_update(t *testing.T) {
 }
 
 func Test_HaNodeAffinityRule_Validate(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name  string
 		input HaNodeAffinityRule
@@ -1077,6 +1082,7 @@ func Test_HaNodeAffinityRule_Validate(t *testing.T) {
 }
 
 func Test_HaResourceAffinityRule_create(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name   string
 		config HaResourceAffinityRule
@@ -1182,6 +1188,7 @@ func Test_HaResourceAffinityRule_create(t *testing.T) {
 }
 
 func Test_HaResourceAffinityRule_Get(t *testing.T) {
+	t.Parallel()
 	baseRule := func(r HaResourceAffinityRule) HaResourceAffinityRule {
 		if r.Affinity == nil {
 			r.Affinity = util.Pointer(HaAffinityUnknown)
@@ -1351,6 +1358,7 @@ func Test_HaResourceAffinityRule_Get(t *testing.T) {
 }
 
 func Test_HaResourceAffinityRule_update(t *testing.T) {
+	t.Parallel()
 	baseConfig := func(current *rawHaResourceAffinityRule) *rawHaResourceAffinityRule {
 		if current == nil {
 			current = &rawHaResourceAffinityRule{a: map[string]any{}}
@@ -1533,6 +1541,7 @@ func Test_HaResourceAffinityRule_update(t *testing.T) {
 }
 
 func Test_HaResourceAffinityRule_Validate(t *testing.T) {
+	t.Parallel()
 	type test struct {
 		name  string
 		input HaResourceAffinityRule
@@ -1651,6 +1660,7 @@ func Test_HaResourceAffinityRule_Validate(t *testing.T) {
 }
 
 func Test_HaRuleID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string

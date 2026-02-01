@@ -11,6 +11,7 @@ import (
 )
 
 func Test_CloneLxcTarget_mapToAPI(t *testing.T) {
+	t.Parallel()
 	type testOutput struct {
 		id   GuestID
 		node NodeName
@@ -112,6 +113,7 @@ func Test_CloneLxcTarget_mapToAPI(t *testing.T) {
 }
 
 func Test_CloneLxcTarget_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CloneLxcTarget
@@ -177,6 +179,7 @@ func Test_CloneLxcTarget_Validate(t *testing.T) {
 }
 
 func Test_CloneQemuTarget_mapToAPI(t *testing.T) {
+	t.Parallel()
 	type testOutput struct {
 		id   GuestID
 		node NodeName
@@ -286,6 +289,7 @@ func Test_CloneQemuTarget_mapToAPI(t *testing.T) {
 }
 
 func Test_CloneQemuTarget_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CloneQemuTarget
@@ -355,6 +359,7 @@ func Test_CloneQemuTarget_Validate(t *testing.T) {
 }
 
 func Test_VmRef_Migrate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		c   *Client
 		ctx context.Context
@@ -386,6 +391,7 @@ func Test_VmRef_Migrate(t *testing.T) {
 }
 
 func Test_VmRef_MigrateNoCheck(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		c   *Client
 		ctx context.Context
@@ -417,6 +423,7 @@ func Test_VmRef_MigrateNoCheck(t *testing.T) {
 }
 
 func Test_VmRef_pendingChanges(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []any
@@ -461,6 +468,7 @@ func Test_VmRef_pendingChanges(t *testing.T) {
 }
 
 func Test_VmRef_pendingConfig(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   []any
@@ -520,6 +528,7 @@ func Test_VmRef_pendingConfig(t *testing.T) {
 }
 
 func Test_RawGuestStatus_Get(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  RawGuestStatus

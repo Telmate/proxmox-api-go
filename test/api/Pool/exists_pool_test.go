@@ -13,6 +13,7 @@ import (
 )
 
 func Test_Pool_Exists(t *testing.T) {
+	t.Parallel()
 	pool := pveSDK.PoolName("Test_Pool_Exists")
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)

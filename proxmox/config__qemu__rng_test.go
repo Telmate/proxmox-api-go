@@ -9,6 +9,7 @@ import (
 )
 
 func Test_EntropySource_MarshalJSON(t *testing.T) {
+	t.Parallel()
 	type testData struct {
 		Source EntropySource `json:"source"`
 	}
@@ -45,6 +46,7 @@ func Test_EntropySource_MarshalJSON(t *testing.T) {
 }
 
 func Test_EntropySource_UnmarshalJSON(t *testing.T) {
+	t.Parallel()
 	type testData struct {
 		EntropySource EntropySource `json:"entropySource"`
 	}

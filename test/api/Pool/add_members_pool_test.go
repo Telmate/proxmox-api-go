@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Pool_AddMembers_Empty(t *testing.T) {
+	t.Parallel()
 	pool := pveSDK.ConfigPool{
 		Name:    "Test_Pool_AddMembers_Empty",
 		Comment: util.Pointer(""),
@@ -22,6 +23,7 @@ func Test_Pool_AddMembers_Empty(t *testing.T) {
 }
 
 func Test_Pool_AddMembers_NonEmpty(t *testing.T) {
+	t.Parallel()
 	initialGuests := []pveSDK.GuestID{503, 504, 505}
 	pool := pveSDK.ConfigPool{
 		Name:    "Test_Pool_AddMembers_NonEmpty",
@@ -132,6 +134,7 @@ func pool_AddMembers(t *testing.T, pool pveSDK.ConfigPool, initialGuests, additi
 }
 
 func Test_Pool_AddMembers_Move(t *testing.T) {
+	t.Parallel()
 	guest := pveSDK.GuestID(509)
 	poolOriginal := pveSDK.ConfigPool{
 		Name:   "Test_Pool_AddMembers_Move_Original",

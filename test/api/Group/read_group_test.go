@@ -16,6 +16,7 @@ import (
 )
 
 func Test_Group_Read(t *testing.T) {
+	t.Parallel()
 	groupName := pveSDK.GroupName("Test_Group_Read")
 	users := []pveSDK.UserID{
 		{Name: "Test_Group_Read_1", Realm: "pve"},

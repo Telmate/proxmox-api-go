@@ -16,6 +16,7 @@ func Benchmark_guestDoesNotExist(b *testing.B) {
 }
 
 func Test_guestDoesNotExist(t *testing.T) {
+	t.Parallel()
 	id := GuestID(123)
 	err := errorMsg{}.guestDoesNotExist(id)
 	require.True(t, errors.Is(err, Error.GuestDoesNotExist()))

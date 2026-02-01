@@ -8,10 +8,12 @@ import (
 )
 
 func Test_ConfigContent_Template_error(t *testing.T) {
+	t.Parallel()
 	require.Equal(t, errors.New("the value of (Node) may not be empty"), ConfigContent_Template{}.error("Node"))
 }
 
 func Test_ConfigContent_Template_mapToApiValues(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  ConfigContent_Template
 		output map[string]interface{}
@@ -33,6 +35,7 @@ func Test_ConfigContent_Template_mapToApiValues(t *testing.T) {
 }
 
 func Test_ConfigContent_Template_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		input  ConfigContent_Template
 		output error
@@ -67,6 +70,7 @@ func Test_ConfigContent_Template_Validate(t *testing.T) {
 }
 
 func Test_createTemplateList(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		Input  []interface{}
 		Output *[]TemplateItem

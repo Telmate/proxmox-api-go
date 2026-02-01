@@ -9,6 +9,7 @@ import (
 )
 
 func Test_GuestName_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string
@@ -43,6 +44,7 @@ func Test_GuestName_Validate(t *testing.T) {
 }
 
 func Test_GuestNetworkRate_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  GuestNetworkRate
@@ -64,6 +66,7 @@ func Test_GuestNetworkRate_Validate(t *testing.T) {
 }
 
 func Test_GuestFeature_mapToStruct(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  map[string]interface{}
@@ -90,6 +93,7 @@ func Test_GuestFeature_mapToStruct(t *testing.T) {
 }
 
 func Test_GuestFeature_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input GuestFeature
@@ -123,6 +127,7 @@ func Test_GuestFeature_Validate(t *testing.T) {
 }
 
 func Test_GuestID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		input GuestID
@@ -149,6 +154,7 @@ func Test_GuestID_Validate(t *testing.T) {
 }
 
 func Test_GuestType_Parse(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  string
@@ -177,6 +183,7 @@ func Test_GuestType_Parse(t *testing.T) {
 }
 
 func Test_GuestType_parse(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  string
@@ -202,6 +209,7 @@ func Test_GuestType_parse(t *testing.T) {
 }
 
 func Test_GuestType_String(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  GuestType

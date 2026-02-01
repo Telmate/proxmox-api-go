@@ -14,6 +14,7 @@ import (
 )
 
 func Test_User_Read(t *testing.T) {
+	t.Parallel()
 	userID := pveSDK.UserID{Name: "Test_User_Read", Realm: "pve"}
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)

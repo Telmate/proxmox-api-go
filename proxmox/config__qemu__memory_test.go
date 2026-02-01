@@ -9,6 +9,7 @@ import (
 )
 
 func Test_QemuMemory_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		new     QemuMemory
 		current *QemuMemory
@@ -159,6 +160,7 @@ func Test_QemuMemory_Validate(t *testing.T) {
 }
 
 func Test_QemuMemoryBalloonCapacity_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuMemoryBalloonCapacity
@@ -178,6 +180,7 @@ func Test_QemuMemoryBalloonCapacity_Validate(t *testing.T) {
 }
 
 func Test_QemuMemoryCapacity_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuMemoryCapacity
@@ -200,6 +203,7 @@ func Test_QemuMemoryCapacity_Validate(t *testing.T) {
 }
 
 func Test_QemuMemoryShares_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuMemoryShares

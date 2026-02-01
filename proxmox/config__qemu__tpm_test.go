@@ -9,6 +9,7 @@ import (
 )
 
 func Test_TpmState_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		config  TpmState
 		current *TpmState
@@ -44,6 +45,7 @@ func Test_TpmState_Validate(t *testing.T) {
 }
 
 func Test_TpmVersion_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  TpmVersion

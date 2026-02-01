@@ -8,6 +8,7 @@ import (
 )
 
 func Test_RawConfigLXC_Features(t *testing.T) {
+	t.Parallel()
 	set := func(raw map[string]any) *rawConfigLXC { return &rawConfigLXC{a: raw} }
 	require.Equal(t, &LxcFeatures{
 		Unprivileged: &UnprivilegedFeatures{

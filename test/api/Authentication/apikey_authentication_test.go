@@ -14,6 +14,7 @@ import (
 )
 
 func Test_Authenticate_ApiKey(t *testing.T) {
+	t.Parallel()
 	tokenID := pveSDK.ApiTokenID{
 		User:      pveSDK.UserID{Name: "Test_Authenticate_ApiKey", Realm: "pve"},
 		TokenName: "testToken"}

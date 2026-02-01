@@ -9,6 +9,7 @@ import (
 )
 
 func Test_CpuFlags_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CpuFlags
@@ -85,6 +86,7 @@ func Test_CpuFlags_Validate(t *testing.T) {
 }
 
 func Test_CpuLimit_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  CpuLimit
@@ -106,6 +108,7 @@ func Test_CpuLimit_Validate(t *testing.T) {
 }
 
 func Test_CpuType_Error(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name    string
 		input   Version
@@ -123,6 +126,7 @@ func Test_CpuType_Error(t *testing.T) {
 }
 
 func Test_CpuType_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		config  CpuType
 		version Version
@@ -168,6 +172,7 @@ func Test_CpuType_Validate(t *testing.T) {
 }
 
 func Test_CpuUnits_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name   string
 		input  CpuUnits
@@ -189,6 +194,7 @@ func Test_CpuUnits_Validate(t *testing.T) {
 }
 
 func Test_CpuVirtualCores_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		virtualCores CpuVirtualCores
 		cores        *QemuCpuCores
@@ -265,6 +271,7 @@ func Test_CpuVirtualCores_Validate(t *testing.T) {
 }
 
 func Test_QemuCPU_Validate(t *testing.T) {
+	t.Parallel()
 	baseConfig := func(config QemuCPU) QemuCPU {
 		if config.Cores == nil {
 			config.Cores = util.Pointer(QemuCpuCores(1))
@@ -403,6 +410,7 @@ func Test_QemuCPU_Validate(t *testing.T) {
 }
 
 func Test_QemuCpuCores_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name   string
 		input  QemuCpuCores
@@ -429,6 +437,7 @@ func Test_QemuCpuCores_Validate(t *testing.T) {
 }
 
 func Test_QemuCpuSockets_Validate(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		name   string
 		input  QemuCpuSockets

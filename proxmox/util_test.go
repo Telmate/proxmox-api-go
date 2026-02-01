@@ -7,6 +7,7 @@ import (
 )
 
 func Test_ensurePrefix(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  string
@@ -46,6 +47,7 @@ func Test_ensurePrefix(t *testing.T) {
 }
 
 func Test_keyExists(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []interface{}
@@ -92,6 +94,7 @@ func Test_keyExists(t *testing.T) {
 }
 
 func Test_floatToTrimmedString(t *testing.T) {
+	t.Parallel()
 	type testStruct struct {
 		number   float64
 		decimals uint8
@@ -138,6 +141,7 @@ func Benchmark_splitStringOfSettings(b *testing.B) {
 }
 
 func Test_splitStringOfSettings(t *testing.T) {
+	t.Parallel()
 	testData := []struct {
 		Input  string
 		Output map[string]string

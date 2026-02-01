@@ -8,6 +8,7 @@ import (
 )
 
 func Test_Combine(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		inputA []string
@@ -58,6 +59,7 @@ func (s stringer) String() string {
 }
 
 func Test_CSV(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []stringer
@@ -100,6 +102,7 @@ func Test_CSV(t *testing.T) {
 }
 
 func Test_Map(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string
@@ -128,6 +131,7 @@ func Test_Map(t *testing.T) {
 }
 
 func Test_Remove(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string
@@ -163,6 +167,7 @@ func Test_Remove(t *testing.T) {
 }
 
 func Test_Subtract(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  []string

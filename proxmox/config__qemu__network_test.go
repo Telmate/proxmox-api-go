@@ -9,6 +9,7 @@ import (
 )
 
 func Test_QemuMTU_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuMTU
@@ -37,6 +38,7 @@ func Test_QemuMTU_Validate(t *testing.T) {
 }
 
 func Test_QemuNetworkInterface_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		config  QemuNetworkInterface
 		current *QemuNetworkInterface
@@ -142,6 +144,7 @@ func Test_QemuNetworkInterface_Validate(t *testing.T) {
 }
 
 func Test_QemuNetworkInterfaceID_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuNetworkInterfaceID
@@ -161,6 +164,7 @@ func Test_QemuNetworkInterfaceID_Validate(t *testing.T) {
 }
 
 func Test_QemuNetworkInterfaces_Validate(t *testing.T) {
+	t.Parallel()
 	type testInput struct {
 		config  QemuNetworkInterfaces
 		current QemuNetworkInterfaces
@@ -279,6 +283,7 @@ func Test_QemuNetworkInterfaces_Validate(t *testing.T) {
 }
 
 func Test_QemuNetworkModel_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuNetworkModel
@@ -303,6 +308,7 @@ func Test_QemuNetworkModel_Validate(t *testing.T) {
 }
 
 func Test_QemuNetworkQueue_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  QemuNetworkQueue
