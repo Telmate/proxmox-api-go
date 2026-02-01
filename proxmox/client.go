@@ -1354,11 +1354,65 @@ func (c *Client) GetQemuFirewallOptions(ctx context.Context, vmr *VmRef) (firewa
 	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/options", vmr.node, vmr.vmId)
 	resp, _, err := c.session.get(ctx, url, nil, nil)
 	if err == nil {
-		firewallOptions, err := responseJSON(resp)
+		firewallOptions, err = responseJSON(resp)
 		if err != nil {
 			return nil, err
 		}
 		return firewallOptions, nil
+	}
+	return
+}
+
+// AddQemuFirewallRule - Add Firewall rule.
+func (c *Client) AddQemuFirewallRule(ctx context.Context, vmr *VmRef, fwRules map[string]interface{}) (exitStatus interface{}, err error) {
+	err = c.CheckVmRef(ctx, vmr)
+	if err != nil {
+		return nil, err
+	}
+	reqbody := paramsToBody(fwRules)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", vmr.node, vmr.vmId)
+	resp, _, err := c.session.post(ctx, url, nil, nil, &reqbody)
+	if err == nil {
+		taskResponse, err := responseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		exitStatus, err = c.WaitForCompletion(ctx, taskResponse)
+		if err != nil {
+			return "", err
+		}
+	}
+	return
+}
+
+// GetQemuFirewallRules - get VM firewall rules.
+func (c *Client) GetQemuFirewallRules(ctx context.Context, vmr *VmRef) (firewallRules map[string]interface{}, err error) {
+	err = c.CheckVmRef(ctx, vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules", vmr.node, vmr.vmId)
+	resp, _, err := c.session.get(ctx, url, nil, nil)
+	if err == nil {
+		firewallRules, err = responseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		return firewallRules, nil
+	}
+	return
+}
+
+// DeleteQemuFirewallRule - delete VM firewall rule.
+func (c *Client) DeleteQemuFirewallRule(ctx context.Context, vmr *VmRef, pos int) (err error) {
+	err = c.CheckVmRef(ctx, vmr)
+	if err != nil {
+		return
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/firewall/rules/%d", vmr.node, vmr.vmId, pos)
+	_, _, err = c.session.delete(ctx, url, nil, nil)
+	if err == nil {
+		return
 	}
 	return
 }
