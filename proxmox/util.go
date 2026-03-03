@@ -29,6 +29,25 @@ func Btoi(b bool) int {
 	}
 }
 
+// Combines params and raw body into a new body.
+// This function can be removed once all bodys are created without the intermidiary params step.
+func combineParamsAndBody(params map[string]any, body *[]byte) *[]byte {
+	paramBody := paramsToBody(params)
+	if body != nil && len(*body) > 0 {
+		if len(paramBody) > 0 { // Combine bodies without append as that would creat intermediary data
+			newBody := make([]byte, len(paramBody)+len(*body)+1)
+			copy(newBody, paramBody)
+			newBody[len(paramBody)] = '&'
+			for i := range *body {
+				newBody[i+len(paramBody)+1] = (*body)[i]
+			}
+			return &newBody
+		}
+		return body
+	}
+	return &paramBody
+}
+
 // ensures a string has a certain ensurePrefix
 func ensurePrefix(prefix, text string) string {
 	if strings.HasPrefix(text, prefix) {
