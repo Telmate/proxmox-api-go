@@ -16,6 +16,86 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type (
+	qemuTestCaseAPI struct {
+		name          string
+		config        *ConfigQemu
+		currentLegacy ConfigQemu
+		currentUpdate configQemuUpdate
+		version       Version
+		output        map[string]any
+		body          map[string]string
+	}
+	qemuTestCaseGet struct {
+		name   string
+		input  map[string]any
+		vmr    VmRef
+		output *ConfigQemu
+		err    error
+	}
+
+	qemuTestCaseValidate struct {
+		name    string
+		input   ConfigQemu
+		current *ConfigQemu
+		err     error
+		version Version
+	}
+
+	qemuTestTypeValidate struct {
+		create       []qemuTestCaseValidate
+		createUpdate []qemuTestCaseValidate // value of currentConfig wil be used for update and ignored for create
+		update       []qemuTestCaseValidate
+	}
+
+	qemuTestsAPI struct {
+		category     string
+		create       []qemuTestCaseAPI
+		createUpdate []qemuTestCaseAPI // value of currentConfig will be used for update and ignored for create
+		update       []qemuTestCaseAPI
+	}
+)
+
+func testQemuBaseConfig_get(config ConfigQemu) *ConfigQemu {
+	if config.CPU == nil {
+		config.CPU = &QemuCPU{}
+	}
+	if config.Description == nil {
+		config.Description = util.Pointer("")
+	}
+	if config.Memory == nil {
+		config.Memory = &QemuMemory{}
+	}
+	if config.Name == nil {
+		config.Name = util.Pointer(GuestName(""))
+	}
+	if config.Protection == nil {
+		config.Protection = util.Pointer(false)
+	}
+	if config.Tablet == nil {
+		config.Tablet = util.Pointer(true)
+	}
+	if config.StartAtNodeBoot == nil {
+		config.StartAtNodeBoot = util.Pointer(false)
+	}
+	return &config
+}
+
+func testQemuBaseConfig_Validate(config ConfigQemu) ConfigQemu {
+	if config.CPU == nil {
+		config.CPU = &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}
+	} else if config.CPU.Cores == nil {
+		config.CPU.Cores = util.Pointer(QemuCpuCores(1))
+	}
+	if config.Node == nil {
+		config.Node = util.Pointer(NodeName("testnode"))
+	}
+	if config.Memory == nil {
+		config.Memory = &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}
+	}
+	return config
+}
+
 func Test_ConfigQemu_mapToAPI(t *testing.T) {
 	t.Parallel()
 	cloudInitCustom := func() *CloudInitCustom {
@@ -102,25 +182,11 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 	virtioBase := func() *QemuVirtIOStorage {
 		return &QemuVirtIOStorage{Disk: &QemuVirtIODisk{Format: QemuDiskFormat_Raw, Id: 23, SizeInKibibytes: 10, Storage: "test"}}
 	}
-	type test struct {
-		name          string
-		config        *ConfigQemu
-		currentConfig ConfigQemu
-		version       Version
-		reboot        bool
-		output        map[string]interface{}
-	}
-	tests := []struct {
-		category     string
-		create       []test
-		createUpdate []test // value of currentConfig wil be used for update and ignored for create
-		update       []test
-	}{
+	tests := []qemuTestsAPI{
 		{category: `Agent`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Agent=nil`,
-					config: &ConfigQemu{},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{}},
 				{name: `Agent Full`,
 					config: &ConfigQemu{Agent: &QemuGuestAgent{
 						Enable: util.Pointer(true),
@@ -143,82 +209,79 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Agent.FsTrim`,
 					config: &ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(true)}},
 					output: map[string]interface{}{"agent": "0,fstrim_cloned_disks=1"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Agent !nil nil`,
 					config: &ConfigQemu{Agent: &QemuGuestAgent{}},
 					output: map[string]interface{}{"agent": "0"}},
 				{name: `Agent nil !nil`,
 					config: &ConfigQemu{},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{
 						Enable: util.Pointer(true),
 						Type:   util.Pointer(QemuGuestAgentType_VirtIO),
 						Freeze: util.Pointer(true),
-						FsTrim: util.Pointer(true)}},
-					output: map[string]interface{}{}},
+						FsTrim: util.Pointer(true)}}},
 				{name: `Agent nil nil `,
-					config: &ConfigQemu{},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{}},
 				{name: `Agent.Enable !nil nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "1"}},
 				{name: `Agent.Enable nil !nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true)}},
 					output:        map[string]interface{}{"agent": "1"}},
 				{name: `Agent.Enable nil nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0"}},
 				{name: `Agent.Type !nil nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0,type=virtio"}},
 				{name: `Agent.Type "" !nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_None)}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0"}},
 				{name: `Agent.Type "" nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_None)}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
 					output:        map[string]interface{}{"agent": "0"}},
 				{name: `Agent.Type nil !nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
 					output:        map[string]interface{}{"agent": "0,type=virtio"}},
 				{name: `Agent.Type nil nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0"}},
 				{name: `Agent.Freeze !nil nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{Freeze: util.Pointer(false)}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0,freeze-fs-on-backup=0"}},
 				{name: `Agent.Freeze nil !nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{Freeze: util.Pointer(true)}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{Freeze: util.Pointer(true)}},
 					output:        map[string]interface{}{"agent": "0,freeze-fs-on-backup=1"}},
 				{name: `Agent.Freeze nil nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0"}},
 				{name: `Agent.FsTrim !nil nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(false)}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0,fstrim_cloned_disks=0"}},
 				{name: `Agent.FsTrim nil !nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(true)}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{FsTrim: util.Pointer(true)}},
 					output:        map[string]interface{}{"agent": "0,fstrim_cloned_disks=1"}},
 				{name: `Agent.FsTrim nil nil`,
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
-					currentConfig: ConfigQemu{Agent: &QemuGuestAgent{}},
+					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0"}}}},
 		{category: `CPU`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Affinity empty`,
-					config: &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{})}},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{})}}},
 				{name: `Flags AES`,
 					config: &ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{AES: util.Pointer(TriBoolTrue)}}},
 					output: map[string]interface{}{"cpu": ",flags=+aes"}},
@@ -267,8 +330,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Pdpe1GB:    util.Pointer(TriBoolNone)}}},
 					output: map[string]interface{}{"cpu": ",flags=+aes;-amd-no-ssb;+amd-ssbd;+hv-tlbflush;+md-clear;-pcid"}},
 				{name: `Flags all nil`,
-					config: &ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{}}},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{}}}},
 				{name: `Flags all none`,
 					config: &ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
 						AES:        util.Pointer(TriBoolNone),
@@ -281,8 +343,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Pdpe1GB:    util.Pointer(TriBoolNone),
 						SSBD:       util.Pointer(TriBoolNone),
 						SpecCtrl:   util.Pointer(TriBoolNone),
-						VirtSSBD:   util.Pointer(TriBoolNone)}}},
-					output: map[string]interface{}{}},
+						VirtSSBD:   util.Pointer(TriBoolNone)}}}},
 				{name: `Flags all none & Type ""`,
 					config: &ConfigQemu{CPU: &QemuCPU{
 						Flags: &CpuFlags{
@@ -297,82 +358,76 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							SSBD:       util.Pointer(TriBoolNone),
 							SpecCtrl:   util.Pointer(TriBoolNone),
 							VirtSSBD:   util.Pointer(TriBoolNone)},
-						Type: util.Pointer(CpuType(""))}},
-					output: map[string]interface{}{}},
+						Type: util.Pointer(CpuType(""))}}},
 				{name: `Limit`,
-					config: &ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(0))}},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(0))}}},
 				{name: `Units 0`,
-					config: &ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(0))}},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(0))}}},
 				{name: `VirtualCores 0`,
-					config: &ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(0))}},
-					output: map[string]interface{}{}}},
-			createUpdate: []test{
+					config: &ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(0))}}}},
+			createUpdate: []qemuTestCaseAPI{
 				{name: `Affinity consecutive`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 0, 1, 2, 2, 3})}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
 					output:        map[string]interface{}{"affinity": "0-3"}},
 				{name: `Affinity singular`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{2})}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
 					output:        map[string]interface{}{"affinity": "2"}},
 				{name: `Affinity mixed`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{5, 0, 4, 2, 9, 3, 2, 11, 7, 2, 12, 4, 13})}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
 					output:        map[string]interface{}{"affinity": "0,2-5,7,9,11-13"}},
 				{name: `Cores`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(2))}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(2))}},
 					output:        map[string]interface{}{"cores": 1}},
 				{name: `Limit`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(50))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(100))}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(100))}},
 					output:        map[string]interface{}{"cpulimit": 50}},
 				{name: `Numa`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Numa: util.Pointer(true)}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Numa: util.Pointer(false)}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Numa: util.Pointer(false)}},
 					output:        map[string]interface{}{"numa": 1}},
 				{name: `Sockets`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(3))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(2))}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Sockets: util.Pointer(QemuCpuSockets(2))}},
 					output:        map[string]interface{}{"sockets": 3}},
 				{name: `Type lower`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(cpuType_X86_64_v2_AES_Lower)}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
 					version:       Version{}.max(),
 					output:        map[string]interface{}{"cpu": string(CpuType_X86_64_v2_AES)}},
 				{name: `Type normal`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_X86_64_v2_AES)}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
 					version:       Version{}.max(),
 					output:        map[string]interface{}{"cpu": string(CpuType_X86_64_v2_AES)}},
 				{name: `Type weird`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType("X_-8-_6_-6-4---V_-2-aE--s__"))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_Host)}},
 					version:       Version{}.max(),
 					output:        map[string]interface{}{"cpu": string(CpuType_X86_64_v2_AES)}},
 				{name: `Units 0`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(100))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(200))}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(200))}},
 					output:        map[string]interface{}{"cpuunits": 100}},
 				{name: `VirtualCores`,
 					config:        &ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(4))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(12))}},
-					output:        map[string]interface{}{"vcpus": 4}},
-			},
-			update: []test{
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(12))}},
+					output:        map[string]interface{}{"vcpus": 4}}},
+			update: []qemuTestCaseAPI{
 				{name: `Affinity empty`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{})}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{0, 1, 2})}},
 					output:        map[string]interface{}{"delete": "affinity"}},
 				{name: `Affinity empty no current`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Affinity: util.Pointer([]uint{})}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{}}},
 				{name: `Flags nil`,
 					config: &ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{}}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
 						AES:  util.Pointer(TriBoolTrue),
 						PCID: util.Pointer(TriBoolFalse)}}},
 					output: map[string]interface{}{"cpu": ",flags=+aes;-pcid"}},
@@ -386,7 +441,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						PCID:       util.Pointer(TriBoolTrue),
 						SpecCtrl:   util.Pointer(TriBoolFalse),
 						VirtSSBD:   util.Pointer(TriBoolFalse)}}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
 						AmdNoSSB:   util.Pointer(TriBoolTrue),
 						HvEvmcs:    util.Pointer(TriBoolFalse),
 						HvTlbFlush: util.Pointer(TriBoolFalse),
@@ -407,7 +462,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						SSBD:       util.Pointer(TriBoolNone),
 						SpecCtrl:   util.Pointer(TriBoolNone),
 						VirtSSBD:   util.Pointer(TriBoolNone)}}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{
 						Flags: &CpuFlags{
 							AES:        util.Pointer(TriBoolTrue),
 							AmdNoSSB:   util.Pointer(TriBoolTrue),
@@ -425,7 +480,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Flags & Type, update Flags`,
 					config: &ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
 						AmdNoSSB: util.Pointer(TriBoolTrue)}}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{
 						Flags: &CpuFlags{
 							HvEvmcs:    util.Pointer(TriBoolFalse),
 							HvTlbFlush: util.Pointer(TriBoolFalse),
@@ -436,7 +491,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output: map[string]interface{}{"cpu": "host,flags=+amd-no-ssb;-hv-evmcs;-hv-tlbflush;+ibpb;+md-clear;-spec-ctrl"}},
 				{name: `Flags & Type, update Type`,
 					config: &ConfigQemu{CPU: &QemuCPU{Type: util.Pointer(CpuType_X86_64_v2_AES)}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{
 						Flags: &CpuFlags{
 							HvEvmcs:    util.Pointer(TriBoolFalse),
 							HvTlbFlush: util.Pointer(TriBoolFalse),
@@ -448,60 +503,56 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output:  map[string]interface{}{"cpu": "x86-64-v2-AES,flags=-hv-evmcs;-hv-tlbflush;+ibpb;+md-clear;-spec-ctrl"}},
 				{name: `Limit 0`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(0))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(100))}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(100))}},
 					output:        map[string]interface{}{"delete": "cpulimit"}},
 				{name: `Limit 0 no current`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(0))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{}}},
 				{name: `Units 0`,
 					config:        &ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(0))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(100))}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(100))}},
 					output:        map[string]interface{}{"delete": "cpuunits"}},
 				{name: `VirtualCores 0`,
 					config:        &ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(0))}},
-					currentConfig: ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(4))}},
+					currentLegacy: ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(4))}},
 					output:        map[string]interface{}{"delete": "vcpus"}},
 			}},
 		{category: `CloudInit`, // Create CloudInit no need for update as update and create behave the same. will be changed in the future
-			createUpdate: []test{
+			createUpdate: []qemuTestCaseAPI{
 				{name: `CloudInit=nil`,
-					config: &ConfigQemu{},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{}},
 				{name: `CloudInit DNS NameServers`,
 					config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 						NameServers: &[]netip.Addr{parseIP("9.9.9.9")}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 						NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
 					output: map[string]interface{}{"nameserver": "9.9.9.9"}},
 				{name: `CloudInit DNS SearchDomain`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
 					output:        map[string]interface{}{"searchdomain": "example.com"}},
 				{name: `CloudInit PublicSSHkeys`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: publicKeys()}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{parsePublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key")})}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{parsePublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key")})}},
 					output:        map[string]interface{}{"sshkeys": test_data_guest.AuthorizedKey_Encoded_Output()}},
 				{name: `CloudInit UpgradePackages v7`,
 					version:       Version{Major: 7, Minor: 255, Patch: 255},
 					config:        &ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(false)}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}}, // this is only possible with user error when using the advanced features
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}}}, // this is only possible with user error when using the advanced features
 				{name: `CloudInit UpgradePackages v8`,
 					version:       Version{Major: 8},
 					config:        &ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(false)}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}},
 					output:        map[string]interface{}{"ciupgrade": 0}},
 				{name: `CloudInit Username`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("root")}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
 					output:        map[string]interface{}{"ciuser": "root"}},
 				{name: `CloudInit UserPassword`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Enter123!")}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Abc123!")}},
-					output:        map[string]interface{}{"cipassword": "Enter123!"}},
-			},
-			create: []test{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Abc123!")}},
+					output:        map[string]interface{}{"cipassword": "Enter123!"}}},
+			create: []qemuTestCaseAPI{
 				{name: `CloudInit Full v7`,
 					version: Version{Major: 7, Minor: 255, Patch: 255},
 					config: &ConfigQemu{CloudInit: &CloudInit{
@@ -607,11 +658,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output: map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml"}},
 				{name: `CloudInit DNS NameServers empty`,
 					config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
-						NameServers: &[]netip.Addr{}}}},
-					output: map[string]interface{}{}},
+						NameServers: &[]netip.Addr{}}}}},
 				{name: `CloudInit DNS SearchDomain empty`,
-					config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}}},
 				{name: `CloudInit NetworkInterfaces`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID1: CloudInitNetworkConfig{
@@ -624,106 +673,102 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						"ipconfig1":  "ip=dhcp,ip6=dhcp",
 						"ipconfig30": "ip=10.20.4.7/22"}},
 				{name: `CloudInit PublicSSHkeys empty`,
-					config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{})}},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{})}}},
 				{name: `CloudInit PublicSSHkeys empty PublicKey`,
-					config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{{}})}},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{{}})}}},
 				{name: `CloudInit Username empty`,
-					config: &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
-					output: map[string]interface{}{}},
+					config: &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}}},
 				{name: `CloudInit UserPassword empty`,
-					config: &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("")}},
-					output: map[string]interface{}{}}},
-			update: []test{
+					config: &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("")}}}},
+			update: []qemuTestCaseAPI{
 				{name: `CloudInit Custom clear`,
 					config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
 						Meta:    &CloudInitSnippet{},
 						Network: &CloudInitSnippet{},
 						User:    &CloudInitSnippet{},
 						Vendor:  &CloudInitSnippet{}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
 					output:        map[string]interface{}{"cicustom": ""}},
 				{name: `CloudInit Custom Network`,
 					config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
 						Network: &CloudInitSnippet{
 							Storage:  "newStorage",
 							FilePath: "new.yml"}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
 					output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=newStorage:new.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"}},
 				{name: `CloudInit Custom User`,
 					config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
 						User: &CloudInitSnippet{
 							Storage:  "newStorage",
 							FilePath: "new.yml"}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
 					output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=newStorage:new.yml,vendor=local:snippets/ci-custom.yml"}},
 				{name: `CloudInit Custom Vendor`,
 					config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
 						Vendor: &CloudInitSnippet{
 							Storage:  "newStorage",
 							FilePath: "new.yml"}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
 					output:        map[string]interface{}{"cicustom": "meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=newStorage:new.yml"}},
 				{name: `CloudInit Custom Meta`,
 					config: &ConfigQemu{CloudInit: &CloudInit{Custom: &CloudInitCustom{
 						Meta: &CloudInitSnippet{
 							Storage:  "newStorage",
 							FilePath: "new.yml"}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{Custom: cloudInitCustom()}},
 					output:        map[string]interface{}{"cicustom": "meta=newStorage:new.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"}},
 				{name: `CloudInit DNS NameServers empty`,
 					config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 						NameServers: &[]netip.Addr{}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 						NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
 					output: map[string]interface{}{"delete": "nameserver"}},
 				{name: `CloudInit DNS NameServers no DNS`,
 					config: &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{
 						NameServers: &[]netip.Addr{parseIP("8.8.8.8")}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{}},
 					output:        map[string]any{"nameserver": string("8.8.8.8")}},
 				{name: `CloudInit DNS SearchDomain empty`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("")}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.org")}}},
 					output:        map[string]interface{}{"delete": "searchdomain"}},
 				{name: `CloudInit DNS SearchDomain no DNS`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{DNS: &GuestDNS{SearchDomain: util.Pointer("example.com")}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{}},
 					output:        map[string]any{"searchdomain": string("example.com")}},
 				{name: `CloudInit NetworkInterfaces Ipv4.Address update`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID0: CloudInitNetworkConfig{
 							IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR("192.168.1.10/24"))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID0: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig0": "ip=192.168.1.10/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
 				{name: `CloudInit NetworkInterfaces Ipv4.Address remove`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID1: CloudInitNetworkConfig{
 							IPv4: &CloudInitIPv4Config{Address: util.Pointer(IPv4CIDR(""))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID1: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig1": "gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
 				{name: `CloudInit NetworkInterfaces Ipv4.DHCP set`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID2: CloudInitNetworkConfig{
 							IPv4: &CloudInitIPv4Config{DHCP: true}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID2: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig2": "ip=dhcp,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
 				{name: `CloudInit NetworkInterfaces Ipv4.Gateway update`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID3: CloudInitNetworkConfig{
 							IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.1.1"))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID3: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig3": "ip=192.168.56.30/24,gw=192.168.1.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
 				{name: `CloudInit NetworkInterfaces Ipv4.Gateway overwrite Ipv4.DHCP`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID4: CloudInitNetworkConfig{
 							IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address("192.168.1.1"))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID4: CloudInitNetworkConfig{
 							IPv4: &CloudInitIPv4Config{DHCP: true}}}}},
 					output: map[string]interface{}{"ipconfig4": "gw=192.168.1.1"}},
@@ -731,42 +776,42 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID5: CloudInitNetworkConfig{
 							IPv4: &CloudInitIPv4Config{Gateway: util.Pointer(IPv4Address(""))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID5: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig5": "ip=192.168.56.30/24,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:abcd::1"}},
 				{name: `CloudInit NetworkInterfaces Ipv6.Address update`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID6: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR("2001:0db8:85a3::/48"))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID6: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig6": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:85a3::/48,gw6=2001:0db8:abcd::1"}},
 				{name: `CloudInit NetworkInterfaces Ipv6.Address remove`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID7: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{Address: util.Pointer(IPv6CIDR(""))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID7: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig7": "ip=192.168.56.30/24,gw=192.168.56.1,gw6=2001:0db8:abcd::1"}},
 				{name: `CloudInit NetworkInterfaces Ipv6.DHCP set`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID8: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{DHCP: true}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID8: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig8": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=dhcp"}},
 				{name: `CloudInit NetworkInterfaces Ipv6.Gateway update`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID9: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID9: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig9": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48,gw6=2001:0db8:85a3::1"}},
 				{name: `CloudInit NetworkInterfaces Ipv6.Gateway overwrite Ipv6.DHCP`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID10: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID10: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{DHCP: true}}}}},
 					output: map[string]interface{}{"ipconfig10": "gw6=2001:0db8:85a3::1"}},
@@ -774,7 +819,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID11: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address("2001:0db8:85a3::1"))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID11: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{SLAAC: true}}}}},
 					output: map[string]interface{}{"ipconfig11": "gw6=2001:0db8:85a3::1"}},
@@ -782,14 +827,14 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID12: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{Gateway: util.Pointer(IPv6Address(""))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID12: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig12": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=2001:0db8:abcd::/48"}},
 				{name: `CloudInit NetworkInterfaces Ipv6.SLAAC set`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID13: CloudInitNetworkConfig{
 							IPv6: &CloudInitIPv6Config{SLAAC: true}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID13: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"ipconfig13": "ip=192.168.56.30/24,gw=192.168.56.1,ip6=auto"}},
 				{name: `CloudInit NetworkInterfaces delete existing interface`,
@@ -801,7 +846,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							IPv6: &CloudInitIPv6Config{
 								Address: util.Pointer(IPv6CIDR("")),
 								Gateway: util.Pointer(IPv6Address(""))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID14: cloudInitNetworkConfig()}}},
 					output: map[string]interface{}{"delete": "ipconfig14"}},
 				{name: `CloudInit NetworkInterfaces delete non-existing interface`,
@@ -813,16 +858,14 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							IPv6: &CloudInitIPv6Config{
 								Address: util.Pointer(IPv6CIDR("")),
 								Gateway: util.Pointer(IPv6Address(""))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{}}}},
 				{name: `CloudInit NetworkInterfaces no updates`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID29: cloudInitNetworkConfig(),
 						QemuNetworkInterfaceID30: CloudInitNetworkConfig{
 							IPv4: &CloudInitIPv4Config{DHCP: true},
-							IPv6: &CloudInitIPv6Config{DHCP: true}}}}},
-					output: map[string]interface{}{}},
+							IPv6: &CloudInitIPv6Config{DHCP: true}}}}}},
 				{name: `CloudInit NetworkInterfaces full`,
 					config: &ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID0: CloudInitNetworkConfig{
@@ -867,7 +910,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							IPv6: &CloudInitIPv6Config{
 								Address: util.Pointer(IPv6CIDR("")),
 								Gateway: util.Pointer(IPv6Address(""))}}}}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{NetworkInterfaces: CloudInitNetworkInterfaces{
 						QemuNetworkInterfaceID0: cloudInitNetworkConfig(),
 						QemuNetworkInterfaceID1: cloudInitNetworkConfig(),
 						QemuNetworkInterfaceID2: cloudInitNetworkConfig(),
@@ -908,55 +951,51 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						"delete":     "ipconfig14"}},
 				{name: `CloudInit PublicSSHkeys empty`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{})}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{parsePublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key")})}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{parsePublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key")})}},
 					output:        map[string]interface{}{"delete": "sshkeys"}},
 				{name: `CloudInit PublicSSHkeys empty PublicKey`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{{}})}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{parsePublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key")})}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{PublicSSHkeys: util.Pointer([]AuthorizedKey{parsePublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+0roY6F4yzq5RfA6V2+8gOgKlLOg9RtB1uGyTYvOMU6wxWUXVZP44+XozNxXZK4/MfPjCZLomqv78RlAedIQbqU8l6J9fdrrsRt6NknusE36UqD4HGPLX3Wn7svjSyNRfrjlk5BrBQ26rglLGlRSeD/xWvQ+5jLzzdo5NczszGkE9IQtrmKye7Gq7NQeGkHb1h0yGH7nMQ48WJ6ZKv1JG+GzFb8n4Qoei3zK9zpWxF+0AzF5u/zzCRZ4yU7FtfHgGRBDPze8oe3nVe+aO8MBH2dy8G/BRMXBdjWrSkaT9ZyeaT0k9SMjsCr9DQzUtVSOeqZZokpNU1dVglI+HU0vN test-key")})}},
 					output:        map[string]interface{}{"delete": "sshkeys"}},
 				{name: `CloudInit Username empty`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("")}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{Username: util.Pointer("admin")}},
 					output:        map[string]interface{}{"delete": "ciuser"}},
 				{name: `CloudInit UserPassword empty`,
 					config:        &ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("")}},
-					currentConfig: ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Abc123!")}},
+					currentLegacy: ConfigQemu{CloudInit: &CloudInit{UserPassword: util.Pointer("Abc123!")}},
 					output:        map[string]interface{}{"delete": "cipassword"}}}},
 		{category: `Description`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Description empty`,
-					config: &ConfigQemu{Description: util.Pointer("")},
-					output: map[string]interface{}{}}},
-			createUpdate: []test{
+					config: &ConfigQemu{Description: util.Pointer("")}}},
+			createUpdate: []qemuTestCaseAPI{
 				{name: `Description set`,
 					config:        &ConfigQemu{Description: util.Pointer("test description")},
-					currentConfig: ConfigQemu{Description: util.Pointer("old description")},
+					currentLegacy: ConfigQemu{Description: util.Pointer("old description")},
 					output:        map[string]interface{}{"description": "test description"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Description empty`,
 					config:        &ConfigQemu{Description: util.Pointer("")},
-					currentConfig: ConfigQemu{Description: util.Pointer("old description")},
+					currentLegacy: ConfigQemu{Description: util.Pointer("old description")},
 					output:        map[string]interface{}{"description": ""}}}},
 		{category: `Disks.Ide`,
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disk.Ide.Disk_X NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{}}}}},
 				{name: `Disk.Ide.Disk_X NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: nil}}}},
 				{name: `Disk.Ide.Disk_X NOTHING DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Delete: true}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Delete: true}}}}},
 				{name: `Disk.Ide.Disk_X DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Delete: true}}}},
 					output:        map[string]any{"delete": "ide3"}}}},
 		{category: `Disks.Ide.CdRom`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Ide.Disk_X.CdRom none`,
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}},
 					output: map[string]interface{}{"ide0": "none,media=cdrom"}},
@@ -966,79 +1005,73 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Ide.Disk_X.CdRom.Passthrough`,
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output: map[string]interface{}{"ide2": "cdrom,media=cdrom"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Ide.Disk_X.CdRom CHANGE ISO TO None`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}},
 					output:        map[string]interface{}{"ide1": "none,media=cdrom"}},
 				{name: `Disks.Ide.Disk_X.CdRom CHANGE ISO TO Passthrough`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output:        map[string]interface{}{"ide2": "cdrom,media=cdrom"}},
 				{name: `Disks.Ide.Disk_X.CdRom CHANGE None TO ISO`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"ide3": "Test:iso/test.iso,media=cdrom"}},
 				{name: `Disks.Ide.Disk_X.CdRom CHANGE None TO Passthrough`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output:        map[string]interface{}{"ide0": "cdrom,media=cdrom"}},
 				{name: `Disks.Ide.Disk_X.CdRom CHANGE Passthrough TO ISO`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"ide1": "Test:iso/test.iso,media=cdrom"}},
 				{name: `Disks.Ide.Disk_X.CdRom CHANGE Passthrough TO None`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}},
 					output:        map[string]interface{}{"ide2": "none,media=cdrom"}},
 				{name: `Disks.Ide.Disk_X.CdRom NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{}}}}},
 				{name: `Disks.Ide.Disk_X.CdRom NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: nil}}}},
 				{name: `Disks.Ide.Disk_X.CdRom SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{Passthrough: true}}}}}},
 				{name: `Disks.Ide.Disk_X.CdRom.Iso.File CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test2.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"ide1": "Test:iso/test2.iso,media=cdrom"}},
 				{name: `Disks.Ide.Disk_X.CdRom.Iso.Storage CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "NewStorage"}}}}}},
 					output:        map[string]interface{}{"ide2": "NewStorage:iso/test.iso,media=cdrom"}}}},
 		{category: `Disks.Ide.CloudInit`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Ide.Disk_X.CloudInit`,
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					output: map[string]interface{}{"ide1": "Test:cloudinit,format=raw"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Ide.Disk_X.CloudInit NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{}}}}},
 				{name: `Disks.Ide.Disk_X.CloudInit NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: nil}}}},
 				{name: `Disks.Ide.Disk_X.CloudInit SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: update_CloudInit()}}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: update_CloudInit()}}}}},
 				{name: `Disks.Ide.Disk_X.CloudInit.Format CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Qcow2, Storage: "Test"}}}}},
 					output:        map[string]interface{}{"ide1": "Test:cloudinit,format=qcow2"}},
 				{name: `Disks.Ide.Disk_X.CloudInit.Storage CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "NewStorage"}}}}},
 					output:        map[string]interface{}{"ide2": "NewStorage:cloudinit,format=raw"}}}},
 		{category: `Disks.Ide.Disk`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Ide.Disk_X.Disk All`,
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						AsyncIO: QemuDiskAsyncIO_Native,
@@ -1154,9 +1187,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Ide.Disk_X.Disk.WorldWideName`,
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{WorldWideName: "0x5001234000F876AB"}}}}},
 					output: map[string]interface{}{"ide0": ",backup=0,replicate=0,wwn=0x5001234000F876AB"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Ide.Disk_X.Disk CHANGE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
@@ -1169,7 +1202,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide3": "test:0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk CHANGE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -1185,7 +1218,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide3": "test:100/base-100-disk-1.raw/0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk CHANGE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -1197,7 +1230,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide3": "test:vm-0-disk-23,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk CHANGE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -1212,7 +1245,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide3": "test:base-100-disk-1/vm-0-disk-23,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk MIGRATE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -1223,7 +1256,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"ide1": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk MIGRATE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -1237,7 +1270,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"ide1": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk MIGRATE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Id:              23,
 						SizeInKibibytes: 10,
 						Storage:         "test1",
@@ -1247,7 +1280,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"ide1": "test2:vm-0-disk-23,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk MIGRATE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Id:              23,
@@ -1260,15 +1293,13 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"ide1": "test2:vm-0-disk-23,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: ideBase()}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: ideBase()}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{}}}}},
 				{name: `Disks.Ide.Disk_X.Disk NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: ideBase()}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: ideBase()}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: nil}}}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE DOWN Gibibyte File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 9437185,
@@ -1279,7 +1310,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide2": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE DOWN Gibibyte File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -1293,7 +1324,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide2": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE DOWN Gibibyte Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Id:              23,
 						SizeInKibibytes: 9437185,
 						Storage:         "test",
@@ -1304,7 +1335,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide2": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE DOWN Gibibyte Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Id:              23,
@@ -1318,7 +1349,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide2": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE DOWN Kibibyte File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 9437186,
@@ -1329,7 +1360,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide2": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE DOWN Kibibyte File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -1343,7 +1374,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide2": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE DOWN Kibibyte Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Id:              23,
 						SizeInKibibytes: 9437186,
 						Storage:         "test",
@@ -1354,7 +1385,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide2": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE DOWN Kibibyte Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Id:              23,
@@ -1368,7 +1399,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide2": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE UP File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -1376,10 +1407,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE UP File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(110)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -1390,20 +1420,18 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE UP Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Id:              23,
 						SizeInKibibytes: 10,
 						Storage:         "test",
 						syntax:          diskSyntaxVolume}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Ide.Disk_X.Disk RESIZE UP Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(110)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Id:              23,
@@ -1413,17 +1441,15 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							syntax:          diskSyntaxVolume}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Ide.Disk_X.Disk SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: ideBase()}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: ideBase()}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Ide.Disk_X.Disk.Format CHANGE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -1434,7 +1460,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide1": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk.Format CHANGE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -1448,7 +1474,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"ide1": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Disk.Format CHANGE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -1457,10 +1483,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Qcow2,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Ide.Disk_X.Disk.Format CHANGE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -1472,10 +1497,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Disk: &QemuIdeDisk{
 						Format:          QemuDiskFormat_Qcow2,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}}}},
+						Storage:         "test"}}}}}}}},
 		{category: `Disks.Ide.Passthrough`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Ide.Disk_X.Passthrough All`,
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						AsyncIO: QemuDiskAsyncIO_Threads,
@@ -1573,50 +1597,44 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Ide.Disk_X.Passthrough.WorldWideName`,
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{WorldWideName: "0x500FED1000B65432"}}}}},
 					output: map[string]interface{}{"ide3": ",backup=0,replicate=0,wwn=0x500FED1000B65432"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Ide.Disk_X.Passthrough CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						AsyncIO: QemuDiskAsyncIO_Native,
 						File:    "/dev/disk/sda"}}}}},
 					output: map[string]interface{}{"ide0": "/dev/disk/sda,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Ide.Disk_X.Passthrough NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						File: "/dev/disk/sda"}}}}},
-					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{}}}},
-					output: map[string]any{}},
+					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{}}}}},
 				{name: `Disks.Ide.Disk_X.Passthrough NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						File: "/dev/disk/sda"}}}}},
-					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: nil}}},
-					output: map[string]any{}},
+					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_2: nil}}}},
 				{name: `Disks.Ide.Disk_X.Passthrough SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
-						File: "/dev/disk/sda"}}}}},
-					output: map[string]interface{}{}}}},
+						File: "/dev/disk/sda"}}}}}}}},
 		{category: `Disks.Sata`,
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disk.Sata.Disk_X NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{}}}}},
 				{name: `Disk.Sata.Disk_X NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: nil}}}},
 				{name: `Disk.Sata.Disk_X NOTHING DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Delete: true}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Delete: true}}}}},
 				{name: `Disk.Sata.Disk_X DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Delete: true}}}},
 					output:        map[string]any{"delete": "sata2"}}}},
 		{category: `Disks.Sata.CdRom`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Sata.Disk_X.CdRom none`,
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CdRom: &QemuCdRom{}}}}},
 					output: map[string]interface{}{"sata0": "none,media=cdrom"}},
@@ -1626,79 +1644,73 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Sata.Disk_X.CdRom.Passthrough`,
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output: map[string]interface{}{"sata2": "cdrom,media=cdrom"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Sata.Disk_X.CdRom CHANGE ISO TO None`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CdRom: &QemuCdRom{}}}}},
 					output:        map[string]interface{}{"sata1": "none,media=cdrom"}},
 				{name: `Disks.Sata.Disk_X.CdRom CHANGE ISO TO Passthrough`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output:        map[string]interface{}{"sata2": "cdrom,media=cdrom"}},
 				{name: `Disks.Sata.Disk_X.CdRom CHANGE None TO ISO`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"sata3": "Test:iso/test.iso,media=cdrom"}},
 				{name: `Disks.Sata.Disk_X.CdRom CHANGE None TO Passthrough`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CdRom: &QemuCdRom{}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CdRom: &QemuCdRom{}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output:        map[string]interface{}{"sata4": "cdrom,media=cdrom"}},
 				{name: `Disks.Sata.Disk_X.CdRom CHANGE Passthrough TO ISO`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"sata5": "Test:iso/test.iso,media=cdrom"}},
 				{name: `Disks.Sata.Disk_X.CdRom CHANGE Passthrough TO None`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CdRom: &QemuCdRom{}}}}},
 					output:        map[string]interface{}{"sata0": "none,media=cdrom"}},
 				{name: `Disks.Sata.Disk_X.CdRom NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{}}}}},
 				{name: `Disks.Sata.Disk_X.CdRom NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: nil}}}},
 				{name: `Disks.Sata.Disk_X.CdRom SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CdRom: &QemuCdRom{Passthrough: true}}}}}},
 				{name: `Disks.Sata.Disk_X.CdRom.Iso.File CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test2.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"sata3": "Test:iso/test2.iso,media=cdrom"}},
 				{name: `Disks.Sata.Disk_X.CdRom.Iso.Storage CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "NewStorage"}}}}}},
 					output:        map[string]interface{}{"sata4": "NewStorage:iso/test.iso,media=cdrom"}}}},
 		{category: `Disks.Sata.CloudInit`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Sata.Disk_X.CloudInit`,
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					output: map[string]interface{}{"sata1": "Test:cloudinit,format=raw"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Sata.Disk_X.CloudInit NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{}}}}},
 				{name: `Disks.Sata.Disk_X.CloudInit NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: nil}}}},
 				{name: `Disks.Sata.Disk_X.CloudInit SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: update_CloudInit()}}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{CloudInit: update_CloudInit()}}}}},
 				{name: `Disks.Sata.Disk_X.CloudInit.Format CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Qcow2, Storage: "Test"}}}}},
 					output:        map[string]interface{}{"sata1": "Test:cloudinit,format=qcow2"}},
 				{name: `Disks.Sata.Disk_X.CloudInit.Storage CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "NewStorage"}}}}},
 					output:        map[string]interface{}{"sata2": "NewStorage:cloudinit,format=raw"}}}},
 		{category: `Disks.Sata.Disk`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Sata.Disk_X.Disk ALL`,
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						AsyncIO: QemuDiskAsyncIO_Native,
@@ -1814,9 +1826,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Sata.Disk_X.Disk.WorldWideName`,
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{WorldWideName: "0x500DCBA500E23456"}}}}},
 					output: map[string]interface{}{"sata0": ",backup=0,replicate=0,wwn=0x500DCBA500E23456"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Sata.Disk_X.Disk CHANGE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
@@ -1829,7 +1841,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata3": "test:0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk CHANGE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -1845,7 +1857,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata3": "test:100/base-100-disk-1.raw/0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk CHANGE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -1857,7 +1869,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata3": "test:vm-0-disk-23,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk CHANGE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -1872,7 +1884,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata3": "test:base-100-disk-1/vm-0-disk-23,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk MIGRATE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -1883,7 +1895,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"sata5": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk MIGRATE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -1897,7 +1909,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"sata5": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk MIGRATE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -1909,7 +1921,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"sata5": "test2:vm-0-disk-23,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk MIGRATE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{
 							Id:              23,
@@ -1922,15 +1934,13 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"sata5": "test2:vm-0-disk-23,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: sataBase()}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: sataBase()}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{}}}}},
 				{name: `Disks.Sata.Disk_X.Disk NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: sataBase()}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: sataBase()}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: nil}}}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE DOWN Gibibyte File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 9437185,
@@ -1941,7 +1951,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata0": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE DOWN Gibibyte File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -1955,7 +1965,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata0": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE DOWN Gibibyte Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Id:              23,
 						SizeInKibibytes: 9437185,
 						Storage:         "test",
@@ -1965,7 +1975,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata0": "test:9,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE DOWN Gibibyte Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 							Id:              23,
@@ -1978,7 +1988,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata0": "test:9,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE DOWN Kibibyte File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 9437186,
@@ -1989,7 +1999,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata0": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE DOWN Kibibyte File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2003,7 +2013,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata0": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE DOWN Kibibyte Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 						Id:              23,
 						SizeInKibibytes: 9437186,
 						Storage:         "test",
@@ -2013,7 +2023,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata0": "test:0.001,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE DOWN Kibibyte Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
 							Id:              23,
@@ -2026,7 +2036,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata0": "test:0.001,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE UP File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2034,10 +2044,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE UP File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2048,19 +2057,17 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE UP Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						Id:              23,
 						SizeInKibibytes: 10,
 						Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Sata.Disk_X.Disk RESIZE UP Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 							Id:              23,
@@ -2069,17 +2076,15 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							Storage:         "test"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Disk: &QemuSataDisk{
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Sata.Disk_X.Disk SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: sataBase()}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: sataBase()}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Sata.Disk_X.Disk.Format CHANGE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2090,7 +2095,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata3": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk.Format CHANGE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2104,7 +2109,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"sata3": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Disk.Format CHANGE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2113,10 +2118,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Qcow2,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Sata.Disk_X.Disk.Format CHANGE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2128,10 +2132,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_3: &QemuSataStorage{Disk: &QemuSataDisk{
 						Format:          QemuDiskFormat_Qcow2,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}}}},
+						Storage:         "test"}}}}}}}},
 		{category: `Disks.Sata.Passthrough`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Sata.Disk_X.Passthrough All`,
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						AsyncIO: QemuDiskAsyncIO_Threads,
@@ -2229,50 +2232,44 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Sata.Disk_X.Passthrough.WorldWideName`,
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{WorldWideName: "0x5001ABE000987654"}}}}},
 					output: map[string]interface{}{"sata5": ",backup=0,replicate=0,wwn=0x5001ABE000987654"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Sata.Disk_X.Passthrough CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						AsyncIO: QemuDiskAsyncIO_Native,
 						File:    "/dev/disk/sda"}}}}},
 					output: map[string]interface{}{"sata0": "/dev/disk/sda,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Sata.Disk_X.Passthrough NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						File: "/dev/disk/sda"}}}}},
-					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{}}}},
-					output: map[string]any{}},
+					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{}}}}},
 				{name: `Disks.Sata.Disk_X.Passthrough NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						File: "/dev/disk/sda"}}}}},
-					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: nil}}},
-					output: map[string]any{}},
+					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_2: nil}}}},
 				{name: `Disks.Sata.Disk_X.Passthrough SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
-						File: "/dev/disk/sda"}}}}},
-					output: map[string]interface{}{}}}},
+						File: "/dev/disk/sda"}}}}}}}},
 		{category: `Disks.Scsi`,
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disk.Scsi.Disk_X NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{}}}}},
 				{name: `Disk.Scsi.Disk_X NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: nil}}}},
 				{name: `Disk.Sata.Disk_X NOTHING DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Delete: true}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{Delete: true}}}}},
 				{name: `Disk.Sata.Disk_X DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Delete: true}}}},
 					output:        map[string]any{"delete": "scsi2"}}}},
 		{category: `Disks.Scsi.CdRom`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Scsi.CdRom none`,
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}},
 					output: map[string]interface{}{"scsi0": "none,media=cdrom"}},
@@ -2282,79 +2279,73 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Scsi.CdRom.Passthrough`,
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output: map[string]interface{}{"scsi2": "cdrom,media=cdrom"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Scsi.Disk_X.CdRom CHANGE ISO TO None`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}},
 					output:        map[string]interface{}{"scsi1": "none,media=cdrom"}},
 				{name: `Disks.Scsi.Disk_X.CdRom CHANGE ISO TO Passthrough`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output:        map[string]interface{}{"scsi2": "cdrom,media=cdrom"}},
 				{name: `Disks.Scsi.Disk_X.CdRom CHANGE None TO ISO`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_3: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"scsi3": "Test:iso/test.iso,media=cdrom"}},
 				{name: `Disks.Scsi.Disk_X.CdRom CHANGE None TO Passthrough`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_4: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output:        map[string]interface{}{"scsi4": "cdrom,media=cdrom"}},
 				{name: `Disks.Scsi.Disk_X.CdRom CHANGE Passthrough TO ISO`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_5: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"scsi5": "Test:iso/test.iso,media=cdrom"}},
 				{name: `Disks.Scsi.Disk_X.CdRom CHANGE Passthrough TO None`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}},
 					output:        map[string]interface{}{"scsi6": "none,media=cdrom"}},
 				{name: `Disks.Scsi.Disk_X.CdRom NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_7: &QemuScsiStorage{}}}}},
 				{name: `Disks.Scsi.Disk_X.CdRom NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: nil}}}},
 				{name: `Disks.Scsi.Disk_X.CdRom SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}}}}},
 				{name: `Disks.Scsi.Disk_X.CdRom.Iso.File CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_9: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test2.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"scsi9": "Test:iso/test2.iso,media=cdrom"}},
 				{name: `Disks.Scsi.Disk_X.CdRom.Iso.Storage CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_10: &QemuScsiStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "NewStorage"}}}}}},
 					output:        map[string]interface{}{"scsi10": "NewStorage:iso/test.iso,media=cdrom"}}}},
 		{category: `Disks.Scsi.CloudInit`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Scsi.CloudInit`,
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					output: map[string]interface{}{"scsi1": "Test:cloudinit,format=raw"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Scsi.Disk_X.CloudInit NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_11: &QemuScsiStorage{}}}}},
 				{name: `Disks.Scsi.Disk_X.CloudInit NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: nil}}}},
 				{name: `Disks.Scsi.Disk_X.CloudInit SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{CloudInit: update_CloudInit()}}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_12: &QemuScsiStorage{CloudInit: update_CloudInit()}}}}},
 				{name: `Disks.Scsi.Disk_X.CloudInit.Format CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_13: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Qcow2, Storage: "Test"}}}}},
 					output:        map[string]interface{}{"scsi13": "Test:cloudinit,format=qcow2"}},
 				{name: `Disks.Scsi.Disk_X.CloudInit.Storage CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_14: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "NewStorage"}}}}},
 					output:        map[string]interface{}{"scsi14": "NewStorage:cloudinit,format=raw"}}}},
 		{category: `Disks.Scsi.Disk`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Scsi.Disk_X.Disk All`,
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						AsyncIO: QemuDiskAsyncIO_Native,
@@ -2478,9 +2469,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Scsi.Disk_X.Disk.WorldWideName`,
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_27: &QemuScsiStorage{Disk: &QemuScsiDisk{WorldWideName: "0x500EF32100D76589"}}}}},
 					output: map[string]interface{}{"scsi27": ",backup=0,replicate=0,wwn=0x500EF32100D76589"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Scsi.Disk_X.Disk CHANGE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
@@ -2493,7 +2484,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi15": "test:0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk CHANGE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -2509,7 +2500,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi15": "test:100/base-100-disk-1.raw/0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk CHANGE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2521,7 +2512,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi15": "test:vm-0-disk-23,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk CHANGE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_15: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -2536,7 +2527,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi15": "test:base-100-disk-1/vm-0-disk-23,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk MIGRATE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2547,7 +2538,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"scsi17": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk MIGRATE File Linked Clone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2561,7 +2552,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"scsi17": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk MIGRATE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Id:              23,
 						SizeInKibibytes: 10,
 						Storage:         "test1",
@@ -2571,7 +2562,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"scsi17": "test2:vm-0-disk-23,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk MIGRATE Volume Linked Clone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Id:              23,
@@ -2584,15 +2575,13 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"scsi17": "test2:vm-0-disk-23,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: scsiBase()}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: &QemuScsiStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: scsiBase()}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_16: &QemuScsiStorage{}}}}},
 				{name: `Disks.Scsi.Disk_X.Disk DELETE nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: scsiBase()}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: scsiBase()}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_17: nil}}}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE DOWN Gibibyte File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 9437185,
@@ -2603,7 +2592,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi18": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE DOWN Gibibyte File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2617,7 +2606,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi18": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE DOWN Gibibyte Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Id:              23,
 						SizeInKibibytes: 9437185,
 						Storage:         "test",
@@ -2628,7 +2617,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi18": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE DOWN Gibibyte Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Id:              23,
@@ -2642,7 +2631,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi18": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE DOWN Kibibyte File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 9437186,
@@ -2653,7 +2642,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi18": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE DOWN Kibibyte File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2667,7 +2656,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi18": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE DOWN Kibibyte Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Id:              23,
 						SizeInKibibytes: 9437186,
 						Storage:         "test",
@@ -2678,7 +2667,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi18": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE DOWN Kibibyte Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_18: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Id:              23,
@@ -2692,7 +2681,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi18": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE UP File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2700,10 +2689,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE UP File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2714,10 +2702,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE UP Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2726,10 +2713,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Scsi.Disk_X.Disk RESIZE UP Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2741,17 +2727,15 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_19: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Scsi.Disk_X.Disk SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_20: scsiBase()}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_20: scsiBase()}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_20: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Scsi.Disk_X.Disk.Format CHANGE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2762,7 +2746,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi21": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk.Format CHANGE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2776,7 +2760,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"scsi21": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Disk.Format CHANGE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -2785,10 +2769,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Qcow2,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.Scsi.Disk_X.Disk.Format CHANGE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 							Format:          QemuDiskFormat_Raw,
@@ -2800,10 +2783,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_21: &QemuScsiStorage{Disk: &QemuScsiDisk{
 						Format:          QemuDiskFormat_Qcow2,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}}}},
+						Storage:         "test"}}}}}}}},
 		{category: `Disks.Scsi.Passthrough`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.Scsi.Disk_X.Passthrough All`,
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						AsyncIO: QemuDiskAsyncIO_Threads,
@@ -2909,50 +2891,44 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.Scsi.Disk_X.Passthrough.WorldWideName`,
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_25: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{WorldWideName: "0x5004DC0100E239C7"}}}}},
 					output: map[string]interface{}{"scsi25": ",backup=0,replicate=0,wwn=0x5004DC0100E239C7"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.Scsi.Disk_X.Passthrough CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						AsyncIO: QemuDiskAsyncIO_Native,
 						File:    "/dev/disk/sda"}}}}},
 					output: map[string]interface{}{"scsi0": "/dev/disk/sda,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.Scsi.Disk_X.Passthrough NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						File: "/dev/disk/sda"}}}}},
-					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{}}}},
-					output: map[string]any{}},
+					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{}}}}},
 				{name: `Disks.Scsi.Disk_X.Passthrough NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						File: "/dev/disk/sda"}}}}},
-					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: nil}}},
-					output: map[string]any{}},
+					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_2: nil}}}},
 				{name: `Disks.Scsi.Disk_X.Passthrough SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_1: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
-						File: "/dev/disk/sda"}}}}},
-					output: map[string]interface{}{}}}},
+						File: "/dev/disk/sda"}}}}}}}},
 		{category: `Disks.VirtIO`,
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disk.VirtIO.Disk_X NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}}},
 				{name: `Disk.VirtIO.Disk_X NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: nil}}}},
 				{name: `Disk.VirtIO.Disk_X NOTHING DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Delete: true}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Delete: true}}}}},
 				{name: `Disk.VirtIO.Disk_X DELETE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Delete: true}}}},
 					output:        map[string]any{"delete": "virtio2"}}}},
 		{category: `Disks.VirtIO.CdRom`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.VirtIO.Disk_X.CdRom none`,
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}},
 					output: map[string]interface{}{"virtio0": "none,media=cdrom"}},
@@ -2962,79 +2938,73 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.VirtIO.Disk_X.CdRom.Passthrough`,
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output: map[string]interface{}{"virtio2": "cdrom,media=cdrom"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.VirtIO.Disk_X.CdRom CHANGE ISO TO None`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}},
 					output:        map[string]interface{}{"virtio1": "none,media=cdrom"}},
 				{name: `Disks.VirtIO.Disk_X.CdRom CHANGE ISO TO Passthrough`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output:        map[string]interface{}{"virtio2": "cdrom,media=cdrom"}},
 				{name: `Disks.VirtIO.Disk_X.CdRom CHANGE None TO ISO`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"virtio3": "Test:iso/test.iso,media=cdrom"}},
 				{name: `Disks.VirtIO.Disk_X.CdRom CHANGE None TO Passthrough`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					output:        map[string]interface{}{"virtio4": "cdrom,media=cdrom"}},
 				{name: `Disks.VirtIO.Disk_X.CdRom CHANGE Passthrough TO ISO`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"virtio5": "Test:iso/test.iso,media=cdrom"}},
 				{name: `Disks.VirtIO.Disk_X.CdRom CHANGE Passthrough TO None`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_6: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}},
 					output:        map[string]interface{}{"virtio6": "none,media=cdrom"}},
 				{name: `Disks.VirtIO.Disk_X.CdRom NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{}}}}},
 				{name: `Disks.VirtIO.Disk_X.CdRom NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: nil}}}},
 				{name: `Disks.VirtIO.Disk_X.CdRom SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{CdRom: &QemuCdRom{Passthrough: true}}}}}},
 				{name: `Disks.VirtIO.Disk_X.CdRom.Iso.File CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_9: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test2.iso", Storage: "Test"}}}}}},
 					output:        map[string]interface{}{"virtio9": "Test:iso/test2.iso,media=cdrom"}},
 				{name: `Disks.VirtIO.Disk_X.CdRom.Iso.Storage CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "Test"}}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test.iso", Storage: "NewStorage"}}}}}},
 					output:        map[string]interface{}{"virtio10": "NewStorage:iso/test.iso,media=cdrom"}}}},
 		{category: `Disks.VirtIO.CloudInit`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.VirtIO.Disk_X.CloudInit`,
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					output: map[string]interface{}{"virtio1": "Test:cloudinit,format=raw"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.VirtIO.Disk_X.CloudInit NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{}}}}},
 				{name: `Disks.VirtIO.Disk_X.CloudInit NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: nil}}}},
 				{name: `Disks.VirtIO.Disk_X.CloudInit SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{CloudInit: update_CloudInit()}}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{CloudInit: update_CloudInit()}}}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{CloudInit: update_CloudInit()}}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_12: &QemuVirtIOStorage{CloudInit: update_CloudInit()}}}}},
 				{name: `Disks.VirtIO.Disk_X.CloudInit.Format CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Qcow2, Storage: "Test"}}}}},
 					output:        map[string]interface{}{"virtio13": "Test:cloudinit,format=qcow2"}},
 				{name: `Disks.VirtIO.Disk_X.CloudInit.Storage CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "Test"}}}}},
 					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_14: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: format_Raw, Storage: "NewStorage"}}}}},
 					output:        map[string]interface{}{"virtio14": "NewStorage:cloudinit,format=raw"}}}},
 		{category: `Disks.VirtIO.Disk`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.VirtIO.Disk_X.Disk All`,
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						AsyncIO: QemuDiskAsyncIO_Native,
@@ -3160,9 +3130,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.VirtIO.Disk_X.Disk.WorldWideName`,
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_10: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{WorldWideName: "0x5005FED000B87632"}}}}},
 					output: map[string]interface{}{"virtio10": ",backup=0,replicate=0,wwn=0x5005FED000B87632"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.VirtIO.Disk_X.Disk CHANGE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
@@ -3175,7 +3145,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio15": "test:0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk CHANGE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -3191,7 +3161,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio15": "test:100/base-100-disk-1.raw/0/vm-0-disk-23.raw,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk CHANGE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						AsyncIO:         QemuDiskAsyncIO_IOuring,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -3203,7 +3173,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio15": "test:vm-0-disk-23,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk CHANGE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_15: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -3218,7 +3188,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio15": "test:base-100-disk-1/vm-0-disk-23,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk MIGRATE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -3229,7 +3199,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"virtio1": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk MIGRATE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
@@ -3243,7 +3213,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"virtio1": "test2:0/vm-0-disk-23.raw,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk MIGRATE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Id:              23,
 						SizeInKibibytes: 10,
 						Storage:         "test1",
@@ -3253,7 +3223,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"virtio1": "test2:vm-0-disk-23,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk MIGRATE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Id:              23,
@@ -3266,15 +3236,13 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test2"}}}}},
 					output: map[string]interface{}{"virtio1": "test2:vm-0-disk-23,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: virtioBase()}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: virtioBase()}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}}},
 				{name: `Disks.VirtIO.Disk_X.Disk NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: virtioBase()}}},
-					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: nil}}},
-					output:        map[string]any{}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: virtioBase()}}},
+					config:        &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: nil}}}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE DOWN Gibibyte File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 9437185,
@@ -3285,7 +3253,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio2": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE DOWN Gibibyte File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
@@ -3299,7 +3267,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio2": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE DOWN Gibibyte Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Id:              23,
 						SizeInKibibytes: 9437185,
 						Storage:         "test",
@@ -3310,7 +3278,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio2": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE DOWN Gibibyte Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Id:              23,
@@ -3324,7 +3292,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio2": "test:9,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE DOWN Kibibyte File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 9437186,
@@ -3335,7 +3303,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio2": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE DOWN Kibibyte File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
@@ -3349,7 +3317,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio2": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE DOWN Kibibyte Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Id:              23,
 						SizeInKibibytes: 9437186,
 						Storage:         "test",
@@ -3360,7 +3328,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio2": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE DOWN Kibibyte Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Id:              23,
@@ -3374,7 +3342,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio2": "test:0.001,backup=0,format=raw,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE UP File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -3382,10 +3350,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE UP File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
@@ -3396,20 +3363,18 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE UP Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Id:              23,
 						SizeInKibibytes: 10,
 						Storage:         "test",
 						syntax:          diskSyntaxVolume}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.VirtIO.Disk_X.Disk RESIZE UP Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Id:              23,
@@ -3419,17 +3384,15 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 							syntax:          diskSyntaxVolume}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						SizeInKibibytes: 11,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.VirtIO.Disk_X.Disk SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: virtioBase()}}},
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: virtioBase()}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_4: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.VirtIO.Disk_X.Disk.Format CHANGE File`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -3440,7 +3403,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio5": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk.Format CHANGE File LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
@@ -3454,7 +3417,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Storage:         "test"}}}}},
 					output: map[string]interface{}{"virtio5": "test:0/vm-0-disk-23.qcow2,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Disk.Format CHANGE Volume`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Raw,
 						Id:              23,
 						SizeInKibibytes: 10,
@@ -3463,10 +3426,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Qcow2,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}},
+						Storage:         "test"}}}}}},
 				{name: `Disks.VirtIO.Disk_X.Disk.Format CHANGE Volume LinkedClone`,
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						LinkedID: util.Pointer(GuestID(100)),
 						Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 							Format:          QemuDiskFormat_Raw,
@@ -3478,10 +3440,9 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_5: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
 						Format:          QemuDiskFormat_Qcow2,
 						SizeInKibibytes: 10,
-						Storage:         "test"}}}}},
-					output: map[string]interface{}{}}}},
+						Storage:         "test"}}}}}}}},
 		{category: `Disks.VirtIO.Passthrough`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Disks.VirtIO.Disk_X.Passthrough All`,
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						AsyncIO: QemuDiskAsyncIO_Threads,
@@ -3583,54 +3544,50 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `Disks.VirtIO.Disk_X.Passthrough.WorldWideName`,
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_8: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{WorldWideName: "0x500D41A600C67853"}}}}},
 					output: map[string]interface{}{"virtio8": ",backup=0,replicate=0,wwn=0x500D41A600C67853"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Disks.VirtIO.Disk_X.Passthrough CHANGE`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						AsyncIO: QemuDiskAsyncIO_Native,
 						File:    "/dev/disk/sda"}}}}},
 					output: map[string]interface{}{"virtio0": "/dev/disk/sda,aio=native,backup=0,replicate=0"}},
 				{name: `Disks.VirtIO.Disk_X.Passthrough NOTHING`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						File: "/dev/disk/sda"}}}}},
-					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{}}}},
-					output: map[string]any{}},
+					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{}}}}},
 				{name: `Disks.VirtIO.Disk_X.Passthrough NOTHING nil`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						File: "/dev/disk/sda"}}}}},
-					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: nil}}},
-					output: map[string]any{}},
+					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: nil}}}},
 				{name: `Disks.VirtIO.Disk_X.Passthrough SAME`,
-					currentConfig: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
+					currentLegacy: ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
-						File: "/dev/disk/sda"}}}}},
-					output: map[string]interface{}{}}}},
+						File: "/dev/disk/sda"}}}}}}}},
 		{category: `Iso`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Iso`,
 					config: &ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 					output: map[string]interface{}{"ide2": "test:iso/file.iso,media=cdrom"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Iso nil`,
-					currentConfig: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
-					config:        &ConfigQemu{Iso: nil},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
+					config:        &ConfigQemu{Iso: nil}},
 				{name: `Iso SAME`,
-					currentConfig: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
+					currentLegacy: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 					config:        &ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 					output:        map[string]interface{}{"ide2": "test:iso/file.iso,media=cdrom"}},
 				{name: `Iso.File`,
-					currentConfig: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
+					currentLegacy: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 					config:        &ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file2.iso"}},
 					output:        map[string]interface{}{"ide2": "test:iso/file2.iso,media=cdrom"}},
 				{name: `Iso.Storage`,
-					currentConfig: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
+					currentLegacy: ConfigQemu{Iso: &IsoFile{Storage: "test", File: "file.iso"}},
 					config:        &ConfigQemu{Iso: &IsoFile{Storage: "NewStorage", File: "file.iso"}},
 					output:        map[string]interface{}{"ide2": "NewStorage:iso/file.iso,media=cdrom"}}}},
 		{category: `Memory`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `MinimumCapacityMiB`,
 					config: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
 					output: map[string]interface{}{
@@ -3640,51 +3597,49 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(40000))}},
 					output: map[string]interface{}{"shares": QemuMemoryShares(40000)}},
 				{name: `Shares 0`,
-					config: &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
-					output: map[string]interface{}{}}},
-			createUpdate: []test{
+					config: &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}}}},
+			createUpdate: []qemuTestCaseAPI{
 				{name: `CapacityMiB`,
 					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048))}},
-					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}},
+					currentLegacy: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}},
 					output:        map[string]interface{}{"memory": QemuMemoryCapacity(2048)}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `CapacityMiB smaller then current MinimumCapacityMiB`,
 					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}},
-					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					currentLegacy: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
 					output:        map[string]interface{}{"memory": QemuMemoryCapacity(1024), "balloon": QemuMemoryCapacity(1024), "delete": "shares"}},
 				{name: `CapacityMiB smaller then current MinimumCapacityMiB and MinimumCapacityMiB lowered`,
 					config:        &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(512))}},
-					currentConfig: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					currentLegacy: ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(2048)), MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
 					output:        map[string]interface{}{"memory": QemuMemoryCapacity(1024), "balloon": QemuMemoryBalloonCapacity(512)}},
 				{name: `MinimumCapacityMiB`,
 					config:        &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
-					currentConfig: ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
+					currentLegacy: ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2048))}},
 					output:        map[string]interface{}{"balloon": QemuMemoryBalloonCapacity(1024)}},
 				{name: `MinimumCapacityMiB 0`,
 					config:        &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(0))}},
-					currentConfig: ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
+					currentLegacy: ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
 					output:        map[string]interface{}{"balloon": QemuMemoryBalloonCapacity(0), "delete": "shares"}},
 				{name: `Shares`,
 					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(40000))}},
-					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
+					currentLegacy: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
 					output:        map[string]interface{}{"shares": QemuMemoryShares(40000)}},
 				{name: `Shares 0`,
 					config:        &ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(0))}},
-					currentConfig: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
+					currentLegacy: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(20000))}},
 					output:        map[string]interface{}{"delete": "shares"}}}},
 		{category: `Name`,
-			createUpdate: []test{
+			createUpdate: []qemuTestCaseAPI{
 				{name: `set`,
 					config:        &ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
-					currentConfig: ConfigQemu{Name: util.Pointer(GuestName("test-vm-2"))},
+					currentLegacy: ConfigQemu{Name: util.Pointer(GuestName("test-vm-2"))},
 					output:        map[string]any{"name": "test-vm"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `do nothing`,
 					config:        &ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
-					currentConfig: ConfigQemu{Name: util.Pointer(GuestName("test-vm"))},
-					output:        map[string]any{}}}},
+					currentLegacy: ConfigQemu{Name: util.Pointer(GuestName("test-vm"))}}}},
 		{category: `Networks`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Delete`,
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
 						Bridge:        util.Pointer("vmbr0"),
@@ -3695,34 +3650,33 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Model:         util.Pointer(QemuNetworkModelVirtIO),
 						MultiQueue:    util.Pointer(QemuNetworkQueue(4)),
 						RateLimitKBps: util.Pointer(GuestNetworkRate(45)),
-						NativeVlan:    util.Pointer(Vlan(23))}}},
-					output: map[string]interface{}{}}},
-			createUpdate: []test{
+						NativeVlan:    util.Pointer(Vlan(23))}}}}},
+			createUpdate: []qemuTestCaseAPI{
 				{name: `Bridge`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{Bridge: util.Pointer("vmbr0")}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{Bridge: util.Pointer("vmbr1")}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{Bridge: util.Pointer("vmbr1")}}},
 					output:        map[string]interface{}{"net0": ",bridge=vmbr0"}},
 				{name: `Connected true`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID1: QemuNetworkInterface{Connected: util.Pointer(true)}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID1: QemuNetworkInterface{Connected: util.Pointer(false)}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID1: QemuNetworkInterface{Connected: util.Pointer(false)}}},
 					output:        map[string]interface{}{"net1": ""}},
 				{name: `Connected false`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{Connected: util.Pointer(false)}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{Connected: util.Pointer(true)}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{Connected: util.Pointer(true)}}},
 					output:        map[string]interface{}{"net2": ",link_down=1"}},
 				{name: `Firewall true`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{Firewall: util.Pointer(true)}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{Firewall: util.Pointer(false)}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{Firewall: util.Pointer(false)}}},
 					output:        map[string]interface{}{"net3": ",firewall=1"}},
 				{name: `Firewall false`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{Firewall: util.Pointer(false)}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{Firewall: util.Pointer(true)}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{Firewall: util.Pointer(true)}}},
 					output:        map[string]interface{}{"net4": ""}},
 				{name: `MAC`,
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
 						Model: util.Pointer(QemuNetworkModelE1000),
 						MAC:   util.Pointer(net.HardwareAddr(parseMAC("BC:11:22:33:44:55")))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
 						Model: util.Pointer(QemuNetworkModelVirtIO),
 						MAC:   util.Pointer(net.HardwareAddr(parseMAC("bc:11:22:33:44:56")))}}},
 					output: map[string]interface{}{"net5": "e1000=BC:11:22:33:44:55"}},
@@ -3730,157 +3684,156 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{
 						Model: util.Pointer(QemuNetworkModelVirtIO),
 						MTU:   util.Pointer(QemuMTU{Inherit: true})}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
 					output:        map[string]interface{}{"net6": "virtio,mtu=1"}},
 				{name: `MTU.Value model=none`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1400)})}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
 					output:        map[string]interface{}{"net7": ""}},
 				{name: `MTU.Value model=virtio`,
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{
 						Model: util.Pointer(QemuNetworkModelVirtIO),
 						MTU:   util.Pointer(QemuMTU{Value: MTU(1400)})}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1500)})}}},
 					output:        map[string]interface{}{"net7": "virtio,mtu=1400"}},
 				{name: `MTU.Value=0 model=virtio`,
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{
 						Model: util.Pointer(QemuNetworkModelVirtIO),
 						MTU:   util.Pointer(QemuMTU{Value: MTU(0)})}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{})}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{})}}},
 					output:        map[string]interface{}{"net8": "virtio"}},
 				{name: `Model`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{Model: util.Pointer(qemuNetworkModelE100082544gc_Lower)}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelVirtIO)}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelVirtIO)}}},
 					output:        map[string]interface{}{"net9": "e1000-82544gc"}},
 				{name: `Model invalid`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{Model: util.Pointer(QemuNetworkModel("gibberish"))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelVirtIO)}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelVirtIO)}}},
 					output:        map[string]interface{}{"net10": ""}},
 				{name: `MultiQueue set`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(4))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(2))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(2))}}},
 					output:        map[string]interface{}{"net11": ",queues=4"}},
 				{name: `MultiQueue unset`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(0))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(2))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(2))}}},
 					output:        map[string]interface{}{"net12": ""}},
 				{name: `RateLimitKBps 0`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(0))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net13": ""}},
 				{name: `RateLimitKBps 0.007`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(7))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net13": ",rate=0.007"}},
 				{name: `RateLimitKBps 0.07`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(70))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net14": ",rate=0.07"}},
 				{name: `RateLimitKBps 0.7`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(700))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net15": ",rate=0.7"}},
 				{name: `RateLimitKBps 7`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(7000))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net16": ",rate=7"}},
 				{name: `RateLimitKBps 7.546`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(7546))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net17": ",rate=7.546"}},
 				{name: `RateLimitKBps 734.546`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(734546))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(5))}}},
 					output:        map[string]interface{}{"net18": ",rate=734.546"}},
 				{name: `NativeVlan unset`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(0))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(2))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(2))}}},
 					output:        map[string]interface{}{"net19": ""}},
 				{name: `NativeVlan set`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID20: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(83))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID20: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(2))}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID20: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(2))}}},
 					output:        map[string]interface{}{"net20": ",tag=83"}},
 				{name: `TaggedVlans set`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{10, 43, 23})}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{12, 56})}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{12, 56})}}},
 					output:        map[string]interface{}{"net21": ",trunks=10;23;43"}},
 				{name: `TaggedVlans unset`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{})}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{12, 56})}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{12, 56})}}},
 					output:        map[string]interface{}{"net22": ""}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Bridge replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID31: QemuNetworkInterface{Bridge: util.Pointer("vmbr45")}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID31: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID31: networkInterface()}},
 					output:        map[string]interface{}{"net31": "virtio=52:54:00:12:34:56,bridge=vmbr45,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `Connected replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID30: QemuNetworkInterface{Connected: util.Pointer(true)}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID30: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID30: networkInterface()}},
 					output:        map[string]interface{}{"net30": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `Firewall replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID29: QemuNetworkInterface{Firewall: util.Pointer(false)}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID29: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID29: networkInterface()}},
 					output:        map[string]interface{}{"net29": "virtio=52:54:00:12:34:56,bridge=vmbr0,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `MAC clear`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{MAC: util.Pointer(net.HardwareAddr(""))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: networkInterface()}},
 					output:        map[string]interface{}{"net28": "virtio,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `MAC replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{MAC: util.Pointer(net.HardwareAddr(parseMAC("BC:24:11:C2:75:20")))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: networkInterface()}},
 					output:        map[string]interface{}{"net28": "virtio=BC:24:11:C2:75:20,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `MAC replace binary match`,
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{MAC: util.Pointer(net.HardwareAddr(parseMAC("BC:24:11:C2:75:20")))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{
 						MAC: util.Pointer(net.HardwareAddr(parseMAC("bc:24:11:C2:75:20"))),
 						mac: "bc:24:11:C2:75:20"}}},
 					output: map[string]interface{}{"net28": "=bc:24:11:C2:75:20"}},
 				{name: `MAC no update mixed case`,
 					config: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID28: QemuNetworkInterface{
 						MAC: util.Pointer(net.HardwareAddr(parseMAC("bc:24:11:C2:75:20"))),
 						mac: "bc:24:11:C2:75:20"}}},
 					output: map[string]interface{}{"net28": "=bc:24:11:C2:75:20"}},
 				{name: `MTU replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID27: QemuNetworkInterface{MTU: util.Pointer(QemuMTU{Value: MTU(1400)})}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID27: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID27: networkInterface()}},
 					output:        map[string]interface{}{"net27": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1400,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `Model replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID26: QemuNetworkInterface{Model: util.Pointer(qemuNetworkModelE100082544gc_Lower)}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID26: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID26: networkInterface()}},
 					output:        map[string]interface{}{"net26": "e1000-82544gc=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,queues=5,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `MultiQueue replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID25: QemuNetworkInterface{MultiQueue: util.Pointer(QemuNetworkQueue(4))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID25: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID25: networkInterface()}},
 					output:        map[string]interface{}{"net25": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=4,rate=0.045,tag=23,trunks=12;23;45"}},
 				{name: `RateLimitKBps replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: QemuNetworkInterface{RateLimitKBps: util.Pointer(GuestNetworkRate(539))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: networkInterface()}},
 					output:        map[string]interface{}{"net24": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.539,tag=23,trunks=12;23;45"}},
 				{name: `NaitiveVlan replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID23: QemuNetworkInterface{NativeVlan: util.Pointer(Vlan(0))}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID23: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID23: networkInterface()}},
 					output:        map[string]interface{}{"net23": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,trunks=12;23;45"}},
 				{name: `TaggedVlans replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{10, 70, 18})}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: networkInterface()}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID22: networkInterface()}},
 					output:        map[string]interface{}{"net22": "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,tag=23,trunks=10;18;70"}},
 				{name: `Delete`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{Delete: true}}},
-					currentConfig: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{}}},
+					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{}}},
 					output:        map[string]interface{}{"delete": "net21"}}}},
 		{category: `PciDevices`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Delete`,
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
-						QemuPciID5: QemuPci{Delete: true}}},
-					output: map[string]interface{}{}}},
-			createUpdate: []test{
+						QemuPciID5: QemuPci{Delete: true}}}}},
+			createUpdate: []qemuTestCaseAPI{
 				{name: `Mapping.DeviceID`,
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID15: QemuPci{Mapping: &QemuPciMapping{
 							DeviceID: util.Pointer(PciDeviceID("8086"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID15: QemuPci{Mapping: &QemuPciMapping{
 							DeviceID: util.Pointer(PciDeviceID("0x8000"))}}}},
 					output: map[string]interface{}{"hostpci15": "mapping=,rombar=0,device-id=0x8086"}},
@@ -3888,7 +3841,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
 							ID: util.Pointer(ResourceMappingPciID("aaaaa"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
 							ID: util.Pointer(ResourceMappingPciID("bbbbb"))}}}},
 					output: map[string]interface{}{"hostpci14": "mapping=aaaaa,rombar=0"}},
@@ -3896,7 +3849,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
 							MDev: util.Pointer(PciMediatedDevice("vendor-665"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID14: QemuPci{Mapping: &QemuPciMapping{
 							MDev: util.Pointer(PciMediatedDevice(PciMediatedDevice("vendor-000")))}}}},
 					output: map[string]interface{}{"hostpci14": "mapping=,rombar=0,mdev=vendor-665"}},
@@ -3904,7 +3857,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID13: QemuPci{Mapping: &QemuPciMapping{
 							PCIe: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID13: QemuPci{Mapping: &QemuPciMapping{
 							PCIe: util.Pointer(false)}}}},
 					output: map[string]interface{}{"hostpci13": "mapping=,pcie=1,rombar=0"}},
@@ -3912,7 +3865,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID12: QemuPci{Mapping: &QemuPciMapping{
 							PrimaryGPU: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID12: QemuPci{Mapping: &QemuPciMapping{
 							PrimaryGPU: util.Pointer(false)}}}},
 					output: map[string]interface{}{"hostpci12": "mapping=,x-vga=1,rombar=0"}},
@@ -3920,7 +3873,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID11: QemuPci{Mapping: &QemuPciMapping{
 							ROMbar: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID11: QemuPci{Mapping: &QemuPciMapping{
 							ROMbar: util.Pointer(false)}}}},
 					output: map[string]interface{}{"hostpci11": "mapping="}},
@@ -3928,7 +3881,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID10: QemuPci{Mapping: &QemuPciMapping{
 							SubDeviceID: util.Pointer(PciSubDeviceID("8086"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID10: QemuPci{Mapping: &QemuPciMapping{
 							SubDeviceID: util.Pointer(PciSubDeviceID("0x8000"))}}}},
 					output: map[string]interface{}{"hostpci10": "mapping=,rombar=0,sub-device-id=0x8086"}},
@@ -3936,7 +3889,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID9: QemuPci{Mapping: &QemuPciMapping{
 							SubVendorID: util.Pointer(PciSubVendorID("8086"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID9: QemuPci{Mapping: &QemuPciMapping{
 							SubVendorID: util.Pointer(PciSubVendorID("0x8000"))}}}},
 					output: map[string]interface{}{"hostpci9": "mapping=,rombar=0,sub-vendor-id=0x8086"}},
@@ -3944,7 +3897,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID8: QemuPci{Mapping: &QemuPciMapping{
 							VendorID: util.Pointer(PciVendorID("8086"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID8: QemuPci{Mapping: &QemuPciMapping{
 							VendorID: util.Pointer(PciVendorID("0x8000"))}}}},
 					output: map[string]interface{}{"hostpci8": "mapping=,rombar=0,vendor-id=0x8086"}},
@@ -3952,7 +3905,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID0: QemuPci{Raw: &QemuPciRaw{
 							DeviceID: util.Pointer(PciDeviceID("8086"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID0: QemuPci{Raw: &QemuPciRaw{
 							DeviceID: util.Pointer(PciDeviceID("0x8000"))}}}},
 					output: map[string]interface{}{"hostpci0": ",rombar=0,device-id=0x8086"}},
@@ -3960,7 +3913,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID1: QemuPci{Raw: &QemuPciRaw{
 							ID: util.Pointer(PciID("0000:00:00.0"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID1: QemuPci{Raw: &QemuPciRaw{
 							ID: util.Pointer(PciID("0000:00:00.1"))}}}},
 					output: map[string]interface{}{"hostpci1": "0000:00:00.0,rombar=0"}},
@@ -3968,7 +3921,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
 							MDev: util.Pointer(PciMediatedDevice("vendor-665"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
 							MDev: util.Pointer(PciMediatedDevice("vendor-000"))}}}},
 					output: map[string]interface{}{"hostpci2": ",rombar=0,mdev=vendor-665"}},
@@ -3976,7 +3929,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
 							PCIe: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID2: QemuPci{Raw: &QemuPciRaw{
 							PCIe: util.Pointer(false)}}}},
 					output: map[string]interface{}{"hostpci2": ",pcie=1,rombar=0"}},
@@ -3984,7 +3937,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID3: QemuPci{Raw: &QemuPciRaw{
 							PrimaryGPU: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID3: QemuPci{Raw: &QemuPciRaw{
 							PrimaryGPU: util.Pointer(false)}}}},
 					output: map[string]interface{}{"hostpci3": ",x-vga=1,rombar=0"}},
@@ -3992,7 +3945,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID4: QemuPci{Raw: &QemuPciRaw{
 							ROMbar: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID4: QemuPci{Raw: &QemuPciRaw{
 							ROMbar: util.Pointer(false)}}}},
 					output: map[string]interface{}{"hostpci4": ""}},
@@ -4000,7 +3953,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID5: QemuPci{Raw: &QemuPciRaw{
 							SubDeviceID: util.Pointer(PciSubDeviceID("8086"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID5: QemuPci{Raw: &QemuPciRaw{
 							SubDeviceID: util.Pointer(PciSubDeviceID("0x8000"))}}}},
 					output: map[string]interface{}{"hostpci5": ",rombar=0,sub-device-id=0x8086"}},
@@ -4008,7 +3961,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID6: QemuPci{Raw: &QemuPciRaw{
 							SubVendorID: util.Pointer(PciSubVendorID("8086"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID6: QemuPci{Raw: &QemuPciRaw{
 							SubVendorID: util.Pointer(PciSubVendorID("0x8000"))}}}},
 					output: map[string]interface{}{"hostpci6": ",rombar=0,sub-vendor-id=0x8086"}},
@@ -4016,25 +3969,25 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID7: QemuPci{Raw: &QemuPciRaw{
 							VendorID: util.Pointer(PciVendorID("8086"))}}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID7: QemuPci{Raw: &QemuPciRaw{
 							VendorID: util.Pointer(PciVendorID("0x8000"))}}}},
 					output: map[string]interface{}{"hostpci7": ",rombar=0,vendor-id=0x8086"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Delete`,
 					config: &ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID5: QemuPci{Delete: true}}},
-					currentConfig: ConfigQemu{PciDevices: QemuPciDevices{
+					currentLegacy: ConfigQemu{PciDevices: QemuPciDevices{
 						QemuPciID5: QemuPci{}}},
 					output: map[string]interface{}{"delete": "hostpci5"}}},
 		},
 		{category: `RandomnessDevice`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Period round down 0.999ms`,
 					config:        &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(1)*time.Millisecond - time.Nanosecond)}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
 					output:        map[string]any{"rng0": string("")}}},
-			createUpdate: []test{
+			createUpdate: []qemuTestCaseAPI{
 				{name: `create Source`,
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Source: util.Pointer(EntropySourceHwRNG)}},
 					output: map[string]any{"rng0": string("source=/dev/hwrng")}},
@@ -4045,187 +3998,175 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
 					output: map[string]any{"rng0": string(",period=863")}},
 				{name: `delete non existing`,
-					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Delete: true}},
-					output: map[string]any{}},
+					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Delete: true}}},
 				{name: `Period round down 14.999ms`,
 					config:        &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(15)*time.Millisecond - time.Nanosecond)}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
 					output:        map[string]any{"rng0": string(",period=14")}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `replace Source`,
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Source: util.Pointer(EntropySourceRandom)}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{
 						Source: util.Pointer(EntropySourceURandom),
 						Limit:  util.Pointer(uint(2742)),
 						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
 					output: map[string]any{"rng0": string("source=/dev/random,max_bytes=2742,period=863")}},
 				{name: `replace Limit`,
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Limit: util.Pointer(uint(954))}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{
 						Source: util.Pointer(EntropySourceURandom),
 						Limit:  util.Pointer(uint(2742)),
 						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
 					output: map[string]any{"rng0": string("source=/dev/urandom,max_bytes=954,period=863")}},
 				{name: `replace Period`,
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(3) * time.Millisecond)}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{
 						Source: util.Pointer(EntropySourceURandom),
 						Limit:  util.Pointer(uint(2742)),
 						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
 					output: map[string]any{"rng0": string("source=/dev/urandom,max_bytes=2742,period=3")}},
 				{name: `unset Limit`,
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Limit: util.Pointer(uint(0))}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{
 						Source: util.Pointer(EntropySourceURandom),
 						Limit:  util.Pointer(uint(2742)),
 						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
 					output: map[string]any{"rng0": string("source=/dev/urandom,period=863")}},
 				{name: `unset Period`,
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{Period: util.Pointer(time.Duration(0))}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{
 						Source: util.Pointer(EntropySourceURandom),
 						Limit:  util.Pointer(uint(2742)),
 						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
 					output: map[string]any{"rng0": string("source=/dev/urandom,max_bytes=2742")}},
 				{name: `delete existing`,
 					config:        &ConfigQemu{RandomnessDevice: &VirtIoRNG{Delete: true}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
 					output:        map[string]any{"delete": string("rng0")}},
 				{name: `same all`,
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{
 						Source: util.Pointer(EntropySourceURandom),
 						Limit:  util.Pointer(uint(2742)),
 						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{
 						Source: util.Pointer(EntropySourceURandom),
 						Limit:  util.Pointer(uint(2742)),
-						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
-					output: map[string]any{}},
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}}},
 				{name: `same none`,
 					config: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
-					currentConfig: ConfigQemu{RandomnessDevice: &VirtIoRNG{
+					currentLegacy: ConfigQemu{RandomnessDevice: &VirtIoRNG{
 						Source: util.Pointer(EntropySourceURandom),
 						Limit:  util.Pointer(uint(2742)),
-						Period: util.Pointer(time.Duration(863) * time.Millisecond)}},
-					output: map[string]any{}}}},
+						Period: util.Pointer(time.Duration(863) * time.Millisecond)}}}}},
 		{category: `Serials`,
-			createUpdate: []test{
+			createUpdate: []qemuTestCaseAPI{
 				{name: `delete non existing`,
 					config: &ConfigQemu{Serials: SerialInterfaces{
 						SerialID0: SerialInterface{Delete: true},
 						SerialID2: SerialInterface{Delete: true}}},
-					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+					currentLegacy: ConfigQemu{Serials: SerialInterfaces{
 						SerialID1: SerialInterface{Socket: true},
-						SerialID3: SerialInterface{Path: "/dev/tty2"}}},
-					output: map[string]interface{}{}},
+						SerialID3: SerialInterface{Path: "/dev/tty2"}}}},
 				{name: `add`,
 					config: &ConfigQemu{Serials: SerialInterfaces{
 						SerialID1: SerialInterface{Path: "/dev/tty6"},
 						SerialID3: SerialInterface{Socket: true}}},
-					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+					currentLegacy: ConfigQemu{Serials: SerialInterfaces{
 						SerialID0: SerialInterface{},
 						SerialID2: SerialInterface{}}},
 					output: map[string]interface{}{
 						"serial1": "/dev/tty6",
 						"serial3": "socket"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `existing socket no change`,
 					config: &ConfigQemu{Serials: SerialInterfaces{
 						SerialID0: SerialInterface{Socket: true}}},
-					currentConfig: ConfigQemu{Serials: SerialInterfaces{
-						SerialID0: SerialInterface{Socket: true}}},
-					output: map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Serials: SerialInterfaces{
+						SerialID0: SerialInterface{Socket: true}}}},
 				{name: `existing path no change`,
 					config: &ConfigQemu{Serials: SerialInterfaces{
 						SerialID1: SerialInterface{Path: "/dev/tty3"}}},
-					currentConfig: ConfigQemu{Serials: SerialInterfaces{
-						SerialID1: SerialInterface{Path: "/dev/tty3"}}},
-					output: map[string]interface{}{}},
+					currentLegacy: ConfigQemu{Serials: SerialInterfaces{
+						SerialID1: SerialInterface{Path: "/dev/tty3"}}}},
 				{name: `existing path to path`,
 					config: &ConfigQemu{Serials: SerialInterfaces{
 						SerialID2: SerialInterface{Path: "/dev/tty3"}}},
-					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+					currentLegacy: ConfigQemu{Serials: SerialInterfaces{
 						SerialID2: SerialInterface{Path: "/dev/tty7"}}},
 					output: map[string]interface{}{"serial2": "/dev/tty3"}},
 				{name: `existing socket to path`,
 					config: &ConfigQemu{Serials: SerialInterfaces{
 						SerialID3: SerialInterface{Path: "/dev/tty2"}}},
-					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+					currentLegacy: ConfigQemu{Serials: SerialInterfaces{
 						SerialID3: SerialInterface{Socket: true}}},
 					output: map[string]interface{}{"serial3": "/dev/tty2"}},
 				{name: `existing path to socket`,
 					config: &ConfigQemu{Serials: SerialInterfaces{
 						SerialID1: SerialInterface{Socket: true}}},
-					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+					currentLegacy: ConfigQemu{Serials: SerialInterfaces{
 						SerialID1: SerialInterface{Path: "/dev/tty7"}}},
 					output: map[string]interface{}{"serial1": "socket"}},
 				{name: `delete existing`,
 					config: &ConfigQemu{Serials: SerialInterfaces{SerialID2: SerialInterface{Delete: true}}},
-					currentConfig: ConfigQemu{Serials: SerialInterfaces{
+					currentLegacy: ConfigQemu{Serials: SerialInterfaces{
 						SerialID0: SerialInterface{Socket: true},
 						SerialID2: SerialInterface{Path: "/dev/tty78"}}},
 					output: map[string]interface{}{"delete": "serial2"}}},
 		},
 		{category: `StartAtNodeBoot`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `true`,
 					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(true)},
 					output: map[string]any{"onboot": int(1)}},
 				{name: `false`,
-					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(false)},
-					output: map[string]any{}}},
-			update: []test{
+					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(false)}}},
+			update: []qemuTestCaseAPI{
 				{name: `true to false`,
 					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(false)},
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						StartAtNodeBoot: util.Pointer(true)},
 					output: map[string]any{"delete": string("onboot")}},
 				{name: `false to true`,
 					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(true)},
-					currentConfig: ConfigQemu{
+					currentLegacy: ConfigQemu{
 						StartAtNodeBoot: util.Pointer(false)},
 					output: map[string]any{"onboot": int(1)}},
 				{name: `true to true`,
 					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(true)},
-					currentConfig: ConfigQemu{
-						StartAtNodeBoot: util.Pointer(true)},
-					output: map[string]any{}},
+					currentLegacy: ConfigQemu{
+						StartAtNodeBoot: util.Pointer(true)}},
 				{name: `false to false`,
 					config: &ConfigQemu{StartAtNodeBoot: util.Pointer(false)},
-					currentConfig: ConfigQemu{
-						StartAtNodeBoot: util.Pointer(false)},
-					output: map[string]any{}}}},
+					currentLegacy: ConfigQemu{
+						StartAtNodeBoot: util.Pointer(false)}}}},
 		{category: `StartupShutdown`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Order no effect`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
-						Order: util.Pointer(GuestStartupOrder(-1))}},
-					output: map[string]any{}},
+						Order: util.Pointer(GuestStartupOrder(-1))}}},
 				{name: `ShutdownTimeout no effect`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
-						ShutdownTimeout: util.Pointer(TimeDuration(-1))}},
-					output: map[string]any{}},
+						ShutdownTimeout: util.Pointer(TimeDuration(-1))}}},
 				{name: `StartupDelay no effect`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
-						StartupDelay: util.Pointer(TimeDuration(-1))}},
-					output: map[string]any{}}},
-			createUpdate: []test{
+						StartupDelay: util.Pointer(TimeDuration(-1))}}}},
+			createUpdate: []qemuTestCaseAPI{
 				{name: `Order`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order: util.Pointer(GuestStartupOrder(10))}},
-					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
+					currentLegacy: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order: util.Pointer(GuestStartupOrder(20))}},
 					output: map[string]any{"startup": string("order=10")}},
 				{name: `ShutdownTimeout`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						ShutdownTimeout: util.Pointer(TimeDuration(74530))}},
-					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
+					currentLegacy: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						ShutdownTimeout: util.Pointer(TimeDuration(9362))}},
 					output: map[string]any{"startup": string("down=74530")}},
 				{name: `StartupDelay`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						StartupDelay: util.Pointer(TimeDuration(200))}},
-					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
+					currentLegacy: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						StartupDelay: util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("up=200")}},
 				{name: `all`,
@@ -4233,17 +4174,17 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						Order:           util.Pointer(GuestStartupOrder(10)),
 						StartupDelay:    util.Pointer(TimeDuration(200)),
 						ShutdownTimeout: util.Pointer(TimeDuration(74530))}},
-					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
+					currentLegacy: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(20)),
 						StartupDelay:    util.Pointer(TimeDuration(50)),
 						ShutdownTimeout: util.Pointer(TimeDuration(9362))}},
 					output: map[string]any{
 						"startup": string("order=10,up=200,down=74530")}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Order unset`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order: util.Pointer(GuestStartupOrder(-1))}},
-					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
+					currentLegacy: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(20)),
 						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
 						StartupDelay:    util.Pointer(TimeDuration(50))}},
@@ -4251,7 +4192,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `ShutdownTimeout unset`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						ShutdownTimeout: util.Pointer(TimeDuration(-1))}},
-					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
+					currentLegacy: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(20)),
 						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
 						StartupDelay:    util.Pointer(TimeDuration(50))}},
@@ -4259,36 +4200,34 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				{name: `StartupDelay unset`,
 					config: &ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						StartupDelay: util.Pointer(TimeDuration(-1))}},
-					currentConfig: ConfigQemu{StartupShutdown: &StartupAndShutdown{
+					currentLegacy: ConfigQemu{StartupShutdown: &StartupAndShutdown{
 						Order:           util.Pointer(GuestStartupOrder(20)),
 						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
 						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("order=20,down=9362")}}}},
 		{category: `Tags`,
-			createUpdate: []test{
+			createUpdate: []qemuTestCaseAPI{
 				{name: `Tags Empty`,
-					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					currentLegacy: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
 					config:        &ConfigQemu{Tags: util.Pointer(Tags{})},
 					output:        map[string]any{"tags": string("")}},
 				{name: `Tags Full`,
-					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					currentLegacy: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
 					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag1", "tag2"})},
 					output:        map[string]any{"tags": string("tag1;tag2")}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `Tags same`,
-					currentConfig: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
-					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
-					output:        map[string]any{}}}},
+					currentLegacy: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
+					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})}}}},
 		{category: `TPM`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `TPM`,
 					config: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion_2_0)}},
 					output: map[string]interface{}{"tpmstate0": "test:1,version=v2.0"}}},
-			update: []test{
+			update: []qemuTestCaseAPI{
 				{name: `TPM`,
 					config:        &ConfigQemu{TPM: &TpmState{Storage: "aaaa", Version: util.Pointer(TpmVersion_1_2)}},
-					currentConfig: ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion_2_0)}},
-					output:        map[string]interface{}{}},
+					currentLegacy: ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion_2_0)}}},
 				{name: `TPM Delete`,
 					config: &ConfigQemu{TPM: &TpmState{Delete: true}},
 					output: map[string]interface{}{"delete": "tpmstate0"}},
@@ -4296,19 +4235,17 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion_2_0), Delete: true}},
 					output: map[string]interface{}{"delete": "tpmstate0"}}}},
 		{category: `USBs`,
-			create: []test{
+			create: []qemuTestCaseAPI{
 				{name: `Delete`,
 					config: &ConfigQemu{USBs: QemuUSBs{
-						QemuUsbID0: QemuUSB{Delete: true}}},
-					output: map[string]interface{}{}},
-			},
-			createUpdate: []test{
+						QemuUsbID0: QemuUSB{Delete: true}}}}},
+			createUpdate: []qemuTestCaseAPI{
 				{name: `Device all`,
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
 							ID:   util.Pointer(UsbDeviceID("1234:5678")),
 							USB3: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{}}}},
 					output: map[string]interface{}{"usb0": "host=1234:5678,usb3=1"}},
 				{name: `Device.USB3 false`,
@@ -4316,14 +4253,14 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
 							ID:   util.Pointer(UsbDeviceID("abcd:35fe")),
 							USB3: util.Pointer(false)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{}}}},
 					output: map[string]interface{}{"usb1": "host=abcd:35fe"}},
 				{name: `Device.USB3 nil`,
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
 							ID: util.Pointer(UsbDeviceID("8235:95af"))}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{}}}},
 					output: map[string]interface{}{"usb1": "host=8235:95af"}},
 				{name: `Mapping all`,
@@ -4331,7 +4268,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{
 							ID:   util.Pointer(ResourceMappingUsbID("test")),
 							USB3: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Port: &QemuUsbPort{}}}},
 					output: map[string]interface{}{"usb1": "mapping=test,usb3=1"}},
 				{name: `Mapping.USB3 false`,
@@ -4339,14 +4276,14 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{
 							ID:   util.Pointer(ResourceMappingUsbID("test")),
 							USB3: util.Pointer(false)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Port: &QemuUsbPort{}}}},
 					output: map[string]interface{}{"usb1": "mapping=test"}},
 				{name: `Mapping.USB3 nil`,
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{
 							ID: util.Pointer(ResourceMappingUsbID("test"))}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Port: &QemuUsbPort{}}}},
 					output: map[string]interface{}{"usb1": "mapping=test"}},
 				{name: `Port all`,
@@ -4354,7 +4291,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						QemuUsbID2: QemuUSB{Port: &QemuUsbPort{
 							ID:   util.Pointer(UsbPortID("1-2")),
 							USB3: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID2: QemuUSB{Spice: &QemuUsbSpice{}}}},
 					output: map[string]interface{}{"usb2": "host=1-2,usb3=1"}},
 				{name: `Port.USB3 false`,
@@ -4362,43 +4299,42 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						QemuUsbID2: QemuUSB{Port: &QemuUsbPort{
 							ID:   util.Pointer(UsbPortID("1-2")),
 							USB3: util.Pointer(false)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID2: QemuUSB{Spice: &QemuUsbSpice{}}}},
 					output: map[string]interface{}{"usb2": "host=1-2"}},
 				{name: `Port.USB3 nil`,
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID2: QemuUSB{Port: &QemuUsbPort{
 							ID: util.Pointer(UsbPortID("1-2"))}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID2: QemuUSB{Spice: &QemuUsbSpice{}}}},
 					output: map[string]interface{}{"usb2": "host=1-2"}},
 				{name: `Spice all`,
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID3: QemuUSB{Spice: &QemuUsbSpice{
 							USB3: true}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID3: QemuUSB{Device: &QemuUsbDevice{}}}},
 					output: map[string]interface{}{"usb3": "spice,usb3=1"}},
 				{name: `Spice.USB3 false`,
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID3: QemuUSB{Spice: &QemuUsbSpice{
 							USB3: false}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID3: QemuUSB{Device: &QemuUsbDevice{}}}},
-					output: map[string]interface{}{"usb3": "spice"}},
-			},
-			update: []test{
+					output: map[string]interface{}{"usb3": "spice"}}},
+			update: []qemuTestCaseAPI{
 				{name: `Delete`,
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID0: QemuUSB{Delete: true}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{}}}},
 					output: map[string]interface{}{"delete": "usb0"}},
 				{name: `Device.ID update`,
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
 							ID: util.Pointer(UsbDeviceID("1234:5678"))}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
 							ID:   util.Pointer(UsbDeviceID("abcd:35fe")),
 							USB3: util.Pointer(true)}}}},
@@ -4407,7 +4343,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
 							USB3: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
 							ID:   util.Pointer(UsbDeviceID("abcd:35fe")),
 							USB3: util.Pointer(false)}}}},
@@ -4416,7 +4352,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{
 							ID: util.Pointer(ResourceMappingUsbID("test"))}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{
 							ID:   util.Pointer(ResourceMappingUsbID("test2")),
 							USB3: util.Pointer(true)}}}},
@@ -4425,7 +4361,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{
 							USB3: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Mapping: &QemuUsbMapping{
 							ID:   util.Pointer(ResourceMappingUsbID("test2")),
 							USB3: util.Pointer(false)}}}},
@@ -4434,7 +4370,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Port: &QemuUsbPort{
 							ID: util.Pointer(UsbPortID("1-2"))}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Port: &QemuUsbPort{
 							ID:   util.Pointer(UsbPortID("2-3")),
 							USB3: util.Pointer(true)}}}},
@@ -4443,7 +4379,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Port: &QemuUsbPort{
 							USB3: util.Pointer(true)}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Port: &QemuUsbPort{
 							ID:   util.Pointer(UsbPortID("2-3")),
 							USB3: util.Pointer(false)}}}},
@@ -4452,7 +4388,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config: &ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Spice: &QemuUsbSpice{
 							USB3: false}}}},
-					currentConfig: ConfigQemu{USBs: QemuUSBs{
+					currentLegacy: ConfigQemu{USBs: QemuUSBs{
 						QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{}}}},
 					output: map[string]interface{}{"usb1": "spice"}},
 			},
@@ -4462,17 +4398,17 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 		for _, subTest := range append(test.create, test.createUpdate...) {
 			name := test.category + "/Create/" + subTest.name
 			t.Run(name, func(*testing.T) {
-				reboot, tmpParams, _ := subTest.config.mapToAPI(ConfigQemu{}, subTest.version.Encode())
-				require.Equal(t, subTest.output, tmpParams, name)
-				require.Equal(t, false, reboot, name)
+				tmpParams, tmpBody := subTest.config.mapToApiCreate(subTest.version.Encode())
+				require.Equal(t, subTest.output, tmpParams, name+" Params")
+				testParamsEqual(t, subTest.body, tmpBody, name+" Body")
 			})
 		}
 		for _, subTest := range append(test.update, test.createUpdate...) {
 			name := test.category + "/Update/" + subTest.name
 			t.Run(name, func(*testing.T) {
-				reboot, tmpParams, _ := subTest.config.mapToAPI(subTest.currentConfig, subTest.version.Encode())
-				require.Equal(t, subTest.output, tmpParams, name)
-				require.Equal(t, subTest.reboot, reboot, name)
+				tmpParams, tmpBody := subTest.config.mapToApiUpdate(&subTest.currentLegacy, subTest.currentUpdate, subTest.version.Encode())
+				require.Equal(t, subTest.output, tmpParams, name+" Params")
+				testParamsEqual(t, subTest.body, tmpBody, name+" Body")
 			})
 		}
 	}
@@ -4481,28 +4417,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 func Test_ConfigQemu_get(t *testing.T) {
 	t.Parallel()
 	baseConfig := func(config ConfigQemu) *ConfigQemu {
-		if config.CPU == nil {
-			config.CPU = &QemuCPU{}
-		}
-		if config.Description == nil {
-			config.Description = util.Pointer("")
-		}
-		if config.Memory == nil {
-			config.Memory = &QemuMemory{}
-		}
-		if config.Name == nil {
-			config.Name = util.Pointer(GuestName(""))
-		}
-		if config.Protection == nil {
-			config.Protection = util.Pointer(false)
-		}
-		if config.Tablet == nil {
-			config.Tablet = util.Pointer(true)
-		}
-		if config.StartAtNodeBoot == nil {
-			config.StartAtNodeBoot = util.Pointer(false)
-		}
-		return &config
+		return testQemuBaseConfig_get(config)
 	}
 	parseIP := func(rawIP string) (ip netip.Addr) {
 		ip, _ = netip.ParseAddr(rawIP)
@@ -4524,20 +4439,13 @@ func Test_ConfigQemu_get(t *testing.T) {
 	uint31 := uint(31)
 	uint47 := uint(47)
 	uint53 := uint(53)
-	type test struct {
-		name   string
-		input  map[string]any
-		vmr    *VmRef
-		output *ConfigQemu
-		err    error
-	}
 	tests := []struct {
 		category string
-		tests    []test
+		tests    []qemuTestCaseGet
 	}{
 		// TODO add test cases for all other items of ConfigQemu{}
 		{category: `Agent`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `ALL`,
 					input: map[string]interface{}{"agent": string("1,freeze-fs-on-backup=1,fstrim_cloned_disks=1,type=virtio")},
 					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{
@@ -4558,7 +4466,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 					input:  map[string]interface{}{"agent": string("1,type=virtio")},
 					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}})}}},
 		{category: `CPU`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `all`,
 					input: map[string]interface{}{
 						"cores":    float64(10),
@@ -4711,7 +4619,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 					input:  map[string]interface{}{"vcpus": float64(1)},
 					output: baseConfig(ConfigQemu{CPU: &QemuCPU{VirtualCores: util.Pointer(CpuVirtualCores(1))}})}}},
 		{category: `CloudInit`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `ALL`,
 					input: map[string]interface{}{
 						"cicustom":     string("meta=local-zfs:ci-meta.yml,network=local-lvm:ci-network.yml,user=folder:ci-user.yml,vendor=local:snippets/ci-custom.yml"),
@@ -4837,11 +4745,11 @@ func Test_ConfigQemu_get(t *testing.T) {
 					input:  map[string]interface{}{"ciuser": string(" ")},
 					output: baseConfig(ConfigQemu{})}}},
 		{category: `Description`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{input: map[string]interface{}{"description": string("test description")},
 					output: baseConfig(ConfigQemu{Description: util.Pointer("test description")})}}},
 		{category: `Disks Ide CdRom`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `none`,
 					input:  map[string]interface{}{"ide1": "none,media=cdrom"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CdRom: &QemuCdRom{}}}}})},
@@ -4855,7 +4763,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Storage:         "local",
 						SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Disks Ide CloudInit`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `file`,
 					input: map[string]interface{}{"ide0": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{
@@ -4867,7 +4775,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Format:  QemuDiskFormat_Raw,
 						Storage: "Test"}}}}})}}},
 		{category: `Disks Ide Disk`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: ``,
 					input: map[string]interface{}{"ide0": "test2:100/vm-100-disk-53.qcow2"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
@@ -5141,7 +5049,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Storage:       "test2",
 						WorldWideName: "0x500DB82100C6FA59"}}}}})}}},
 		{category: `Disks Ide Passthrough`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: ``,
 					input: map[string]interface{}{"ide0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
@@ -5321,7 +5229,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Replicate:     true,
 						WorldWideName: "0x5005AC1200F643B8"}}}}})}}},
 		{category: `Disks Sata CdRom`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `none`,
 					input:  map[string]interface{}{"sata5": "none,media=cdrom"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{CdRom: &QemuCdRom{}}}}})},
@@ -5335,7 +5243,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Storage:         "local",
 						SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Disks Sata CloudInit`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `file`,
 					input: map[string]interface{}{"sata4": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{
@@ -5347,7 +5255,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Format:  QemuDiskFormat_Raw,
 						Storage: "Test"}}}}})}}},
 		{category: `Disks Sata Disk`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: ``,
 					input: map[string]interface{}{"sata0": "test2:100/vm-100-disk-47.qcow2"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_0: &QemuSataStorage{Disk: &QemuSataDisk{
@@ -5623,7 +5531,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Storage:       "test2",
 						WorldWideName: "0x5001E48A00D567C9"}}}}})}}},
 		{category: `Disks Sata Passthrough`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: ``,
 					input: map[string]interface{}{"sata1": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Sata: &QemuSataDisks{Disk_1: &QemuSataStorage{Passthrough: &QemuSataPassthrough{
@@ -5803,7 +5711,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Replicate:     true,
 						WorldWideName: "0x5004D2EF00C8B57A"}}}}})}}},
 		{category: `Disks Scsi CdRom`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `none`,
 					input:  map[string]interface{}{"scsi30": "none,media=cdrom"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_30: &QemuScsiStorage{CdRom: &QemuCdRom{}}}}})},
@@ -5817,7 +5725,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Storage:         "local",
 						SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Disks Scsi CloudInit`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `file`,
 					input: map[string]interface{}{"scsi0": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{
@@ -5829,7 +5737,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Format:  QemuDiskFormat_Raw,
 						Storage: "Test"}}}}})}}},
 		{category: `Disks Scsi Disk`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: ``,
 					input: map[string]interface{}{"scsi0": "test:100/vm-100-disk-2.qcow2"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Disk: &QemuScsiDisk{
@@ -6125,7 +6033,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Storage:       "test",
 						WorldWideName: "0x500E265400A1F3D7"}}}}})}}},
 		{category: `Disks Scsi Passthrough`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: ``,
 					input: map[string]interface{}{"scsi0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{
@@ -6321,7 +6229,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Replicate:     true,
 						WorldWideName: "0x5009A4FC00B7C613"}}}}})}}},
 		{category: `Disks VirtIO CdRom`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `none`,
 					input:  map[string]interface{}{"virtio11": "none,media=cdrom"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_11: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}}}})},
@@ -6335,7 +6243,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Storage:         "local",
 						SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Disks VirtIO CloudInit`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `file`,
 					input: map[string]interface{}{"virtio0": "Test:100/vm-100-cloudinit.raw,media=cdrom"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{
@@ -6347,7 +6255,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Format:  QemuDiskFormat_Raw,
 						Storage: "Test"}}}}})}}},
 		{category: `Disks VirtIO Disk`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: ``,
 					input: map[string]interface{}{"virtio0": "test2:100/vm-100-disk-31.qcow2"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Disk: &QemuVirtIODisk{
@@ -6634,7 +6542,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Storage:       "test2",
 						WorldWideName: "0x500D3FAB00B4E672"}}}}})}}},
 		{category: `Disks VirtIO Passthrough`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: ``,
 					input: map[string]interface{}{"virtio0": "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8"},
 					output: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
@@ -6832,7 +6740,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						"file":    "vm-1000-disk-0",
 						"volume":  "local-lvm:vm-1000-disk-0"}})}}},
 		{category: `Iso`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `All`,
 					input: map[string]interface{}{"ide2": "local:iso/debian-11.0.0-amd64-netinst.iso,media=cdrom,size=377M"},
 					output: baseConfig(ConfigQemu{
@@ -6846,7 +6754,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 								Storage:         "local",
 								SizeInKibibytes: "377M"}}}}}})}}},
 		{category: `Memory`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `All float64`,
 					input: map[string]interface{}{
 						"memory":  float64(1024),
@@ -6875,12 +6783,12 @@ func Test_ConfigQemu_get(t *testing.T) {
 					input:  map[string]interface{}{"shares": float64(100)},
 					output: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(100))}})}}},
 		{category: `Name`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `All`,
 					input:  map[string]any{"name": "testvm"},
 					output: baseConfig(ConfigQemu{Name: util.Pointer(GuestName("testvm"))})}}},
 		{category: `Networks`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `all e1000`,
 					input: map[string]interface{}{"net0": "e1000=BC:24:11:E1:BB:5d,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"},
 					output: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
@@ -7112,27 +7020,21 @@ func Test_ConfigQemu_get(t *testing.T) {
 			},
 		},
 		{category: `Node`,
-			tests: []test{
-				{name: `vmr nil`,
-					output: baseConfig(ConfigQemu{})},
+			tests: []qemuTestCaseGet{
 				{name: `vmr empty`,
-					vmr:    &VmRef{node: ""},
 					output: baseConfig(ConfigQemu{})},
 				{name: `vmr populated`,
-					vmr:    &VmRef{node: "test"},
+					vmr:    VmRef{node: "test"},
 					output: baseConfig(ConfigQemu{Node: util.Pointer(NodeName("test"))})}}},
 		{category: `Pool`,
-			tests: []test{
-				{name: `vmr nil`,
-					output: baseConfig(ConfigQemu{})},
+			tests: []qemuTestCaseGet{
 				{name: `vmr empty`,
-					vmr:    &VmRef{pool: ""},
 					output: baseConfig(ConfigQemu{})},
 				{name: `vmr populated`,
-					vmr:    &VmRef{pool: "test"},
+					vmr:    VmRef{pool: "test"},
 					output: baseConfig(ConfigQemu{Pool: util.Pointer(PoolName("test"))})}}},
 		{category: `PciDevices`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `Mapping all`,
 					input: map[string]interface{}{"hostpci0": "mapping=abc,device-id=0xa97f,pcie=1,x-vga=1,rombar=0,sub-device-id=0x61a4,sub-vendor-id=0x98f1,vendor-id=0x4003,mdev=vendor-test"},
 					output: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
@@ -7336,7 +7238,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 			},
 		},
 		{category: `RandomnessDevice`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `Source /dev/random`,
 					input: map[string]any{"rng0": "source=/dev/random"},
 					output: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
@@ -7366,7 +7268,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						Limit:  util.Pointer(uint(1000)),
 						Period: util.Pointer(time.Duration(1024) * time.Millisecond)}})}}},
 		{category: `Serials`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `All`,
 					input: map[string]interface{}{
 						"serial2": "/dev/tty1",
@@ -7385,7 +7287,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 					input:  map[string]interface{}{"serial2": "socket"},
 					output: baseConfig(ConfigQemu{Serials: SerialInterfaces{SerialID2: SerialInterface{Socket: true}}})}}},
 		{category: `StartAtNodeBoot`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `true`,
 					input:  map[string]any{"onboot": float64(1)},
 					output: baseConfig(ConfigQemu{StartAtNodeBoot: util.Pointer(true)})},
@@ -7393,10 +7295,9 @@ func Test_ConfigQemu_get(t *testing.T) {
 					input:  map[string]any{"onboot": float64(0)},
 					output: baseConfig(ConfigQemu{StartAtNodeBoot: util.Pointer(false)})},
 				{name: `default false`,
-					input:  map[string]any{},
 					output: baseConfig(ConfigQemu{StartAtNodeBoot: util.Pointer(false)})}}},
 		{category: `StartupShutdown`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `Order`,
 					input: map[string]any{"startup": string("order=0")},
 					output: baseConfig(ConfigQemu{
@@ -7427,7 +7328,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 							ShutdownTimeout: util.Pointer(TimeDuration(43742)),
 							StartupDelay:    util.Pointer(TimeDuration(8454))}})}}},
 		{category: `Tags`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `bug`, // in some versions a space is returned when there are no tags.
 					input: map[string]any{"tags": string(" ")},
 					output: baseConfig(ConfigQemu{
@@ -7441,12 +7342,12 @@ func Test_ConfigQemu_get(t *testing.T) {
 					output: baseConfig(ConfigQemu{
 						Tags: util.Pointer(Tags{"a", "bb", "ccc"})})}}},
 		{category: `TPM`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `All`,
 					input:  map[string]interface{}{"tpmstate0": string("local-lvm:vm-101-disk-0,size=4M,version=v2.0")},
 					output: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "local-lvm", Version: util.Pointer(TpmVersion("v2.0"))}})}}},
 		{category: `USBs`,
-			tests: []test{
+			tests: []qemuTestCaseGet{
 				{name: `Device`,
 					input: map[string]interface{}{
 						"usb0": "host=1234:5678"},
@@ -7497,14 +7398,11 @@ func Test_ConfigQemu_get(t *testing.T) {
 					input:  map[string]interface{}{"usb3": ""},
 					output: baseConfig(ConfigQemu{USBs: QemuUSBs{QemuUsbID3: QemuUSB{}}})}}},
 		{category: `ID`,
-			tests: []test{
-				{name: `vmr nil`,
-					output: baseConfig(ConfigQemu{})},
+			tests: []qemuTestCaseGet{
 				{name: `vmr empty`,
-					vmr:    &VmRef{vmId: 0},
 					output: baseConfig(ConfigQemu{})},
 				{name: `vmr populated`,
-					vmr:    &VmRef{vmId: 100},
+					vmr:    VmRef{vmId: 100},
 					output: baseConfig(ConfigQemu{ID: util.Pointer(GuestID(100))})}}},
 	}
 	for _, test := range tests {
@@ -7539,9 +7437,6 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		}
 		if config.Description == nil {
 			config.Description = util.Pointer("")
-		}
-		if config.EFIDisk == nil {
-			config.EFIDisk = QemuDevice{}
 		}
 		if config.Hotplug == "" {
 			config.Hotplug = "network,disk,usb"
@@ -7584,7 +7479,7 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   []any
-		vmr     *VmRef
+		vmr     VmRef
 		pending bool
 		output  *ConfigQemu
 		err     error
@@ -7731,20 +7626,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					Burst:      0,
 					Concurrent: 10}}}
 	}
-	baseConfig := func(config ConfigQemu) ConfigQemu {
-		if config.CPU == nil {
-			config.CPU = &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}
-		} else if config.CPU.Cores == nil {
-			config.CPU.Cores = util.Pointer(QemuCpuCores(1))
-		}
-		if config.Node == nil {
-			config.Node = util.Pointer(NodeName("testnode"))
-		}
-		if config.Memory == nil {
-			config.Memory = &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}
-		}
-		return config
-	}
+	baseConfig := func(config ConfigQemu) ConfigQemu { return testQemuBaseConfig_Validate(config) }
 	baseNetwork := func(id QemuNetworkInterfaceID, config QemuNetworkInterface) QemuNetworkInterfaces {
 		if config.Bridge == nil {
 			config.Bridge = util.Pointer("vmbr0")
@@ -7763,36 +7645,24 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		}
 		return tags
 	}
-	type test struct {
-		name    string
-		input   ConfigQemu
-		current *ConfigQemu
-		err     error
-		version Version
-	}
-	type testType struct {
-		create       []test
-		createUpdate []test // value of currentConfig wil be used for update and ignored for create
-		update       []test
-	}
 	tests := []struct {
 		category string
-		valid    testType
-		invalid  testType
+		valid    qemuTestTypeValidate
+		invalid  qemuTestTypeValidate
 	}{
 		{category: `Agent`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{input: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("isa"))}}),
 						current: &ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}}}}},
-			invalid: testType{
-				createUpdate: []test{
+			invalid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{input: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType("test"))}}),
 						current: &ConfigQemu{Agent: &QemuGuestAgent{Type: util.Pointer(QemuGuestAgentType_VirtIO)}},
 						err:     errors.New(QemuGuestAgentType_Error_Invalid)}}}},
 		{category: `CloudInit`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `All v7`,
 						version: Version{Major: 7, Minor: 255, Patch: 255},
 						input: baseConfig(ConfigQemu{CloudInit: &CloudInit{
@@ -7895,8 +7765,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 										SLAAC:   true})}},
 							UpgradePackages: util.Pointer(true)}}),
 						current: &ConfigQemu{CloudInit: &CloudInit{}}}}},
-			invalid: testType{
-				createUpdate: []test{
+			invalid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(CloudInit_Error_UpgradePackagesPre8)`,
 						version: Version{Major: 7, Minor: 255, Patch: 255},
 						input:   baseConfig(ConfigQemu{CloudInit: &CloudInit{UpgradePackages: util.Pointer(true)}}),
@@ -7996,8 +7866,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{CloudInit: &CloudInit{}},
 						err:     errors.New(IPv6Address_Error_Invalid)}}}},
 		{category: `CPU`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `Cores`,
 						input:   baseConfig(ConfigQemu{CPU: &QemuCPU{Cores: util.Pointer(QemuCpuCores(1))}}),
 						current: &ConfigQemu{CPU: &QemuCPU{}}},
@@ -8063,12 +7933,12 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `Units Maximum`,
 						input:   baseConfig(ConfigQemu{CPU: &QemuCPU{Units: util.Pointer(CpuUnits(262144))}}),
 						current: &ConfigQemu{CPU: &QemuCPU{}}}},
-				update: []test{
+				update: []qemuTestCaseValidate{
 					{name: `nothing`,
 						input:   baseConfig(ConfigQemu{CPU: &QemuCPU{}}),
 						current: &ConfigQemu{CPU: &QemuCPU{}}}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `erross.New(ConfigQemu_Error_CpuRequired)`,
 						input: ConfigQemu{
 							ID:   util.Pointer(GuestID(111)),
@@ -8080,7 +7950,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							ID:   util.Pointer(GuestID(111)),
 							Node: util.Pointer(NodeName("test"))},
 						err: errors.New(QemuCPU_Error_CoresRequired)}},
-				createUpdate: []test{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(CpuLimit_Error_Maximum)`,
 						input:   baseConfig(ConfigQemu{CPU: &QemuCPU{Limit: util.Pointer(CpuLimit(129))}}),
 						current: &ConfigQemu{CPU: &QemuCPU{}},
@@ -8172,8 +8042,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						version: Version{}.max(),
 						err:     CpuType("").Error(Version{}.max())}}}},
 		{category: `Disks`,
-			valid: testType{
-				create: []test{
+			valid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `Empty 0`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{}})},
 					{name: `Empty 1`,
@@ -8182,8 +8052,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							Sata:   &QemuSataDisks{Disk_0: &QemuSataStorage{}},
 							Scsi:   &QemuScsiDisks{Disk_0: &QemuScsiStorage{}},
 							VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{}}}})}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `MutuallyExclusive Ide 0`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{
 							CdRom:     &QemuCdRom{},
@@ -8429,15 +8299,15 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							Passthrough: &QemuVirtIOPassthrough{}}}}}),
 						err: errors.New(Error_QemuDisk_MutuallyExclusive)}}}},
 		{category: `Disks CdRom`,
-			valid: testType{
-				create: []test{
+			valid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}},
 						Sata:   &QemuSataDisks{Disk_0: &QemuSataStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}}}},
 						Scsi:   &QemuScsiDisks{Disk_0: &QemuScsiStorage{CdRom: &QemuCdRom{Passthrough: true}}},
 						VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}}}}}})}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `Ide errors.New(Error_IsoFile_File) 0`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{Iso: &IsoFile{}}}}}}),
 						err:   errors.New(Error_IsoFile_File)},
@@ -8487,8 +8357,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_3: &QemuVirtIOStorage{CdRom: &QemuCdRom{Iso: &IsoFile{File: "test", Storage: "test"}, Passthrough: true}}}}}),
 						err:   errors.New(Error_QemuCdRom_MutuallyExclusive)}}}},
 		{category: `Disks CloudInit`,
-			valid: testType{
-				create: []test{
+			valid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `Ide`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit}}}})},
 					{name: `Sata`,
@@ -8497,8 +8367,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{Scsi: &QemuScsiDisks{Disk_0: &QemuScsiStorage{CloudInit: &validCloudInit}}}})},
 					{name: `VirtIO`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_0: &QemuVirtIOStorage{CloudInit: &validCloudInit}}}})}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `Duplicate errors.New(Error_QemuCloudInitDisk_OnlyOne)`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 							Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CloudInit: &validCloudInit}},
@@ -8567,8 +8437,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_2: &QemuVirtIOStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw}}}}}),
 						err:   errors.New(Error_QemuCloudInitDisk_Storage)}}}},
 		{category: `Disks Disk`,
-			valid: testType{
-				create: []test{
+			valid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{
 							AsyncIO:         QemuDiskAsyncIO_IOuring,
@@ -8602,8 +8472,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							SizeInKibibytes: 18742,
 							Storage:         "test",
 							WorldWideName:   "0x500C0D0E0F101112"}}}}})}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `Ide QemuDiskFormat("").Error()`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{}}}}}),
 						err:   QemuDiskFormat("").Error()},
@@ -8861,8 +8731,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							WorldWideName:   "500C0D0E0F10111"}}}}}),
 						err: errors.New(Error_QemuWorldWideName_Invalid)}}}},
 		{category: `Disks Passthrough`,
-			valid: testType{
-				create: []test{
+			valid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{input: baseConfig(ConfigQemu{Disks: &QemuStorages{
 						Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{
 							AsyncIO:       QemuDiskAsyncIO_IOuring,
@@ -8888,8 +8758,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							Cache:         QemuDiskCache_WriteThrough,
 							File:          "test",
 							WorldWideName: "0x5004A3B2C1D0E0F1"}}}}})}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `Ide QemuDiskAsyncIO("").Error()`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{Ide: &QemuIdeDisks{Disk_0: &QemuIdeStorage{Passthrough: &QemuIdePassthrough{AsyncIO: "invalid"}}}}}),
 						err:   QemuDiskAsyncIO("").Error()},
@@ -9059,8 +8929,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}}),
 						err:   errors.New(Error_QemuWorldWideName_Invalid)}}}},
 		{category: `ID`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `nil`,
 						input: ConfigQemu{
 							ID:     nil,
@@ -9075,8 +8945,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `maximum`,
 						input:   baseConfig(ConfigQemu{ID: util.Pointer(GuestID(1000000))}),
 						current: util.Pointer(baseConfig(ConfigQemu{}))}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `minimum`,
 						input:   baseConfig(ConfigQemu{ID: util.Pointer(GuestID(99))}),
 						current: util.Pointer(baseConfig(ConfigQemu{})),
@@ -9086,8 +8956,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: util.Pointer(baseConfig(ConfigQemu{})),
 						err:     errors.New(GuestID_Error_Maximum)}}}},
 		{category: `Memory`,
-			valid: testType{
-				create: []test{
+			valid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `CapacityMiB only`,
 						input: baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1024))}})},
 					{name: `new.MinimumCapacityMiB`,
@@ -9106,7 +8976,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							CapacityMiB:        util.Pointer(QemuMemoryCapacity(1001)),
 							MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000)),
 							Shares:             util.Pointer(QemuMemoryShares(0))}})}},
-				update: []test{
+				update: []qemuTestCaseValidate{
 					{name: `new.CapacityMiB smaller then current.MinimumCapacityMiB`,
 						input:   ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}},
 						current: &ConfigQemu{Memory: &QemuMemory{MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(2000))}}},
@@ -9128,8 +8998,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{Memory: &QemuMemory{
 							CapacityMiB:        util.Pointer(QemuMemoryCapacity(1000)),
 							MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1000))}}}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `new.MinimumCapacityMiB > new.CapacityMiB`,
 						input: baseConfig(ConfigQemu{Memory: &QemuMemory{
 							CapacityMiB:        util.Pointer(QemuMemoryCapacity(1000)),
@@ -9141,7 +9011,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `new.Shares(1) when new.CapacityMiB == new.MinimumCapacityMiB`,
 						input: baseConfig(ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(1))}}),
 						err:   errors.New(QemuMemory_Error_NoMemoryCapacity)}},
-				createUpdate: []test{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `new.CapacityMiB(0)`,
 						input:   baseConfig(ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(0))}}),
 						current: &ConfigQemu{Memory: &QemuMemory{CapacityMiB: util.Pointer(QemuMemoryCapacity(1000))}},
@@ -9164,7 +9034,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(256)),
 							Shares:             util.Pointer(QemuMemoryShares(1))}},
 						err: errors.New(QemuMemoryShares_Error_Invalid)}},
-				update: []test{
+				update: []qemuTestCaseValidate{
 					{name: `new.Shares(1) when current.CapacityMiB == current.MinimumCapacityMiB`,
 						input: ConfigQemu{Memory: &QemuMemory{Shares: util.Pointer(QemuMemoryShares(1))}},
 						current: &ConfigQemu{Memory: &QemuMemory{
@@ -9188,20 +9058,20 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							MinimumCapacityMiB: util.Pointer(QemuMemoryBalloonCapacity(1024))}},
 						err: errors.New(QemuMemory_Error_SharesHasNoEffectWithoutBallooning)}}}},
 		{category: `Name`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `set`,
 						input:   baseConfig(ConfigQemu{Name: util.Pointer(GuestName("test"))}),
 						current: &ConfigQemu{Name: util.Pointer(GuestName("test2"))}}}},
-			invalid: testType{
-				createUpdate: []test{
+			invalid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `empty`,
 						input:   baseConfig(ConfigQemu{Name: util.Pointer(GuestName(""))}),
 						current: &ConfigQemu{Name: util.Pointer(GuestName("test"))},
 						err:     errors.New(GuestNameErrorEmpty)}}}},
 		{category: `Network`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `Delete`,
 						input:   baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{Delete: true}}}),
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{}}}},
@@ -9248,7 +9118,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID7,
 							QemuNetworkInterface{TaggedVlans: util.Pointer(Vlans{0, 4095})})}),
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{}}}}},
-				update: []test{
+				update: []qemuTestCaseValidate{
 					{name: `MTU model change`,
 						input: baseConfig(ConfigQemu{Networks: baseNetwork(QemuNetworkInterfaceID0,
 							QemuNetworkInterface{Model: util.Pointer(QemuNetworkModelE1000)})}),
@@ -9258,15 +9128,15 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `Update no Bridge && no Model`,
 						input:   baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{}}}),
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{}}}}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `no Bridge`,
 						input: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{}}}),
 						err:   errors.New(QemuNetworkInterface_Error_BridgeRequired)},
 					{name: `no Model`,
 						input: baseConfig(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{Bridge: util.Pointer("vmbr0")}}}),
 						err:   errors.New(QemuNetworkInterface_Error_ModelRequired)}},
-				createUpdate: []test{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(MTU_Error_Invalid)`,
 						input: baseConfig(ConfigQemu{Networks: baseNetwork(
 							QemuNetworkInterfaceID11, QemuNetworkInterface{MTU: &QemuMTU{Value: 575}})}),
@@ -9318,16 +9188,16 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{}}},
 						err:     errors.New(Vlan_Error_Invalid)}}}},
 		{category: `Node`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{input: baseConfig(ConfigQemu{Node: util.Pointer(NodeName("test"))}),
 						current: &ConfigQemu{Node: util.Pointer(NodeName("aaa"))}}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `nil`,
 						input: ConfigQemu{ID: util.Pointer(GuestID(100))},
 						err:   errors.New(ConfigQemu_Error_NodeRequired)}},
-				createUpdate: []test{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `empty`,
 						input: baseConfig(ConfigQemu{
 							ID:   util.Pointer(GuestID(100)),
@@ -9335,16 +9205,16 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{Node: util.Pointer(NodeName("test"))},
 						err:     errors.New(NodeName_Error_Empty)}}}},
 		{category: `PoolName`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `normal`,
 						input:   baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Legal()))}),
 						current: &ConfigQemu{Pool: util.Pointer(PoolName("test"))}},
 					{name: `empty`,
 						input:   baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(""))}),
 						current: &ConfigQemu{Pool: util.Pointer(PoolName("test"))}}}},
-			invalid: testType{
-				createUpdate: []test{
+			invalid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `Length`,
 						input:   baseConfig(ConfigQemu{Pool: util.Pointer(PoolName(test_data_pool.PoolName_Max_Illegal()))}),
 						current: &ConfigQemu{Pool: util.Pointer(PoolName("test"))},
@@ -9354,13 +9224,13 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{Pool: util.Pointer(PoolName("test"))},
 						err:     errors.New(PoolName_Error_Characters)}}}},
 		{category: `PciDevices`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `Delete`,
 						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
 							QemuPciID15: QemuPci{Delete: true}}}),
 						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID0: QemuPci{}}}}},
-				update: []test{
+				update: []qemuTestCaseValidate{
 					{name: `Mapping`,
 						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
 							QemuPciID14: QemuPci{
@@ -9377,8 +9247,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							QemuPciID13: QemuPci{
 								Raw: &QemuPciRaw{
 									ID: util.Pointer(PciID("0000:00:00"))}}}}}}},
-			invalid: testType{
-				createUpdate: []test{
+			invalid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(QemuPciID_Error_Invalid)`,
 						input: baseConfig(ConfigQemu{PciDevices: QemuPciDevices{
 							20: QemuPci{}}}),
@@ -9484,8 +9354,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{PciDevices: QemuPciDevices{QemuPciID0: QemuPci{}}},
 						err:     errors.New(PciVendorID_Error_Invalid)}}}},
 		{category: `RandomnessDevice`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `all`,
 						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
 							Source: util.Pointer(EntropySourceRandom),
@@ -9496,7 +9366,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
 							Delete: true}}),
 						current: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}}}},
-				update: []test{
+				update: []qemuTestCaseValidate{
 					{name: `minimum`,
 						input:   baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{}}),
 						current: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}}},
@@ -9504,20 +9374,20 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
 							Source: util.Pointer(EntropySourceHwRNG)}}),
 						current: &ConfigQemu{}}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `errors.New(VirtIoRNG_Error_SourceNotSet)`,
 						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{}}),
 						err:   errors.New(VirtIoRNGErrorSourceNotSet)}},
-				createUpdate: []test{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(EntropySource_Error_Invalid)`,
 						input: baseConfig(ConfigQemu{RandomnessDevice: &VirtIoRNG{
 							Source: util.Pointer(EntropySource(0))}}),
 						current: &ConfigQemu{RandomnessDevice: &VirtIoRNG{}},
 						err:     errors.New(EntropySourceErrorInvalid)}}}},
 		{category: `Serials`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `all`,
 						input: baseConfig(ConfigQemu{Serials: SerialInterfaces{
 							SerialID0: SerialInterface{Path: "/dev/ttyS0"},
@@ -9529,8 +9399,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						input: baseConfig(ConfigQemu{Serials: SerialInterfaces{
 							SerialID3: SerialInterface{Delete: true}}}),
 						current: &ConfigQemu{Serials: SerialInterfaces{SerialID0: SerialInterface{Path: "/dev/ttyS0"}}}}}},
-			invalid: testType{
-				createUpdate: []test{
+			invalid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(SerialID_Errors_Invalid)`,
 						input:   baseConfig(ConfigQemu{Serials: SerialInterfaces{4: SerialInterface{}}}),
 						err:     errors.New(SerialID_Errors_Invalid),
@@ -9548,16 +9418,16 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						err:     errors.New(SerialPath_Errors_Invalid),
 						current: &ConfigQemu{Serials: SerialInterfaces{SerialID3: SerialInterface{Path: "/dev/ttyS0"}}}}}}},
 		{category: `Tags`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `normal`,
 						input:   baseConfig(ConfigQemu{Tags: util.Pointer(validTags())}),
 						current: &ConfigQemu{Tags: util.Pointer(Tags{"a", "b"})}},
 					{name: `empty`,
 						input:   baseConfig(ConfigQemu{Tags: util.Pointer(Tags{})}),
 						current: &ConfigQemu{Tags: util.Pointer(validTags())}}}},
-			invalid: testType{
-				createUpdate: []test{
+			invalid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(Tag_Error_Invalid)`,
 						input:   baseConfig(ConfigQemu{Tags: util.Pointer(Tags{Tag(test_data_tag.Tag_Illegal())})}),
 						current: &ConfigQemu{Tags: util.Pointer(Tags{"a", "b"})},
@@ -9573,24 +9443,23 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `errors.New(Tags_Error_Duplicate)`,
 						input:   baseConfig(ConfigQemu{Tags: util.Pointer(Tags{Tag(test_data_tag.Tag_Max_Legal()), Tag(test_data_tag.Tag_Max_Legal())})}),
 						current: &ConfigQemu{Tags: util.Pointer(Tags{"a", "b"})},
-						err:     errors.New(Tags_Error_Duplicate)}}},
-		},
+						err:     errors.New(Tags_Error_Duplicate)}}}},
 		{category: `TPM`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `normal`,
 						input:   baseConfig(ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v2.0"))}}),
 						current: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v1.2"))}}}},
-				update: []test{
+				update: []qemuTestCaseValidate{
 					{name: `Version=nil`,
 						input:   ConfigQemu{TPM: &TpmState{Storage: "test"}},
 						current: &ConfigQemu{TPM: &TpmState{Storage: "test", Version: util.Pointer(TpmVersion("v1.2"))}}}}},
-			invalid: testType{
-				create: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
 					{name: `errors.New(TmpState_Error_VersionRequired) Create`,
 						input: baseConfig(ConfigQemu{TPM: &TpmState{Storage: "test", Version: nil}}),
 						err:   errors.New(TmpState_Error_VersionRequired)}},
-				createUpdate: []test{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(storage is required)`,
 						input:   baseConfig(ConfigQemu{TPM: &TpmState{Storage: ""}}),
 						current: &ConfigQemu{TPM: &TpmState{}},
@@ -9600,8 +9469,8 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{TPM: &TpmState{}},
 						err:     errors.New(TpmVersion_Error_Invalid)}}}},
 		{category: `USBs`,
-			valid: testType{
-				createUpdate: []test{
+			valid: qemuTestTypeValidate{
+				createUpdate: []qemuTestCaseValidate{
 					{name: `delete`,
 						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
 							QemuUsbID0: QemuUSB{Delete: true}}}),
@@ -9639,7 +9508,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{USBs: QemuUSBs{
 							QemuUsbID0: QemuUSB{Spice: &QemuUsbSpice{
 								USB3: false}}}}}},
-				update: []test{
+				update: []qemuTestCaseValidate{
 					{name: `USBs.Device to USBs.Mapped`,
 						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
 							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
@@ -9690,9 +9559,9 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 						current: &ConfigQemu{USBs: QemuUSBs{
 							QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
 								ID: util.Pointer(UsbDeviceID("5678:1234"))}}}}}}},
-			invalid: testType{
-				create: []test{},
-				createUpdate: []test{
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{},
+				createUpdate: []qemuTestCaseValidate{
 					{name: `errors.New(QemuUsbID_Error_Invalid)`,
 						input: baseConfig(ConfigQemu{USBs: QemuUSBs{
 							20: QemuUSB{}}}),
@@ -9748,44 +9617,29 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 							QemuUsbID0: QemuUSB{Port: &QemuUsbPort{}}}},
 						err: errors.New(UsbPortID_Error_Invalid)}}}},
 	}
+	validateCreate := func(prefix string, v qemuTestCaseValidate) {
+		t.Run(prefix+"/Create/"+v.name, func(t *testing.T) {
+			require.Equal(t, v.err, v.input.Validate(nil, v.version))
+		})
+	}
+	validateUpdate := func(prefix string, v qemuTestCaseValidate) {
+		t.Run(prefix+"/Update/"+v.name, func(t *testing.T) {
+			require.NotNil(t, v.current)
+			require.Equal(t, v.err, v.input.Validate(v.current, v.version))
+		})
+	}
 	for _, test := range tests {
 		for _, subTest := range append(test.valid.create, test.valid.createUpdate...) {
-			name := test.category + "/Valid/Create"
-			if len(test.valid.create)+len(test.valid.createUpdate) > 1 {
-				name += "/" + subTest.name
-			}
-			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.err, subTest.input.Validate(nil, subTest.version), name)
-			})
+			validateCreate("/Valid", subTest)
 		}
 		for _, subTest := range append(test.valid.update, test.valid.createUpdate...) {
-			name := test.category + "/Valid/Update"
-			if len(test.valid.update)+len(test.valid.createUpdate) > 1 {
-				name += "/" + subTest.name
-			}
-			t.Run(name, func(*testing.T) {
-				require.NotNil(t, subTest.current)
-				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current, subTest.version), name)
-			})
+			validateUpdate("/Valid", subTest)
 		}
 		for _, subTest := range append(test.invalid.create, test.invalid.createUpdate...) {
-			name := test.category + "/Invalid/Create"
-			if len(test.invalid.create)+len(test.invalid.createUpdate) > 1 {
-				name += "/" + subTest.name
-			}
-			t.Run(name, func(*testing.T) {
-				require.Equal(t, subTest.err, subTest.input.Validate(nil, subTest.version), name)
-			})
+			validateCreate("/Invalid", subTest)
 		}
 		for _, subTest := range append(test.invalid.update, test.invalid.createUpdate...) {
-			name := test.category + "/Invalid/Update"
-			if len(test.invalid.update)+len(test.invalid.createUpdate) > 1 {
-				name += "/" + subTest.name
-			}
-			t.Run(name, func(*testing.T) {
-				require.NotNil(t, subTest.current)
-				require.Equal(t, subTest.err, subTest.input.Validate(subTest.current, subTest.version), name)
-			})
+			validateUpdate("/Invalid", subTest)
 		}
 	}
 }
