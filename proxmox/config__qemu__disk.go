@@ -243,10 +243,12 @@ func (disk qemuDisk) formatDisk(vmID, LinkedVmId GuestID, currentStorage string,
 			// base-110-disk-1/vm-100-disk-0
 			tmpId = strconv.Itoa(int(LinkedVmId))
 			settings = "base-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.LinkedDiskId)) + "/" + settings
-		}
-		// For volume syntax, append format if not raw (e.g., qcow2 on LVM with snapshot-as-volume-chain enabled)
-		if disk.Format != QemuDiskFormat_Raw {
-			settings += "." + string(disk.Format)
+		} else {
+			// For volume syntax, append format if not raw (e.g., qcow2 on LVM with snapshot-as-volume-chain enabled)
+			// Linked clone feature is not supported for LVM
+			if disk.Format != QemuDiskFormat_Raw {
+				settings += "." + string(disk.Format)
+			}
 		}
 	}
 	// storage:100/vm-100-disk-0.raw
