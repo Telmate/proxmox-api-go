@@ -92,12 +92,7 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	if err = config.Validate(nil, version); err != nil {
 		return nil, err
 	}
-
-	var params map[string]interface{}
-	_, params, err = config.mapToAPI(ConfigQemu{}, version.Encode())
-	if err != nil {
-		return nil, err
-	}
+	params, body := config.mapToApiCreate(version.Encode())
 	// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
 	// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
 	var pool PoolName
@@ -109,19 +104,18 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	if config.Node != nil {
 		node = *config.Node
 	}
+	cl := client.new().apiRaw()
 	url := "/nodes/" + node.String() + "/qemu"
 	if config.ID == nil {
-		id, err = guestCreateLoop_Unsafe(ctx, "vmid", url, params, client)
+		id, err = guestCreateLoop_Unsafe(ctx, "vmid", url, params, body, client)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		id = *config.ID
 		params["vmid"] = int(id)
-		var exitStatus string
-		exitStatus, err = client.PostWithTask(ctx, params, url)
-		if err != nil {
-			return nil, fmt.Errorf("error creating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+		if err = cl.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
+			return nil, err
 		}
 	}
 
@@ -141,7 +135,7 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	return vmr, err
 }
 
-// TODO this should not be done here, but should be done in the unmarshaling of eache respective field
+// TODO this should not be done here, but should be done in the unmarshaling of each respective field
 func (config *ConfigQemu) defaults() {
 	if config == nil {
 		return
@@ -178,7 +172,7 @@ func (config *ConfigQemu) defaults() {
 	}
 }
 
-func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersion) (rebootRequired bool, params map[string]interface{}, err error) {
+func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersion) (params map[string]interface{}) {
 	// TODO check if cloudInit settings changed, they require a reboot to take effect.
 	var itemsToDelete string
 
@@ -342,6 +336,40 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersi
 	return
 }
 
+func (config ConfigQemu) mapToApiCreate(version EncodedVersion) (params map[string]any, body *[]byte) {
+	params = config.mapToAPI(ConfigQemu{}, version)
+	if len(params) == 0 {
+		params = nil
+	}
+	builder := strings.Builder{}
+	if builder.Len() > 0 {
+		body = util.Pointer(bytes.NewBufferString(builder.String()[1:]).Bytes())
+	}
+	return
+}
+
+func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current configQemuUpdate, version EncodedVersion) (params map[string]any, body *[]byte) {
+	params = config.mapToAPI(*currentLegacy, version)
+	if len(params) == 0 {
+		params = nil
+	}
+	builder := strings.Builder{}
+	delete := strings.Builder{}
+
+	if delete.Len() > 0 {
+		if v, ok := params["delete"]; ok {
+			params["delete"] = v.(string) + delete.String()[1:] // remove leading comma
+		} else {
+			builder.WriteString(",delete=")
+			builder.WriteString(delete.String()[1:]) // remove leading comma
+		}
+	}
+	if builder.Len() > 0 {
+		body = util.Pointer(bytes.NewBufferString(builder.String()[1:]).Bytes())
+	}
+	return
+}
+
 func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) error {
 	// vmConfig Sample: map[ cpu:host
 	// net0:virtio=62:DF:XX:XX:XX:XX,bridge=vmbr0
@@ -477,12 +505,19 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	// TODO add digest during update to check if the config has changed
 
 	ca := client.new().apiGet()
+	cr := client.new().apiRaw()
 
 	// currentConfig will be mutated
-	currentConfig, err := NewConfigQemuFromApi(ctx, vmr, client)
+	rawConfig, err := guestGetQemuConfig(ctx, vmr, client)
 	if err != nil {
 		return
 	}
+
+	currentLegacy, err := rawConfig.Get(*vmr) // LEGACY we shouldn't need full config as we can grab this from the raw config as needed.
+	if err != nil {
+		return
+	}
+	updateConfig := configQemuUpdate{raw: rawConfig}
 
 	if vmr != nil {
 		if err = config.setVmr(vmr); err != nil {
@@ -494,17 +529,17 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	if version, err = client.Version(ctx); err != nil {
 		return
 	}
-	if err = config.Validate(currentConfig, version); err != nil {
+	if err = config.Validate(currentLegacy, version); err != nil {
 		return
 	}
 	// TODO implement tmp move and version change
 	urlPart := "/" + vmr.vmType.String() + "/" + vmr.vmId.String() + "/config"
-	var itemsToDeleteBeforeUpdate string // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
+	deleteBuilder := &strings.Builder{} // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 	stopped := false
 
 	var markedDisks qemuUpdateChanges
-	if config.Disks != nil && currentConfig.Disks != nil {
-		markedDisks = *config.Disks.markDiskChanges(*currentConfig.Disks)
+	if config.Disks != nil && currentLegacy.Disks != nil {
+		markedDisks = *config.Disks.markDiskChanges(*currentLegacy.Disks)
 		for _, e := range markedDisks.Move { // move disk to different storage or change disk format
 			_, err = e.move(ctx, true, vmr, client)
 			if err != nil {
@@ -514,38 +549,38 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
 			return false, err
 		}
-		itemsToDeleteBeforeUpdate = config.Disks.cloudInitRemove(*currentConfig.Disks)
+		config.Disks.cloudInitRemove(*currentLegacy.Disks, deleteBuilder)
 	}
 
-	if config.TPM != nil && currentConfig.TPM != nil { // delete or move TPM
-		delete, disk := config.TPM.markChanges(*currentConfig.TPM)
-		if delete != "" { // delete
-			itemsToDeleteBeforeUpdate = AddToList(itemsToDeleteBeforeUpdate, delete)
-			currentConfig.TPM = nil
-		} else if disk != nil { // move
+	if config.TPM != nil && currentLegacy.TPM != nil { // delete or move TPM
+		if disk := config.TPM.markChanges(*currentLegacy.TPM, deleteBuilder); disk != nil { // move
 			if _, err := disk.move(ctx, true, vmr, client); err != nil {
 				return false, err
 			}
 		}
 	}
 
-	if itemsToDeleteBeforeUpdate != "" {
-		err = client.Put(ctx, map[string]interface{}{"delete": itemsToDeleteBeforeUpdate}, "/nodes/"+vmr.node.String()+urlPart)
-		if err != nil {
+	var pending bool
+
+	var itemsToDeleteBeforeUpdate string
+	if deleteBuilder.Len() > 0 {
+		pending = true
+		itemsToDeleteBeforeUpdate = deleteBuilder.String()[len(comma):] // remove leading comma
+		cl := client.new().apiRaw()
+		if err := cl.putRawRetry(ctx, "/nodes/"+vmr.node.String()+urlPart, util.Pointer([]byte("delete="+itemsToDeleteBeforeUpdate)), 3); err != nil {
 			return false, fmt.Errorf("error updating VM: %v", err)
 		}
-
 	}
 
 	// Deleting items can create pending changes.
 	// Moving disks changes the disk id. we need to get the config again if any disk was moved.
-	if itemsToDeleteBeforeUpdate != "" || len(markedDisks.Move) != 0 {
+	if pending || len(markedDisks.Move) != 0 {
 		var rawConfig map[string]any
 		rawConfig, rebootRequired, err = vmr.pendingConfig(ctx, ca)
 		if err != nil {
 			return
 		}
-		currentConfig, err = (&rawConfigQemu{a: rawConfig}).get(vmr)
+		currentLegacy, err = (&rawConfigQemu{a: rawConfig}).get(*vmr)
 		if err != nil {
 			return
 		}
@@ -562,7 +597,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		}
 	}
 
-	if config.Node != nil && currentConfig.Node != nil && *config.Node != *currentConfig.Node { // Migrate VM
+	if config.Node != nil && currentLegacy.Node != nil && *config.Node != *currentLegacy.Node { // Migrate VM
 		if err = vmr.migrate_Unsafe(ctx, client, *config.Node, true); err != nil {
 			return
 		}
@@ -571,16 +606,9 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	}
 
 	versionEncoded := version.Encode()
-
-	var params map[string]interface{}
-	rebootRequired, params, err = config.mapToAPI(*currentConfig, versionEncoded)
-	if err != nil {
-		return
-	}
-	var exitStatus string
-	exitStatus, err = client.PutWithTask(ctx, params, "/nodes/"+vmr.node.String()+urlPart)
-	if err != nil {
-		return false, fmt.Errorf("error updating VM: %v, error status: %s (params: %v)", err, exitStatus, params)
+	params, body := config.mapToApiUpdate(currentLegacy, updateConfig, versionEncoded)
+	if err = cr.putRawRetry(ctx, "/nodes/"+vmr.node.String()+urlPart, combineParamsAndBody(params, body), 3); err != nil {
+		return false, fmt.Errorf("error updating VM: %v", err)
 	}
 
 	if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped
@@ -590,12 +618,12 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		}
 	}
 
-	if err = resizeNewDisks(ctx, vmr, client, config.Disks, currentConfig.Disks); err != nil {
+	if err = resizeNewDisks(ctx, vmr, client, config.Disks, currentLegacy.Disks); err != nil {
 		return
 	}
 
 	if config.Pool != nil { // update pool membership
-		if err = vmr.vmId.setPool(ctx, client.new().apiRaw(), *config.Pool, currentConfig.Pool, versionEncoded); err != nil {
+		if err = vmr.vmId.setPool(ctx, client.new().apiRaw(), *config.Pool, currentLegacy.Pool, versionEncoded); err != nil {
 			return
 		}
 	}
@@ -1100,7 +1128,7 @@ func (c ConfigQemu) String() string { // String is for fmt.Stringer.
 }
 
 type RawConfigQemu interface {
-	Get(vmr *VmRef) (*ConfigQemu, error)
+	Get(vmr VmRef) (*ConfigQemu, error)
 	GetAgent() *QemuGuestAgent
 	GetCPU() *QemuCPU
 	GetCloudInit() *CloudInit
@@ -1234,16 +1262,16 @@ const (
 // NewRawConfigQemuFromApi returns the configuration of the Qemu guest.
 // Including pending changes.
 func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
-	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
-	}
 	if client == nil {
 		return nil, errors.New(Client_Error_Nil)
+	}
+	if err := client.CheckVmRef(ctx, vmr); err != nil {
+		return nil, err
 	}
 	return client.new().guestGetQemuRawConfig(ctx, vmr)
 }
 
-func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (RawConfigQemu, error) {
+func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (*rawConfigQemu, error) {
 	rawConfig, err := c.getGuestConfig(ctx, vmr)
 	if err != nil {
 		return nil, err
@@ -1251,7 +1279,7 @@ func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiIn
 	return &rawConfigQemu{a: rawConfig}, nil
 }
 
-func (c *clientNewTest) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
+func (c *clientNewTest) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error) {
 	return guestGetRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 
@@ -1261,7 +1289,7 @@ func NewActiveRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, c *Client) (
 	return c.new().guestGetQemuActiveRawConfig(ctx, vmr)
 }
 
-func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw RawConfigQemu, pending bool, err error) {
+func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw *rawConfigQemu, pending bool, err error) {
 	var tmpConfig map[string]any
 	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
 	if err != nil {
@@ -1270,15 +1298,22 @@ func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clien
 	return &rawConfigQemu{a: tmpConfig}, pending, nil
 }
 
-func (c *clientNewTest) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error) {
+func (c *clientNewTest) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error) {
 	return guestGetActiveRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 
-func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (config *ConfigQemu, err error) {
-	var raw RawConfigQemu
+func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (*ConfigQemu, error) {
+	raw, err := guestGetQemuConfig(ctx, vmr, client)
+	if err != nil {
+		return nil, err
+	}
+	return raw.Get(*vmr)
+}
+
+func guestGetQemuConfig(ctx context.Context, vmr *VmRef, client *Client) (raw *rawConfigQemu, err error) {
 	var vmInfo map[string]interface{}
 	for ii := 0; ii < 3; ii++ {
-		raw, err = NewRawConfigQemuFromApi(ctx, vmr, client)
+		raw, err = client.new().guestGetQemuRawConfig(ctx, vmr)
 		if err != nil {
 			return nil, err
 		}
@@ -1303,21 +1338,13 @@ func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (conf
 		vmr.pool = PoolName(v.(string))
 	}
 
-	config, err = raw.Get(vmr)
-	if err != nil {
-		return
-	}
-
-	config.defaults()
-
 	// HAstate is return by the api for a vm resource type but not the HAgroup
 	err = client.ReadVMHA(ctx, vmr) // TODO: can be optimized, uses same API call as GetVmConfig and GetVmInfo
-	if err == nil {
-		config.HaState = vmr.HaState()
-		config.HaGroup = vmr.HaGroup()
-	} else {
-		//log.Printf("[DEBUG] VM %d(%s) has no HA config", vmr.vmId, vmConfig["hostname"])
-		return config, nil
+	var apiErr *ApiError
+	if errors.As(err, &apiErr) {
+		if strings.HasPrefix(apiErr.Message, "no such resource") {
+			err = nil
+		}
 	}
 	return
 }

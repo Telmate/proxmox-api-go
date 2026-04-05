@@ -1026,13 +1026,12 @@ type QemuStorages struct {
 }
 
 // Return the cloud init disk that should be removed.
-func (newStorages QemuStorages) cloudInitRemove(currentStorages QemuStorages) string {
+func (newStorages QemuStorages) cloudInitRemove(currentStorages QemuStorages, delete *strings.Builder) {
 	newCloudInit := newStorages.listCloudInitDisk()
 	currentCloudInit := currentStorages.listCloudInitDisk()
 	if newCloudInit != "" && currentCloudInit != "" && newCloudInit != currentCloudInit {
-		return currentCloudInit
+		delete.WriteString(comma + currentCloudInit)
 	}
-	return ""
 }
 
 func (q QemuStorages) listCloudInitDisk() string {

@@ -3,6 +3,7 @@ package proxmox
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
@@ -874,50 +875,39 @@ func Test_QemuStorages_cloudInitRemove(t *testing.T) {
 				currentStorages: QemuStorages{
 					Sata: &QemuSataDisks{Disk_2: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
 				newStorages: QemuStorages{
-					Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
-			},
-			output: "sata2",
-		},
+					Scsi: &QemuScsiDisks{Disk_8: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}}},
+			output: comma + "sata2"},
 		{name: "Different Slot, Same Type",
 			input: testInput{
 				currentStorages: QemuStorages{
 					Ide: &QemuIdeDisks{Disk_1: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
 				newStorages: QemuStorages{
-					Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
-			},
-			output: "ide1",
-		},
+					Ide: &QemuIdeDisks{Disk_3: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}}},
+			output: comma + "ide1"},
 		{name: "Same Slot",
 			input: testInput{
 				currentStorages: QemuStorages{
 					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
 				newStorages: QemuStorages{
-					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
-			},
-			output: "",
-		},
+					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}}}},
 		{name: "Same Slot, CloudInit Disk",
 			input: testInput{
 				currentStorages: QemuStorages{
 					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
 				newStorages: QemuStorages{
-					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
-			},
-			output: "",
-		},
+					Ide: &QemuIdeDisks{Disk_2: &QemuIdeStorage{Disk: &QemuIdeDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}}}},
 		{name: "Same Slot, Disk CloudInit",
 			input: testInput{
 				currentStorages: QemuStorages{
 					Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{Disk: &QemuSataDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
 				newStorages: QemuStorages{
-					Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}},
-			},
-			output: "",
-		},
+					Sata: &QemuSataDisks{Disk_4: &QemuSataStorage{CloudInit: &QemuCloudInitDisk{Format: QemuDiskFormat_Raw, Storage: "Test"}}}}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, test.input.newStorages.cloudInitRemove(test.input.currentStorages), test.name)
+			delete := strings.Builder{}
+			test.input.newStorages.cloudInitRemove(test.input.currentStorages, &delete)
+			require.Equal(t, test.output, delete.String(), test.name)
 		})
 	}
 }

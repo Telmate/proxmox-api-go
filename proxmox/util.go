@@ -18,6 +18,12 @@ const (
 	tebiByte          = gibiByte * 1024
 )
 
+const (
+	colon = "%3A"
+	comma = "%2C"
+	equal = "%3D"
+)
+
 const hexPrefix string = "0x"
 
 func Btoi(b bool) int {
