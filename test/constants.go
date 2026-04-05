@@ -5,6 +5,7 @@ const (
 	TemplateStorage       = `local`
 	FirstNode             = `pve`
 	GuestStorage          = `local-zfs`
+	QemuTemplateID        = 9000
 	ApiURL                = `https://127.0.0.1:8006/api2/json`
 	UserID                = `root@pam`
 	Password              = `Enter123!`

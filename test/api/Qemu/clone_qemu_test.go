@@ -73,7 +73,7 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 						}
 
 						// TODO we should create the template during the test
-						cloneVmr := pveSDK.NewVmRef(9000)
+						cloneVmr := pveSDK.NewVmRef(test.QemuTemplateID)
 						cloneVmr.SetNode(string(node))
 						vmr, err := cloneVmr.CloneQemu(ctx, pveSDK.CloneQemuTarget{
 							Linked: &pveSDK.CloneLinked{
