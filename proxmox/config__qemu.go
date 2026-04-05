@@ -1117,12 +1117,11 @@ type RawConfigQemu interface {
 	GetTablet() bool
 	GetTags() *Tags
 	GetUSBs() QemuUSBs
-	get(vmr *VmRef) (*ConfigQemu, error)
 }
 
 type rawConfigQemu struct{ a map[string]any }
 
-func (raw *rawConfigQemu) Get(vmr *VmRef) (*ConfigQemu, error) {
+func (raw *rawConfigQemu) Get(vmr VmRef) (*ConfigQemu, error) {
 	config, err := raw.get(vmr)
 	if err != nil {
 		return nil, err
@@ -1131,7 +1130,7 @@ func (raw *rawConfigQemu) Get(vmr *VmRef) (*ConfigQemu, error) {
 	return config, nil
 }
 
-func (raw *rawConfigQemu) get(vmr *VmRef) (*ConfigQemu, error) {
+func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 	config := ConfigQemu{
 		Agent:            raw.GetAgent(),
 		CPU:              raw.GetCPU(),
@@ -1151,7 +1150,7 @@ func (raw *rawConfigQemu) get(vmr *VmRef) (*ConfigQemu, error) {
 		USBs:             raw.GetUSBs(),
 	}
 	config.Disks, config.LinkedID = raw.GetDisks()
-	if err := config.mapToStruct(vmr, raw.a); err != nil {
+	if err := config.mapToStruct(&vmr, raw.a); err != nil {
 		return nil, err
 	}
 	return &config, nil

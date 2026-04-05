@@ -138,7 +138,10 @@ func (c *snapshotClient) ReadLxcNoCheck(ctx context.Context, guest VmRef, name S
 	if err != nil {
 		return nil, err
 	}
-	return &rawConfigLXC{a: params}, nil
+	return &rawConfigLXC{
+		a:       params,
+		guestID: guest.vmId,
+		node:    guest.node}, nil
 }
 
 func (c *snapshotClient) ReadQemu(ctx context.Context, guest VmRef, name SnapshotName) (RawConfigQemu, error) {
