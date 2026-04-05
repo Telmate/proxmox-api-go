@@ -581,8 +581,6 @@ func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (feature
 	return
 }
 
-const guest_ApiError_AlreadyExists string = "config file already exists"
-
 // Keep trying to create/clone a VM until we get a unique ID
 func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, body *[]byte, c *Client) (GuestID, error) {
 	c.guestCreationMutex.Lock()
