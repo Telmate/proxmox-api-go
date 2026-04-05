@@ -3565,6 +3565,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						File: "/dev/disk/sda"}}}}}}}},
+		testDataEfiDiskMapToAPI(),
 		{category: `Iso`,
 			create: []qemuTestCaseAPI{
 				{name: `Iso`,
@@ -6729,16 +6730,7 @@ func Test_ConfigQemu_get(t *testing.T) {
 						File:          "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi8",
 						Replicate:     true,
 						WorldWideName: "0x5008FA6500D9C8B3"}}}}})}}},
-		{category: `EFIDisk`,
-			tests: []test{
-				{name: `All`,
-					input: map[string]interface{}{"efidisk0": "local-lvm:vm-1000-disk-0,efitype=2m,size=4M"},
-					output: baseConfig(ConfigQemu{EFIDisk: map[string]interface{}{
-						"efitype": "2m",
-						"size":    "4M",
-						"storage": "local-lvm",
-						"file":    "vm-1000-disk-0",
-						"volume":  "local-lvm:vm-1000-disk-0"}})}}},
+		testDataEfiDiskGet(),
 		{category: `Iso`,
 			tests: []qemuTestCaseGet{
 				{name: `All`,
@@ -8928,6 +8920,7 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `VirtIO errors.New(Error_QemuWorldWideName_Invalid)`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}}),
 						err:   errors.New(Error_QemuWorldWideName_Invalid)}}}},
+		testDataEfiDiskValidate(),
 		{category: `ID`,
 			valid: qemuTestTypeValidate{
 				createUpdate: []qemuTestCaseValidate{

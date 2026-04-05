@@ -23,9 +23,9 @@ func testMockServerInit(t *testing.T) (*mockServer.Server, *Client) {
 	return server, c
 }
 
-func testParamsEqual(t *testing.T, expected map[string]string, params *[]byte) {
+func testParamsEqual(t *testing.T, expected map[string]string, params *[]byte, msgAndArgs ...any) {
 	if params == nil {
-		require.Nil(t, expected)
+		require.Nil(t, expected, msgAndArgs...)
 		return
 	}
 
@@ -38,7 +38,7 @@ func testParamsEqual(t *testing.T, expected map[string]string, params *[]byte) {
 			out[k] = v[0]
 		}
 	}
-	require.Equal(t, expected, out)
+	require.Equal(t, expected, out, msgAndArgs...)
 }
 
 // An interface for types that have a Get() method returning V

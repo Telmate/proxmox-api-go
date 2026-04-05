@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -41,7 +42,7 @@ type ConfigQemu struct {
 	CloudInit        *CloudInit            `json:"cloudinit,omitempty"`
 	Description      *string               `json:"description,omitempty"` // never nil when returned
 	Disks            *QemuStorages         `json:"disks,omitempty"`
-	EFIDisk          QemuDevice            `json:"efidisk,omitempty"`   // TODO should be a struct
+	EfiDisk          *EfiDisk              `json:"efidisk,omitempty"`
 	FullClone        *int                  `json:"fullclone,omitempty"` // Deprecated
 	HaGroup          string                `json:"hagroup,omitempty"`
 	HaState          string                `json:"hastate,omitempty"` // TODO should be custom type with enum
@@ -145,9 +146,6 @@ func (config *ConfigQemu) defaults() {
 	}
 	if config.Bios == "" {
 		config.Bios = "seabios"
-	}
-	if config.EFIDisk == nil {
-		config.EFIDisk = QemuDevice{}
 	}
 	if config.Hotplug == "" {
 		config.Hotplug = "network,disk,usb"
@@ -309,9 +307,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersi
 		}
 	}
 
-	// Create EFI disk
-	config.CreateQemuEfiParams(params)
-
 	// Create networks config.
 	itemsToDelete += config.Networks.mapToAPI(currentConfig.Networks, params)
 
@@ -342,6 +337,9 @@ func (config ConfigQemu) mapToApiCreate(version EncodedVersion) (params map[stri
 		params = nil
 	}
 	builder := strings.Builder{}
+	if config.EfiDisk != nil {
+		config.EfiDisk.mapToApiCreate(&builder)
+	}
 	if builder.Len() > 0 {
 		body = util.Pointer(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
@@ -355,6 +353,13 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 	}
 	builder := strings.Builder{}
 	delete := strings.Builder{}
+	if config.EfiDisk != nil {
+		if current.efiDisk != nil {
+			config.EfiDisk.mapToApiUpdate(current.efiDisk, &builder, &delete)
+		} else {
+			config.EfiDisk.mapToApiCreate(&builder)
+		}
+	}
 
 	if delete.Len() > 0 {
 		if v, ok := params["delete"]; ok {
@@ -489,15 +494,6 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 		}
 	}
 
-	// efidisk
-	if efidisk, isSet := params["efidisk0"].(string); isSet {
-		efiDiskConfMap := ParsePMConf(efidisk, "volume")
-		storageName, fileName := ParseSubConf(efiDiskConfMap["volume"].(string), ":")
-		efiDiskConfMap["storage"] = storageName
-		efiDiskConfMap["file"] = fileName
-		config.EFIDisk = efiDiskConfMap
-	}
-
 	return nil
 }
 
@@ -561,6 +557,19 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	}
 
 	var pending bool
+
+	// TODO we can't move a disk for a Qemu guest that is running. Before we can add this we have to move the power state into the config like we did with the Lxc guest.
+	if config.EfiDisk != nil {
+		updateConfig.efiDisk = rawConfig.GetEfiDisk()
+		if updateConfig.efiDisk != nil {
+			if disk := config.EfiDisk.markChangesUnsafe(updateConfig.efiDisk); disk != nil {
+				pending = true
+				if _, err := disk.move(ctx, true, vmr, client); err != nil {
+					return false, err
+				}
+			}
+		}
+	}
 
 	var itemsToDeleteBeforeUpdate string
 	if deleteBuilder.Len() > 0 {
@@ -720,6 +729,9 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
+		if err = config.validateCreate(); err != nil {
+			return
+		}
 	} else { // Update
 		if config.Node != nil {
 			if err = config.Node.Validate(); err != nil {
@@ -761,6 +773,9 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
+		if err = config.validateUpdate(current); err != nil {
+			return
+		}
 	}
 	// Shared
 	if config.Agent != nil {
@@ -800,6 +815,30 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 	}
 	return
+}
+
+func (config ConfigQemu) validateCreate() error {
+	if config.EfiDisk != nil {
+		if err := config.EfiDisk.validateCreate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (config ConfigQemu) validateUpdate(current *ConfigQemu) error {
+	if config.EfiDisk != nil {
+		if current.EfiDisk != nil {
+			if err := config.EfiDisk.validateUpdate(); err != nil {
+				return err
+			}
+		} else {
+			if err := config.EfiDisk.validateCreate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 /*
@@ -1062,30 +1101,6 @@ func FormatDiskParam(disk QemuDevice) string {
 	return strings.Join(diskConfParam, ",")
 }
 
-// Create efi parameter.
-func (c ConfigQemu) CreateQemuEfiParams(params map[string]interface{}) {
-	efiParam := QemuDeviceParam{}
-	efiParam = efiParam.createDeviceParam(c.EFIDisk, nil)
-
-	if len(efiParam) > 0 {
-		storage_info := []string{}
-		storage := ""
-		for _, param := range efiParam {
-			key := strings.Split(param, "=")
-			if key[0] == "storage" {
-				// Proxmox format for disk creation
-				storage = fmt.Sprintf("%s:1", key[1])
-			} else {
-				storage_info = append(storage_info, param)
-			}
-		}
-		if len(storage_info) > 0 {
-			storage = fmt.Sprintf("%s,%s", storage, strings.Join(storage_info, ","))
-		}
-		params["efidisk0"] = storage
-	}
-}
-
 func (p QemuDeviceParam) createDeviceParam(
 	deviceConfMap QemuDevice,
 	ignoredKeys []string,
@@ -1127,12 +1142,19 @@ func (c ConfigQemu) String() string { // String is for fmt.Stringer.
 	return string(jsConf)
 }
 
+// We have some special properties as they would have to be decoded more than once.
+type configQemuUpdate struct {
+	efiDisk *EfiDisk
+	raw     *rawConfigQemu
+}
+
 type RawConfigQemu interface {
 	Get(vmr VmRef) (*ConfigQemu, error)
 	GetAgent() *QemuGuestAgent
 	GetCPU() *QemuCPU
 	GetCloudInit() *CloudInit
 	GetDescription() string
+	GetEfiDisk() *EfiDisk
 	GetMemory() *QemuMemory
 	GetName() GuestName
 	GetNetworks() QemuNetworkInterfaces
@@ -1164,6 +1186,9 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 		CPU:              raw.GetCPU(),
 		CloudInit:        raw.GetCloudInit(),
 		Description:      util.Pointer(raw.GetDescription()),
+		EfiDisk:          raw.GetEfiDisk(),
+		HaGroup:          vmr.HaGroup(),
+		HaState:          vmr.HaState(),
 		Memory:           raw.GetMemory(),
 		Name:             util.Pointer(raw.GetName()),
 		Networks:         raw.GetNetworks(),
@@ -1226,37 +1251,38 @@ func (raw *rawConfigQemu) GetTags() *Tags {
 }
 
 const (
-	qemuApiKeyCloudInitCustom   string = "cicustom"
-	qemuApiKeyCloudInitPassword string = "cipassword"
-	qemuApiKeyCloudInitSshKeys  string = "sshkeys"
-	qemuApiKeyCloudInitUpgrade  string = "ciupgrade"
-	qemuApiKeyCloudInitUser     string = "ciuser"
-	qemuApiKeyCpuAffinity       string = "affinity"
-	qemuApiKeyCpuCores          string = "cores"
-	qemuApiKeyCpuLimit          string = "cpulimit"
-	qemuApiKeyCpuNuma           string = "numa"
-	qemuApiKeyCpuSockets        string = "sockets"
-	qemuApiKeyCpuType           string = "cpu"
-	qemuApiKeyCpuUnits          string = "cpuunits"
-	qemuApiKeyCpuVirtual        string = "vcpus"
-	qemuApiKeyDescription       string = "description"
-	qemuApiKeyGuestAgent        string = "agent"
-	qemuApiKeyMemoryBallooning  string = "balloon"
-	qemuApiKeyMemoryCapacity    string = "memory"
-	qemuApiKeyMemoryShares      string = "shares"
-	qemuApiKeyName              string = "name"
-	qemuApiKeyProtection        string = "protection"
-	qemuApiKeyRandomnessDevice  string = "rng0"
-	qemuApiKeyTablet            string = "tablet"
-	qemuApiKeyTags              string = "tags"
-	qemuPrefixApiKeyDiskIde     string = "ide"
-	qemuPrefixApiKeyDiskSCSI    string = "scsi"
-	qemuPrefixApiKeyDiskSata    string = "sata"
-	qemuPrefixApiKeyDiskVirtIO  string = "virtio"
-	qemuPrefixApiKeyNetwork     string = "net"
-	qemuPrefixApiKeyPCI         string = "hostpci"
-	qemuPrefixApiKeySerial      string = "serial"
-	qemuPrefixApiKeyUSB         string = "usb"
+	qemuApiKeyCloudInitCustom   = "cicustom"
+	qemuApiKeyCloudInitPassword = "cipassword"
+	qemuApiKeyCloudInitSshKeys  = "sshkeys"
+	qemuApiKeyCloudInitUpgrade  = "ciupgrade"
+	qemuApiKeyCloudInitUser     = "ciuser"
+	qemuApiKeyCpuAffinity       = "affinity"
+	qemuApiKeyCpuCores          = "cores"
+	qemuApiKeyCpuLimit          = "cpulimit"
+	qemuApiKeyCpuNuma           = "numa"
+	qemuApiKeyCpuSockets        = "sockets"
+	qemuApiKeyCpuType           = "cpu"
+	qemuApiKeyCpuUnits          = "cpuunits"
+	qemuApiKeyCpuVirtual        = "vcpus"
+	qemuApiKeyDescription       = "description"
+	qemuApiKeyEfiDisk           = "efidisk0"
+	qemuApiKeyGuestAgent        = "agent"
+	qemuApiKeyMemoryBallooning  = "balloon"
+	qemuApiKeyMemoryCapacity    = "memory"
+	qemuApiKeyMemoryShares      = "shares"
+	qemuApiKeyName              = "name"
+	qemuApiKeyProtection        = "protection"
+	qemuApiKeyRandomnessDevice  = "rng0"
+	qemuApiKeyTablet            = "tablet"
+	qemuApiKeyTags              = "tags"
+	qemuPrefixApiKeyDiskIde     = "ide"
+	qemuPrefixApiKeyDiskSCSI    = "scsi"
+	qemuPrefixApiKeyDiskSata    = "sata"
+	qemuPrefixApiKeyDiskVirtIO  = "virtio"
+	qemuPrefixApiKeyNetwork     = "net"
+	qemuPrefixApiKeyPCI         = "hostpci"
+	qemuPrefixApiKeySerial      = "serial"
+	qemuPrefixApiKeyUSB         = "usb"
 )
 
 // NewRawConfigQemuFromApi returns the configuration of the Qemu guest.

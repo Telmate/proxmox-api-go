@@ -418,7 +418,7 @@ func Test_snapshotClient_ReadLxc(t *testing.T) {
 			config: baseConfig(ConfigLXC{
 				ID:   util.Pointer(GuestID(300)),
 				Name: util.Pointer(GuestName("lxc-name")),
-				Node: util.Pointer(NodeName("")),
+				Node: util.Pointer(NodeName("myNode")),
 			}),
 			requests: mockServer.Append(
 				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
@@ -473,9 +473,6 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 		}
 		if c.Description == nil {
 			c.Description = util.Pointer("")
-		}
-		if c.EFIDisk == nil {
-			c.EFIDisk = QemuDevice{}
 		}
 		if c.Hotplug == "" {
 			c.Hotplug = "network,disk,usb"
@@ -571,7 +568,7 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 			raw, err := c.New().Snapshot.ReadQemu(context.Background(), test.guest, test.snapName)
 			require.Equal(t, test.err, err)
 			if err == nil {
-				config, err := raw.Get(&test.guest)
+				config, err := raw.Get(test.guest)
 				require.NoError(t, err)
 				require.Equal(t, test.config, config)
 			}

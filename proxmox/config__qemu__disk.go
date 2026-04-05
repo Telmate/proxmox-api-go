@@ -729,6 +729,20 @@ func (QemuDiskFormat) Error() error {
 	return fmt.Errorf("format can only be one of the following values: %s,%s,%s,%s,%s,%s,%s", QemuDiskFormat_Cow, QemuDiskFormat_Cloop, QemuDiskFormat_Qcow, QemuDiskFormat_Qcow2, QemuDiskFormat_Qed, QemuDiskFormat_Vmdk, QemuDiskFormat_Raw)
 }
 
+func (format *QemuDiskFormat) parse(path string) {
+	index := strings.LastIndexByte(path, '.')
+	if index == -1 {
+		*format = QemuDiskFormat_Raw
+		return
+	}
+	switch path[index+1:] {
+	case "cow", "cloop", "qcow", "qcow2", "qed", "vmdk":
+		*format = QemuDiskFormat(path[index+1:])
+		return
+	}
+	*format = QemuDiskFormat_Raw
+}
+
 func (format QemuDiskFormat) String() string { return string(format) } // String is for fmt.Stringer.
 
 func (format QemuDiskFormat) Validate() error {
