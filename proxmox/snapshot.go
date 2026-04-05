@@ -138,7 +138,10 @@ func (c *snapshotClient) ReadLxcNoCheck(ctx context.Context, guest VmRef, name S
 	if err != nil {
 		return nil, err
 	}
-	return &rawConfigLXC{a: params}, nil
+	return &rawConfigLXC{
+		a:       params,
+		guestID: guest.vmId,
+		node:    guest.node}, nil
 }
 
 func (c *snapshotClient) ReadQemu(ctx context.Context, guest VmRef, name SnapshotName) (RawConfigQemu, error) {
@@ -567,7 +570,7 @@ func (snap SnapshotName) create(ctx context.Context, c *clientAPI, vmr VmRef, de
 
 func (snap SnapshotName) delete(ctx context.Context, c *clientAPI, vmr VmRef) (bool, error) {
 	if err := c.deleteTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot/"+snap.String()); err != nil {
-		var taskErr TaskError
+		var taskErr *TaskError
 		if errors.As(err, &taskErr) {
 			if strings.HasPrefix(taskErr.Message, `snapshot '`+snap.String()+`' does not exist`) {
 				return false, nil

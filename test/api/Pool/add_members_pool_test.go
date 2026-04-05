@@ -60,15 +60,7 @@ func pool_AddMembers(t *testing.T, pool pveSDK.ConfigPool, initialGuests, additi
 		{name: `Create guests`,
 			test: func(t *testing.T) {
 				for _, guest := range allGuests {
-					config := pveSDK.ConfigQemu{
-						CPU:    &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
-						ID:     &guest,
-						Memory: &pveSDK.QemuMemory{CapacityMiB: util.Pointer(pveSDK.QemuMemoryCapacity(16))},
-						Name:   util.Pointer(pveSDK.GuestName("Test-Pool-AddMembers-VM")),
-						Node:   util.Pointer(node)}
-					vmRef, err := config.Create(ctx, cl)
-					require.NoError(t, err)
-					require.NotNil(t, vmRef)
+					guestCreate(t, ctx, cl, guest, node, "Test-Pool-AddMembers-VM")
 				}
 			}},
 		{name: `Create pool`,

@@ -288,7 +288,7 @@ func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (boo
 	if strings.HasPrefix(exitStatus, taskWarning) {
 		return false, nil
 	}
-	return false, TaskError{
+	return false, &TaskError{
 		Message: exitStatus,
 		TaskID:  taskUpID}
 }

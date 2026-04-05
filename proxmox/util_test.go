@@ -3,8 +3,50 @@ package proxmox
 import (
 	"testing"
 
+	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/stretchr/testify/require"
 )
+
+func Test_combineParamsAndBody(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		params   map[string]any
+		body     *[]byte
+		expected map[string]string
+	}{
+		{name: "only params",
+			params: map[string]any{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "value3"},
+			expected: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "value3"}},
+		{name: "only body",
+			body: util.Pointer([]byte("key1=value1&key2=value2&key3=value3")),
+			expected: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "value3"}},
+		{name: "params and body",
+			params: map[string]any{
+				"key1": "value1",
+				"key2": "value2"},
+			body: util.Pointer([]byte("key3=value3&key4=value4")),
+			expected: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "value3",
+				"key4": "value4"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			testParamsEqual(t, test.expected, combineParamsAndBody(test.params, test.body), test.name)
+		})
+	}
+}
 
 func Test_ensurePrefix(t *testing.T) {
 	t.Parallel()

@@ -23,19 +23,19 @@ func checkIfTemplateDoesNotExist(t *testing.T, template, node, storage string) {
 
 func Test_ContentTemplate_Download_Cleanup(t *testing.T) {
 	Test := cliTest.Test{
-		Args: []string{"-i", "delete", "file", test.FirstNode, test.CtStorage, string(proxmox.ContentType_Template), test.DownloadedLXCTemplate},
+		Args: []string{"-i", "delete", "file", test.FirstNode, test.TemplateStorage, string(proxmox.ContentType_Template), test.DownloadedLXCTemplate},
 	}
 	Test.StandardTest(t)
 }
 
 func Test_ContentTemplate_Existence_Removed_0(t *testing.T) {
-	checkIfTemplateDoesNotExist(t, test.DownloadedLXCTemplate, test.FirstNode, test.CtStorage)
+	checkIfTemplateDoesNotExist(t, test.DownloadedLXCTemplate, test.FirstNode, test.TemplateStorage)
 }
 
 func Test_ContentTemplate_Download(t *testing.T) {
 	Test := cliTest.Test{
 		Contains: []string{"(" + test.DownloadedLXCTemplate + ")"},
-		Args:     []string{"-i", "content", "template", "download", test.FirstNode, test.CtStorage, test.DownloadedLXCTemplate},
+		Args:     []string{"-i", "content", "template", "download", test.FirstNode, test.TemplateStorage, test.DownloadedLXCTemplate},
 	}
 	Test.StandardTest(t)
 }
@@ -43,7 +43,7 @@ func Test_ContentTemplate_Download(t *testing.T) {
 func Test_ContentTemplate_List(t *testing.T) {
 	Test := cliTest.Test{
 		Return: true,
-		Args:   []string{"-i", "list", "files", test.FirstNode, test.CtStorage, string(proxmox.ContentType_Template)},
+		Args:   []string{"-i", "list", "files", test.FirstNode, test.TemplateStorage, string(proxmox.ContentType_Template)},
 	}
 	var data []*proxmox.Content_FileProperties
 	require.NoError(t, json.Unmarshal(Test.StandardTest(t), &data))
@@ -56,11 +56,11 @@ func Test_ContentTemplate_List(t *testing.T) {
 func Test_ContentTemplate_Download_Delete(t *testing.T) {
 	Test := cliTest.Test{
 		Contains: []string{test.DownloadedLXCTemplate},
-		Args:     []string{"-i", "delete", "file", test.FirstNode, test.CtStorage, string(proxmox.ContentType_Template), test.DownloadedLXCTemplate},
+		Args:     []string{"-i", "delete", "file", test.FirstNode, test.TemplateStorage, string(proxmox.ContentType_Template), test.DownloadedLXCTemplate},
 	}
 	Test.StandardTest(t)
 }
 
 func Test_ContentTemplate_Existence_Removed_1(t *testing.T) {
-	checkIfTemplateDoesNotExist(t, test.DownloadedLXCTemplate, test.FirstNode, test.CtStorage)
+	checkIfTemplateDoesNotExist(t, test.DownloadedLXCTemplate, test.FirstNode, test.TemplateStorage)
 }

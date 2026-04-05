@@ -3,7 +3,6 @@ package proxmox
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/netip"
 	"regexp"
 	"strconv"
@@ -582,23 +581,42 @@ func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (feature
 	return
 }
 
-const guest_ApiError_AlreadyExists string = "config file already exists"
-
 // Keep trying to create/clone a VM until we get a unique ID
-func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, c *Client) (GuestID, error) {
+func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, body *[]byte, c *Client) (GuestID, error) {
 	c.guestCreationMutex.Lock()
 	defer c.guestCreationMutex.Unlock()
+	ca := c.new().apiRaw()
 	for {
 		guestID, err := c.getNextID_Unsafe(ctx)
 		if err != nil {
 			return 0, err
 		}
 		params[idKey] = int(guestID)
-		var exitStatus string
-		exitStatus, err = c.PostWithTask(ctx, params, url)
-		if err != nil {
-			if !strings.Contains(err.Error(), guest_ApiError_AlreadyExists) {
-				return 0, fmt.Errorf("error creating Guest: %v, error status: %s (params: %v)", err, exitStatus, params)
+		if err = ca.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
+			var apiErr *ApiError
+			var taskErr *TaskError
+			// TODO test what happens during a LXC clone
+			//
+			// Create LXC
+			// "VM 106 already exists on node 'pve-9l'"
+			//
+			//
+			// Clone QEMU
+			// "unable to create VM 107: config file already exists"
+			//
+			// Create QEMU
+			// "unable to create VM 106 - VM 106 already exists on node 'pve-9l'"
+			// the task returns the same message
+			if errors.As(err, &apiErr) {
+				if !strings.Contains(apiErr.Message, "already exists") {
+					return 0, err
+				}
+			} else if errors.As(err, &taskErr) {
+				if !strings.Contains(taskErr.Error(), "already exists") {
+					return 0, err
+				}
+			} else {
+				return 0, err
 			}
 		} else {
 			return guestID, nil

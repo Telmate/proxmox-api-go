@@ -71,7 +71,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 	}
 	url := "/nodes/" + node.String() + "/lxc"
 	if config.ID == nil {
-		id, err = guestCreateLoop_Unsafe(ctx, lxcApiKeyGuestID, url, params, c)
+		id, err = guestCreateLoop_Unsafe(ctx, lxcApiKeyGuestID, url, params, nil, c)
 		if err != nil {
 			return nil, err
 		}
@@ -382,7 +382,7 @@ func (config ConfigLXC) update_Unsafe(
 			}
 		}
 
-		var newCurrent RawConfigLXC
+		var newCurrent *rawConfigLXC
 		newCurrent, err = c.new().guestGetLxcRawConfig(ctx, vmr) // We have to refetch part of the current config
 		if err != nil {
 			return err
@@ -549,9 +549,11 @@ type RawConfigLXC interface {
 	GetDNS() *GuestDNS
 	GetDescription() *string
 	GetDigest() [sha1.Size]byte
+	GetID() GuestID
 	GetMemory() LxcMemory
 	GetMounts() LxcMounts
 	GetName() GuestName
+	GetNode() NodeName
 	GetOperatingSystem() OperatingSystem
 	GetPrivileged() bool
 	GetProtection() bool
@@ -559,13 +561,13 @@ type RawConfigLXC interface {
 	GetStartupShutdown() *StartupAndShutdown
 	GetSwap() LxcSwap
 	GetTags() *Tags
-	get(vmr VmRef) *ConfigLXC
-	getBootMount(privileged bool) *LxcBootMount
-	getDigest() digest
-	getMounts(privileged bool) LxcMounts
 }
 
-type rawConfigLXC struct{ a map[string]any }
+type rawConfigLXC struct {
+	a       map[string]any
+	guestID GuestID
+	node    NodeName
+}
 
 func (raw *rawConfigLXC) Get(vmr VmRef, state PowerState) *ConfigLXC {
 	config := raw.get(vmr)
@@ -585,12 +587,12 @@ func (raw *rawConfigLXC) get(vmr VmRef) *ConfigLXC {
 		DNS:             raw.GetDNS(),
 		Description:     raw.GetDescription(),
 		Features:        raw.getFeatures(privileged),
-		ID:              util.Pointer(vmr.vmId),
+		ID:              util.Pointer(raw.GetID()),
 		Memory:          util.Pointer(raw.GetMemory()),
 		Mounts:          raw.getMounts(privileged),
 		Name:            util.Pointer(raw.GetName()),
 		Networks:        raw.GetNetworks(),
-		Node:            util.Pointer(vmr.node),
+		Node:            util.Pointer(raw.GetNode()),
 		OperatingSystem: raw.GetOperatingSystem(),
 		Privileged:      &privileged,
 		Protection:      util.Pointer(raw.GetProtection()),
@@ -630,6 +632,8 @@ func (raw *rawConfigLXC) getDigest() digest {
 	return ""
 }
 
+func (raw *rawConfigLXC) GetID() GuestID { return raw.guestID }
+
 func (raw *rawConfigLXC) GetDNS() *GuestDNS {
 	return GuestDNS{}.mapToSDK(raw.a)
 }
@@ -647,6 +651,8 @@ func (raw *rawConfigLXC) GetName() GuestName {
 	}
 	return ""
 }
+
+func (raw *rawConfigLXC) GetNode() NodeName { return raw.node }
 
 func (raw *rawConfigLXC) GetOperatingSystem() OperatingSystem {
 	if v, isSet := raw.a[lxcApiKeyOperatingSystem]; isSet {
@@ -820,15 +826,19 @@ func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConf
 	return c.new().guestGetLxcRawConfig(ctx, vmr)
 }
 
-func guestGetLxcRawConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (RawConfigLXC, error) {
+func guestGetLxcRawConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (*rawConfigLXC, error) {
 	rawConfig, err := c.getGuestConfig(ctx, vmr)
 	if err != nil {
 		return nil, err
 	}
-	return &rawConfigLXC{a: rawConfig}, nil
+	return &rawConfigLXC{
+		a:       rawConfig,
+		guestID: vmr.vmId,
+		node:    vmr.node,
+	}, nil
 }
 
-func (c *clientNewTest) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
+func (c *clientNewTest) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigLXC, error) {
 	return guestGetLxcRawConfig_Unsafe(ctx, vmr, c.api)
 }
 

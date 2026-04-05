@@ -39,17 +39,18 @@ func (TpmState) mapToSDK(param string) *TpmState {
 
 }
 
-func (t TpmState) markChanges(currentTpm TpmState) (delete string, disk *qemuDiskMove) {
-	if t.Delete {
-		return "", nil
+func (t TpmState) markChanges(currentTpm TpmState, delete *strings.Builder) (disk *qemuDiskMove) {
+	if t.Delete { // Explicit delete happens elsewhere
+		return nil
 	}
 	if t.Version != nil && t.Version.mapToApi() != string(*currentTpm.Version) {
-		return "tpmstate0", nil
+		delete.WriteString(comma + "tpmstate0")
+		return nil
 	}
 	if t.Storage != currentTpm.Storage {
-		return "", &qemuDiskMove{Storage: t.Storage, Id: "tpmstate0"}
+		return &qemuDiskMove{Storage: t.Storage, Id: "tpmstate0"}
 	}
-	return "", nil
+	return nil
 }
 
 func (t TpmState) Validate(current *TpmState) error {

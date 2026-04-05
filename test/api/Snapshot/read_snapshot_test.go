@@ -53,7 +53,7 @@ func Test_Snapshot_ReadQemu(t *testing.T) {
 				raw, err := c.Snapshot.ReadQemu(ctx, *pveSDK.NewVmRef(guest), snapshot.Name)
 				require.NoError(t, err)
 				require.NotNil(t, raw)
-				config, _ := raw.Get(nil)
+				config, _ := raw.Get(pveSDK.VmRef{})
 				expected := util.Pointer(pveSDK.ConfigQemu{
 					Name: util.Pointer(pveSDK.GuestName("Test-Snapshot-ReadQemu")),
 					Bios: "seabios",
@@ -62,7 +62,6 @@ func Test_Snapshot_ReadQemu(t *testing.T) {
 						Cores: util.Pointer(pveSDK.QemuCpuCores(1)),
 					},
 					Description: util.Pointer("Test snapshot" + body.Symbols),
-					EFIDisk:     pveSDK.QemuDevice{},
 					Hotplug:     "network,disk,usb",
 					Memory: &pveSDK.QemuMemory{
 						CapacityMiB: util.Pointer(pveSDK.QemuMemoryCapacity(16)),
