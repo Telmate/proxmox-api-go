@@ -9,9 +9,9 @@ type MockClient struct {
 	GuestDeleteFunc                 func(ctx context.Context, vmr *VmRef) error
 	GuestGetRawAgentInformationFunc func(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
 	GuestGetLxcActiveRawConfigFunc  func(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error)
-	GuestGetLxcRawConfigFunc        func(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
-	GuestGetQemuActiveRawConfigFunc func(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error)
-	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
+	GuestGetLxcRawConfigFunc        func(ctx context.Context, vmr *VmRef) (*rawConfigLXC, error)
+	GuestGetQemuActiveRawConfigFunc func(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error)
+	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error)
 	GuestListResourcesFunc          func(ctx context.Context) (RawGuestResources, error)
 	GuestStopFunc                   func(ctx context.Context, vmr *VmRef) error
 	GuestStopForceFunc              func(ctx context.Context, vmr *VmRef) error
@@ -82,21 +82,21 @@ func (m *MockClient) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef)
 	return m.GuestGetLxcActiveRawConfigFunc(ctx, vmr)
 }
 
-func (m *MockClient) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error) {
+func (m *MockClient) guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigLXC, error) {
 	if m.GuestGetLxcRawConfigFunc == nil {
 		m.panic("GuestGetLxcRawConfigFunc")
 	}
 	return m.GuestGetLxcRawConfigFunc(ctx, vmr)
 }
 
-func (m *MockClient) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error) {
+func (m *MockClient) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error) {
 	if m.GuestGetQemuActiveRawConfigFunc == nil {
 		m.panic("GuestGetQemuActiveRawConfigFunc")
 	}
 	return m.GuestGetQemuActiveRawConfigFunc(ctx, vmr)
 }
 
-func (m *MockClient) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
+func (m *MockClient) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error) {
 	if m.GuestGetQemuRawConfigFunc == nil {
 		m.panic("GuestGetQemuRawConfigFunc")
 	}

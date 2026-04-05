@@ -20,9 +20,9 @@ type ClientNewTest interface {
 	guestCheckVmRef(ctx context.Context, vmr *VmRef) error
 	guestDelete(ctx context.Context, vmr *VmRef) error
 	guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error)
-	guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (RawConfigLXC, error)
-	guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigQemu, pending bool, err error)
-	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (RawConfigQemu, error)
+	guestGetLxcRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigLXC, error)
+	guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error)
+	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error)
 	guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
 	guestListResources(ctx context.Context) (RawGuestResources, error)
 	guestStop(ctx context.Context, vmr *VmRef) error
