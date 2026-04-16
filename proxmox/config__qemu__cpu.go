@@ -252,6 +252,12 @@ const (
 	cpuType_AmdEPYCRomeV2_Lower               CpuType = "epycromev2"
 	CpuType_AmdEPYCV3                         CpuType = "EPYC-v3"
 	cpuType_AmdEPYCV3_Lower                   CpuType = "epycv3"
+	CpuType_AmdEPYCGenoa                      CpuType = "EPYC-Genoa"
+	cpuType_AmdEPYCGenoa_Lower                CpuType = "epycgenoa"
+	CpuType_AmdEPYCGenoaV2                    CpuType = "EPYC-Genoa-v2"
+	cpuType_AmdEPYCGenoaV2_Lower              CpuType = "epycgenoav2"
+	CpuType_AmdEPYCTurin                      CpuType = "EPYC-Turin"
+	cpuType_AmdEPYCTurin_Lower                CpuType = "epycturin"
 	CpuType_Host                              CpuType = "host"
 	CpuType_IntelHaswell                      CpuType = "Haswell"
 	cpuType_IntelHaswell_Lower                CpuType = "haswell"
@@ -414,6 +420,8 @@ func (CpuType) cpuV8(cpus map[CpuType]CpuType) {
 	cpus[cpuType_AmdEPYCMilanV2_Lower] = CpuType_AmdEPYCMilanV2
 	cpus[cpuType_AmdEPYCRomeV2_Lower] = CpuType_AmdEPYCRomeV2
 	cpus[cpuType_AmdEPYCV3_Lower] = CpuType_AmdEPYCV3
+	cpus[cpuType_AmdEPYCGenoa_Lower] = CpuType_AmdEPYCGenoa
+	cpus[cpuType_AmdEPYCGenoaV2_Lower] = CpuType_AmdEPYCGenoaV2
 	cpus[cpuType_IntelIcelakeServerV3_Lower] = CpuType_IntelIcelakeServerV3
 	cpus[cpuType_IntelIcelakeServerV4_Lower] = CpuType_IntelIcelakeServerV4
 	cpus[cpuType_IntelIcelakeServerV5_Lower] = CpuType_IntelIcelakeServerV5
@@ -428,11 +436,18 @@ func (CpuType) cpuV8(cpus map[CpuType]CpuType) {
 	cpus[cpuType_X86_64_v4_Lower] = CpuType_X86_64_v4
 }
 
+func (CpuType) cpuV9(cpus map[CpuType]CpuType) {
+	cpus[cpuType_AmdEPYCTurin_Lower] = CpuType_AmdEPYCTurin
+}
+
 func (CpuType) Error(version Version) error {
 	// v7
 	cpus := CpuType("").cpuBase()
 	if version.Encode() >= version_8_0_0 { // v8
 		CpuType("").cpuV8(cpus)
+	}
+	if version.Encode() >= version_9_0_0 { // v9
+		CpuType("").cpuV9(cpus)
 	}
 	cpusConverted := make([]string, len(cpus))
 	var index int
@@ -448,6 +463,9 @@ func (cpu CpuType) mapToApi(version EncodedVersion) string {
 	cpus := CpuType("").cpuBase()
 	if version >= version_8_0_0 {
 		cpu.cpuV8(cpus)
+	}
+	if version >= version_9_0_0 {
+		cpu.cpuV9(cpus)
 	}
 	if v, ok := cpus[CpuType(strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", "")))]; ok {
 		return string(v)
