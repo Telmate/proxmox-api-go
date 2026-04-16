@@ -152,6 +152,11 @@ func Test_CpuType_Validate(t *testing.T) {
 				config:  CpuType_AmdEPYCGenoa,
 				version: Version{Major: 7}.max()},
 			output: CpuType("").Error(Version{Major: 7}.max())},
+		{name: `Invalid V8 EPYC-Turin`,
+			input: testInput{
+				config:  CpuType_AmdEPYCTurin,
+				version: Version{Major: 8}.max()},
+			output: CpuType("").Error(Version{Major: 8}.max())},
 		// Valid
 		{name: `Valid empty`,
 			input: testInput{
@@ -176,6 +181,10 @@ func Test_CpuType_Validate(t *testing.T) {
 			input: testInput{
 				config:  CpuType_AmdEPYCGenoaV2,
 				version: Version{Major: 8}.max()}},
+		{name: `Valid EPYC-Turin`,
+			input: testInput{
+				config:  CpuType_AmdEPYCTurin,
+				version: Version{Major: 9}.max()}},
 	}
 	for _, test := range testData {
 		t.Run(test.name, func(*testing.T) {
