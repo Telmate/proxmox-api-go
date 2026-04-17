@@ -93,7 +93,7 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	if err = config.Validate(nil, version); err != nil {
 		return nil, err
 	}
-	params, body := config.mapToApiCreate(version.Encode())
+	params, body := config.mapToApiCreate(version)
 	// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
 	// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
 	var pool PoolName
@@ -170,7 +170,7 @@ func (config *ConfigQemu) defaults() {
 	}
 }
 
-func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersion) (params map[string]interface{}) {
+func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (params map[string]interface{}) {
 	// TODO check if cloudInit settings changed, they require a reboot to take effect.
 	var itemsToDelete string
 
@@ -331,7 +331,7 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version EncodedVersi
 	return
 }
 
-func (config ConfigQemu) mapToApiCreate(version EncodedVersion) (params map[string]any, body *[]byte) {
+func (config ConfigQemu) mapToApiCreate(version Version) (params map[string]any, body *[]byte) {
 	params = config.mapToAPI(ConfigQemu{}, version)
 	if len(params) == 0 {
 		params = nil
@@ -346,7 +346,7 @@ func (config ConfigQemu) mapToApiCreate(version EncodedVersion) (params map[stri
 	return
 }
 
-func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current configQemuUpdate, version EncodedVersion) (params map[string]any, body *[]byte) {
+func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current configQemuUpdate, version Version) (params map[string]any, body *[]byte) {
 	params = config.mapToAPI(*currentLegacy, version)
 	if len(params) == 0 {
 		params = nil
@@ -615,7 +615,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	}
 
 	versionEncoded := version.Encode()
-	params, body := config.mapToApiUpdate(currentLegacy, updateConfig, versionEncoded)
+	params, body := config.mapToApiUpdate(currentLegacy, updateConfig, version)
 	if err = cr.putRawRetry(ctx, "/nodes/"+vmr.node.String()+urlPart, combineParamsAndBody(params, body), 3); err != nil {
 		return false, fmt.Errorf("error updating VM: %v", err)
 	}

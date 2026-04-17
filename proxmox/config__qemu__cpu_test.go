@@ -125,72 +125,80 @@ func Test_CpuType_Error(t *testing.T) {
 	}
 }
 
-func Test_CpuType_Validate(t *testing.T) {
-	t.Parallel()
-	type testInput struct {
+func test_CpuTypeValidate_data() []struct {
+	name    string
+	config  CpuType
+	version Version
+	output  error
+} {
+	return []struct {
+		name    string
 		config  CpuType
 		version Version
-	}
-	testData := []struct {
-		name   string
-		input  testInput
-		output error
+		output  error
 	}{
 		// Invalid
 		{name: `Invalid`,
-			input: testInput{
-				config:  CpuType("gibbers"),
-				version: Version{}.max()},
-			output: CpuType("").Error(Version{}.max())},
+			config:  CpuType("gibbers"),
+			version: Version{}.max(),
+			output:  CpuType("").Error(Version{}.max())},
 		{name: `Invalid V7`,
-			input: testInput{
-				config:  CpuType_AmdEPYCRomeV2,
-				version: Version{Major: 7}.max()},
-			output: CpuType("").Error(Version{Major: 7}.max())},
+			config:  CpuType_AmdEPYCRomeV2,
+			version: Version{Major: 7}.max(),
+			output:  CpuType("").Error(Version{Major: 7}.max())},
 		{name: `Invalid V7 EPYC-Genoa`,
-			input: testInput{
-				config:  CpuType_AmdEPYCGenoa,
-				version: Version{Major: 7}.max()},
-			output: CpuType("").Error(Version{Major: 7}.max())},
+			config:  CpuType_AmdEPYCGenoa,
+			version: Version{Major: 7}.max(),
+			output:  CpuType("").Error(Version{Major: 7}.max())},
 		{name: `Invalid V8 EPYC-Turin`,
-			input: testInput{
-				config:  CpuType_AmdEPYCTurin,
-				version: Version{Major: 8}.max()},
-			output: CpuType("").Error(Version{Major: 8}.max())},
+			config:  CpuType_AmdEPYCTurin,
+			version: Version{Major: 8}.max(),
+			output:  CpuType("").Error(Version{Major: 8}.max())},
 		// Valid
 		{name: `Valid empty`,
-			input: testInput{
-				config:  CpuType(""),
-				version: Version{}.max()}},
+			config:  CpuType(""),
+			version: Version{}.max()},
 		{name: `Valid normal`,
-			input: testInput{
-				config:  CpuType("Skylake-Server-noTSX-IBRS"),
-				version: Version{}.max()}},
+			config:  CpuType("Skylake-Server-noTSX-IBRS"),
+			version: Version{}.max()},
 		{name: `Valid lowercase`,
-			input: testInput{
-				config:  CpuType("skylakeclientnotsxibrs"),
-				version: Version{}.max()}},
+			config:  CpuType("skylakeclientnotsxibrs"),
+			version: Version{}.max()},
 		{name: `Valid weird`,
-			input: testInput{config: CpuType("S-k__-Yl_-A--k-e__-Se-R-v-__Er--n-OTs_X---I-_br-S"),
-				version: Version{}.max()}},
+			config:  CpuType("S-k__-Yl_-A--k-e__-Se-R-v-__Er--n-OTs_X---I-_br-S"),
+			version: Version{}.max()},
 		{name: `Valid EPYC-Genoa`,
-			input: testInput{
-				config:  CpuType_AmdEPYCGenoa,
-				version: Version{Major: 8}.max()}},
+			config:  CpuType_AmdEPYCGenoa,
+			version: Version{Major: 8}.max()},
 		{name: `Valid EPYC-Genoa-v2`,
-			input: testInput{
-				config:  CpuType_AmdEPYCGenoaV2,
-				version: Version{Major: 8}.max()}},
+			config:  CpuType_AmdEPYCGenoaV2,
+			version: Version{Major: 8}.max()},
 		{name: `Valid EPYC-Turin`,
-			input: testInput{
-				config:  CpuType_AmdEPYCTurin,
-				version: Version{Major: 9}.max()}},
+			config:  CpuType_AmdEPYCTurin,
+			version: Version{Major: 9}.max()},
 	}
-	for _, test := range testData {
+}
+
+func Test_CpuType_Validate(t *testing.T) {
+	t.Parallel()
+	for _, test := range test_CpuTypeValidate_data() {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.input.config.Validate(test.input.version), test.output, test.name)
+			require.Equal(t, test.config.Validate(test.version), test.output, test.name)
 		})
 	}
+}
+
+func Benchmark_CpuType_Validate(b *testing.B) {
+	// prevent compiler optimizations
+	var result error
+	tests := test_CpuTypeValidate_data()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, test := range tests {
+			result = test.config.Validate(test.version)
+		}
+	}
+	_ = result
 }
 
 func Test_CpuUnits_Validate(t *testing.T) {

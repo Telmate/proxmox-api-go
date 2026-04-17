@@ -21,7 +21,7 @@ type CloudInit struct {
 
 const CloudInit_Error_UpgradePackagesPre8 = "upgradePackages is only available in version 8 and above"
 
-func (config CloudInit) mapToAPI(current *CloudInit, params map[string]any, version EncodedVersion) (delete string) {
+func (config CloudInit) mapToAPI(current *CloudInit, params map[string]any, version Version) (delete string) {
 	if current != nil { // Update
 		if config.Custom != nil {
 			params[qemuApiKeyCloudInitCustom] = config.Custom.mapToAPI(current.Custom)
@@ -75,7 +75,7 @@ func (config CloudInit) mapToAPI(current *CloudInit, params map[string]any, vers
 		}
 	}
 	// Shared
-	if config.UpgradePackages != nil && version >= version_8_0_0 {
+	if config.UpgradePackages != nil && version.Major >= 8 {
 		params[qemuApiKeyCloudInitUpgrade] = Btoi(*config.UpgradePackages)
 	}
 	if config.UserPassword != nil && *config.UserPassword != "" {

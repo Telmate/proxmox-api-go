@@ -4399,7 +4399,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 		for _, subTest := range append(test.create, test.createUpdate...) {
 			name := test.category + "/Create/" + subTest.name
 			t.Run(name, func(*testing.T) {
-				tmpParams, tmpBody := subTest.config.mapToApiCreate(subTest.version.Encode())
+				tmpParams, tmpBody := subTest.config.mapToApiCreate(subTest.version)
 				require.Equal(t, subTest.output, tmpParams, name+" Params")
 				testParamsEqual(t, subTest.body, tmpBody, name+" Body")
 			})
@@ -4407,7 +4407,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 		for _, subTest := range append(test.update, test.createUpdate...) {
 			name := test.category + "/Update/" + subTest.name
 			t.Run(name, func(*testing.T) {
-				tmpParams, tmpBody := subTest.config.mapToApiUpdate(&subTest.currentLegacy, subTest.currentUpdate, subTest.version.Encode())
+				tmpParams, tmpBody := subTest.config.mapToApiUpdate(&subTest.currentLegacy, subTest.currentUpdate, subTest.version)
 				require.Equal(t, subTest.output, tmpParams, name+" Params")
 				testParamsEqual(t, subTest.body, tmpBody, name+" Body")
 			})
