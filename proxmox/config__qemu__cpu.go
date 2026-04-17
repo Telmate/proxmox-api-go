@@ -209,6 +209,92 @@ func (limit CpuLimit) Validate() error {
 
 type CpuType string // enum
 
+var cpuTypeTableV7 = map[string]string{
+	string(CpuType_AmdAthlon):                         string(CpuType_AmdAthlon),
+	string(CpuType_AmdPhenom):                         string(CpuType_AmdPhenom),
+	string(CpuType_Intel486):                          string(CpuType_Intel486),
+	string(CpuType_IntelCore2Duo):                     string(CpuType_IntelCore2Duo),
+	string(CpuType_IntelCoreDuo):                      string(CpuType_IntelCoreDuo),
+	string(CpuType_IntelPentium):                      string(CpuType_IntelPentium),
+	string(CpuType_IntelPentium2):                     string(CpuType_IntelPentium2),
+	string(CpuType_IntelPentium3):                     string(CpuType_IntelPentium3),
+	string(CpuType_QemuKvm32):                         string(CpuType_QemuKvm32),
+	string(CpuType_QemuKvm64):                         string(CpuType_QemuKvm64),
+	string(CpuType_QemuMax):                           string(CpuType_QemuMax),
+	string(CpuType_Qemu32):                            string(CpuType_Qemu32),
+	string(CpuType_Qemu64):                            string(CpuType_Qemu64),
+	string(CpuType_Host):                              string(CpuType_Host),
+	string(cpuType_AmdEPYC_Lower):                     string(CpuType_AmdEPYC),
+	string(cpuType_AmdEPYCIBPB_Lower):                 string(CpuType_AmdEPYCIBPB),
+	string(cpuType_AmdEPYCMilan_Lower):                string(CpuType_AmdEPYCMilan),
+	string(cpuType_AmdEPYCRome_Lower):                 string(CpuType_AmdEPYCRome),
+	string(cpuType_AmdOpteronG1_Lower):                string(CpuType_AmdOpteronG1),
+	string(cpuType_AmdOpteronG2_Lower):                string(CpuType_AmdOpteronG2),
+	string(cpuType_AmdOpteronG3_Lower):                string(CpuType_AmdOpteronG3),
+	string(cpuType_AmdOpteronG4_Lower):                string(CpuType_AmdOpteronG4),
+	string(cpuType_AmdOpteronG5_Lower):                string(CpuType_AmdOpteronG5),
+	string(cpuType_IntelBroadwell_Lower):              string(CpuType_IntelBroadwell),
+	string(cpuType_IntelBroadwellIBRS_Lower):          string(CpuType_IntelBroadwellIBRS),
+	string(cpuType_IntelBroadwellNoTSX_Lower):         string(CpuType_IntelBroadwellNoTSX),
+	string(cpuType_IntelBroadwellNoTSXIBRS_Lower):     string(CpuType_IntelBroadwellNoTSXIBRS),
+	string(cpuType_IntelCascadelakeServer_Lower):      string(CpuType_IntelCascadelakeServer),
+	string(cpuType_IntelCascadelakeServerNoTSX_Lower): string(CpuType_IntelCascadelakeServerNoTSX),
+	string(cpuType_IntelConroe_Lower):                 string(CpuType_IntelConroe),
+	string(cpuType_IntelHaswell_Lower):                string(CpuType_IntelHaswell),
+	string(cpuType_IntelHaswellIBRS_Lower):            string(CpuType_IntelHaswellIBRS),
+	string(cpuType_IntelHaswellNoTSX_Lower):           string(CpuType_IntelHaswellNoTSX),
+	string(cpuType_IntelHaswellNoTSXIBRS_Lower):       string(CpuType_IntelHaswellNoTSXIBRS),
+	string(cpuType_IntelIcelakeClient_Lower):          string(CpuType_IntelIcelakeClient),
+	string(cpuType_IntelIcelakeClientNoTSX_Lower):     string(CpuType_IntelIcelakeClientNoTSX),
+	string(cpuType_IntelIcelakeServer_Lower):          string(CpuType_IntelIcelakeServer),
+	string(cpuType_IntelIcelakeServerNoTSX_Lower):     string(CpuType_IntelIcelakeServerNoTSX),
+	string(cpuType_IntelIvybridge_Lower):              string(CpuType_IntelIvybridge),
+	string(cpuType_IntelIvybridgeIBRS_Lower):          string(CpuType_IntelIvybridgeIBRS),
+	string(cpuType_IntelKnightsmill_Lower):            string(CpuType_IntelKnightsmill),
+	string(cpuType_IntelNehalem_Lower):                string(CpuType_IntelNehalem),
+	string(cpuType_IntelNehalemIBRS_Lower):            string(CpuType_IntelNehalemIBRS),
+	string(cpuType_IntelPenrym_Lower):                 string(CpuType_IntelPenrym),
+	string(cpuType_IntelSandyBridge_Lower):            string(CpuType_IntelSandyBridge),
+	string(cpuType_IntelSandybridgeIBRS_Lower):        string(CpuType_IntelSandybridgeIBRS),
+	string(cpuType_IntelSkylakeClient_Lower):          string(CpuType_IntelSkylakeClient),
+	string(cpuType_IntelSkylakeClientIBRS_Lower):      string(CpuType_IntelSkylakeClientIBRS),
+	string(cpuType_IntelSkylakeClientNoTSXIBRS_Lower): string(CpuType_IntelSkylakeClientNoTSXIBRS),
+	string(cpuType_IntelSkylakeServer_Lower):          string(CpuType_IntelSkylakeServer),
+	string(cpuType_IntelSkylakeServerIBRS_Lower):      string(CpuType_IntelSkylakeServerIBRS),
+	string(cpuType_IntelSkylakeServerNoTSXIBRS_Lower): string(CpuType_IntelSkylakeServerNoTSXIBRS),
+	string(cpuType_IntelWestmere_Lower):               string(CpuType_IntelWestmere),
+	string(cpuType_IntelWestmereIBRS_Lower):           string(CpuType_IntelWestmereIBRS),
+}
+
+var cpuTypeTableV8 = map[string]string{
+	string(cpuType_IntelCascadelakeServerV2_Lower): string(CpuType_IntelCascadelakeServerV2),
+	string(cpuType_IntelCascadelakeServerV4_Lower): string(CpuType_IntelCascadelakeServerV4),
+	string(cpuType_IntelCascadelakeServerV5_Lower): string(CpuType_IntelCascadelakeServerV5),
+	string(cpuType_IntelCooperlake_Lower):          string(CpuType_IntelCooperlake),
+	string(cpuType_IntelCooperlakeV2_Lower):        string(CpuType_IntelCooperlakeV2),
+	string(cpuType_AmdEPYCMilanV2_Lower):           string(CpuType_AmdEPYCMilanV2),
+	string(cpuType_AmdEPYCRomeV2_Lower):            string(CpuType_AmdEPYCRomeV2),
+	string(cpuType_AmdEPYCV3_Lower):                string(CpuType_AmdEPYCV3),
+	string(cpuType_AmdEPYCGenoa_Lower):             string(CpuType_AmdEPYCGenoa),
+	string(cpuType_AmdEPYCGenoaV2_Lower):           string(CpuType_AmdEPYCGenoaV2),
+	string(cpuType_IntelIcelakeServerV3_Lower):     string(CpuType_IntelIcelakeServerV3),
+	string(cpuType_IntelIcelakeServerV4_Lower):     string(CpuType_IntelIcelakeServerV4),
+	string(cpuType_IntelIcelakeServerV5_Lower):     string(CpuType_IntelIcelakeServerV5),
+	string(cpuType_IntelIcelakeServerV6_Lower):     string(CpuType_IntelIcelakeServerV6),
+	string(cpuType_IntelSapphireRapids_Lower):      string(CpuType_IntelSapphireRapids),
+	string(cpuType_IntelSkylakeClientV4_Lower):     string(CpuType_IntelSkylakeClientV4),
+	string(cpuType_IntelSkylakeServerV4_Lower):     string(CpuType_IntelSkylakeServerV4),
+	string(cpuType_IntelSkylakeServerV5_Lower):     string(CpuType_IntelSkylakeServerV5),
+	string(cpuType_X86_64_v2_Lower):                string(CpuType_X86_64_v2),
+	string(cpuType_X86_64_v2_AES_Lower):            string(CpuType_X86_64_v2_AES),
+	string(cpuType_X86_64_v3_Lower):                string(CpuType_X86_64_v3),
+	string(cpuType_X86_64_v4_Lower):                string(CpuType_X86_64_v4),
+}
+
+var cpuTypeTableV9 = map[string]string{
+	string(cpuType_AmdEPYCTurin_Lower): string(CpuType_AmdEPYCTurin),
+}
+
 const (
 	CpuType_Intel486                          CpuType = "486"
 	CpuType_AmdAthlon                         CpuType = "athlon"
@@ -352,129 +438,56 @@ const (
 	cpuType_X86_64_v4_Lower                   CpuType = "x8664v4"
 )
 
-func (CpuType) cpuBase() map[CpuType]CpuType {
-	return map[CpuType]CpuType{
-		CpuType_AmdAthlon:                         CpuType_AmdAthlon,
-		CpuType_AmdPhenom:                         CpuType_AmdPhenom,
-		CpuType_Intel486:                          CpuType_Intel486,
-		CpuType_IntelCore2Duo:                     CpuType_IntelCore2Duo,
-		CpuType_IntelCoreDuo:                      CpuType_IntelCoreDuo,
-		CpuType_IntelPentium:                      CpuType_IntelPentium,
-		CpuType_IntelPentium2:                     CpuType_IntelPentium2,
-		CpuType_IntelPentium3:                     CpuType_IntelPentium3,
-		CpuType_QemuKvm32:                         CpuType_QemuKvm32,
-		CpuType_QemuKvm64:                         CpuType_QemuKvm64,
-		CpuType_QemuMax:                           CpuType_QemuMax,
-		CpuType_Qemu32:                            CpuType_Qemu32,
-		CpuType_Qemu64:                            CpuType_Qemu64,
-		CpuType_Host:                              CpuType_Host,
-		cpuType_AmdEPYC_Lower:                     CpuType_AmdEPYC,
-		cpuType_AmdEPYCIBPB_Lower:                 CpuType_AmdEPYCIBPB,
-		cpuType_AmdEPYCMilan_Lower:                CpuType_AmdEPYCMilan,
-		cpuType_AmdEPYCRome_Lower:                 CpuType_AmdEPYCRome,
-		cpuType_AmdOpteronG1_Lower:                CpuType_AmdOpteronG1,
-		cpuType_AmdOpteronG2_Lower:                CpuType_AmdOpteronG2,
-		cpuType_AmdOpteronG3_Lower:                CpuType_AmdOpteronG3,
-		cpuType_AmdOpteronG4_Lower:                CpuType_AmdOpteronG4,
-		cpuType_AmdOpteronG5_Lower:                CpuType_AmdOpteronG5,
-		cpuType_IntelBroadwell_Lower:              CpuType_IntelBroadwell,
-		cpuType_IntelBroadwellIBRS_Lower:          CpuType_IntelBroadwellIBRS,
-		cpuType_IntelBroadwellNoTSX_Lower:         CpuType_IntelBroadwellNoTSX,
-		cpuType_IntelBroadwellNoTSXIBRS_Lower:     CpuType_IntelBroadwellNoTSXIBRS,
-		cpuType_IntelCascadelakeServer_Lower:      CpuType_IntelCascadelakeServer,
-		cpuType_IntelCascadelakeServerNoTSX_Lower: CpuType_IntelCascadelakeServerNoTSX,
-		cpuType_IntelConroe_Lower:                 CpuType_IntelConroe,
-		cpuType_IntelHaswell_Lower:                CpuType_IntelHaswell,
-		cpuType_IntelHaswellIBRS_Lower:            CpuType_IntelHaswellIBRS,
-		cpuType_IntelHaswellNoTSX_Lower:           CpuType_IntelHaswellNoTSX,
-		cpuType_IntelHaswellNoTSXIBRS_Lower:       CpuType_IntelHaswellNoTSXIBRS,
-		cpuType_IntelIcelakeClient_Lower:          CpuType_IntelIcelakeClient,
-		cpuType_IntelIcelakeClientNoTSX_Lower:     CpuType_IntelIcelakeClientNoTSX,
-		cpuType_IntelIcelakeServer_Lower:          CpuType_IntelIcelakeServer,
-		cpuType_IntelIcelakeServerNoTSX_Lower:     CpuType_IntelIcelakeServerNoTSX,
-		cpuType_IntelIvybridge_Lower:              CpuType_IntelIvybridge,
-		cpuType_IntelIvybridgeIBRS_Lower:          CpuType_IntelIvybridgeIBRS,
-		cpuType_IntelKnightsmill_Lower:            CpuType_IntelKnightsmill,
-		cpuType_IntelNehalem_Lower:                CpuType_IntelNehalem,
-		cpuType_IntelNehalemIBRS_Lower:            CpuType_IntelNehalemIBRS,
-		cpuType_IntelPenrym_Lower:                 CpuType_IntelPenrym,
-		cpuType_IntelSandyBridge_Lower:            CpuType_IntelSandyBridge,
-		cpuType_IntelSandybridgeIBRS_Lower:        CpuType_IntelSandybridgeIBRS,
-		cpuType_IntelSkylakeClient_Lower:          CpuType_IntelSkylakeClient,
-		cpuType_IntelSkylakeClientIBRS_Lower:      CpuType_IntelSkylakeClientIBRS,
-		cpuType_IntelSkylakeClientNoTSXIBRS_Lower: CpuType_IntelSkylakeClientNoTSXIBRS,
-		cpuType_IntelSkylakeServer_Lower:          CpuType_IntelSkylakeServer,
-		cpuType_IntelSkylakeServerIBRS_Lower:      CpuType_IntelSkylakeServerIBRS,
-		cpuType_IntelSkylakeServerNoTSXIBRS_Lower: CpuType_IntelSkylakeServerNoTSXIBRS,
-		cpuType_IntelWestmere_Lower:               CpuType_IntelWestmere,
-		cpuType_IntelWestmereIBRS_Lower:           CpuType_IntelWestmereIBRS,
-	}
-}
-
-func (CpuType) cpuV8(cpus map[CpuType]CpuType) {
-	cpus[cpuType_IntelCascadelakeServerV2_Lower] = CpuType_IntelCascadelakeServerV2
-	cpus[cpuType_IntelCascadelakeServerV4_Lower] = CpuType_IntelCascadelakeServerV4
-	cpus[cpuType_IntelCascadelakeServerV5_Lower] = CpuType_IntelCascadelakeServerV5
-	cpus[cpuType_IntelCooperlake_Lower] = CpuType_IntelCooperlake
-	cpus[cpuType_IntelCooperlakeV2_Lower] = CpuType_IntelCooperlakeV2
-	cpus[cpuType_AmdEPYCMilanV2_Lower] = CpuType_AmdEPYCMilanV2
-	cpus[cpuType_AmdEPYCRomeV2_Lower] = CpuType_AmdEPYCRomeV2
-	cpus[cpuType_AmdEPYCV3_Lower] = CpuType_AmdEPYCV3
-	cpus[cpuType_AmdEPYCGenoa_Lower] = CpuType_AmdEPYCGenoa
-	cpus[cpuType_AmdEPYCGenoaV2_Lower] = CpuType_AmdEPYCGenoaV2
-	cpus[cpuType_IntelIcelakeServerV3_Lower] = CpuType_IntelIcelakeServerV3
-	cpus[cpuType_IntelIcelakeServerV4_Lower] = CpuType_IntelIcelakeServerV4
-	cpus[cpuType_IntelIcelakeServerV5_Lower] = CpuType_IntelIcelakeServerV5
-	cpus[cpuType_IntelIcelakeServerV6_Lower] = CpuType_IntelIcelakeServerV6
-	cpus[cpuType_IntelSapphireRapids_Lower] = CpuType_IntelSapphireRapids
-	cpus[cpuType_IntelSkylakeClientV4_Lower] = CpuType_IntelSkylakeClientV4
-	cpus[cpuType_IntelSkylakeServerV4_Lower] = CpuType_IntelSkylakeServerV4
-	cpus[cpuType_IntelSkylakeServerV5_Lower] = CpuType_IntelSkylakeServerV5
-	cpus[cpuType_X86_64_v2_Lower] = CpuType_X86_64_v2
-	cpus[cpuType_X86_64_v2_AES_Lower] = CpuType_X86_64_v2_AES
-	cpus[cpuType_X86_64_v3_Lower] = CpuType_X86_64_v3
-	cpus[cpuType_X86_64_v4_Lower] = CpuType_X86_64_v4
-}
-
-func (CpuType) cpuV9(cpus map[CpuType]CpuType) {
-	cpus[cpuType_AmdEPYCTurin_Lower] = CpuType_AmdEPYCTurin
-}
-
 func (CpuType) Error(version Version) error {
-	// v7
-	cpus := CpuType("").cpuBase()
-	if version.Encode() >= version_8_0_0 { // v8
-		CpuType("").cpuV8(cpus)
+	length := len(cpuTypeTableV7)
+	if version.Major >= 8 { // v8
+		length += len(cpuTypeTableV8)
 	}
-	if version.Encode() >= version_9_0_0 { // v9
-		CpuType("").cpuV9(cpus)
+	if version.Major >= 9 { //v9
+		length += len(cpuTypeTableV9)
 	}
-	cpusConverted := make([]string, len(cpus))
-	var index int
-	for _, e := range cpus {
-		cpusConverted[index] = string(e)
-		index++
+	cpus := make([]string, length)
+	offset := 0
+	for v := range cpuTypeTableV7 {
+		cpus[offset] = string(v)
+		offset++
 	}
-	slices.Sort(cpusConverted)
-	return errors.New("cpuType can only be one of the following values: " + strings.Join(cpusConverted, ", "))
+	if version.Major >= 8 {
+		for v := range cpuTypeTableV8 {
+			cpus[offset] = string(v)
+			offset++
+		}
+	}
+	if version.Major >= 9 {
+		for v := range cpuTypeTableV9 {
+			cpus[offset] = string(v)
+			offset++
+		}
+	}
+	slices.Sort(cpus)
+	return errors.New("cpuType can only be one of the following values: " + strings.Join(cpus, ", "))
 }
 
-func (cpu CpuType) mapToApi(version EncodedVersion) string {
-	cpus := CpuType("").cpuBase()
-	if version >= version_8_0_0 {
-		cpu.cpuV8(cpus)
+func (cpu CpuType) mapToApi(version Version) string {
+	cpuNormalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", ""))
+	if version.Major >= 9 {
+		if v, ok := cpuTypeTableV9[cpuNormalized]; ok {
+			return v
+		}
 	}
-	if version >= version_9_0_0 {
-		cpu.cpuV9(cpus)
+	if version.Major >= 8 {
+		if v, ok := cpuTypeTableV8[cpuNormalized]; ok {
+			return v
+		}
 	}
-	if v, ok := cpus[CpuType(strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", "")))]; ok {
-		return string(v)
+	if v, ok := cpuTypeTableV7[cpuNormalized]; ok {
+		return v
 	}
 	return ""
 }
 
 func (cpu CpuType) Validate(version Version) error {
-	if cpu == "" || cpu.mapToApi(version.Encode()) != "" {
+	if cpu == "" || cpu.mapToApi(version) != "" {
 		return nil
 	}
 	return CpuType("").Error(version)
@@ -531,7 +544,7 @@ const (
 	QemuCPU_Error_CoresRequired string = "cores is required"
 )
 
-func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]any, version EncodedVersion) (delete string) {
+func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]any, version Version) (delete string) {
 	if cpu.Affinity != nil {
 		if len(*cpu.Affinity) != 0 {
 			params[qemuApiKeyCpuAffinity] = cpu.mapToApiAffinity(*cpu.Affinity)
