@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -333,6 +334,35 @@ func (c *Client) GetVmInfo(ctx context.Context, vmr *VmRef) (vmInfo map[string]i
 		}
 	}
 	return nil, fmt.Errorf("vm '%d' not found", vmr.vmId)
+}
+
+func (c *Client) WaitForVmLock(ctx context.Context, vmr *VmRef) error {
+	// a bit of initial sleep, as the lock won't be gone instantly
+	time.Sleep(5 * time.Second)
+
+	timeout := time.After(300 * time.Second) // 5 minutes timeout
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for VM %d to unlock after migration", vmr.VmId())
+		case <-ticker.C:
+			vmInfo, err := c.GetVmInfo(ctx, vmr)
+			if err != nil {
+				log.Printf("[DEBUG] error getting vm info while waiting for lock release: %v", err)
+				continue
+			}
+
+			if lock, ok := vmInfo["lock"]; !ok {
+				log.Printf("[DEBUG] VM %d unlocked", vmr.VmId())
+				return nil
+			} else {
+				log.Printf("[DEBUG] VM %d is still locked: %v", vmr.VmId(), lock)
+			}
+		}
+	}
 }
 
 func (c *Client) GetVmRefByName(ctx context.Context, name GuestName) (vmr *VmRef, err error) {
