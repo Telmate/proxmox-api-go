@@ -57,3 +57,7 @@ func testCompareRawMap[key comparable, compareObject any, get getAble[compareObj
 		require.Equal(t, expected[k], v.Get())
 	}
 }
+
+func generateUPID(node NodeName, task string, guest GuestID, user UserID) string {
+	return "UPID:" + node.String() + ":0006E4CB:17C8E729:6972A08C:" + task + ":" + guest.String() + ":" + user.String() + ":"
+}

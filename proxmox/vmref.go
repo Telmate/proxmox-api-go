@@ -4,14 +4,36 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 const (
-	vmRefQemu                     string = "qemu"
-	vmRefLXC                      string = "lxc"
 	clone_Error_MutuallyExclusive string = "linked and full clone are mutually exclusive"
-	clone_Error_NoneSet           string = "either linked nor full clone must be set"
+	clone_Error_NoneSet           string = "either linked or full clone must be set"
 )
+
+// Returns nil when we had enough information in the VmRef to determine the guest resource, otherwise it returns the guest resource or an error if it can't be found.
+func (vmr *VmRef) check_unsafe(ctx context.Context, c clientApiInterface) (*rawGuestResource, error) {
+	if vmr.vmId == 0 {
+		return nil, errors.New(VmRef_Error_IDnotSet)
+	}
+	if vmr.node != "" && vmr.vmType != guestUnknown {
+		return nil, nil
+	}
+	raws, err := listGuests_Unsafe(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	rawInterface, ok := raws.SelectID(vmr.vmId)
+	if !ok {
+		return nil, errorMsg{}.guestDoesNotExist(vmr.vmId)
+	}
+	raw := rawInterface.(*rawGuestResource)
+	vmr.node = raw.GetNode()
+	vmr.vmType = raw.GetType()
+	return raw, nil
+}
 
 // CloneLxc clones a new LXC container by cloning current container
 func (vmr *VmRef) CloneLxc(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, error) {
@@ -36,9 +58,10 @@ func (vmr *VmRef) CloneLxcNoCheck(ctx context.Context, settings CloneLxcTarget, 
 func (vmr *VmRef) cloneLxc_Unsafe(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, error) {
 	id, node, pool, params := settings.mapToAPI()
 	var err error
+	ca := c.new().apiRaw()
 	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String() + "/clone"
 	if id == 0 {
-		id, err = guestCreateLoop_Unsafe(ctx, "newid", url, params, nil, c)
+		id, err = guestCreateLoop_Unsafe(ctx, "newid", url, params, nil, c, ca)
 	} else {
 		_, err = c.PostWithTask(ctx, params, url)
 	}
@@ -75,9 +98,10 @@ func (vmr *VmRef) CloneQemuNoCheck(ctx context.Context, settings CloneQemuTarget
 func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, error) {
 	id, node, pool, params := settings.mapToAPI()
 	var err error
+	ca := c.new().apiRaw()
 	url := "/nodes/" + vmr.node.String() + "/qemu/" + vmr.vmId.String() + "/clone"
 	if id == 0 {
-		id, err = guestCreateLoop_Unsafe(ctx, "newid", url, params, nil, c)
+		id, err = guestCreateLoop_Unsafe(ctx, "newid", url, params, nil, c, ca)
 	} else {
 		_, err = c.PostWithTask(ctx, params, url)
 	}
@@ -99,6 +123,7 @@ func (c *clientNewTest) guestDelete(ctx context.Context, vmr *VmRef) error {
 		return errors.New(VmRef_Error_IDnotSet)
 	}
 	ca := c.apiGet()
+	cr := c.apiRaw()
 	rawGuests, err := listGuests_Unsafe(ctx, ca)
 	if err != nil {
 		return err
@@ -152,12 +177,7 @@ func (c *clientNewTest) guestDelete(ctx context.Context, vmr *VmRef) error {
 			if guestStatus.GetState() == PowerStateStopped {
 				break
 			}
-			if version.Encode() >= version_8_0_0 { // Try to force stop the guest if supported
-				err = vmr.forceStop_Unsafe(ctx, ca)
-			} else {
-				err = vmr.stop_Unsafe(ctx, ca)
-			}
-			if err != nil {
+			if err = vmr.stopOverruleOpertunistic_Unsafe(ctx, cr, version); err != nil {
 				return err
 			}
 		}
@@ -194,11 +214,7 @@ func (c *clientNewTest) guestStopForce(ctx context.Context, vmr *VmRef) error {
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
 		return err
 	}
-	return vmr.forceStop_Unsafe(ctx, c.apiGet())
-}
-
-func (vmr *VmRef) forceStop_Unsafe(ctx context.Context, c clientApiInterface) error {
-	return c.updateGuestStatus(ctx, vmr, "stop", map[string]any{"overrule-shutdown": int(1)})
+	return vmr.stopOverrule_Unsafe(ctx, c.apiRaw())
 }
 
 func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestStatus, error) {
@@ -212,8 +228,12 @@ func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestSta
 	return vmr.getRawGuestStatus_Unsafe(ctx, c)
 }
 
-func (vmr *VmRef) getRawGuestStatus_Unsafe(ctx context.Context, c *Client) (RawGuestStatus, error) {
-	return c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
+func (vmr *VmRef) getRawGuestStatus_Unsafe(ctx context.Context, c *Client) (*rawGuestStatus, error) {
+	raw, err := c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
+	if err != nil {
+		return nil, err
+	}
+	return &rawGuestStatus{a: raw}, nil
 }
 
 func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
@@ -305,17 +325,48 @@ const (
 	pendingApiValueKey string = "value"
 )
 
+// Deprecated: use GuestInterface.Stop() instead.
 func (vmr *VmRef) Stop(ctx context.Context, c *Client) error { return c.new().guestStop(ctx, vmr) }
 
+// TODO Remove this when VmRef.Stop() is removed.
 func (c *clientNewTest) guestStop(ctx context.Context, vmr *VmRef) error {
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
 		return err
 	}
-	return vmr.stop_Unsafe(ctx, c.apiGet())
+	return c.oldClient.New().Guest.Stop(ctx, *vmr, false)
 }
 
-func (vmr *VmRef) stop_Unsafe(ctx context.Context, c clientApiInterface) error {
+func (vmr *VmRef) reboot_Unsafe(ctx context.Context, c *clientAPI) error {
+	return c.updateGuestStatus(ctx, vmr, "reboot", nil)
+}
+
+// We should rarely need this function, use: VmRef.stopOverruleOpertunistic_Unsafe() instead.
+func (vmr *VmRef) stop_Unsafe(ctx context.Context, c *clientAPI) error {
 	return c.updateGuestStatus(ctx, vmr, "stop", nil)
+}
+
+func (vmr *VmRef) stopOverruleOpertunistic_Unsafe(ctx context.Context, c *clientAPI, version Version) error {
+	if version.Major >= 8 {
+		vmr.stopOverrule_Unsafe(ctx, c)
+	}
+	return vmr.stop_Unsafe(ctx, c)
+}
+
+// We should rarely need this function, use: VmRef.stopOverruleOpertunistic_Unsafe() instead.
+func (vmr *VmRef) stopOverrule_Unsafe(ctx context.Context, c *clientAPI) error {
+	return c.updateGuestStatus(ctx, vmr, "stop", util.Pointer([]byte("overrule-shutdown=1")))
+}
+
+func (vmr *VmRef) start_Unsafe(ctx context.Context, c *clientAPI) error {
+	return c.updateGuestStatus(ctx, vmr, "start", nil)
+}
+
+func (vmr *VmRef) shutdown_Unsafe(ctx context.Context, c *clientAPI) error {
+	return c.updateGuestStatus(ctx, vmr, "shutdown", nil)
+}
+
+func (vmr *VmRef) shutdownForce_Unsafe(ctx context.Context, c *clientAPI) error {
+	return c.updateGuestStatus(ctx, vmr, "shutdown", util.Pointer([]byte(`force=1`)))
 }
 
 const (
@@ -554,10 +605,28 @@ type GuestStatus struct {
 	Uptime time.Duration `json:"uptime"`
 }
 
-type RawGuestStatus map[string]any
+type RawGuestStatus interface {
+	Get() GuestStatus
+	GetName() GuestName
+	GetState() PowerState
+	GetUptime() time.Duration
+}
 
-func (raw RawGuestStatus) GetName() GuestName {
-	if v, isSet := raw["name"]; isSet {
+type rawGuestStatus struct {
+	a map[string]any
+}
+
+var _ RawGuestStatus = (*rawGuestStatus)(nil)
+
+func (raw *rawGuestStatus) Get() GuestStatus {
+	return GuestStatus{
+		Name:   raw.GetName(),
+		State:  raw.GetState(),
+		Uptime: raw.GetUptime()}
+}
+
+func (raw *rawGuestStatus) GetName() GuestName {
+	if v, isSet := raw.a["name"]; isSet {
 		if name, ok := v.(string); ok {
 			return GuestName(name)
 		}
@@ -565,15 +634,8 @@ func (raw RawGuestStatus) GetName() GuestName {
 	return ""
 }
 
-func (raw RawGuestStatus) Get() GuestStatus {
-	return GuestStatus{
-		Name:   raw.GetName(),
-		State:  raw.GetState(),
-		Uptime: raw.GetUptime()}
-}
-
-func (raw RawGuestStatus) GetState() PowerState {
-	if v, isSet := raw["status"]; isSet {
+func (raw *rawGuestStatus) GetState() PowerState {
+	if v, isSet := raw.a["status"]; isSet {
 		if state, ok := v.(string); ok {
 			return PowerState(0).parse(state)
 		}
@@ -581,8 +643,8 @@ func (raw RawGuestStatus) GetState() PowerState {
 	return PowerStateUnknown
 }
 
-func (raw RawGuestStatus) GetUptime() time.Duration {
-	if v, isSet := raw["uptime"]; isSet {
+func (raw *rawGuestStatus) GetUptime() time.Duration {
+	if v, isSet := raw.a["uptime"]; isSet {
 		if uptime, ok := v.(float64); ok {
 			return time.Duration(uptime) * time.Second
 		}

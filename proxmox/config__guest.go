@@ -541,11 +541,13 @@ func GuestHasPendingChanges(ctx context.Context, vmr *VmRef, client *Client) (bo
 }
 
 // Reboot the specified guest
+// Deprecated: use GuestInterface.Reboot() instead.
 func GuestReboot(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	_, err = client.RebootVm(ctx, vmr)
 	return
 }
 
+// Deprecated: use GuestInterface.Shutdown() instead.
 func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) (err error) {
 	if err = client.CheckVmRef(ctx, vmr); err != nil {
 		return
@@ -558,6 +560,7 @@ func GuestShutdown(ctx context.Context, vmr *VmRef, client *Client, force bool) 
 	return
 }
 
+// Deprecated: use GuestInterface.Start() instead.
 func GuestStart(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	_, err = client.StartVm(ctx, vmr)
 	return
@@ -582,10 +585,9 @@ func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (feature
 }
 
 // Keep trying to create/clone a VM until we get a unique ID
-func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, body *[]byte, c *Client) (GuestID, error) {
+func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, body *[]byte, c *Client, ca *clientAPI) (GuestID, error) {
 	c.guestCreationMutex.Lock()
 	defer c.guestCreationMutex.Unlock()
-	ca := c.new().apiRaw()
 	for {
 		guestID, err := c.getNextID_Unsafe(ctx)
 		if err != nil {

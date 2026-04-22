@@ -51,7 +51,10 @@ func combineParamsAndBody(params map[string]any, body *[]byte) *[]byte {
 		}
 		return body
 	}
-	return &paramBody
+	if len(paramBody) != 0 {
+		return &paramBody
+	}
+	return nil
 }
 
 // ensures a string has a certain ensurePrefix

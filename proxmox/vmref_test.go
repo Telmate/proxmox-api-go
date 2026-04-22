@@ -531,34 +531,34 @@ func Test_RawGuestStatus_Get(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name   string
-		input  RawGuestStatus
+		input  rawGuestStatus
 		output GuestStatus
 	}{
 		{name: `Name`,
-			input:  RawGuestStatus{"name": "test"},
+			input:  rawGuestStatus{a: map[string]any{"name": "test"}},
 			output: GuestStatus{Name: "test"}},
 		{name: `State`,
-			input:  RawGuestStatus{"status": "running"},
+			input:  rawGuestStatus{a: map[string]any{"status": "running"}},
 			output: GuestStatus{State: PowerStateRunning}},
 		{name: `Uptime`,
-			input:  RawGuestStatus{"uptime": float64(12345)},
+			input:  rawGuestStatus{a: map[string]any{"uptime": float64(12345)}},
 			output: GuestStatus{Uptime: time.Duration(12345) * time.Second}},
 		{name: `All`,
-			input: RawGuestStatus{
+			input: rawGuestStatus{a: map[string]any{
 				"name":   "guest100",
 				"status": "stopped",
-				"uptime": float64(95673)},
+				"uptime": float64(95673)}},
 			output: GuestStatus{
 				Name:   "guest100",
 				State:  PowerStateStopped,
 				Uptime: time.Duration(95673) * time.Second}},
 		{name: `Empty`,
-			input:  RawGuestStatus{},
+			input:  rawGuestStatus{},
 			output: GuestStatus{}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, test.input.Get(), test.name)
+			require.Equal(t, test.output, RawGuestStatus(&test.input).Get(), test.name)
 		})
 	}
 }

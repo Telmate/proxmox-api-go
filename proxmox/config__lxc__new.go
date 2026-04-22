@@ -70,8 +70,9 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		node = *config.Node
 	}
 	url := "/nodes/" + node.String() + "/lxc"
+	ca := c.new().apiRaw()
 	if config.ID == nil {
-		id, err = guestCreateLoop_Unsafe(ctx, lxcApiKeyGuestID, url, params, nil, c)
+		id, err = guestCreateLoop_Unsafe(ctx, lxcApiKeyGuestID, url, params, nil, c, ca)
 		if err != nil {
 			return nil, err
 		}
@@ -568,6 +569,8 @@ type rawConfigLXC struct {
 	guestID GuestID
 	node    NodeName
 }
+
+var _ RawConfigLXC = (*rawConfigLXC)(nil)
 
 func (raw *rawConfigLXC) Get(vmr VmRef, state PowerState) *ConfigLXC {
 	config := raw.get(vmr)

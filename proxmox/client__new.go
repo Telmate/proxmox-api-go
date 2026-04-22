@@ -1,9 +1,11 @@
 package proxmox
 
 type ClientNew struct {
-	ApiToken ApiTokenInterface
-	Group    GroupInterface
-	Pool     PoolInterface
-	Snapshot SnapshotInterface
-	User     UserInterface
+	ApiToken  ApiTokenInterface
+	Group     GroupInterface
+	Guest     GuestInterface
+	Pool      PoolInterface
+	QemuGuest QemuGuestInterface
+	Snapshot  SnapshotInterface
+	User      UserInterface
 }
