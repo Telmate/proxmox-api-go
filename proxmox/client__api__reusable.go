@@ -244,7 +244,7 @@ func (c *clientAPI) waitForCompletion(ctx context.Context, taskResponse map[stri
 		time.Sleep(TaskStatusCheckInterval * time.Second)
 		waited = waited + TaskStatusCheckInterval
 	}
-	return fmt.Errorf("Wait timeout for:" + taskUpid)
+	return errors.New("Wait timeout for:" + taskUpid)
 }
 
 func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (bool, error) {

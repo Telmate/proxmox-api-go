@@ -828,8 +828,7 @@ func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs [
 
 func (pool PoolName) delete(ctx context.Context, c *clientAPI) (bool, error) {
 	if err := c.deleteRetry(ctx, "/pools/"+pool.String(), 3); err != nil {
-		var apiErr *ApiError
-		if errors.As(err, &apiErr) {
+		if apiErr, ok := err.(*ApiError); ok {
 			const prefix = "delete pool failed: pool '"
 			const prefixLen = len(prefix)
 			if strings.HasPrefix(apiErr.Message, prefix) {
@@ -913,8 +912,7 @@ func (pool PoolName) read(ctx context.Context, c *clientAPI) (r *rawPoolInfo, er
 	var raw map[string]any
 	raw, err = c.getMap(ctx, "/pools/"+pool.String(), "pool", "CONFIG")
 	if err != nil {
-		var apiErr *ApiError
-		if errors.As(err, &apiErr) { // check for not found
+		if apiErr, ok := err.(*ApiError); ok { // check for not found
 			if strings.HasPrefix(apiErr.Message, "pool '"+pool.String()+"' does not exist") {
 				return nil, err, nil
 			}

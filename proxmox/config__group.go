@@ -447,8 +447,7 @@ func (group GroupName) Delete(ctx context.Context, client *Client) error {
 
 func (group GroupName) delete(ctx context.Context, c *clientAPI) (bool, error) {
 	if err := c.deleteRetry(ctx, "/access/groups/"+group.String(), 3); err != nil {
-		var apiErr *ApiError
-		if errors.As(err, &apiErr) {
+		if apiErr, ok := err.(*ApiError); ok {
 			if strings.HasPrefix(apiErr.Message, "delete group failed: group '"+group.String()+"' does not exist") {
 				return false, nil
 			}
@@ -490,8 +489,7 @@ func (GroupName) mapToArray(params any) *[]GroupName {
 func (group GroupName) read(ctx context.Context, c *clientAPI) (*rawGroupConfig, bool, error) {
 	raw, err := c.getMap(ctx, "/access/groups/"+group.String(), "group", "CONFIG")
 	if err != nil {
-		var apiErr *ApiError
-		if errors.As(err, &apiErr) {
+		if apiErr, ok := err.(*ApiError); ok {
 			if strings.HasPrefix(apiErr.Message, "group '"+group.String()+"' does not exist") {
 				return nil, false, nil
 			}

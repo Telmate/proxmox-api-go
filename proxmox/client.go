@@ -568,7 +568,7 @@ func (c *Client) WaitForCompletion(ctx context.Context, taskResponse map[string]
 		time.Sleep(TaskStatusCheckInterval * time.Second)
 		waited = waited + TaskStatusCheckInterval
 	}
-	return "", fmt.Errorf("Wait timeout for:" + taskUpid)
+	return "", errors.New("Wait timeout for:" + taskUpid)
 }
 
 var (
@@ -585,7 +585,7 @@ func (c *Client) GetTaskExitstatus(ctx context.Context, taskUpid string) (exitSt
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
 	if exitStatus != nil && rxExitStatusSuccess.FindString(exitStatus.(string)) == "" {
-		err = fmt.Errorf(exitStatus.(string))
+		err = errors.New(exitStatus.(string))
 	}
 	return
 }
@@ -1044,8 +1044,7 @@ func (c *Client) getNextIDstart_Unsafe(ctx context.Context, guestID GuestID) (Gu
 		if err == nil {
 			break
 		}
-		var apiErr *ApiError
-		if !errors.As(err, &apiErr) {
+		if _, ok := err.(*ApiError); !ok {
 			return 0, err
 		}
 		guestID++
@@ -2230,7 +2229,7 @@ func (c *Client) GetItemConfig(ctx context.Context, url, text, message string) (
 		return nil, err
 	}
 	if config["data"] == nil {
-		return nil, fmt.Errorf(text + " " + message + " not readable")
+		return nil, errors.New(text + " " + message + " not readable")
 	}
 	return
 }

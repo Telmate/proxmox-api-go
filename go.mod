@@ -1,8 +1,6 @@
 module github.com/Telmate/proxmox-api-go
 
-go 1.23.0
-
-toolchain go1.24.1
+go 1.26.2
 
 require (
 	github.com/joho/godotenv v1.5.1
