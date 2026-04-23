@@ -143,6 +143,43 @@ func responseJSON(resp *http.Response) (jbody map[string]interface{}, err error)
 	err = decodeResponse(resp, &jbody)
 	return jbody, err
 }
+func responseJSONData(resp *http.Response, v interface{}) (err error) {
+	if resp.StatusCode == http.StatusInternalServerError ||
+		resp.StatusCode == http.StatusNotImplemented {
+		return errors.New(resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var ok bool
+	if resp.StatusCode == http.StatusBadRequest {
+		var errorskey map[string]json.RawMessage
+		if err = json.Unmarshal(body, &errorskey); err != nil {
+			return err
+		}
+
+		if body, ok = errorskey["errors"]; ok {
+			return fmt.Errorf("bad request: %s - %s", resp.Status, body)
+		}
+
+		return fmt.Errorf("bad request: %s - %s", resp.Status, string(body))
+	}
+
+	// account for everything being in a data key
+	var datakey map[string]json.RawMessage
+	if err = json.Unmarshal(body, &datakey); err != nil {
+		return err
+	}
+
+	if data, ok := datakey["data"]; ok {
+		return json.Unmarshal(data, &v)
+	}
+
+	return json.Unmarshal(body, &v) // assume passed in type fully supports response
+}
 
 func (s *Session) setAPIToken(token ApiTokenID, secret ApiTokenSecret) {
 	s.AuthToken = token.String() + "=" + secret.String()
@@ -186,7 +223,29 @@ func (s *Session) login(ctx context.Context, username string, password string, o
 	s.CsrfToken = dat["CSRFPreventionToken"].(string)
 	return nil
 }
+func (s *Session) BuildHeaders(headers map[string]string) (sessionHeaders http.Header) {
 
+	if nil != s.Headers {
+		sessionHeaders = s.Headers.Clone()
+	} else {
+		sessionHeaders = make(http.Header)
+	}
+
+	if s.AuthToken != "" {
+		sessionHeaders.Set("Authorization", "PVEAPIToken="+s.AuthToken)
+
+	} else if s.AuthTicket != "" {
+		sessionHeaders.Set("Authorization", "PVEAuthCookie="+s.AuthTicket)
+		sessionHeaders.Set("CSRFPreventionToken", s.CsrfToken)
+	}
+	if nil != headers {
+		for k, v := range headers {
+			sessionHeaders.Set(k, v)
+		}
+	}
+
+	return
+}
 func (s *Session) NewRequest(ctx context.Context, method, url string, headers *http.Header, body io.Reader) (req *http.Request, err error) {
 	req, err = http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {

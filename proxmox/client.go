@@ -641,7 +641,7 @@ func (c *Client) ResumeVm(ctx context.Context, vmr *VmRef) (exitStatus string, e
 
 // Deprecated: use VmRef.Delete() instead.
 func (c *Client) DeleteVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
-	return c.DeleteVmParams(ctx, vmr, nil)
+	return c.DeleteVmParams(ctx, vmr, map[string]interface{}{"destroy-unreferenced-disks": true, "purge": true})
 }
 
 func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[string]interface{}) (exitStatus string, err error) {
@@ -842,6 +842,10 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 // DEPRECATED SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config")
+}
+
+func (c *Client) CloudinitRegenerate(vmr *VmRef) (err error) {
+	return c.Put(context.Background(), map[string]interface{}{}, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"//cloudinit")
 }
 
 // SetLxcConfig - send config options
@@ -1208,8 +1212,29 @@ func (c *Client) DeleteVolume(ctx context.Context, vmr *VmRef, storageName strin
 	return
 }
 
+type StringOrUint64 uint64
+
+func (d *StringOrUint64) UnmarshalJSON(b []byte) error {
+	str := strings.Replace(string(b), "\"", "", -1)
+	parsed, err := strconv.ParseUint(str, 0, 64)
+	if err != nil {
+		return err
+	}
+	*d = StringOrUint64(parsed)
+	return nil
+}
+
+type ProxyTicket struct {
+	Cert     string
+	Port     StringOrUint64
+	Ticket   string
+	UPID     string
+	User     string
+	Password string
+}
+
 // CreateVNCProxy - Creates a TCP VNC proxy connections
-func (c *Client) CreateVNCProxy(ctx context.Context, vmr *VmRef, params map[string]interface{}) (vncProxyRes map[string]interface{}, err error) {
+func (c *Client) CreateVNCProxy(ctx context.Context, vmr *VmRef, params map[string]interface{}) (ticket *ProxyTicket, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
 		return nil, err
@@ -1220,14 +1245,23 @@ func (c *Client) CreateVNCProxy(ctx context.Context, vmr *VmRef, params map[stri
 	if err != nil {
 		return nil, err
 	}
-	vncProxyRes, err = responseJSON(resp)
+	err = responseJSONData(resp, &ticket)
+
+	return
+}
+
+func (c *Client) CreateTermProxy(ctx context.Context, vmr *VmRef, params map[string]interface{}) (ticket *ProxyTicket, err error) {
+	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
 		return nil, err
 	}
-	if vncProxyRes["data"] == nil {
-		return nil, fmt.Errorf("VNC Proxy not readable")
+	reqbody := paramsToBody(params)
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/termproxy", vmr.node, vmr.vmId)
+	resp, _, err := c.session.post(ctx, url, nil, nil, &reqbody)
+	if err != nil {
+		return nil, err
 	}
-	vncProxyRes = vncProxyRes["data"].(map[string]interface{})
+	err = responseJSONData(resp, &ticket)
 	return
 }
 
@@ -1248,6 +1282,28 @@ func (c *Client) QemuAgentPing(ctx context.Context, vmr *VmRef) (pingRes map[str
 			return nil, fmt.Errorf("qemu agent ping not readable")
 		}
 		pingRes = taskResponse["data"].(map[string]interface{})
+	}
+	return
+}
+
+// QemuAgentOsInfo - Get os info.
+func (c *Client) QemuAgentOsInfo(ctx context.Context, vmr *VmRef) (osInfoRes map[string]interface{}, err error) {
+	err = c.CheckVmRef(ctx, vmr)
+	if err != nil {
+		return nil, err
+	}
+	url := fmt.Sprintf("/nodes/%s/qemu/%d/agent/get-osinfo", vmr.node, vmr.vmId)
+	resp, _, err := c.session.get(ctx, url, nil, nil)
+	if err == nil {
+		taskResponse, err := responseJSON(resp)
+		if err != nil {
+			return nil, err
+		}
+		data, ok := taskResponse["data"].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("qemu agent get-osinfo not readable")
+		}
+		osInfoRes, _ = data["result"].(map[string]interface{})
 	}
 	return
 }
