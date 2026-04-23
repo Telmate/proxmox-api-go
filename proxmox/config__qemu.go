@@ -1516,8 +1516,7 @@ func guestGetQemuConfig(ctx context.Context, vmr *VmRef, client *Client) (raw *r
 
 	// HAstate is return by the api for a vm resource type but not the HAgroup
 	err = client.ReadVMHA(ctx, vmr) // TODO: can be optimized, uses same API call as GetVmConfig and GetVmInfo
-	var apiErr *ApiError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := err.(*ApiError); ok {
 		if strings.HasPrefix(apiErr.Message, "no such resource") {
 			err = nil
 		}

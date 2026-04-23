@@ -595,8 +595,6 @@ func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[s
 		}
 		params[idKey] = int(guestID)
 		if err = ca.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
-			var apiErr *ApiError
-			var taskErr *TaskError
 			// TODO test what happens during a LXC clone
 			//
 			// Create LXC
@@ -609,11 +607,11 @@ func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[s
 			// Create QEMU
 			// "unable to create VM 106 - VM 106 already exists on node 'pve-9l'"
 			// the task returns the same message
-			if errors.As(err, &apiErr) {
+			if apiErr, ok := err.(*ApiError); ok {
 				if !strings.Contains(apiErr.Message, "already exists") {
 					return 0, err
 				}
-			} else if errors.As(err, &taskErr) {
+			} else if taskErr, ok := err.(*TaskError); ok {
 				if !strings.Contains(taskErr.Error(), "already exists") {
 					return 0, err
 				}

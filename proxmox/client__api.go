@@ -2,7 +2,6 @@ package proxmox
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 )
@@ -60,8 +59,7 @@ func (c *clientAPI) getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]a
 func (c *clientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error) {
 	guestID := vmr.vmId.String()
 	out, err := c.getMap(ctx, "/nodes/"+vmr.node.String()+"/qemu/"+guestID+"/agent/network-get-interfaces", "guest agent", "data")
-	var apiErr *ApiError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := err.(*ApiError); ok {
 		if strings.HasPrefix(apiErr.Message, "QEMU guest agent is not running") {
 			return out, GuestAgentStateNotRunning, nil
 		}
@@ -74,8 +72,7 @@ func (c *clientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[stri
 
 func (c *clientAPI) getHaRule(ctx context.Context, id HaRuleID) (haRule map[string]any, err error) {
 	out, err := c.getMap(ctx, "/cluster/ha/rules/"+id.String(), "ha rule", "CONFIG")
-	var apiErr *ApiError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := err.(*ApiError); ok {
 		if strings.HasPrefix(apiErr.Message, "no such ha rule ") {
 			return out, nil
 		}
@@ -92,8 +89,7 @@ func (c *clientAPI) getUserConfig(ctx context.Context, userID UserID) (map[strin
 	if err == nil {
 		return config, true, nil
 	}
-	var apiErr *ApiError
-	if ok := errors.As(err, &apiErr); ok {
+	if apiErr, ok := err.(*ApiError); ok {
 		if strings.HasPrefix(apiErr.Message, "no such user ") {
 			return config, false, nil
 		}

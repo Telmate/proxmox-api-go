@@ -273,8 +273,7 @@ type ApiTokenID struct {
 
 func (id ApiTokenID) delete(ctx context.Context, c *clientAPI) (bool, error) {
 	err := c.deleteRetry(ctx, "/access/users/"+id.User.String()+"/token/"+id.TokenName.String(), 3)
-	var apiErr *ApiError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := err.(*ApiError); ok {
 		if strings.HasPrefix(apiErr.Message, "no such token ") {
 			return false, nil
 		}
@@ -310,8 +309,7 @@ func (id *ApiTokenID) Parse(s string) error {
 func (id ApiTokenID) read(ctx context.Context, c *clientAPI) (*rawApiTokenConfig, bool, error) {
 	data, err := c.getMap(ctx, "/access/users/"+id.User.String()+"/token/"+id.TokenName.String(), "api token", "CONFIG")
 	if err != nil {
-		var apiErr *ApiError
-		if errors.As(err, &apiErr) {
+		if apiErr, ok := err.(*ApiError); ok {
 			if strings.HasPrefix(apiErr.Message, "no such token ") {
 				return nil, false, nil
 			}

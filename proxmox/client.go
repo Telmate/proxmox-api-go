@@ -1044,8 +1044,7 @@ func (c *Client) getNextIDstart_Unsafe(ctx context.Context, guestID GuestID) (Gu
 		if err == nil {
 			break
 		}
-		var apiErr *ApiError
-		if !errors.As(err, &apiErr) {
+		if _, ok := err.(*ApiError); !ok {
 			return 0, err
 		}
 		guestID++
