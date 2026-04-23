@@ -2,8 +2,16 @@ package proxmox
 
 import (
 	"context"
+	"crypto/des"
+	"crypto/tls"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -11,6 +19,10 @@ const (
 	vmRefLXC                      string = "lxc"
 	clone_Error_MutuallyExclusive string = "linked and full clone are mutually exclusive"
 	clone_Error_NoneSet           string = "either linked nor full clone must be set"
+)
+
+var (
+	bufCopy = NewBufCopy()
 )
 
 // CloneLxc clones a new LXC container by cloning current container
@@ -173,7 +185,7 @@ func (vmr VmRef) DeleteNoCheck(ctx context.Context, c *Client) error {
 }
 
 func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
-	_, err := c.DeleteVmParams(ctx, vmr, nil) // TODO use a more optimized version
+	_, err := c.DeleteVmParams(ctx, vmr, map[string]interface{}{"destroy-unreferenced-disks": true, "purge": true}) // TODO use a more optimized version
 	return err
 }
 
@@ -316,6 +328,311 @@ func (c *clientNewTest) guestStop(ctx context.Context, vmr *VmRef) error {
 
 func (vmr *VmRef) stop_Unsafe(ctx context.Context, c clientApiInterface) error {
 	return c.updateGuestStatus(ctx, vmr, "stop", nil)
+}
+
+func (vmr *VmRef) TermProxyWebsocketServeHTTP(c *Client, w http.ResponseWriter, r *http.Request, responseHeader http.Header) (err error) {
+
+	ticket, err := c.CreateTermProxy(context.Background(), vmr, map[string]interface{}{})
+	if nil != err {
+		return err
+	}
+
+	path := fmt.Sprintf("/nodes/%s/qemu/%s/vncwebsocket?port=%d&vncticket=%s",
+		vmr.Node().String(), vmr.vmId.String(), ticket.Port, url.QueryEscape(ticket.Ticket))
+
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+	websocketServe, err := upgrader.Upgrade(w, r, responseHeader)
+	if err != nil {
+		err = fmt.Errorf("upgrade http to websocket err: %+v", err)
+		fmt.Println(err)
+		return
+	}
+
+	if strings.HasPrefix(path, "/") {
+		path = strings.Replace(c.ApiUrl, "https://", "wss://", 1) + path
+	}
+
+	dialer := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 5 * time.Second,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+		ReadBufferSize:  1024 * 10,
+		WriteBufferSize: 1024 * 1024 * 4,
+	}
+
+	headers := c.session.BuildHeaders(nil)
+	pveVncConn, _, err := dialer.Dial(path, headers)
+
+	if err != nil {
+		err = fmt.Errorf("connect to pve err: %+v", err)
+		_ = websocketServe.Close()
+		return
+	}
+
+	defer func() {
+		_ = pveVncConn.Close()
+		_ = websocketServe.Close()
+	}()
+
+	//authMsg := ticket.User + ":" + ticket.Password+ "\n"
+	/*authMsg :=  "root:ogsFPGsTCj8Br0TI\n"
+
+		err = pveVncConn.WriteMessage(websocket.TextMessage, []byte(authMsg))
+	fmt.Println("pveVncConn write err:",err)
+		if err != nil {
+			return
+		}*/
+
+	go func() {
+		for {
+			_, err = bufCopy.Copy(websocketServe.NetConn(), pveVncConn.NetConn())
+			if err != nil {
+				err = fmt.Errorf("buf copy pve to websocket err: %+v", err)
+				_ = pveVncConn.Close()
+				_ = websocketServe.Close()
+				return
+			}
+		}
+	}()
+
+	for {
+		_, err = bufCopy.Copy(pveVncConn.NetConn(), websocketServe.NetConn())
+		if err != nil {
+			err = fmt.Errorf("buf copy websocket to pve err: %+v", err)
+			_ = pveVncConn.Close()
+			_ = websocketServe.Close()
+			return
+		}
+	}
+
+	return
+}
+
+func (vmr *VmRef) VNCProxyWebsocketServeHTTP(c *Client, w http.ResponseWriter, r *http.Request, responseHeader http.Header) (err error) {
+	ticket, err := c.CreateVNCProxy(context.Background(), vmr, map[string]interface{}{
+		"websocket":         true,
+		"generate-password": false,
+	})
+	if nil != err {
+		return err
+	}
+
+	path := fmt.Sprintf("/nodes/%s/qemu/%s/vncwebsocket?port=%d&vncticket=%s",
+		vmr.Node().String(), vmr.vmId.String(), ticket.Port, url.QueryEscape(ticket.Ticket))
+
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+	websocketServe, err := upgrader.Upgrade(w, r, responseHeader)
+	if err != nil {
+		err = fmt.Errorf("upgrade http to websocket err: %+v", err)
+		return
+	}
+
+	if strings.HasPrefix(path, "/") {
+		path = strings.Replace(c.ApiUrl, "https://", "wss://", 1) + path
+	}
+
+	var tlsConfig *tls.Config
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+		//DisableKeepAlives: true,
+	}
+	if transport != nil {
+		tlsConfig = transport.TLSClientConfig
+	}
+
+	dialer := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 30 * time.Second,
+		TLSClientConfig:  tlsConfig,
+	}
+
+	headers := c.session.BuildHeaders(nil)
+	pveVncConn, _, err := dialer.Dial(path, headers)
+
+	if err != nil {
+		err = fmt.Errorf("connect to pve err: %+v", err)
+		_ = websocketServe.Close()
+		return
+	}
+
+	defer func() {
+		_ = pveVncConn.Close()
+		_ = websocketServe.Close()
+	}()
+
+	var msgType int
+	var msg []byte
+
+	/*err = pveVncConn.WriteMessage(websocket.TextMessage, []byte(ticket.Ticket+"\n"))
+	if err != nil {
+		err = fmt.Errorf("write vncticket message err: %+v", err)
+		return
+	}*/
+	msgType, msg, err = pveVncConn.ReadMessage()
+	//fmt.Println("pveVncConn1", msgType, msg, err, string(msg))
+	if nil != err {
+		err = fmt.Errorf("read pve rfb message err: %+v", err)
+		return
+	}
+	//fmt.Println("pveVncConn1", msgType, msg, err, string(msg))
+	//"RFB 003.008\n"
+	if err = websocketServe.WriteMessage(msgType, msg); err != nil {
+		err = fmt.Errorf("write websocket rfb message err: %+v", err)
+		return
+	}
+
+	msgType, msg, err = websocketServe.ReadMessage()
+	//fmt.Println("websocketServe2", msgType, msg, err, string(msg))
+	if nil != err {
+		err = fmt.Errorf("read websocket rfb message err: %+v", err)
+		return
+	}
+	//"RFB 003.008\n"
+	if err = pveVncConn.WriteMessage(msgType, msg); err != nil {
+		err = fmt.Errorf("write pve rfb message err: %+v", err)
+		return
+	}
+	msgType, msg, err = pveVncConn.ReadMessage()
+	//fmt.Println("pveVncConn3", msgType, msg, err, string(msg))
+	if nil != err {
+		err = fmt.Errorf("read websocket auth type message err: %+v", err)
+		return
+	}
+	//[]uint8{1,2}  type 2 is need password
+	if err = pveVncConn.WriteMessage(websocket.BinaryMessage, []uint8{2}); err != nil {
+		err = fmt.Errorf("write pve auth type message err: %+v", err)
+		return
+	}
+
+	msgType, msg, err = pveVncConn.ReadMessage()
+	//fmt.Println("pveVncConn4", msgType, msg, err, string(msg))
+	if nil != err {
+		err = fmt.Errorf("read pve auth random key message err: %+v", err)
+		return
+	}
+	//[]unit8{...}  len 16
+	enPassword, err := VNCAuthPasswordEncrypt(ticket.Ticket, msg)
+	//fmt.Println("enPassword", enPassword, err, string(enPassword))
+	if err = pveVncConn.WriteMessage(websocket.BinaryMessage, enPassword); err != nil {
+		err = fmt.Errorf("write pve auth password message err: %+v", err)
+		return
+	}
+	//msgType, msg, err = pveVncConn.ReadMessage()
+	//fmt.Println("pveVncConn5", msgType, msg, err, string(msg))
+
+	//send websocket do not need password
+	if err = websocketServe.WriteMessage(websocket.BinaryMessage, []uint8{1, 1}); err != nil {
+		err = fmt.Errorf("write websocket auth type message err: %+v", err)
+		return
+	}
+	msgType, msg, err = websocketServe.ReadMessage()
+	//fmt.Println("websocketServe6", msgType, msg, err, string(msg))
+	if nil != err {
+		err = fmt.Errorf("read websocket auth type return message err: %+v", err)
+		return
+	}
+
+	go func() {
+
+		for {
+			_, err = bufCopy.Copy(websocketServe.NetConn(), pveVncConn.NetConn())
+			if err != nil {
+				err = fmt.Errorf("buf copy pve to websocket err: %+v", err)
+				_ = pveVncConn.Close()
+				_ = websocketServe.Close()
+				return
+			}
+		}
+	}()
+
+	for {
+		_, err = bufCopy.Copy(pveVncConn.NetConn(), websocketServe.NetConn())
+		if err != nil {
+			err = fmt.Errorf("buf copy websocket to pve err: %+v", err)
+			_ = pveVncConn.Close()
+			_ = websocketServe.Close()
+			return
+		}
+	}
+
+	return
+}
+
+func VNCAuthPasswordEncrypt(key string, bytes []byte) ([]byte, error) {
+	keyBytes := []byte{0, 0, 0, 0, 0, 0, 0, 0}
+
+	if len(key) > 8 {
+		key = key[:8]
+	}
+
+	for i := 0; i < len(key); i++ {
+		keyBytes[i] = ReverseBits(key[i])
+	}
+
+	block, err := des.NewCipher(keyBytes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	result1 := make([]byte, 8)
+	block.Encrypt(result1, bytes)
+	result2 := make([]byte, 8)
+	block.Encrypt(result2, bytes[8:])
+
+	crypted := append(result1, result2...)
+
+	return crypted, nil
+}
+func ReverseBits(b byte) byte {
+	var reverse = [256]int{
+		0, 128, 64, 192, 32, 160, 96, 224,
+		16, 144, 80, 208, 48, 176, 112, 240,
+		8, 136, 72, 200, 40, 168, 104, 232,
+		24, 152, 88, 216, 56, 184, 120, 248,
+		4, 132, 68, 196, 36, 164, 100, 228,
+		20, 148, 84, 212, 52, 180, 116, 244,
+		12, 140, 76, 204, 44, 172, 108, 236,
+		28, 156, 92, 220, 60, 188, 124, 252,
+		2, 130, 66, 194, 34, 162, 98, 226,
+		18, 146, 82, 210, 50, 178, 114, 242,
+		10, 138, 74, 202, 42, 170, 106, 234,
+		26, 154, 90, 218, 58, 186, 122, 250,
+		6, 134, 70, 198, 38, 166, 102, 230,
+		22, 150, 86, 214, 54, 182, 118, 246,
+		14, 142, 78, 206, 46, 174, 110, 238,
+		30, 158, 94, 222, 62, 190, 126, 254,
+		1, 129, 65, 193, 33, 161, 97, 225,
+		17, 145, 81, 209, 49, 177, 113, 241,
+		9, 137, 73, 201, 41, 169, 105, 233,
+		25, 153, 89, 217, 57, 185, 121, 249,
+		5, 133, 69, 197, 37, 165, 101, 229,
+		21, 149, 85, 213, 53, 181, 117, 245,
+		13, 141, 77, 205, 45, 173, 109, 237,
+		29, 157, 93, 221, 61, 189, 125, 253,
+		3, 131, 67, 195, 35, 163, 99, 227,
+		19, 147, 83, 211, 51, 179, 115, 243,
+		11, 139, 75, 203, 43, 171, 107, 235,
+		27, 155, 91, 219, 59, 187, 123, 251,
+		7, 135, 71, 199, 39, 167, 103, 231,
+		23, 151, 87, 215, 55, 183, 119, 247,
+		15, 143, 79, 207, 47, 175, 111, 239,
+		31, 159, 95, 223, 63, 191, 127, 255,
+	}
+
+	return byte(reverse[int(b)])
 }
 
 const (
