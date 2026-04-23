@@ -16,6 +16,119 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
+type (
+	QemuGuestInterface interface {
+		Create(context.Context, ConfigQemu) (*VmRef, error)
+		CreateNoCheck(context.Context, ConfigQemu) (*VmRef, error)
+
+		// When allowRestart is false an error is return if the update rewuires a reboot or shutdown.
+		Update(ctx context.Context, vmr VmRef, allowRestart bool, allowForceStop bool, config ConfigQemu) error
+		UpdateNoCheck(ctx context.Context, vmr VmRef, allowRestart bool, allowForceStop bool, config ConfigQemu) error
+	}
+
+	qemuGuestClient struct {
+		api       *clientAPI
+		oldClient *Client
+	}
+)
+
+var _ QemuGuestInterface = (*qemuGuestClient)(nil)
+
+func (c *qemuGuestClient) Create(ctx context.Context, config ConfigQemu) (*VmRef, error) {
+	client := c.oldClient
+	version, err := client.Version(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = config.Validate(nil, version); err != nil {
+		return nil, err
+	}
+
+	var vmr *VmRef
+	vmr, err = config.create(ctx, client, c.api, version)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
+		return nil, err
+	}
+	return vmr, nil
+}
+
+func (c *qemuGuestClient) CreateNoCheck(ctx context.Context, config ConfigQemu) (*VmRef, error) {
+	client := c.oldClient
+	version, err := client.Version(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return config.create(ctx, client, c.api, version)
+
+}
+
+func (c *qemuGuestClient) Update(
+	ctx context.Context, vmr VmRef,
+	allowRestart bool, allowForceStop bool,
+	config ConfigQemu,
+) (err error) {
+	if err = config.setVmr(&vmr); err != nil {
+		return
+	}
+
+	client := c.oldClient
+
+	var rawConfig *rawConfigQemu
+	if rawConfig, err = guestGetQemuConfig(ctx, &vmr, client); err != nil {
+		return
+	}
+
+	currentLegacy, err := rawConfig.Get(vmr) // LEGACY we shouldn't need full config as we can grab this from the raw config as needed.
+	if err != nil {
+		return
+	}
+	var version Version
+	if version, err = client.Version(ctx); err != nil {
+		return
+	}
+	if err = config.Validate(currentLegacy, version); err != nil {
+		return
+	}
+	_, err = config.updateNoCheck(ctx, c.api, version, client, allowRestart, &vmr, currentLegacy, configQemuUpdate{raw: rawConfig})
+	return
+}
+
+func (c *qemuGuestClient) UpdateNoCheck(
+	ctx context.Context, vmr VmRef,
+	allowRestart bool, allowForceStop bool,
+	config ConfigQemu,
+) (err error) {
+	if err = config.setVmr(&vmr); err != nil {
+		return
+	}
+
+	client := c.oldClient
+
+	var rawConfig *rawConfigQemu
+	if rawConfig, err = guestGetQemuConfig(ctx, &vmr, client); err != nil {
+		return
+	}
+
+	currentLegacy, err := rawConfig.Get(vmr) // LEGACY we shouldn't need full config as we can grab this from the raw config as needed.
+	if err != nil {
+		return
+	}
+
+	var version Version
+	if version, err = client.Version(ctx); err != nil {
+		return
+	}
+
+	config.updateNoCheck(ctx, c.api, version, client, allowRestart, &vmr, currentLegacy, configQemuUpdate{})
+
+	return
+}
+
 // Currently ZFS local, LVM, Ceph RBD, CephFS, Directory and virtio-scsi-pci are considered.
 // Other formats are not verified, but could be added if they're needed.
 // const rxStorageTypes = `(zfspool|lvm|rbd|cephfs|dir|virtio-scsi-pci)`
@@ -70,6 +183,7 @@ type ConfigQemu struct {
 	Smbios1          string                `json:"smbios1,omitempty"`            // TODO should be custom type with enum?
 	StartAtNodeBoot  *bool                 `json:"start_at_node_boot,omitempty"` // Never nil when returned
 	StartupShutdown  *StartupAndShutdown   `json:"startup_shutdown,omitempty"`
+	State            *PowerState           `json:"state,omitempty"`   // Never returned
 	Storage          string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
 	TPM              *TpmState             `json:"tpm,omitempty"`
 	Tablet           *bool                 `json:"tablet,omitempty"` // never nil when returned
@@ -84,15 +198,13 @@ const (
 	ConfigQemu_Error_NodeRequired                string = "node is required during creation"
 )
 
+// Deprecated: use QemuGuestInterface.Create() instead.
 // Create - Tell Proxmox API to make the VM
 func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, error) {
-	version, err := client.Version(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if err = config.Validate(nil, version); err != nil {
-		return nil, err
-	}
+	return client.New().QemuGuest.Create(ctx, config)
+}
+
+func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientAPI, version Version) (*VmRef, error) {
 	params, body := config.mapToApiCreate(version)
 	// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
 	// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
@@ -105,17 +217,17 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	if config.Node != nil {
 		node = *config.Node
 	}
-	cl := client.new().apiRaw()
 	url := "/nodes/" + node.String() + "/qemu"
+	var err error
 	if config.ID == nil {
-		id, err = guestCreateLoop_Unsafe(ctx, "vmid", url, params, body, client)
+		id, err = guestCreateLoop_Unsafe(ctx, "vmid", url, params, body, client, ca)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		id = *config.ID
 		params["vmid"] = int(id)
-		if err = cl.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
+		if err = ca.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
 			return nil, err
 		}
 	}
@@ -129,8 +241,10 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 	if err = resizeNewDisks(ctx, vmr, client, config.Disks, nil); err != nil {
 		return nil, err
 	}
-	if err = client.insertCachedPermission(ctx, permissionPath(permissionCategory_GuestPath)+"/"+permissionPath(vmr.vmId.String())); err != nil {
-		return nil, err
+	if config.State != nil && *config.State == PowerStateRunning {
+		if err = vmr.start_Unsafe(ctx, ca); err != nil {
+			return nil, err
+		}
 	}
 	_, err = client.UpdateVMHA(ctx, vmr, config.HaState, config.HaGroup)
 	return vmr, err
@@ -340,6 +454,9 @@ func (config ConfigQemu) mapToApiCreate(version Version) (params map[string]any,
 	if config.EfiDisk != nil {
 		config.EfiDisk.mapToApiCreate(&builder)
 	}
+	if config.State != nil && *config.State == PowerStateRunning {
+		builder.WriteString(",start=1")
+	}
 	if builder.Len() > 0 {
 		body = util.Pointer(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
@@ -497,41 +614,44 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 	return nil
 }
 
+// Deprecated: use QemuGuestInterface.Update() instead.
 func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *VmRef, client *Client) (rebootRequired bool, err error) {
+	if vmr == nil {
+		vmr = &VmRef{}
+	}
+	err = client.New().QemuGuest.Update(ctx, *vmr, rebootIfNeeded, false, config)
+	return
+}
+
+func (config ConfigQemu) updateNoCheck(
+	ctx context.Context, c *clientAPI, version Version, client *Client,
+	allowRestart bool, vmr *VmRef,
+	currentLegacy *ConfigQemu, updateConfig configQemuUpdate,
+) (rebootRequired bool, err error) {
 	// TODO add digest during update to check if the config has changed
 
 	ca := client.new().apiGet()
-	cr := client.new().apiRaw()
 
-	// currentConfig will be mutated
-	rawConfig, err := guestGetQemuConfig(ctx, vmr, client)
-	if err != nil {
-		return
-	}
-
-	currentLegacy, err := rawConfig.Get(*vmr) // LEGACY we shouldn't need full config as we can grab this from the raw config as needed.
-	if err != nil {
-		return
-	}
-	updateConfig := configQemuUpdate{raw: rawConfig}
-
-	if vmr != nil {
-		if err = config.setVmr(vmr); err != nil {
-			return
-		}
-	}
-
-	var version Version
-	if version, err = client.Version(ctx); err != nil {
-		return
-	}
-	if err = config.Validate(currentLegacy, version); err != nil {
-		return
-	}
-	// TODO implement tmp move and version change
 	urlPart := "/" + vmr.vmType.String() + "/" + vmr.vmId.String() + "/config"
 	deleteBuilder := &strings.Builder{} // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
-	stopped := false
+
+	var currentState *PowerState
+	var desiredState *PowerState
+	if config.State != nil {
+		desiredState = config.State
+		var raw *rawGuestStatus
+		raw, err = vmr.getRawGuestStatus_Unsafe(ctx, client)
+		if err != nil {
+			return false, err
+		}
+		tmpState := raw.GetState()
+		if *desiredState == PowerStateStopped && *desiredState != tmpState {
+			if err = vmr.shutdown_Unsafe(ctx, c); err != nil {
+				return false, err
+			}
+		}
+		currentState = &tmpState
+	}
 
 	var markedDisks qemuUpdateChanges
 	if config.Disks != nil && currentLegacy.Disks != nil {
@@ -558,12 +678,17 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 
 	var pending bool
 
-	// TODO we can't move a disk for a Qemu guest that is running. Before we can add this we have to move the power state into the config like we did with the Lxc guest.
 	if config.EfiDisk != nil {
-		updateConfig.efiDisk = rawConfig.GetEfiDisk()
+		updateConfig.efiDisk = updateConfig.raw.GetEfiDisk()
 		if updateConfig.efiDisk != nil {
 			if disk := config.EfiDisk.markChangesUnsafe(updateConfig.efiDisk); disk != nil {
-				pending = true
+				if currentState == nil || *currentState != PowerStateStopped {
+					desiredState, err = shutdownIfRunning(ctx, c, client, vmr, desiredState, allowRestart)
+					if err != nil {
+						return false, err
+					}
+					currentState = util.Pointer(PowerStateStopped)
+				}
 				if _, err := disk.move(ctx, true, vmr, client); err != nil {
 					return false, err
 				}
@@ -571,10 +696,9 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		}
 	}
 
-	var itemsToDeleteBeforeUpdate string
 	if deleteBuilder.Len() > 0 {
 		pending = true
-		itemsToDeleteBeforeUpdate = deleteBuilder.String()[len(comma):] // remove leading comma
+		itemsToDeleteBeforeUpdate := deleteBuilder.String()[len(comma):] // remove leading comma
 		cl := client.new().apiRaw()
 		if err := cl.putRawRetry(ctx, "/nodes/"+vmr.node.String()+urlPart, util.Pointer([]byte("delete="+itemsToDeleteBeforeUpdate)), 3); err != nil {
 			return false, fmt.Errorf("error updating VM: %v", err)
@@ -594,15 +718,11 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 			return
 		}
 		if rebootRequired { // shutdown vm if reboot is required
-			if rebootIfNeeded {
-				if err = GuestShutdown(ctx, vmr, client, true); err != nil {
-					return
-				}
-				stopped = true
-				rebootRequired = false
-			} else {
-				return rebootRequired, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
+			desiredState, err = shutdownIfRunning(ctx, c, client, vmr, desiredState, allowRestart)
+			if err != nil {
+				return false, err
 			}
+			rebootRequired = false
 		}
 	}
 
@@ -616,11 +736,15 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 
 	versionEncoded := version.Encode()
 	params, body := config.mapToApiUpdate(currentLegacy, updateConfig, version)
-	if err = cr.putRawRetry(ctx, "/nodes/"+vmr.node.String()+urlPart, combineParamsAndBody(params, body), 3); err != nil {
-		return false, fmt.Errorf("error updating VM: %v", err)
+	body = combineParamsAndBody(params, body)
+	if body != nil {
+		if err = c.putRawRetry(ctx, "/nodes/"+vmr.node.String()+urlPart, body, 3); err != nil {
+			return false, fmt.Errorf("error updating VM: %v", err)
+		}
+		pending = true
 	}
 
-	if !rebootRequired && !stopped { // only check if reboot is required if the vm is not already stopped
+	if (currentState == nil || *currentState != PowerStateStopped) && pending { // Only check if we arent sure the guest is turned off, or it's not off.
 		rebootRequired, err = vmr.pendingChanges(ctx, ca)
 		if err != nil {
 			return
@@ -631,35 +755,61 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 		return
 	}
 
+	if rebootRequired {
+		if allowRestart {
+			return true, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
+		}
+		if err = vmr.reboot_Unsafe(ctx, c); err != nil {
+			return true, err
+		}
+	}
+
 	if config.Pool != nil { // update pool membership
 		if err = vmr.vmId.setPool(ctx, client.new().apiRaw(), *config.Pool, currentLegacy.Pool, versionEncoded); err != nil {
 			return
 		}
 	}
 
-	if stopped { // start vm if it was stopped
-		if rebootIfNeeded {
-			if err = GuestStart(ctx, vmr, client); err != nil {
-				return
+	_, err = client.UpdateVMHA(ctx, vmr, config.HaState, config.HaGroup)
+
+	if desiredState != nil && *desiredState == PowerStateRunning {
+		if currentState == nil {
+			var raw *rawGuestStatus
+			raw, err = vmr.getRawGuestStatus_Unsafe(ctx, client)
+			if err != nil {
+				return false, nil
 			}
-			stopped = false
-			rebootRequired = false
-		} else {
-			return true, nil
+			currentState = util.Pointer(raw.GetState())
 		}
-	} else if rebootRequired { // reboot vm if it is running
-		if rebootIfNeeded {
-			if err = GuestReboot(ctx, vmr, client); err != nil {
-				return
+		if *desiredState != *currentState {
+			if err = vmr.start_Unsafe(ctx, c); err != nil {
+				return false, err
 			}
-			rebootRequired = false
-		} else {
-			return rebootRequired, nil
 		}
 	}
 
-	_, err = client.UpdateVMHA(ctx, vmr, config.HaState, config.HaGroup)
 	return
+}
+
+// returns the desired state as the current when no state was provided, so we can revert back to it later.
+func shutdownIfRunning(ctx context.Context, c *clientAPI, client *Client, vmr *VmRef, desired *PowerState, allowRestart bool) (*PowerState, error) {
+	raw, err := vmr.getRawGuestStatus_Unsafe(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+	current := raw.GetState()
+	if current != PowerStateStopped {
+		if !allowRestart {
+			return nil, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
+		}
+		if desired == nil {
+			desired = &current
+		}
+		if err = vmr.shutdown_Unsafe(ctx, c); err != nil {
+			return nil, err
+		}
+	}
+	return desired, nil
 }
 
 func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {

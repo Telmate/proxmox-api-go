@@ -33,7 +33,7 @@ func Test_Snapshot_Update(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				guestCreate(t, ctx, cl, guest, node, "Test-Snapshot-Update")
+				guestCreate(t, ctx, c, guest, node, "Test-Snapshot-Update")
 			}},
 		{name: `Create snapshot`,
 			test: func(t *testing.T) {

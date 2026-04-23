@@ -442,9 +442,9 @@ func (CpuType) Error(version Version) error {
 	length := len(cpuTypeTableV7)
 	if version.Major >= 8 { // v8
 		length += len(cpuTypeTableV8)
-	}
-	if version.Major >= 9 { //v9
-		length += len(cpuTypeTableV9)
+		if version.Major >= 9 { //v9
+			length += len(cpuTypeTableV9)
+		}
 	}
 	cpus := make([]string, length)
 	offset := 0
@@ -457,11 +457,11 @@ func (CpuType) Error(version Version) error {
 			cpus[offset] = string(v)
 			offset++
 		}
-	}
-	if version.Major >= 9 {
-		for v := range cpuTypeTableV9 {
-			cpus[offset] = string(v)
-			offset++
+		if version.Major >= 9 {
+			for v := range cpuTypeTableV9 {
+				cpus[offset] = string(v)
+				offset++
+			}
 		}
 	}
 	slices.Sort(cpus)
@@ -470,18 +470,19 @@ func (CpuType) Error(version Version) error {
 
 func (cpu CpuType) mapToApi(version Version) string {
 	cpuNormalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", ""))
-	if version.Major >= 9 {
-		if v, ok := cpuTypeTableV9[cpuNormalized]; ok {
-			return v
-		}
+	if v, ok := cpuTypeTableV7[cpuNormalized]; ok {
+		return v
 	}
 	if version.Major >= 8 {
 		if v, ok := cpuTypeTableV8[cpuNormalized]; ok {
 			return v
 		}
-	}
-	if v, ok := cpuTypeTableV7[cpuNormalized]; ok {
-		return v
+		if version.Major >= 9 {
+			if v, ok := cpuTypeTableV9[cpuNormalized]; ok {
+				return v
+			}
+		}
+
 	}
 	return ""
 }

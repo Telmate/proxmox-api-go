@@ -165,11 +165,13 @@ func (c *Client) New() ClientNew {
 		user:        user}
 
 	return ClientNew{
-		ApiToken: &apiTokenClient{oldClient: c, api: apiClientPtr},
-		Group:    &groupClient{oldClient: c, api: apiClientPtr},
-		Pool:     &poolClient{oldClient: c, api: apiClientPtr},
-		Snapshot: &snapshotClient{oldClient: c, api: apiClientPtr},
-		User:     &userClient{oldClient: c, api: apiClientPtr}}
+		ApiToken:  &apiTokenClient{oldClient: c, api: apiClientPtr},
+		Group:     &groupClient{oldClient: c, api: apiClientPtr},
+		Guest:     &guestClient{oldClient: c, api: apiClientPtr},
+		Pool:      &poolClient{oldClient: c, api: apiClientPtr},
+		QemuGuest: &qemuGuestClient{oldClient: c, api: apiClientPtr},
+		Snapshot:  &snapshotClient{oldClient: c, api: apiClientPtr},
+		User:      &userClient{oldClient: c, api: apiClientPtr}}
 }
 
 func (c *Client) new() ClientNewTest {
@@ -605,15 +607,17 @@ func (c *Client) StatusChangeVm(ctx context.Context, vmr *VmRef, params map[stri
 	return
 }
 
+// Deprecated: use GuestInterface.Start() instead.
 func (c *Client) StartVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "start")
 }
 
-// Deprecated: use VmRef.Stop() instead.
+// Deprecated: use GuestInterface.Stop() instead.
 func (c *Client) StopVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "stop")
 }
 
+// Deprecated: use GuestInterface.Shutdown() instead.
 func (c *Client) ShutdownVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "shutdown")
 }
@@ -622,6 +626,7 @@ func (c *Client) ResetVm(ctx context.Context, vmr *VmRef) (exitStatus string, er
 	return c.StatusChangeVm(ctx, vmr, nil, "reset")
 }
 
+// Deprecated: use GuestInterface.Reboot() instead.
 func (c *Client) RebootVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "reboot")
 }

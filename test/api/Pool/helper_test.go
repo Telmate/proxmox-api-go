@@ -35,7 +35,7 @@ func poolRead(t *testing.T, ctx context.Context, c pveSDK.PoolInterface,
 	require.ElementsMatch(t, storages, tmpStorages)
 }
 
-func guestCreate(t *testing.T, ctx context.Context, cl *pveSDK.Client, guest pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestName) {
+func guestCreate(t *testing.T, ctx context.Context, c pveSDK.ClientNew, guest pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestName) {
 	config := pveSDK.ConfigQemu{
 		CPU:    &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
 		ID:     &guest,
@@ -43,7 +43,7 @@ func guestCreate(t *testing.T, ctx context.Context, cl *pveSDK.Client, guest pve
 		Name:   util.Pointer(name),
 		Node:   util.Pointer(node),
 	}
-	vmRef, err := config.Create(ctx, cl)
+	vmRef, err := c.QemuGuest.Create(ctx, config)
 	require.NoError(t, err)
 	require.NotNil(t, vmRef)
 }

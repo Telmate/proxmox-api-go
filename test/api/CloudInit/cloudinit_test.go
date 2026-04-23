@@ -32,7 +32,7 @@ func Test_Cloud_Init_VM(t *testing.T) {
 	config.QemuDisks[0] = disk
 	config.Name = util.Pointer(pxapi.GuestName("Base-Image"))
 
-	_, err = config.Create(context.Background(), Test.GetClient())
+	_, err = Test.GetClient().New().QemuGuest.Create(context.Background(), config)
 	require.NoError(t, err)
 
 	config.Boot = "order=virtio0;ide2;net0"
@@ -43,7 +43,7 @@ func Test_Cloud_Init_VM(t *testing.T) {
 				IPv4: &pxapi.CloudInitIPv4Config{
 					Address: util.Pointer(pxapi.IPv4CIDR("10.0.0.2/24")),
 					Gateway: util.Pointer(pxapi.IPv4Address("10.0.0.1"))}}}}
-	_, err = config.Update(context.Background(), true, vmref, Test.GetClient())
+	err = Test.GetClient().New().QemuGuest.Update(context.Background(), *vmref, true, true, config)
 	require.NoError(t, err)
 
 	testConfig, _ := pxapi.NewConfigQemuFromApi(context.Background(), vmref, Test.GetClient())
