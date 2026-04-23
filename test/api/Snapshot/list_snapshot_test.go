@@ -47,7 +47,7 @@ func Test_Snapshot_List(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				guestCreate(t, ctx, cl, guest, node, "Test-Snapshot-List")
+				guestCreate(t, ctx, c, guest, node, "Test-Snapshot-List")
 			}},
 		{name: `Create snapshot`,
 			test: func(t *testing.T) {

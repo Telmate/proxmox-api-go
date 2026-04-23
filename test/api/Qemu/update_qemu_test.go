@@ -22,6 +22,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	c := cl.New()
 	var vmr *pveSDK.VmRef
 	tests := []struct {
 		name string
@@ -45,7 +46,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 						Storage: util.Pointer(pveSDK.StorageName(test.GuestStorage)),
 					},
 				}
-				vmr, err := config.Create(ctx, cl)
+				vmr, err = c.QemuGuest.Create(ctx, config)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},
@@ -100,7 +101,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 						Storage:         util.Pointer(pveSDK.StorageName(test.GuestStorage)),
 					},
 				}
-				_, err = config.Update(ctx, true, vmr, cl)
+				err = c.QemuGuest.Update(ctx, *vmr, true, false, config)
 				require.NoError(t, err)
 			}},
 		{name: `Check guest config after update`,

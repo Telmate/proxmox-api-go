@@ -77,7 +77,7 @@ func Test_Qemu_Create_Client_Race(t *testing.T) {
 							errCh <- err
 							return
 						}
-						vmr, err := config.Create(ctx, cl)
+						vmr, err := cl.New().QemuGuest.Create(ctx, config)
 						if err != nil {
 							errCh <- err
 							return
@@ -119,6 +119,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	c := cl.New()
 	tests := []struct {
 		name string
 		test func(t *testing.T)
@@ -137,7 +138,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 					Name:   util.Pointer(pveSDK.GuestName(guestName)),
 					Node:   util.Pointer(node),
 				}
-				vmr, err := config.Create(ctx, cl)
+				vmr, err := c.QemuGuest.Create(ctx, config)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},
@@ -195,6 +196,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	c := cl.New()
 	tests := []struct {
 		name string
 		test func(t *testing.T)
@@ -216,7 +218,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 					Name:   util.Pointer(pveSDK.GuestName(guestName)),
 					Node:   util.Pointer(node),
 				}
-				vmr, err := config.Create(ctx, cl)
+				vmr, err := c.QemuGuest.Create(ctx, config)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},

@@ -60,7 +60,7 @@ func pool_AddMembers(t *testing.T, pool pveSDK.ConfigPool, initialGuests, additi
 		{name: `Create guests`,
 			test: func(t *testing.T) {
 				for _, guest := range allGuests {
-					guestCreate(t, ctx, cl, guest, node, "Test-Pool-AddMembers-VM")
+					guestCreate(t, ctx, c, guest, node, "Test-Pool-AddMembers-VM")
 				}
 			}},
 		{name: `Create pool`,
@@ -155,7 +155,7 @@ func Test_Pool_AddMembers_Move(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				guestCreate(t, ctx, cl, guest, node, "Test-Pool-AddMembers-VM")
+				guestCreate(t, ctx, c, guest, node, "Test-Pool-AddMembers-VM")
 			}},
 		{name: `Create pools`,
 			test: func(t *testing.T) {

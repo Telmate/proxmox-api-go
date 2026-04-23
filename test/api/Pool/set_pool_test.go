@@ -42,7 +42,7 @@ func Test_Pool_Set(t *testing.T) {
 		{name: `Create guests`,
 			test: func(t *testing.T) {
 				for _, guest := range guests {
-					guestCreate(t, ctx, cl, guest, node, "Test-Pool-Set-VM")
+					guestCreate(t, ctx, c, guest, node, "Test-Pool-Set-VM")
 				}
 			}},
 		{name: `Create pool`,

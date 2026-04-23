@@ -187,7 +187,7 @@ func Test_QemuGuestInterface_Update(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
 			server.Set(test.requests, t)
-			err := c.New().QemuGuest.Update(context.Background(), test.config, test.vmr, test.allowRestart, test.allowForceStop)
+			err := c.New().QemuGuest.Update(context.Background(), test.vmr, test.allowRestart, test.allowForceStop, test.config)
 			require.Equal(t, test.err, err)
 			server.Clear(t)
 			c.clearVersion()

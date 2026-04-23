@@ -155,11 +155,10 @@ func main() {
 
 	case "start":
 		vmr = proxmox.NewVmRef(vmid)
-		jbody, err = c.StartVm(ctx, vmr)
-		failError(err)
+		failError(c.New().Guest.Start(ctx, *vmr))
 
 	case "stop":
-		failError(proxmox.NewVmRef(vmid).Stop(ctx, c))
+		failError(c.New().Guest.Stop(ctx, *proxmox.NewVmRef(vmid), true))
 
 	case "destroy":
 		failError(proxmox.NewVmRef(vmid).Delete(ctx, c))
@@ -197,7 +196,7 @@ func main() {
 		failError(err)
 		config.ID = &vmid
 		config.Node = util.Pointer(proxmox.NodeName(flag.Args()[2]))
-		_, err = config.Create(ctx, c)
+		_, err = c.New().QemuGuest.Create(ctx, *config)
 		failError(err)
 		log.Println("Complete")
 
@@ -231,9 +230,9 @@ func main() {
 		log.Printf("Creating node %s: \n", mode)
 		log.Println(vmr)
 
-		vmr, err = config.Create(ctx, c)
+		vmr, err = c.New().QemuGuest.Create(ctx, *config)
 		failError(err)
-		_, err = c.StartVm(ctx, vmr)
+		err = c.New().Guest.Start(ctx, *vmr)
 		failError(err)
 
 		// ISO mode waits for the VM to reboot to exit
@@ -244,7 +243,7 @@ func main() {
 			log.Println("Waiting for CDRom install shutdown (at least 5 minutes)")
 			failError(proxmox.WaitForShutdown(ctx, vmr, c))
 			log.Println("Restarting")
-			_, err = c.StartVm(ctx, vmr)
+			err = c.New().Guest.Start(ctx, *vmr)
 			failError(err)
 			_, err = proxmox.SshForwardUsernet(ctx, vmr, c)
 			failError(err)

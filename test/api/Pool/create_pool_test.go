@@ -46,7 +46,7 @@ func Test_Pool_Create(t *testing.T) {
 		{name: `Create guests`,
 			test: func(t *testing.T) {
 				for _, guest := range *pool.Guests {
-					guestCreate(t, ctx, cl, guest, node, pveSDK.GuestName("Test-Pool-Create-VM"))
+					guestCreate(t, ctx, c, guest, node, pveSDK.GuestName("Test-Pool-Create-VM"))
 				}
 			}},
 		{name: `Create pool`,

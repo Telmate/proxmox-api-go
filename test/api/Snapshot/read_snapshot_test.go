@@ -41,7 +41,7 @@ func Test_Snapshot_ReadQemu(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				guestCreate(t, ctx, cl, guest, node, "Test-Snapshot-ReadQemu")
+				guestCreate(t, ctx, c, guest, node, "Test-Snapshot-ReadQemu")
 			}},
 		{name: `Create snapshot`,
 			test: func(t *testing.T) {

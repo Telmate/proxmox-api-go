@@ -22,8 +22,8 @@ type (
 		CreateNoCheck(context.Context, ConfigQemu) (*VmRef, error)
 
 		// When allowRestart is false an error is return if the update rewuires a reboot or shutdown.
-		Update(ctx context.Context, config ConfigQemu, vmr VmRef, allowRestart bool, allowForceStop bool) error
-		UpdateNoCheck(ctx context.Context, config ConfigQemu, vmr VmRef, allowRestart bool, allowForceStop bool) error
+		Update(ctx context.Context, vmr VmRef, allowRestart bool, allowForceStop bool, config ConfigQemu) error
+		UpdateNoCheck(ctx context.Context, vmr VmRef, allowRestart bool, allowForceStop bool, config ConfigQemu) error
 	}
 
 	qemuGuestClient struct {
@@ -68,8 +68,9 @@ func (c *qemuGuestClient) CreateNoCheck(ctx context.Context, config ConfigQemu) 
 }
 
 func (c *qemuGuestClient) Update(
-	ctx context.Context, config ConfigQemu, vmr VmRef,
+	ctx context.Context, vmr VmRef,
 	allowRestart bool, allowForceStop bool,
+	config ConfigQemu,
 ) (err error) {
 	if err = config.setVmr(&vmr); err != nil {
 		return
@@ -98,7 +99,9 @@ func (c *qemuGuestClient) Update(
 }
 
 func (c *qemuGuestClient) UpdateNoCheck(
-	ctx context.Context, config ConfigQemu, vmr VmRef, allowRestart bool, allowForceStop bool,
+	ctx context.Context, vmr VmRef,
+	allowRestart bool, allowForceStop bool,
+	config ConfigQemu,
 ) (err error) {
 	if err = config.setVmr(&vmr); err != nil {
 		return
@@ -616,7 +619,7 @@ func (config ConfigQemu) Update(ctx context.Context, rebootIfNeeded bool, vmr *V
 	if vmr == nil {
 		vmr = &VmRef{}
 	}
-	err = client.New().QemuGuest.Update(ctx, config, *vmr, rebootIfNeeded, false)
+	err = client.New().QemuGuest.Update(ctx, *vmr, rebootIfNeeded, false, config)
 	return
 }
 
