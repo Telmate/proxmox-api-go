@@ -18,20 +18,27 @@ func (t Tags) Less(i, j int) bool { return t[i] < t[j] }      // Less is for sor
 func (t Tags) Swap(i, j int)      { t[i], t[j] = t[j], t[i] } // Swap is for sort.Interface.
 
 func (new Tags) mapToApiCreate() string {
-	return new.String()
+	if len(new) == 0 {
+		return ""
+	}
+	builder := strings.Builder{}
+	for i := range new {
+		builder.WriteString(comma + new[i].String())
+	}
+	return builder.String()[3:]
 }
 
 func (new Tags) mapToApiUpdate(current *Tags) (string, bool) {
-	if current != nil {
-		sort.Sort(new)
-		sort.Sort(*current)
-		newTags := new.String()
-		if newTags == current.String() {
-			return "", false
-		}
-		return newTags, true
+	if len(new) != len(*current) {
+		return new.String(), true
 	}
-	return new.String(), true
+	sort.Sort(new)
+	sort.Sort(*current)
+	newTags := new.mapToApiCreate()
+	if newTags == current.mapToApiCreate() {
+		return "", false
+	}
+	return newTags, true
 }
 
 func (Tags) mapToSDK(tags string) Tags {
@@ -40,7 +47,7 @@ func (Tags) mapToSDK(tags string) Tags {
 	if trimmed == "" {
 		return Tags{}
 	}
-	
+
 	tmpTags := strings.Split(trimmed, ";")
 	typedTags := make(Tags, 0, len(tmpTags))
 	for _, tag := range tmpTags {
@@ -56,11 +63,11 @@ func (t Tags) String() string { // String is for fmt.Stringer.
 	if len(t) == 0 {
 		return ""
 	}
-	var tags string
-	for _, e := range t {
-		tags += ";" + e.String()
+	builder := strings.Builder{}
+	for i := range t {
+		builder.WriteString("," + t[i].String())
 	}
-	return tags[1:]
+	return builder.String()[1:]
 }
 
 func (t Tags) Validate() error {

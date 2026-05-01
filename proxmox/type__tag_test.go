@@ -40,3 +40,35 @@ func Test_Tag_Validate(t *testing.T) {
 		}
 	}
 }
+
+func testDataTagsMapToAPI() qemuTestsAPI {
+	return qemuTestsAPI{category: `Tags`,
+		create: []qemuTestCaseAPI{
+			{name: `do nothing`,
+				config: &ConfigQemu{Tags: new(Tags{})}}},
+		createUpdate: []qemuTestCaseAPI{
+			{name: `set`,
+				currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
+					"tags": "tag5;tag6"}}},
+				config: &ConfigQemu{Tags: new(Tags{"tag1", "tag2"})},
+				body:   map[string]string{"tags": "tag1,tag2"}}},
+		update: []qemuTestCaseAPI{
+			{name: `create`,
+				currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{}}},
+				config:        &ConfigQemu{Tags: new(Tags{"tag1", "tag2"})},
+				body:          map[string]string{"tags": "tag1,tag2"}},
+			{name: `empty`,
+				currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
+					"tags": "tag5;tag6"}}},
+				config: &ConfigQemu{Tags: new(Tags{})},
+				body:   map[string]string{"tags": ""}},
+			{name: `do nothing`,
+				currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
+					"tags": "tag5;tag6"}}},
+				config: &ConfigQemu{Tags: new(Tags{"tag5", "tag6"})}},
+			{name: `different order, do nothing`,
+				currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
+					"tags": "tag5;tag623;tag2;tag8"}}},
+				config: &ConfigQemu{Tags: new(Tags{"tag2", "tag8", "tag623", "tag5"})}}},
+	}
+}

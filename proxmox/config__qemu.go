@@ -352,11 +352,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (pa
 	if config.Tablet != nil {
 		params[qemuApiKeyTablet] = *config.Tablet
 	}
-	if config.Tags != nil {
-		if v, ok := config.Tags.mapToApiUpdate(currentConfig.Tags); ok {
-			params[qemuApiKeyTags] = v
-		}
-	}
 	if config.Smbios1 != "" {
 		params["smbios1"] = config.Smbios1
 	}
@@ -457,6 +452,12 @@ func (config ConfigQemu) mapToApiCreate(version Version) (params map[string]any,
 	if config.State != nil && *config.State == PowerStateRunning {
 		builder.WriteString(",start=1")
 	}
+	if config.Tags != nil {
+		if v := config.Tags.String(); v != "" {
+			builder.WriteString("&" + qemuApiKeyTags + "=")
+			builder.WriteString(v)
+		}
+	}
 	if builder.Len() > 0 {
 		body = util.Pointer(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
@@ -475,6 +476,19 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 			config.EfiDisk.mapToApiUpdate(current.efiDisk, &builder, &delete)
 		} else {
 			config.EfiDisk.mapToApiCreate(&builder)
+		}
+	}
+	if config.Tags != nil {
+		if cur := current.raw.GetTags(); cur != nil {
+			if v, ok := config.Tags.mapToApiUpdate(cur); ok {
+				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString(v)
+			}
+		} else {
+			if v := config.Tags.mapToApiCreate(); v != "" {
+				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString(v)
+			}
 		}
 	}
 

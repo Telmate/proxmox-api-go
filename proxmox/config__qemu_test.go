@@ -4206,20 +4206,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						ShutdownTimeout: util.Pointer(TimeDuration(9362)),
 						StartupDelay:    util.Pointer(TimeDuration(50))}},
 					output: map[string]any{"startup": string("order=20,down=9362")}}}},
-		{category: `Tags`,
-			createUpdate: []qemuTestCaseAPI{
-				{name: `Tags Empty`,
-					currentLegacy: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
-					config:        &ConfigQemu{Tags: util.Pointer(Tags{})},
-					output:        map[string]any{"tags": string("")}},
-				{name: `Tags Full`,
-					currentLegacy: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
-					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag1", "tag2"})},
-					output:        map[string]any{"tags": string("tag1;tag2")}}},
-			update: []qemuTestCaseAPI{
-				{name: `Tags same`,
-					currentLegacy: ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})},
-					config:        &ConfigQemu{Tags: util.Pointer(Tags{"tag5", "tag6"})}}}},
+		testDataTagsMapToAPI(),
 		{category: `TPM`,
 			create: []qemuTestCaseAPI{
 				{name: `TPM`,
