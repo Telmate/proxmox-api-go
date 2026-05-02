@@ -1,4 +1,4 @@
-package api_test
+package api
 
 import (
 	"context"
@@ -120,6 +120,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
+	var vmr *pveSDK.VmRef
 	tests := []struct {
 		name string
 		test func(t *testing.T)
@@ -138,7 +139,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 					Name:   util.Pointer(pveSDK.GuestName(guestName)),
 					Node:   util.Pointer(node),
 				}
-				vmr, err := c.QemuGuest.Create(ctx, config)
+				vmr, err = c.QemuGuest.Create(ctx, config)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},
@@ -168,7 +169,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				DeleteGuest(t, ctx, cl, guestID)
+				require.NoError(t, vmr.Delete(ctx, cl))
 			}},
 	}
 	for i, test := range tests {
@@ -186,6 +187,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
+	var vmr *pveSDK.VmRef
 	tests := []struct {
 		name string
 		test func(t *testing.T)
@@ -207,7 +209,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 					Name:   util.Pointer(pveSDK.GuestName(guestName)),
 					Node:   util.Pointer(node),
 				}
-				vmr, err := c.QemuGuest.Create(ctx, config)
+				vmr, err = c.QemuGuest.Create(ctx, config)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},
@@ -243,7 +245,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				DeleteGuest(t, ctx, cl, guestID)
+				require.NoError(t, vmr.Delete(ctx, cl))
 			}},
 	}
 	for i, test := range tests {
