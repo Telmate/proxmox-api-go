@@ -450,7 +450,7 @@ func (config ConfigQemu) mapToApiCreate(version Version) (params map[string]any,
 		config.EfiDisk.mapToApiCreate(&builder)
 	}
 	if config.State != nil && *config.State == PowerStateRunning {
-		builder.WriteString(",start=1")
+		builder.WriteString("&start=1")
 	}
 	if config.Tags != nil {
 		if v := config.Tags.String(); v != "" {
@@ -496,7 +496,7 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 		if v, ok := params["delete"]; ok {
 			params["delete"] = v.(string) + delete.String()[1:] // remove leading comma
 		} else {
-			builder.WriteString(",delete=")
+			builder.WriteString("&delete=")
 			builder.WriteString(delete.String()[1:]) // remove leading comma
 		}
 	}
