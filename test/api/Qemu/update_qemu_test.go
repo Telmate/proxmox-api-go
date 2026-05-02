@@ -1,4 +1,4 @@
-package api_test
+package api
 
 import (
 	"context"
@@ -129,7 +129,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				DeleteGuest(t, ctx, cl, guestID)
+				require.NoError(t, vmr.Delete(ctx, cl))
 			}},
 	}
 	for i, test := range tests {
@@ -180,7 +180,7 @@ func Test_Qemu_Upate_Reduced_To_Max(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				DeleteGuest(t, ctx, cl, guestID)
+				require.NoError(t, vmr.Delete(ctx, cl))
 			}},
 	}
 	for i, test := range tests {
@@ -231,7 +231,7 @@ func Test_Qemu_Upate_Max_To_Reduced(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				DeleteGuest(t, ctx, cl, guestID)
+				require.NoError(t, vmr.Delete(ctx, cl))
 			}},
 	}
 	for i, test := range tests {
@@ -282,7 +282,7 @@ func Test_Qemu_Upate_Min_To_Reduced(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				DeleteGuest(t, ctx, cl, guestID)
+				require.NoError(t, vmr.Delete(ctx, cl))
 			}},
 	}
 	for i, test := range tests {
@@ -333,7 +333,7 @@ func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				DeleteGuest(t, ctx, cl, guestID)
+				require.NoError(t, vmr.Delete(ctx, cl))
 			}},
 	}
 	for i, test := range tests {

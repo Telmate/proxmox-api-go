@@ -1,4 +1,4 @@
-package api_test
+package api
 
 import (
 	"context"
@@ -19,12 +19,4 @@ func CheckConfig(t *testing.T, ctx context.Context, c *pveSDK.Client, guestID pv
 	config.Smbios1 = ""                           // This field is unique and cannot be predicted, so we ignore it for the comparison.
 	config.QemuUnusedDisks = pveSDK.QemuDevices{} // TODO include this field in test once reworked
 	require.EqualExportedValues(t, expected, config)
-}
-
-func DeleteGuest(t *testing.T, ctx context.Context, c *pveSDK.Client, guestID pveSDK.GuestID) {
-	vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-	raw, err := pveSDK.NewRawConfigQemuFromApi(ctx, vmr, c)
-	require.NoError(t, err)
-	require.NotNil(t, raw)
-	require.NoError(t, vmr.Delete(ctx, c))
 }
