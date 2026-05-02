@@ -41,7 +41,7 @@ type ConfigLXC struct {
 	StartupShutdown *StartupAndShutdown `json:"startup_shutdown,omitempty"`
 	State           *PowerState         `json:"state,omitempty"`
 	Swap            *LxcSwap            `json:"swap,omitempty"` // Never nil when returned
-	Tags            *Tags               `json:"tags,omitempty"`
+	Tags            *Tags               `json:"tags,omitempty"` // Never nil when returned
 	rawDigest       digest              `json:"-"`
 }
 
@@ -588,7 +588,7 @@ type RawConfigLXC interface {
 	GetStartAtNodeBoot() bool
 	GetStartupShutdown() *StartupAndShutdown
 	GetSwap() LxcSwap
-	GetTags() *Tags
+	GetTags() Tags
 }
 
 type rawConfigLXC struct {
@@ -629,7 +629,7 @@ func (raw *rawConfigLXC) get(vmr VmRef) *ConfigLXC {
 		StartAtNodeBoot: util.Pointer(raw.GetStartAtNodeBoot()),
 		StartupShutdown: raw.GetStartupShutdown(),
 		Swap:            util.Pointer(raw.GetSwap()),
-		Tags:            raw.GetTags(),
+		Tags:            new(raw.GetTags()),
 		rawDigest:       raw.getDigest()}
 	if vmr.pool != "" {
 		config.Pool = util.Pointer(PoolName(vmr.pool))
@@ -723,11 +723,12 @@ func (raw *rawConfigLXC) GetSwap() LxcSwap {
 	return 0
 }
 
-func (raw *rawConfigLXC) GetTags() *Tags {
+func (raw *rawConfigLXC) GetTags() Tags {
+	var t Tags
 	if v, isSet := raw.a[lxcApiKeyTags]; isSet {
-		return util.Pointer(Tags{}.mapToSDK(v.(string)))
+		t.mapToSDK(v.(string))
 	}
-	return nil
+	return t
 }
 
 const (

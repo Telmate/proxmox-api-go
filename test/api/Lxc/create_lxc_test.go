@@ -78,6 +78,7 @@ func Test_Lxc_Create_Minimal(t *testing.T) {
 					Protection:      util.Pointer(false),
 					StartAtNodeBoot: util.Pointer(false),
 					Swap:            util.Pointer(pveSDK.LxcSwap(512)),
+					Tags:            new(pveSDK.Tags),
 				}, *config)
 			}},
 		{name: `Delete guest`,

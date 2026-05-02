@@ -75,6 +75,7 @@ func Test_Snapshot_ReadQemu(t *testing.T) {
 					Tablet:          util.Pointer(true),
 					StartAtNodeBoot: util.Pointer(false),
 					Scsihw:          "lsi",
+					Tags:            new(pveSDK.Tags),
 				})
 				config.Smbios1 = "" // ignore smbios differences
 				require.Equal(t, expected, config)

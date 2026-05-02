@@ -187,7 +187,7 @@ type ConfigQemu struct {
 	Storage          string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
 	TPM              *TpmState             `json:"tpm,omitempty"`
 	Tablet           *bool                 `json:"tablet,omitempty"` // never nil when returned
-	Tags             *Tags                 `json:"tags,omitempty"`
+	Tags             *Tags                 `json:"tags,omitempty"`   // Never nil when returned
 	RandomnessDevice *VirtIoRNG            `json:"randomness_device,omitempty"`
 }
 
@@ -1329,7 +1329,7 @@ type RawConfigQemu interface {
 	GetStartAtNodeBoot() bool
 	GetStartupShutdown() *StartupAndShutdown
 	GetTablet() bool
-	GetTags() *Tags
+	GetTags() Tags
 	GetUSBs() QemuUSBs
 }
 
@@ -1363,7 +1363,7 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 		StartAtNodeBoot:  util.Pointer(raw.GetStartAtNodeBoot()),
 		StartupShutdown:  raw.GetStartupShutdown(),
 		Tablet:           util.Pointer(raw.GetTablet()),
-		Tags:             raw.GetTags(),
+		Tags:             new(raw.GetTags()),
 		USBs:             raw.GetUSBs(),
 	}
 	config.Disks, config.LinkedID = raw.GetDisks()
@@ -1407,11 +1407,12 @@ func (raw *rawConfigQemu) GetTablet() bool {
 	return true
 }
 
-func (raw *rawConfigQemu) GetTags() *Tags {
+func (raw *rawConfigQemu) GetTags() Tags {
+	var t Tags
 	if v, isSet := raw.a[qemuApiKeyTags]; isSet {
-		return util.Pointer(Tags{}.mapToSDK(v.(string)))
+		t.mapToSDK(v.(string))
 	}
-	return nil
+	return t
 }
 
 const (

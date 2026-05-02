@@ -171,6 +171,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 					Tablet:          util.Pointer(true),
 					Bios:            "seabios",
 					Boot:            " ",
+					Tags:            new(pveSDK.Tags),
 				}, config)
 			}},
 		{name: `Delete guest`,
@@ -257,6 +258,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 					Scsihw:          "lsi",
 					StartAtNodeBoot: util.Pointer(false),
 					Tablet:          util.Pointer(true),
+					Tags:            new(pveSDK.Tags),
 				}, config)
 			}},
 		{name: `Delete guest`,

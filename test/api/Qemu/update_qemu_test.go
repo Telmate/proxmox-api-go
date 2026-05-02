@@ -85,6 +85,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 					Scsihw:          "lsi",
 					StartAtNodeBoot: util.Pointer(false),
 					Tablet:          util.Pointer(true),
+					Tags:            new(pveSDK.Tags),
 				}, config)
 			}},
 		{name: `Update guest`,
@@ -140,6 +141,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 					Scsihw:          "lsi",
 					StartAtNodeBoot: util.Pointer(false),
 					Tablet:          util.Pointer(true),
+					Tags:            new(pveSDK.Tags),
 				}, config)
 			}},
 		{name: `Delete guest`,

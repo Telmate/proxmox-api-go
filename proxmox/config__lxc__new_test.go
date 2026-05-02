@@ -2810,6 +2810,9 @@ func Test_RawConfigLXC_Get(t *testing.T) {
 		if config.Swap == nil {
 			config.Swap = util.Pointer(LxcSwap(0))
 		}
+		if config.Tags == nil {
+			config.Tags = new(Tags)
+		}
 		return &config
 	}
 	baseBootMount := func(config LxcBootMount) *LxcBootMount {
@@ -3786,6 +3789,9 @@ func Test_ActiveRawConfigLXC_Get(t *testing.T) {
 		}
 		if config.Swap == nil {
 			config.Swap = util.Pointer(LxcSwap(0))
+		}
+		if config.Tags == nil {
+			config.Tags = new(Tags)
 		}
 		return &config
 	}

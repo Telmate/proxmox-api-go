@@ -41,22 +41,26 @@ func (new Tags) mapToApiUpdate(current *Tags) (string, bool) {
 	return newTags, true
 }
 
-func (Tags) mapToSDK(tags string) Tags {
+func (t *Tags) mapToSDK(tags string) {
 	// Handle Proxmox API bug: sometimes returns " " (whitespace) for VMs with no tags
 	trimmed := strings.TrimSpace(tags)
 	if trimmed == "" {
-		return Tags{}
+		return
 	}
-
-	tmpTags := strings.Split(trimmed, ";")
-	typedTags := make(Tags, 0, len(tmpTags))
-	for _, tag := range tmpTags {
-		// Trim whitespace from each tag and skip empty tags
-		if trimmedTag := strings.TrimSpace(tag); trimmedTag != "" {
-			typedTags = append(typedTags, Tag(trimmedTag))
+	seperators := countSeperator(trimmed)
+	tagsTyped := make(Tags, seperators+1)
+	var entry, lastSeperator int
+	for i := 0; i < len(trimmed); i++ {
+		switch trimmed[i] {
+		case ',', ';':
+			tagsTyped[entry] = Tag(trimmed[lastSeperator:i])
+			entry++
+			i++
+			lastSeperator = i
 		}
 	}
-	return typedTags
+	tagsTyped[entry] = Tag(trimmed[lastSeperator:])
+	*t = tagsTyped
 }
 
 func (t Tags) String() string { // String is for fmt.Stringer.

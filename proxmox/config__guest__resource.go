@@ -241,10 +241,11 @@ func (raw *rawGuestResource) GetStatus() PowerState {
 }
 
 func (raw *rawGuestResource) GetTags() Tags {
+	var t Tags
 	if v, isSet := raw.a["tags"]; isSet {
-		return Tags{}.mapToSDK(v.(string))
+		t.mapToSDK(v.(string))
 	}
-	return nil
+	return t
 }
 
 func (raw *rawGuestResource) GetTemplate() bool {

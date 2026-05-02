@@ -78,6 +78,9 @@ func testQemuBaseConfig_get(config ConfigQemu) *ConfigQemu {
 	if config.StartAtNodeBoot == nil {
 		config.StartAtNodeBoot = util.Pointer(false)
 	}
+	if config.Tags == nil {
+		config.Tags = new(Tags)
+	}
 	return &config
 }
 
@@ -7311,15 +7314,15 @@ func Test_ConfigQemu_get(t *testing.T) {
 				{name: `bug`, // in some versions a space is returned when there are no tags.
 					input: map[string]any{"tags": string(" ")},
 					output: baseConfig(ConfigQemu{
-						Tags: util.Pointer(Tags{})})},
+						Tags: new(Tags)})},
 				{name: `empty`,
 					input: map[string]any{"tags": string("")},
 					output: baseConfig(ConfigQemu{
-						Tags: util.Pointer(Tags{})})},
+						Tags: new(Tags)})},
 				{name: `set`,
 					input: map[string]any{"tags": string("a;bb;ccc")},
 					output: baseConfig(ConfigQemu{
-						Tags: util.Pointer(Tags{"a", "bb", "ccc"})})}}},
+						Tags: new(Tags{"a", "bb", "ccc"})})}}},
 		{category: `TPM`,
 			tests: []qemuTestCaseGet{
 				{name: `All`,
@@ -7452,6 +7455,9 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		}
 		if config.Tablet == nil {
 			config.Tablet = util.Pointer(true)
+		}
+		if config.Tags == nil {
+			config.Tags = new(Tags)
 		}
 		return &config
 	}
