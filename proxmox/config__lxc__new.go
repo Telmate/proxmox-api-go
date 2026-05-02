@@ -1,6 +1,7 @@
 package proxmox
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"errors"
@@ -40,7 +41,7 @@ type ConfigLXC struct {
 	StartupShutdown *StartupAndShutdown `json:"startup_shutdown,omitempty"`
 	State           *PowerState         `json:"state,omitempty"`
 	Swap            *LxcSwap            `json:"swap,omitempty"` // Never nil when returned
-	Tags            *Tags               `json:"tags,omitempty"`
+	Tags            *Tags               `json:"tags,omitempty"` // Never nil when returned
 	rawDigest       digest              `json:"-"`
 }
 
@@ -61,7 +62,7 @@ func (config ConfigLXC) Create(ctx context.Context, c *Client) (*VmRef, error) {
 }
 
 func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, error) {
-	params, pool := config.mapToApiCreate()
+	params, body, pool := config.mapToApiCreate()
 
 	var err error
 	var id GuestID
@@ -72,15 +73,13 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 	url := "/nodes/" + node.String() + "/lxc"
 	ca := c.new().apiRaw()
 	if config.ID == nil {
-		id, err = guestCreateLoop_Unsafe(ctx, lxcApiKeyGuestID, url, params, nil, c, ca)
+		id, err = guestCreateLoop_Unsafe(ctx, lxcApiKeyGuestID, url, params, body, c, ca)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		var exitStatus string
-		exitStatus, err = c.PostWithTask(ctx, params, url)
-		if err != nil {
-			return nil, fmt.Errorf("error creating LXC: %v, error status: %s (params: %v)", err, exitStatus, params)
+		if err = ca.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
+			return nil, fmt.Errorf("error creating LXC: %v", err)
 		}
 		id = *config.ID
 	}
@@ -99,7 +98,8 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 	return vmRef, nil
 }
 
-func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
+func (config ConfigLXC) mapToApiCreate() (map[string]any, *[]byte, PoolName) {
+	builder := strings.Builder{}
 	params := config.mapToApiShared()
 	privileged := true
 	if config.Privileged == nil || !*config.Privileged {
@@ -157,9 +157,19 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, PoolName) {
 		params[lxcApiKeySwap] = int(*config.Swap)
 	}
 	if config.Tags != nil {
-		params[lxcApiKeyTags] = (*config.Tags).mapToApiCreate()
+		if v := config.Tags.mapToApiCreate(); v != "" {
+			builder.WriteString("&" + qemuApiKeyTags + "=")
+			builder.WriteString(v)
+		}
 	}
-	return params, pool
+	var body *[]byte
+	if builder.Len() > 0 {
+		body = new(bytes.NewBufferString(builder.String()[1:]).Bytes())
+	}
+	if len(params) == 0 { // Teporarily clear params
+		params = nil
+	}
+	return params, body, pool
 }
 
 func (config ConfigLXC) mapToApiShared() map[string]any {
@@ -167,7 +177,8 @@ func (config ConfigLXC) mapToApiShared() map[string]any {
 	return params
 }
 
-func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
+func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) (map[string]any, *[]byte) {
+	builder := strings.Builder{}
 	privileged := lxcDefaultPrivilege
 	if current.Privileged != nil {
 		privileged = *current.Privileged
@@ -250,8 +261,16 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 		params[lxcApiKeySwap] = int(*config.Swap)
 	}
 	if config.Tags != nil {
-		if v, ok := (*config.Tags).mapToApiUpdate(current.Tags); ok {
-			params[lxcApiKeyTags] = v
+		if current.Tags != nil {
+			if v, ok := config.Tags.mapToApiUpdate(*current.Tags); ok {
+				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString(v)
+			}
+		} else {
+			if v := config.Tags.mapToApiCreate(); v != "" {
+				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString(v)
+			}
 		}
 	}
 	if delete != "" {
@@ -260,7 +279,14 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) map[string]any {
 	if len(params) > 0 {
 		params[lxcApiKeyDigest] = current.rawDigest.String()
 	}
-	return params
+	var body *[]byte
+	if builder.Len() > 0 {
+		body = new(bytes.NewBufferString(builder.String()[1:]).Bytes())
+	}
+	if len(params) == 0 { // Teporarily clear params
+		params = nil
+	}
+	return params, body
 }
 
 func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
@@ -321,7 +347,7 @@ func (config ConfigLXC) update_Unsafe(
 	version EncodedVersion,
 	c *Client) error {
 
-	ca := c.new().apiGet()
+	ca := c.new().apiRaw()
 
 	var move []lxcMountMove
 	var resize []lxcMountResize
@@ -399,9 +425,10 @@ func (config ConfigLXC) update_Unsafe(
 			}
 		}
 	}
+	params, body := config.mapToApiUpdate(*current)
 
-	if params := config.mapToApiUpdate(*current); len(params) > 0 {
-		if err = c.Put(ctx, params, url+"/config"); err != nil {
+	if body = combineParamsAndBody(params, body); body != nil {
+		if err = ca.putRawRetry(ctx, url+"/config", body, 3); err != nil {
 			return err
 		}
 		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes
@@ -561,7 +588,7 @@ type RawConfigLXC interface {
 	GetStartAtNodeBoot() bool
 	GetStartupShutdown() *StartupAndShutdown
 	GetSwap() LxcSwap
-	GetTags() *Tags
+	GetTags() Tags
 }
 
 type rawConfigLXC struct {
@@ -602,7 +629,7 @@ func (raw *rawConfigLXC) get(vmr VmRef) *ConfigLXC {
 		StartAtNodeBoot: util.Pointer(raw.GetStartAtNodeBoot()),
 		StartupShutdown: raw.GetStartupShutdown(),
 		Swap:            util.Pointer(raw.GetSwap()),
-		Tags:            raw.GetTags(),
+		Tags:            new(raw.GetTags()),
 		rawDigest:       raw.getDigest()}
 	if vmr.pool != "" {
 		config.Pool = util.Pointer(PoolName(vmr.pool))
@@ -696,11 +723,12 @@ func (raw *rawConfigLXC) GetSwap() LxcSwap {
 	return 0
 }
 
-func (raw *rawConfigLXC) GetTags() *Tags {
+func (raw *rawConfigLXC) GetTags() Tags {
+	var t Tags
 	if v, isSet := raw.a[lxcApiKeyTags]; isSet {
-		return util.Pointer(Tags{}.mapToSDK(v.(string)))
+		t.mapToSDK(v.(string))
 	}
-	return nil
+	return t
 }
 
 const (

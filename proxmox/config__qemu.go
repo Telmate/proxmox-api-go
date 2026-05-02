@@ -187,7 +187,7 @@ type ConfigQemu struct {
 	Storage          string                `json:"storage,omitempty"` // this value is only used when doing a full clone and is never returned
 	TPM              *TpmState             `json:"tpm,omitempty"`
 	Tablet           *bool                 `json:"tablet,omitempty"` // never nil when returned
-	Tags             *Tags                 `json:"tags,omitempty"`
+	Tags             *Tags                 `json:"tags,omitempty"`   // Never nil when returned
 	RandomnessDevice *VirtIoRNG            `json:"randomness_device,omitempty"`
 }
 
@@ -352,11 +352,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (pa
 	if config.Tablet != nil {
 		params[qemuApiKeyTablet] = *config.Tablet
 	}
-	if config.Tags != nil {
-		if v, ok := config.Tags.mapToApiUpdate(currentConfig.Tags); ok {
-			params[qemuApiKeyTags] = v
-		}
-	}
 	if config.Smbios1 != "" {
 		params["smbios1"] = config.Smbios1
 	}
@@ -455,7 +450,13 @@ func (config ConfigQemu) mapToApiCreate(version Version) (params map[string]any,
 		config.EfiDisk.mapToApiCreate(&builder)
 	}
 	if config.State != nil && *config.State == PowerStateRunning {
-		builder.WriteString(",start=1")
+		builder.WriteString("&start=1")
+	}
+	if config.Tags != nil {
+		if v := config.Tags.mapToApiCreateLower(); v != "" {
+			builder.WriteString("&" + qemuApiKeyTags + "=")
+			builder.WriteString(v)
+		}
 	}
 	if builder.Len() > 0 {
 		body = util.Pointer(bytes.NewBufferString(builder.String()[1:]).Bytes())
@@ -477,12 +478,25 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 			config.EfiDisk.mapToApiCreate(&builder)
 		}
 	}
+	if config.Tags != nil {
+		if cur := current.raw.GetTags(); len(cur) != 0 {
+			if v, ok := config.Tags.mapToApiUpdate(cur); ok {
+				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString(v)
+			}
+		} else {
+			if v := config.Tags.mapToApiCreate(); v != "" {
+				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString(v)
+			}
+		}
+	}
 
 	if delete.Len() > 0 {
 		if v, ok := params["delete"]; ok {
-			params["delete"] = v.(string) + delete.String()[1:] // remove leading comma
+			params["delete"] = v.(string) + delete.String()
 		} else {
-			builder.WriteString(",delete=")
+			builder.WriteString("&delete=")
 			builder.WriteString(delete.String()[1:]) // remove leading comma
 		}
 	}
@@ -1315,7 +1329,7 @@ type RawConfigQemu interface {
 	GetStartAtNodeBoot() bool
 	GetStartupShutdown() *StartupAndShutdown
 	GetTablet() bool
-	GetTags() *Tags
+	GetTags() Tags
 	GetUSBs() QemuUSBs
 }
 
@@ -1349,7 +1363,7 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 		StartAtNodeBoot:  util.Pointer(raw.GetStartAtNodeBoot()),
 		StartupShutdown:  raw.GetStartupShutdown(),
 		Tablet:           util.Pointer(raw.GetTablet()),
-		Tags:             raw.GetTags(),
+		Tags:             new(raw.GetTags()),
 		USBs:             raw.GetUSBs(),
 	}
 	config.Disks, config.LinkedID = raw.GetDisks()
@@ -1393,11 +1407,12 @@ func (raw *rawConfigQemu) GetTablet() bool {
 	return true
 }
 
-func (raw *rawConfigQemu) GetTags() *Tags {
+func (raw *rawConfigQemu) GetTags() Tags {
+	var t Tags
 	if v, isSet := raw.a[qemuApiKeyTags]; isSet {
-		return util.Pointer(Tags{}.mapToSDK(v.(string)))
+		t.mapToSDK(v.(string))
 	}
-	return nil
+	return t
 }
 
 const (

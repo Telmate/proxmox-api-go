@@ -390,6 +390,9 @@ func Test_snapshotClient_ReadLxc(t *testing.T) {
 		if c.State == nil {
 			c.State = util.Pointer(PowerStateRunning)
 		}
+		if c.Tags == nil {
+			c.Tags = new(Tags)
+		}
 		return &c
 	}
 	tests := []struct {
@@ -506,6 +509,9 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 		}
 		if c.Tablet == nil {
 			c.Tablet = util.Pointer(true)
+		}
+		if c.Tags == nil {
+			c.Tags = new(Tags)
 		}
 		return &c
 	}

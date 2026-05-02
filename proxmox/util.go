@@ -57,6 +57,18 @@ func combineParamsAndBody(params map[string]any, body *[]byte) *[]byte {
 	return nil
 }
 
+func countSeperator(str string) int {
+	var count int
+	for i := range str {
+		switch str[i] {
+		case ',', ';':
+			count++
+		}
+	}
+	return count
+
+}
+
 // ensures a string has a certain ensurePrefix
 func ensurePrefix(prefix, text string) string {
 	if strings.HasPrefix(text, prefix) {
