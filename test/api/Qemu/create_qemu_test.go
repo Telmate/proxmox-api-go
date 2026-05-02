@@ -144,15 +144,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				raw, err := pveSDK.NewRawConfigQemuFromApi(ctx, vmr, cl)
-				require.NoError(t, err)
-				require.NotNil(t, raw)
-				config, err := raw.Get(*vmr)
-				require.NoError(t, err)
-				require.NotNil(t, config)
-				config.Smbios1 = "" // This field is unique and cannot be predicted, so we ignore it for the comparison.
-				require.EqualExportedValues(t, &pveSDK.ConfigQemu{
+				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
 					CPU:             &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
 					Description:     util.Pointer(""),
 					Hotplug:         "network,disk,usb",
@@ -172,15 +164,11 @@ func Test_Qemu_Create_Max(t *testing.T) {
 					Bios:            "seabios",
 					Boot:            " ",
 					Tags:            new(pveSDK.Tags),
-				}, config)
+				})
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				raw, err := pveSDK.NewRawConfigQemuFromApi(ctx, vmr, cl)
-				require.NoError(t, err)
-				require.NotNil(t, raw)
-				require.NoError(t, vmr.Delete(ctx, cl))
+				DeleteGuest(t, ctx, cl, guestID)
 			}},
 	}
 	for i, test := range tests {
@@ -225,15 +213,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				raw, err := pveSDK.NewRawConfigQemuFromApi(ctx, vmr, cl)
-				require.NoError(t, err)
-				require.NotNil(t, raw)
-				config, err := raw.Get(*vmr)
-				require.NoError(t, err)
-				require.NotNil(t, config)
-				config.Smbios1 = "" // This field is unique and cannot be predicted, so we ignore it for the comparison.
-				require.EqualExportedValues(t, &pveSDK.ConfigQemu{
+				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
 					Bios:        "seabios",
 					Boot:        " ",
 					CPU:         &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
@@ -259,15 +239,11 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 					StartAtNodeBoot: util.Pointer(false),
 					Tablet:          util.Pointer(true),
 					Tags:            new(pveSDK.Tags),
-				}, config)
+				})
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				raw, err := pveSDK.NewRawConfigQemuFromApi(ctx, vmr, cl)
-				require.NoError(t, err)
-				require.NotNil(t, raw)
-				require.NoError(t, vmr.Delete(ctx, cl))
+				DeleteGuest(t, ctx, cl, guestID)
 			}},
 	}
 	for i, test := range tests {
