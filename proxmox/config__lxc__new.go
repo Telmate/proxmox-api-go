@@ -262,7 +262,7 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) (map[string]any, *[]by
 	}
 	if config.Tags != nil {
 		if current.Tags != nil {
-			if v, ok := config.Tags.mapToApiUpdate(current.Tags); ok {
+			if v, ok := config.Tags.mapToApiUpdate(*current.Tags); ok {
 				builder.WriteString("&" + qemuApiKeyTags + "=")
 				builder.WriteString(v)
 			}

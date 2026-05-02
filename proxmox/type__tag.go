@@ -17,24 +17,37 @@ func (t Tags) Len() int           { return len(t) }           // Len is for sort
 func (t Tags) Less(i, j int) bool { return t[i] < t[j] }      // Less is for sort.Interface.
 func (t Tags) Swap(i, j int)      { t[i], t[j] = t[j], t[i] } // Swap is for sort.Interface.
 
-func (new Tags) mapToApiCreate() string {
-	if len(new) == 0 {
+func (t Tags) mapToApiCreate() string {
+	if len(t) == 0 {
 		return ""
 	}
 	builder := strings.Builder{}
-	for i := range new {
-		builder.WriteString(comma + new[i].String())
+	for i := range t {
+		builder.WriteString(comma + t[i].String())
 	}
 	return builder.String()[3:]
 }
 
-func (new Tags) mapToApiUpdate(current *Tags) (string, bool) {
-	if len(new) != len(*current) {
-		return new.String(), true
+// Tags not converted to lowercase during Qemu VM creation
+// https://bugzilla.proxmox.com/show_bug.cgi?id=7549
+func (t Tags) mapToApiCreateLower() string {
+	if len(t) == 0 {
+		return ""
 	}
-	sort.Sort(new)
-	sort.Sort(*current)
-	newTags := new.mapToApiCreate()
+	builder := strings.Builder{}
+	for i := range t {
+		builder.WriteString(comma + strings.ToLower(t[i].String()))
+	}
+	return builder.String()[3:]
+}
+
+func (t Tags) mapToApiUpdate(current Tags) (string, bool) {
+	if len(t) != len(current) {
+		return t.String(), true
+	}
+	sort.Sort(t)
+	sort.Sort(current)
+	newTags := t.mapToApiCreate()
 	if newTags == current.mapToApiCreate() {
 		return "", false
 	}

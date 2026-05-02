@@ -453,7 +453,7 @@ func (config ConfigQemu) mapToApiCreate(version Version) (params map[string]any,
 		builder.WriteString("&start=1")
 	}
 	if config.Tags != nil {
-		if v := config.Tags.String(); v != "" {
+		if v := config.Tags.mapToApiCreateLower(); v != "" {
 			builder.WriteString("&" + qemuApiKeyTags + "=")
 			builder.WriteString(v)
 		}
@@ -479,7 +479,7 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 		}
 	}
 	if config.Tags != nil {
-		if cur := current.raw.GetTags(); cur != nil {
+		if cur := current.raw.GetTags(); len(cur) != 0 {
 			if v, ok := config.Tags.mapToApiUpdate(cur); ok {
 				builder.WriteString("&" + qemuApiKeyTags + "=")
 				builder.WriteString(v)
