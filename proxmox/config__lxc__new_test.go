@@ -170,6 +170,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 							Quota: util.Pointer(false)},
 						Privileged: util.Pointer(true)},
 					omitDefaults: all,
+					body:         map[string]string{"unprivileged": "0"},
 					output:       map[string]any{"rootfs": ""}},
 				{name: `Quota true, Privileged false`,
 					config: ConfigLXC{
@@ -183,6 +184,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 							Quota: util.Pointer(true)},
 						Privileged: util.Pointer(true)},
 					omitDefaults: all,
+					body:         map[string]string{"unprivileged": "0"},
 					output:       map[string]any{"rootfs": ",quota=1"}}},
 			createUpdate: []test{
 				{name: `ACL true`,
@@ -974,55 +976,49 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					output: map[string]any{
 						"mp17": string("local-zfs:1,mp=/mnt/test")}},
 				{name: `DataMount.Quota false Privileged false`,
-					omitDefaults: all,
 					config: ConfigLXC{Mounts: LxcMounts{
 						LxcMountID19: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota: util.Pointer(false)})}},
 						Privileged: util.Pointer(false)},
 					output: map[string]any{
-						"mp19":         string("local-zfs:1"),
-						"unprivileged": int(1)}},
+						"mp19": string("local-zfs:1")}},
 				{name: `DataMount.Quota false Privileged true`,
 					omitDefaults: all,
 					config: ConfigLXC{Mounts: LxcMounts{
 						LxcMountID20: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota: util.Pointer(false)})}},
 						Privileged: util.Pointer(true)},
+					body: map[string]string{"unprivileged": "0"},
 					output: map[string]any{
 						"mp20": string("local-zfs:1")}},
 				{name: `DataMount.Quota false Privileged unset`,
-					omitDefaults: all,
 					config: ConfigLXC{Mounts: LxcMounts{
 						LxcMountID18: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota: util.Pointer(false)})}}},
 					output: map[string]any{
-						"mp18":         string("local-zfs:1"),
-						"unprivileged": int(1)}},
+						"mp18": string("local-zfs:1")}},
 				{name: `DataMount.Quota true Privileged false`,
-					omitDefaults: all,
 					config: ConfigLXC{Mounts: LxcMounts{
 						LxcMountID22: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota: util.Pointer(true)})}},
 						Privileged: util.Pointer(false)},
 					output: map[string]any{
-						"mp22":         string("local-zfs:1"),
-						"unprivileged": int(1)}},
+						"mp22": string("local-zfs:1")}},
 				{name: `DataMount.Quota true Privileged true`,
 					omitDefaults: all,
 					config: ConfigLXC{Mounts: LxcMounts{
 						LxcMountID23: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota: util.Pointer(true)})}},
 						Privileged: util.Pointer(true)},
+					body: map[string]string{"unprivileged": "0"},
 					output: map[string]any{
 						"mp23": string("local-zfs:1,quota=1")}},
 				{name: `DataMount.Quota true Privileged unset`,
-					omitDefaults: all,
 					config: ConfigLXC{Mounts: LxcMounts{
 						LxcMountID24: LxcMount{DataMount: baseDataMount(LxcDataMount{
 							Quota: util.Pointer(true)})}}},
 					output: map[string]any{
-						"mp24":         string("local-zfs:1"),
-						"unprivileged": int(1)}},
+						"mp24": string("local-zfs:1")}},
 				{name: `DataMount.ReadOnly false`,
 					config: ConfigLXC{Mounts: LxcMounts{
 						LxcMountID25: LxcMount{DataMount: baseDataMount(LxcDataMount{
@@ -1800,10 +1796,10 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			create: []test{
 				{name: `true`,
 					config:       ConfigLXC{Privileged: util.Pointer(true)},
+					body:         map[string]string{"unprivileged": "0"},
 					omitDefaults: all},
 				{name: `false`,
-					config: ConfigLXC{Privileged: util.Pointer(false)},
-					output: map[string]any{"unprivileged": int(1)}}},
+					config: ConfigLXC{Privileged: util.Pointer(false)}}},
 			update: []test{
 				{name: `true no effect`,
 					config:        ConfigLXC{Privileged: util.Pointer(true)},
@@ -1990,17 +1986,17 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			name := test.category + "/Create/" + subTest.name
 			t.Run(name, func(*testing.T) {
 				tmpParams, tmpBody, pool := subTest.config.mapToApiCreate()
-				clone := maps.Clone(subTest.output)
+				clone := maps.Clone(subTest.body)
 				if !(subTest.omitDefaults == all || subTest.omitDefaults == create) {
 					if clone == nil {
-						clone = map[string]any{}
+						clone = map[string]string{}
 					}
 					if _, isSet := clone["unprivileged"]; !isSet {
-						clone["unprivileged"] = int(1) // Default to unprivileged
+						clone["unprivileged"] = "1" // Default to unprivileged
 					}
 				}
-				require.Equal(t, clone, tmpParams, name)
-				testParamsEqual(t, subTest.body, tmpBody, name+" Body")
+				require.Equal(t, subTest.output, tmpParams, name)
+				testParamsEqual(t, clone, tmpBody, name+" Body")
 				require.Equal(t, subTest.pool, pool, name)
 			})
 		}
