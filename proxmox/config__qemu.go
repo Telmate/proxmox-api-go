@@ -494,7 +494,7 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 
 	if delete.Len() > 0 {
 		if v, ok := params["delete"]; ok {
-			params["delete"] = v.(string) + delete.String()[1:] // remove leading comma
+			params["delete"] = v.(string) + delete.String()
 		} else {
 			builder.WriteString("&delete=")
 			builder.WriteString(delete.String()[1:]) // remove leading comma
