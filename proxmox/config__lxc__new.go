@@ -101,10 +101,13 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 func (config ConfigLXC) mapToApiCreate() (map[string]any, *[]byte, PoolName) {
 	builder := strings.Builder{}
 	params := config.mapToApiShared()
-	privileged := true
-	if config.Privileged == nil || !*config.Privileged {
-		params[lxcApiKeyUnprivileged] = 1
-		privileged = false
+	var privileged bool
+	builder.WriteString("&" + lxcApiKeyUnprivileged + "=")
+	if config.Privileged != nil && *config.Privileged {
+		builder.WriteString("0")
+		privileged = true
+	} else {
+		builder.WriteString("1")
 	}
 	var pool PoolName
 	if config.BootMount != nil {
@@ -853,6 +856,9 @@ func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConf
 	}
 	if c == nil {
 		return nil, errors.New(Client_Error_Nil)
+	}
+	if err := c.CheckVmRef(ctx, vmr); err != nil {
+		return nil, err
 	}
 	return c.new().guestGetLxcRawConfig(ctx, vmr)
 }

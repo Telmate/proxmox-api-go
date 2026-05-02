@@ -1,4 +1,4 @@
-package api_test
+package api
 
 import (
 	"context"
@@ -15,16 +15,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Lxc_Create_Minimal(t *testing.T) {
+func Test_Lxc_Create_Minimal_Unprivileged(t *testing.T) {
 	t.Parallel()
 	const guest = pveSDK.GuestID(1000)
 	const node = pveSDK.NodeName(test.FirstNode)
 	const storage = pveSDK.StorageName(test.GuestStorage)
-	const name = pveSDK.GuestName("Test-Lxc-Create-Minimal")
+	const name = pveSDK.GuestName("Test-Lxc-Create-Minimal-Unprivileged")
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	set, expected := MinimumConfig(guest, node, storage, new(false), name)
 	var vmr *pveSDK.VmRef
 	tests := []struct {
 		name string
@@ -36,50 +37,93 @@ func Test_Lxc_Create_Minimal(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				config := pveSDK.ConfigLXC{
-					ID: util.Pointer(guest),
-					BootMount: &pveSDK.LxcBootMount{
-						SizeInKibibytes: util.Pointer(pveSDK.LxcMountSize(128 * 1024)),
-						Storage:         util.Pointer(string(storage))},
-					CreateOptions: &pveSDK.LxcCreateOptions{
-						OsTemplate: &pveSDK.LxcTemplate{
-							Storage: test.TemplateStorage,
-							File:    test.DownloadedLXCTemplate,
-						}},
-					Name: util.Pointer(name),
-					Node: util.Pointer(node),
-				}
-				vmr, err = config.Create(ctx, cl)
+				vmr, err = set.Create(ctx, cl)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				raw, err := pveSDK.NewRawConfigLXCFromAPI(ctx, vmr, cl)
+				CheckConfig(t, ctx, cl, guest, expected)
+			}},
+		{name: `Delete guest`,
+			test: func(t *testing.T) {
+				require.NoError(t, vmr.Delete(ctx, cl))
+			}},
+	}
+	for i, test := range tests {
+		t.Run(pad.Left(strconv.Itoa(i), 2, '0')+" "+test.name, test.test)
+	}
+}
+
+func Test_Lxc_Create_Minimal_Privileged(t *testing.T) {
+	t.Parallel()
+	const guest = pveSDK.GuestID(1001)
+	const node = pveSDK.NodeName(test.FirstNode)
+	const storage = pveSDK.StorageName(test.GuestStorage)
+	const name = pveSDK.GuestName("Test-Lxc-Create-Minimal-Privileged")
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	require.NoError(t, err)
+	ctx := context.Background()
+	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	set, expected := MinimumConfig(guest, node, storage, new(true), name)
+	var vmr *pveSDK.VmRef
+	tests := []struct {
+		name string
+		test func(t *testing.T)
+	}{
+		{name: `Ensure guest does not exist`,
+			test: func(t *testing.T) {
+				require.Error(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+			}},
+		{name: `Create guest`,
+			test: func(t *testing.T) {
+				vmr, err = set.Create(ctx, cl)
 				require.NoError(t, err)
-				require.NotNil(t, raw)
-				config := raw.Get(pveSDK.VmRef{}, pveSDK.PowerStateUnknown)
-				config.Digest = [20]byte{} // Ignore digest for comparison as it is always different
-				require.EqualExportedValues(t, pveSDK.ConfigLXC{
-					Architecture: "amd64",
-					BootMount: &pveSDK.LxcBootMount{
-						ACL:             util.Pointer(pveSDK.TriBoolNone),
-						Replicate:       util.Pointer(true),
-						SizeInKibibytes: util.Pointer(pveSDK.LxcMountSize(131072)),
-						Storage:         util.Pointer("local-zfs"),
-					},
-					ID:              util.Pointer(pveSDK.GuestID(1000)),
-					Memory:          util.Pointer(pveSDK.LxcMemory(512)),
-					Name:            util.Pointer(name),
-					Networks:        pveSDK.LxcNetworks{},
-					Node:            util.Pointer(pveSDK.NodeName(node)),
-					OperatingSystem: "alpine",
-					Privileged:      util.Pointer(false),
-					Protection:      util.Pointer(false),
-					StartAtNodeBoot: util.Pointer(false),
-					Swap:            util.Pointer(pveSDK.LxcSwap(512)),
-					Tags:            new(pveSDK.Tags),
-				}, *config)
+				require.NotNil(t, vmr)
+			}},
+		{name: `Check guest config`,
+			test: func(t *testing.T) {
+				CheckConfig(t, ctx, cl, guest, expected)
+			}},
+		{name: `Delete guest`,
+			test: func(t *testing.T) {
+				require.NoError(t, vmr.Delete(ctx, cl))
+			}},
+	}
+	for i, test := range tests {
+		t.Run(pad.Left(strconv.Itoa(i), 2, '0')+" "+test.name, test.test)
+	}
+}
+
+func Test_Lxc_Create_Minimal_Privileged_Unset(t *testing.T) {
+	t.Parallel()
+	const guest = pveSDK.GuestID(1002)
+	const node = pveSDK.NodeName(test.FirstNode)
+	const storage = pveSDK.StorageName(test.GuestStorage)
+	const name = pveSDK.GuestName("Test-Lxc-Create-Minimal-Privileged-Unset")
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	require.NoError(t, err)
+	ctx := context.Background()
+	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	set, expected := MinimumConfig(guest, node, storage, nil, name)
+	var vmr *pveSDK.VmRef
+	tests := []struct {
+		name string
+		test func(t *testing.T)
+	}{
+		{name: `Ensure guest does not exist`,
+			test: func(t *testing.T) {
+				require.Error(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+			}},
+		{name: `Create guest`,
+			test: func(t *testing.T) {
+				vmr, err = set.Create(ctx, cl)
+				require.NoError(t, err)
+				require.NotNil(t, vmr)
+			}},
+		{name: `Check guest config`,
+			test: func(t *testing.T) {
+				CheckConfig(t, ctx, cl, guest, expected)
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
