@@ -186,30 +186,30 @@ func (cloudInit QemuCloudInitDisk) Validate() error {
 }
 
 type qemuDisk struct {
-	AsyncIO   QemuDiskAsyncIO
-	Bandwidth QemuDiskBandwidth
-	Cache     QemuDiskCache
-	// TODO custom type
-	File            string         // Only set for Passthrough.
+	LinkedDiskId    *GuestID // Only set for Disk
+	AsyncIO         QemuDiskAsyncIO
+	Cache           QemuDiskCache
 	fileSyntax      diskSyntaxEnum // private enum to determine the syntax of the file path, as this changes depending on the type of backing storage. ie nfs, lvm, local, etc.
 	Format          QemuDiskFormat // Only set for Disk
-	Id              uint           // Only set for Disk
-	LinkedDiskId    *GuestID       // Only set for Disk
 	Serial          QemuDiskSerial
 	SizeInKibibytes QemuDiskSize
+	Type            qemuDiskType
+	WorldWideName   QemuWorldWideName
 	// TODO custom type
-	Storage       string // Only set for Disk
-	VolumePath    string
-	Type          qemuDiskType
-	WorldWideName QemuWorldWideName
-	ImportFrom    string
-	Backup        bool
-	Discard       bool
-	Disk          bool // true = disk, false = passthrough
-	EmulateSSD    bool // Only set for ide,sata,scsi
-	IOThread      bool // Only set for scsi,virtio
-	ReadOnly      bool // Only set for scsi,virtio
-	Replicate     bool
+	File       string // Only set for Passthrough.
+	ImportFrom string
+	// TODO custom type
+	Storage    string // Only set for Disk
+	VolumePath string
+	Bandwidth  QemuDiskBandwidth
+	Id         uint // Only set for Disk
+	Backup     bool
+	Discard    bool
+	Disk       bool // true = disk, false = passthrough
+	EmulateSSD bool // Only set for ide,sata,scsi
+	IOThread   bool // Only set for scsi,virtio
+	ReadOnly   bool // Only set for scsi,virtio
+	Replicate  bool
 }
 
 const (
