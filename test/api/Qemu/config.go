@@ -3,6 +3,7 @@ package api
 import (
 	"strings"
 
+	"github.com/Telmate/proxmox-api-go/internal/body"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/test"
 )
@@ -79,7 +80,7 @@ func MinimumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 func MaximumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestName) (set pveSDK.ConfigQemu, expected *pveSDK.ConfigQemu) {
 	set = pveSDK.ConfigQemu{
 		CPU:         &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
-		Description: new(""),
+		Description: new(body.Alphanumeric + body.Symbols),
 		EfiDisk: &pveSDK.EfiDisk{
 			Size:            1024,
 			Format:          new(pveSDK.QemuDiskFormat("raw")),
@@ -98,7 +99,7 @@ func MaximumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 		Bios:        "seabios",
 		Boot:        " ",
 		CPU:         &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
-		Description: new(""),
+		Description: new(body.Alphanumeric + body.Symbols),
 		EfiDisk: &pveSDK.EfiDisk{
 			Size:            1024,
 			Format:          new(pveSDK.QemuDiskFormat("raw")),

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Telmate/proxmox-api-go/internal/body"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -306,9 +307,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (pa
 	if config.Boot != "" {
 		params["boot"] = config.Boot
 	}
-	if config.Description != nil && (*config.Description != "" || currentConfig.Description != nil) {
-		params[qemuApiKeyDescription] = *config.Description
-	}
 	if config.Hookscript != "" {
 		params["hookscript"] = config.Hookscript
 	}
@@ -440,12 +438,16 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (pa
 	return
 }
 
-func (config ConfigQemu) mapToApiCreate(version Version) (params map[string]any, body *[]byte) {
-	params = config.mapToAPI(ConfigQemu{}, version)
+func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byte) {
+	params := config.mapToAPI(ConfigQemu{}, version)
 	if len(params) == 0 {
 		params = nil
 	}
 	builder := strings.Builder{}
+	if config.Description != nil && *config.Description != "" {
+		builder.WriteString("&" + qemuApiKeyDescription + "=")
+		builder.WriteString(body.Escape(*config.Description))
+	}
 	if config.EfiDisk != nil {
 		config.EfiDisk.mapToApiCreate(&builder)
 	}
@@ -459,18 +461,24 @@ func (config ConfigQemu) mapToApiCreate(version Version) (params map[string]any,
 		}
 	}
 	if builder.Len() > 0 {
-		body = util.Pointer(bytes.NewBufferString(builder.String()[1:]).Bytes())
+		return params, new(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
-	return
+	return params, nil
 }
 
-func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current configQemuUpdate, version Version) (params map[string]any, body *[]byte) {
-	params = config.mapToAPI(*currentLegacy, version)
+func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current configQemuUpdate, version Version) (map[string]any, *[]byte) {
+	params := config.mapToAPI(*currentLegacy, version)
 	if len(params) == 0 {
 		params = nil
 	}
 	builder := strings.Builder{}
 	delete := strings.Builder{}
+	if config.Description != nil {
+		if *config.Description != current.raw.GetDescription() {
+			builder.WriteString("&" + qemuApiKeyDescription + "=")
+			builder.WriteString(body.Escape(*config.Description))
+		}
+	}
 	if config.EfiDisk != nil {
 		if current.efiDisk != nil {
 			config.EfiDisk.mapToApiUpdate(current.efiDisk, &builder, &delete)
@@ -501,9 +509,9 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 		}
 	}
 	if builder.Len() > 0 {
-		body = util.Pointer(bytes.NewBufferString(builder.String()[1:]).Bytes())
+		return params, new(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
-	return
+	return params, nil
 }
 
 func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{}) error {
