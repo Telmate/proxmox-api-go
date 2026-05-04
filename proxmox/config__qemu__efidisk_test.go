@@ -14,31 +14,31 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 			{name: `PreEnrolledKeys True`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					PreEnrolledKeys: util.Pointer(true)}},
-				body: map[string]string{"efidisk0": ":1,pre-enrolled-keys=1"}},
+				body: map[string]string{"efidisk0": "%3A1%2Cpre-enrolled-keys%3D1"}}, // :1,pre-enrolled-keys=1
 			{name: `PreEnrolledKeys False`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					PreEnrolledKeys: util.Pointer(false)}},
-				body: map[string]string{"efidisk0": ":1"}},
+				body: map[string]string{"efidisk0": "%3A1"}}, // :1
 			{name: `Type 2M`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Type: util.Pointer(EfiDiskType2M)}},
-				body: map[string]string{"efidisk0": ":1,efitype=2m"}},
+				body: map[string]string{"efidisk0": "%3A1%2Cefitype%3D2m"}}, // :1,efitype=2m
 			{name: `Type 4M`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Type: util.Pointer(EfiDiskType4M)}},
-				body: map[string]string{"efidisk0": ":1,efitype=4m"}},
+				body: map[string]string{"efidisk0": "%3A1%2Cefitype%3D4m"}}, // :1,efitype=4m
 			{name: `minimal`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Format:  util.Pointer(QemuDiskFormat_Raw),
 					Storage: util.Pointer(StorageName("test"))}},
-				body: map[string]string{"efidisk0": "test:1,format=raw"}},
+				body: map[string]string{"efidisk0": "test%3A1%2Cformat%3Draw"}}, // test:1,format=raw
 			{name: `full`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Format:          util.Pointer(QemuDiskFormat_Qcow2),
 					PreEnrolledKeys: util.Pointer(true),
 					Storage:         util.Pointer(StorageName("test")),
 					Type:            util.Pointer(EfiDiskType4M)}},
-				body: map[string]string{"efidisk0": "test:1,format=qcow2,pre-enrolled-keys=1,efitype=4m"}}},
+				body: map[string]string{"efidisk0": "test%3A1%2Cformat%3Dqcow2%2Cpre-enrolled-keys%3D1%2Cefitype%3D4m"}}}, // test:1,format=qcow2,pre-enrolled-keys=1,efitype=4m
 		createUpdate: []qemuTestCaseAPI{
 			{name: `Delete no effect`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{Delete: true}}}},
@@ -57,7 +57,7 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 					efiDisk: &EfiDisk{
 						PreEnrolledKeys: util.Pointer(true),
 						Storage:         util.Pointer(StorageName("local-lvm"))}},
-				body: map[string]string{"efidisk0": "local-lvm:1"}},
+				body: map[string]string{"efidisk0": "local-lvm%3A1"}}, // local-lvm:1
 			{name: `PreEnrolledKeys False same`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					PreEnrolledKeys: util.Pointer(false)}},
@@ -72,7 +72,7 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 					efiDisk: &EfiDisk{
 						PreEnrolledKeys: util.Pointer(false),
 						Storage:         util.Pointer(StorageName("local-zfs"))}},
-				body: map[string]string{"efidisk0": "local-zfs:1,pre-enrolled-keys=1"}},
+				body: map[string]string{"efidisk0": "local-zfs%3A1%2Cpre-enrolled-keys%3D1"}}, // local-zfs:1,pre-enrolled-keys=1
 			{name: `PreEnrolledKeys True same`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					PreEnrolledKeys: util.Pointer(true)}},
@@ -87,7 +87,7 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 					efiDisk: &EfiDisk{
 						Type:    util.Pointer(EfiDiskType4M),
 						Storage: util.Pointer(StorageName("local-zfs"))}},
-				body: map[string]string{"efidisk0": "local-zfs:1,efitype=2m"}},
+				body: map[string]string{"efidisk0": "local-zfs%3A1%2Cefitype%3D2m"}}, // local-zfs:1,efitype=2m
 			{name: `Type 2M same`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Type: util.Pointer(EfiDiskType2M)}},
@@ -102,7 +102,7 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 					efiDisk: &EfiDisk{
 						Type:    util.Pointer(EfiDiskType2M),
 						Storage: util.Pointer(StorageName("local-zfs"))}},
-				body: map[string]string{"efidisk0": "local-zfs:1"}},
+				body: map[string]string{"efidisk0": "local-zfs%3A1"}}, // local-zfs:1
 			{name: `Type 4M`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Type: util.Pointer(EfiDiskType4M)}},
@@ -111,7 +111,7 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 						Type:    util.Pointer(EfiDiskType2M),
 						Format:  util.Pointer(QemuDiskFormat_Qcow2),
 						Storage: util.Pointer(StorageName("local-zfs"))}},
-				body: map[string]string{"efidisk0": "local-zfs:1,format=qcow2,efitype=4m"}},
+				body: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Dqcow2%2Cefitype%3D4m"}}, // local-zfs:1,format=qcow2,efitype=4m
 			{name: `Type 4M same`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Type: util.Pointer(EfiDiskType4M)}},
@@ -127,7 +127,7 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 						Type:    util.Pointer(EfiDiskType4M),
 						Format:  util.Pointer(QemuDiskFormat_Raw),
 						Storage: util.Pointer(StorageName("local-zfs"))}},
-				body: map[string]string{"efidisk0": "local-zfs:1,format=raw"}},
+				body: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Draw"}}, // local-zfs:1,format=raw
 			{name: `Format no inherit`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Storage: util.Pointer(StorageName("local-lvm")),
@@ -138,7 +138,7 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 						Type:            util.Pointer(EfiDiskType4M),
 						PreEnrolledKeys: util.Pointer(true),
 						Storage:         util.Pointer(StorageName("local-zfs"))}},
-				body: map[string]string{"efidisk0": "local-lvm:1,pre-enrolled-keys=1"}},
+				body: map[string]string{"efidisk0": "local-lvm%3A1%2Cpre-enrolled-keys%3D1"}}, // local-lvm:1,pre-enrolled-keys=1
 			{name: `Format change`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Storage:         util.Pointer(StorageName("local-lvm")),
@@ -150,7 +150,7 @@ func testDataEfiDiskMapToAPI() qemuTestsAPI {
 						Type:            util.Pointer(EfiDiskType2M),
 						PreEnrolledKeys: util.Pointer(true),
 						Storage:         util.Pointer(StorageName("local-zfs"))}},
-				body: map[string]string{"efidisk0": "local-lvm:1,format=raw,efitype=2m"}},
+				body: map[string]string{"efidisk0": "local-lvm%3A1%2Cformat%3Draw%2Cefitype%3D2m"}}, // local-lvm:1,format=raw,efitype=2m
 			{name: `Format, Storage change`,
 				config: &ConfigQemu{EfiDisk: &EfiDisk{
 					Format:  util.Pointer(QemuDiskFormat_Vmdk),

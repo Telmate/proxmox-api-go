@@ -102,12 +102,12 @@ func testDataTagsMapToAPI() qemuTestsAPI {
 				currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
 					"tags": "tag5;tag6"}}},
 				config: &ConfigQemu{Tags: new(Tags{"tag1", "tag2"})},
-				body:   map[string]string{"tags": "tag1,tag2"}}},
+				body:   map[string]string{"tags": "tag1%2Ctag2"}}}, // tag1,tag2
 		update: []qemuTestCaseAPI{
 			{name: `create`,
 				currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{}}},
 				config:        &ConfigQemu{Tags: new(Tags{"tag1", "tag2"})},
-				body:          map[string]string{"tags": "tag1,tag2"}},
+				body:          map[string]string{"tags": "tag1%2Ctag2"}}, // tag1,tag2
 			{name: `empty`,
 				currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
 					"tags": "tag5;tag6"}}},

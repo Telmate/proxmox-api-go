@@ -8,13 +8,14 @@ func Escape(s string) string { return escape(s, encodePveApiToken) }
 func QemuSshKeyEscape(s string) string { return escape(s, encodePveQemuSshKey) }
 
 const Symbols = " !\"#$%&'()*+,-./:;<=>?@[\\]^`_{|}~"
+const Alphanumeric = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRESTUVXYZ1234567890"
 
 type encoding int
 
 const (
-	encodePathSegment   encoding = 1 + iota // "$&+-.:=@_~" as normal characters
-	encodePveApiToken                       // "!'()*-._~" as normal characters
-	encodePveQemuSshKey                     // "$&-._~" as normal characters
+	encodePathSegment   encoding = 1 << iota // "$&+-.:=@_~" as normal characters
+	encodePveApiToken                        // "!'()*-._~" as normal characters
+	encodePveQemuSshKey                      // "$&-._~" as normal characters
 )
 
 func (e encoding) String() string {

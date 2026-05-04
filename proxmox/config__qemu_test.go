@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Telmate/proxmox-api-go/internal/body"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_guest"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_pool"
@@ -970,18 +971,24 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output:        map[string]interface{}{"delete": "cipassword"}}}},
 		{category: `Description`,
 			create: []qemuTestCaseAPI{
-				{name: `Description empty`,
-					config: &ConfigQemu{Description: util.Pointer("")}}},
+				{name: `empty`,
+					config: &ConfigQemu{Description: new("")}}},
 			createUpdate: []qemuTestCaseAPI{
-				{name: `Description set`,
-					config:        &ConfigQemu{Description: util.Pointer("test description")},
-					currentLegacy: ConfigQemu{Description: util.Pointer("old description")},
-					output:        map[string]interface{}{"description": "test description"}}},
+				{name: `set`,
+					config: &ConfigQemu{Description: new(body.Symbols + body.Alphanumeric)},
+					currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
+						"description": "old description"}}},
+					body: map[string]string{"description": "%20!%22%23%24%25%26'()*%2B%2C-.%2F%3A%3B%3C%3D%3E%3F%40%5B%5C%5D%5E%60_%7B%7C%7D~abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRESTUVXYZ1234567890"}}},
 			update: []qemuTestCaseAPI{
-				{name: `Description empty`,
-					config:        &ConfigQemu{Description: util.Pointer("")},
-					currentLegacy: ConfigQemu{Description: util.Pointer("old description")},
-					output:        map[string]interface{}{"description": ""}}}},
+				{name: `clear`,
+					config: &ConfigQemu{Description: new("")},
+					currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
+						"description": "old description"}}},
+					body: map[string]string{"description": ""}},
+				{name: `same`,
+					config: &ConfigQemu{Description: new("old description")},
+					currentUpdate: configQemuUpdate{raw: &rawConfigQemu{a: map[string]any{
+						"description": "old description"}}}}}},
 		{category: `Disks.Ide`,
 			update: []qemuTestCaseAPI{
 				{name: `Disk.Ide.Disk_X NOTHING`,
@@ -4391,7 +4398,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 			t.Run(name, func(*testing.T) {
 				tmpParams, tmpBody := subTest.config.mapToApiCreate(subTest.version)
 				require.Equal(t, subTest.output, tmpParams, name+" Params")
-				testParamsEqual(t, subTest.body, tmpBody, name+" Body")
+				testParamsEqualRaw(t, subTest.body, tmpBody, name+" Body")
 			})
 		}
 		for _, subTest := range append(test.update, test.createUpdate...) {
@@ -4399,7 +4406,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 			t.Run(name, func(*testing.T) {
 				tmpParams, tmpBody := subTest.config.mapToApiUpdate(&subTest.currentLegacy, subTest.currentUpdate, subTest.version)
 				require.Equal(t, subTest.output, tmpParams, name+" Params")
-				testParamsEqual(t, subTest.body, tmpBody, name+" Body")
+				testParamsEqualRaw(t, subTest.body, tmpBody, name+" Body")
 			})
 		}
 	}

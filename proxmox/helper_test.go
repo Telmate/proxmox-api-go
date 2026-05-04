@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,6 +37,26 @@ func testParamsEqual(t *testing.T, expected map[string]string, params *[]byte, m
 	for k, v := range values {
 		if len(v) > 0 {
 			out[k] = v[0]
+		}
+	}
+	require.Equal(t, expected, out, msgAndArgs...)
+}
+
+func testParamsEqualRaw(t *testing.T, expected map[string]string, params *[]byte, msgAndArgs ...any) {
+	if params == nil {
+		require.Nil(t, expected, msgAndArgs...)
+		return
+	}
+
+	values := strings.Split(string(*params), "&")
+
+	out := make(map[string]string)
+	for i := range values {
+		if len(values[i]) > 0 {
+			index := strings.Index(values[i], "=")
+			if index > 0 {
+				out[values[i][0:index]] = values[i][index+1:]
+			}
 		}
 	}
 	require.Equal(t, expected, out, msgAndArgs...)
