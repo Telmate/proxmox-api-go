@@ -12,7 +12,7 @@ const (
 const upperHex = "0123456789ABCDEF"
 
 func escape(s string, mode encoding) string {
-	spaceCount, hexCount := 0, 0
+	hexCount := 0
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if shouldEscape(c, mode) {
@@ -20,7 +20,7 @@ func escape(s string, mode encoding) string {
 		}
 	}
 
-	if spaceCount == 0 && hexCount == 0 {
+	if hexCount == 0 {
 		return s
 	}
 
@@ -61,23 +61,84 @@ func escape(s string, mode encoding) string {
 }
 
 // Return true if the specified character should be escaped
-func shouldEscape(c byte, mode encoding) bool {
-	// Unreserved characters (alphanumeric)
-	if 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9' {
-		return false
-	}
+func shouldEscape(c byte, mode encoding) bool { return table[c]&mode == 0 }
 
-	switch c {
-	case '-', '_', '.', '~': // Unreserved characters (mark)
-		return false
-	case '&', '$':
-		return mode == encodePveApiToken
-	case '=', ':', '@', '+':
-		return mode == encodePveApiToken || mode == encodePveQemuSshKey
-	case singleQuote, '(', ')', '*', '!':
-		return mode != encodePveApiToken
-	}
-
-	// Everything else must be escaped.
-	return true
+var table = [256]encoding{
+	'!':  encodePveApiToken,
+	'$':  encodePathSegment | encodePveQemuSshKey,
+	'&':  encodePathSegment | encodePveQemuSshKey,
+	'\'': encodePveApiToken,
+	'(':  encodePveApiToken,
+	')':  encodePveApiToken,
+	'*':  encodePveApiToken,
+	'+':  encodePathSegment,
+	'-':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'.':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'0':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'1':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'2':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'3':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'4':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'5':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'6':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'7':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'8':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'9':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	':':  encodePathSegment,
+	'=':  encodePathSegment,
+	'@':  encodePathSegment,
+	'A':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'B':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'C':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'D':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'E':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'F':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'G':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'H':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'I':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'J':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'K':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'L':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'M':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'N':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'O':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'P':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'Q':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'R':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'S':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'T':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'U':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'V':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'W':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'X':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'Y':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'Z':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'_':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'a':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'b':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'c':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'd':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'e':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'f':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'g':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'h':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'i':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'j':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'k':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'l':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'm':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'n':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'o':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'p':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'q':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'r':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	's':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	't':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'u':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'v':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'w':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'x':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'y':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'z':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
+	'~':  encodePathSegment | encodePveApiToken | encodePveQemuSshKey,
 }
