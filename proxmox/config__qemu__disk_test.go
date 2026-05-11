@@ -1155,10 +1155,9 @@ func Test_QemuStorages_selectInitialResize(t *testing.T) {
 		},
 		{name: "No current disks 5 x kibibyte",
 			input: testInput{currentStorages: &QemuStorages{
-				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}},
-				Sata:   &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{}}},
-				Scsi:   &QemuScsiDisks{Disk_6: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{}}},
-				VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}},
+				Ide:  &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}},
+				Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{}}},
+				Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{}}},
 			}, newStorages: QemuStorages{
 				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{SizeInKibibytes: 7867}}},
 				Sata:   &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{SizeInKibibytes: 985947483}}},

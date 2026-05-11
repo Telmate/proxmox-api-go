@@ -1042,11 +1042,6 @@ func (q QemuStorages) listCloudInitDisk() string {
 			return disk
 		}
 	}
-	if q.VirtIO != nil {
-		if disk := q.VirtIO.listCloudInitDisk(); disk != "" {
-			return disk
-		}
-	}
 	return ""
 }
 

@@ -72,16 +72,6 @@ type QemuVirtIODisks struct {
 	Disk_15 *QemuVirtIOStorage `json:"15,omitempty"`
 }
 
-func (q QemuVirtIODisks) listCloudInitDisk() string {
-	diskMap := q.mapToIntMap()
-	for i := range diskMap {
-		if diskMap[i] != nil && diskMap[i].CloudInit != nil {
-			return qemuPrefixApiKeyDiskVirtIO + strconv.Itoa(int(i))
-		}
-	}
-	return ""
-}
-
 func (disks QemuVirtIODisks) mapToApiValues(currentDisks *QemuVirtIODisks, params map[string]any, delete *strings.Builder) {
 	tmpCurrentDisks := QemuVirtIODisks{}
 	if currentDisks != nil {
@@ -281,8 +271,6 @@ func (passthrough QemuVirtIOPassthrough) Validate() error {
 }
 
 type QemuVirtIOStorage struct {
-	CdRom       *QemuCdRom             `json:"cdrom,omitempty"`
-	CloudInit   *QemuCloudInitDisk     `json:"cloudinit,omitempty"`
 	Disk        *QemuVirtIODisk        `json:"disk,omitempty"`
 	Passthrough *QemuVirtIOPassthrough `json:"passthrough,omitempty"`
 	Delete      bool                   `json:"delete,omitempty"`
@@ -294,9 +282,7 @@ func (storage *QemuVirtIOStorage) convertDataStructure() *qemuStorage {
 		return nil
 	}
 	generalizedStorage := qemuStorage{
-		CdRom:     storage.CdRom,
-		CloudInit: storage.CloudInit,
-		delete:    storage.Delete,
+		delete: storage.Delete,
 	}
 	if storage.Disk != nil {
 		generalizedStorage.Disk = storage.Disk.convertDataStructure()
@@ -326,14 +312,6 @@ func (storage *QemuVirtIOStorage) convertDataStructureMark() *qemuDiskMark {
 func (QemuVirtIOStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuVirtIOStorage {
 	diskData, _, _ := strings.Cut(param, ",")
 	settings := splitStringOfSettings(param)
-	tmpCdRom := qemuCdRom{}.mapToStruct(diskData, settings)
-	if tmpCdRom != nil {
-		if tmpCdRom.CdRom {
-			return &QemuVirtIOStorage{CdRom: QemuCdRom{}.mapToStruct(*tmpCdRom)}
-		} else {
-			return &QemuVirtIOStorage{CloudInit: QemuCloudInitDisk{}.mapToStruct(*tmpCdRom)}
-		}
-	}
 
 	tmpDisk := qemuDisk{}.mapToStruct(diskData, settings, LinkedVmId)
 	if tmpDisk == nil {
@@ -383,16 +361,6 @@ func (storage QemuVirtIOStorage) Validate() (err error) {
 func (storage QemuVirtIOStorage) validate() (CloudInit uint8, err error) {
 	// First check if more than one item is nil
 	var subTypeSet bool
-	if storage.CdRom != nil {
-		subTypeSet = true
-	}
-	if storage.CloudInit != nil {
-		if err = diskSubtypeSet(subTypeSet); err != nil {
-			return
-		}
-		subTypeSet = true
-		CloudInit = 1
-	}
 	if storage.Disk != nil {
 		if err = diskSubtypeSet(subTypeSet); err != nil {
 			return
@@ -405,16 +373,6 @@ func (storage QemuVirtIOStorage) validate() (CloudInit uint8, err error) {
 		}
 	}
 	// Validate sub items
-	if storage.CdRom != nil {
-		if err = storage.CdRom.Validate(); err != nil {
-			return
-		}
-	}
-	if storage.CloudInit != nil {
-		if err = storage.CloudInit.Validate(); err != nil {
-			return
-		}
-	}
 	if storage.Disk != nil {
 		if err = storage.Disk.Validate(); err != nil {
 			return
