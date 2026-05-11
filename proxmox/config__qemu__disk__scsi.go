@@ -15,7 +15,6 @@ type QemuScsiDisk struct {
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
 	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Storage         string            `json:"storage"`
-	syntax          diskSyntaxEnum
 	volumePath      string
 	WorldWideName   QemuWorldWideName `json:"wwn"`
 	ImportFrom      string            `json:"import_from,omitempty"`
@@ -46,7 +45,6 @@ func (disk *QemuScsiDisk) convertDataStructure() *qemuDisk {
 		SizeInKibibytes: disk.SizeInKibibytes,
 		Storage:         disk.Storage,
 		VolumePath:      disk.volumePath,
-		fileSyntax:      disk.syntax,
 		Type:            scsi,
 		WorldWideName:   disk.WorldWideName,
 		ImportFrom:      disk.ImportFrom,
@@ -101,7 +99,7 @@ func (q QemuScsiDisks) listCloudInitDisk() string {
 	return ""
 }
 
-func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID, linkedVmId GuestID, params map[string]interface{}, delete string) string {
+func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, params map[string]any, delete *strings.Builder) {
 	tmpCurrentDisks := QemuScsiDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -112,9 +110,8 @@ func (disks QemuScsiDisks) mapToApiValues(currentDisks *QemuScsiDisks, vmID, lin
 		if diskMap[i] == nil {
 			continue
 		}
-		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, linkedVmId, QemuDiskId("scsi"+strconv.Itoa(int(i))), params, delete)
+		diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), QemuDiskId("scsi"+strconv.Itoa(int(i))), params, delete)
 	}
-	return delete
 }
 
 func (disks QemuScsiDisks) mapToIntMap() map[uint8]*QemuScsiStorage {
@@ -445,17 +442,16 @@ func (QemuScsiStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuScsiS
 			Discard:         tmpDisk.Discard,
 			EmulateSSD:      tmpDisk.EmulateSSD,
 			Format:          tmpDisk.Format,
-			Id:              tmpDisk.Id,
 			IOThread:        tmpDisk.IOThread,
+			Id:              tmpDisk.Id,
 			LinkedDiskId:    tmpDisk.LinkedDiskId,
 			ReadOnly:        tmpDisk.ReadOnly,
 			Replicate:       tmpDisk.Replicate,
 			Serial:          tmpDisk.Serial,
 			SizeInKibibytes: tmpDisk.SizeInKibibytes,
 			Storage:         tmpDisk.Storage,
-			syntax:          tmpDisk.fileSyntax,
-			volumePath:      "",
 			WorldWideName:   tmpDisk.WorldWideName,
+			volumePath:      tmpDisk.VolumePath,
 		}}
 	}
 	return &QemuScsiStorage{Passthrough: &QemuScsiPassthrough{

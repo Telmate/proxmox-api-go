@@ -15,7 +15,6 @@ type QemuSataDisk struct {
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
 	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Storage         string            `json:"storage"`
-	syntax          diskSyntaxEnum
 	volumePath      string
 	WorldWideName   QemuWorldWideName `json:"wwn"`
 	ImportFrom      string            `json:"import_from,omitempty"`
@@ -34,7 +33,6 @@ func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
 		Discard:         disk.Discard,
 		Disk:            true,
 		EmulateSSD:      disk.EmulateSSD,
-		fileSyntax:      disk.syntax,
 		Format:          disk.Format,
 		Id:              disk.Id,
 		LinkedDiskId:    disk.LinkedDiskId,
@@ -72,7 +70,7 @@ func (q QemuSataDisks) listCloudInitDisk() string {
 	return ""
 }
 
-func (disks QemuSataDisks) mapToApiValues(currentDisks *QemuSataDisks, vmID, LinkedVmId GuestID, params map[string]interface{}, delete string) string {
+func (disks QemuSataDisks) mapToApiValues(currentDisks *QemuSataDisks, params map[string]any, delete *strings.Builder) {
 	tmpCurrentDisks := QemuSataDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -83,9 +81,8 @@ func (disks QemuSataDisks) mapToApiValues(currentDisks *QemuSataDisks, vmID, Lin
 		if diskMap[i] == nil {
 			continue
 		}
-		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, LinkedVmId, QemuDiskId("sata"+strconv.Itoa(int(i))), params, delete)
+		diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), QemuDiskId("sata"+strconv.Itoa(int(i))), params, delete)
 	}
-	return delete
 }
 
 func (disks QemuSataDisks) mapToIntMap() map[uint8]*QemuSataStorage {
@@ -293,9 +290,8 @@ func (QemuSataStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuSataS
 			Serial:          tmpDisk.Serial,
 			SizeInKibibytes: tmpDisk.SizeInKibibytes,
 			Storage:         tmpDisk.Storage,
-			syntax:          tmpDisk.fileSyntax,
-			volumePath:      "",
 			WorldWideName:   tmpDisk.WorldWideName,
+			volumePath:      tmpDisk.VolumePath,
 		}}
 	}
 	return &QemuSataStorage{Passthrough: &QemuSataPassthrough{

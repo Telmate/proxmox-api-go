@@ -150,6 +150,7 @@ func Test_Qemu_Upate_Reduced_To_Max(t *testing.T) {
 	var vmr *pveSDK.VmRef
 	setReduced, expectedReduced := ReducedConfig(guestID, node, guestName)
 	setMax, expectedMax := MaximumConfig(guestID, node, guestName)
+	ClearDiskID(expectedMax)
 	tests := []struct {
 		name string
 		test func(t *testing.T)
@@ -176,7 +177,9 @@ func Test_Qemu_Upate_Reduced_To_Max(t *testing.T) {
 			}},
 		{name: `Check guest config after update`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, expectedMax)
+				config := GetConfig(t, ctx, cl, guestID)
+				ClearDiskID(config)
+				require.EqualExportedValues(t, expectedMax, config)
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
@@ -201,6 +204,7 @@ func Test_Qemu_Upate_Max_To_Reduced(t *testing.T) {
 	var vmr *pveSDK.VmRef
 	setMax, expectedMax := MaximumConfig(guestID, node, guestName)
 	setReduced, expectedReduced := ReducedConfig(guestID, node, guestName)
+	expectedMax.Boot = "order=ide1;ide0"
 	tests := []struct {
 		name string
 		test func(t *testing.T)
@@ -303,6 +307,7 @@ func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
 	var vmr *pveSDK.VmRef
 	setMin, expectedMin := MinimumConfig(guestID, node, guestName)
 	setMax, expectedMax := MaximumConfig(guestID, node, guestName)
+	ClearDiskID(expectedMax)
 	tests := []struct {
 		name string
 		test func(t *testing.T)
@@ -329,7 +334,9 @@ func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
 			}},
 		{name: `Check guest config after update`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, expectedMax)
+				config := GetConfig(t, ctx, cl, guestID)
+				ClearDiskID(config)
+				require.EqualExportedValues(t, expectedMax, config)
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {

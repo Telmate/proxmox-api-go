@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_qemu"
 	"github.com/stretchr/testify/require"
 )
@@ -92,90 +91,6 @@ func Test_QemuCloudInitDisk_Validate(t *testing.T) {
 	}
 }
 
-func Test_qemuDisk_formatDisk(t *testing.T) {
-	t.Parallel()
-	type localInput struct {
-		vmID           GuestID
-		linkedVmId     GuestID
-		currentStorage string
-		currentFormat  QemuDiskFormat
-		syntax         diskSyntaxEnum
-		disk           qemuDisk
-	}
-	tests := []struct {
-		name   string
-		input  localInput
-		output string
-	}{
-		{name: "linked file",
-			input: localInput{
-				vmID:           100,
-				linkedVmId:     110,
-				currentStorage: "storage",
-				currentFormat:  QemuDiskFormat_Qcow2,
-				syntax:         diskSyntaxFile,
-				disk: qemuDisk{
-					Id:           6,
-					Storage:      "storage",
-					Format:       QemuDiskFormat_Qcow2,
-					LinkedDiskId: util.Pointer(GuestID(1)),
-				},
-			},
-			output: "storage:110/base-110-disk-1.qcow2/100/vm-100-disk-6.qcow2",
-		},
-		{name: "linked volume",
-			input: localInput{
-				vmID:           100,
-				linkedVmId:     110,
-				currentStorage: "storage",
-				currentFormat:  QemuDiskFormat_Raw,
-				syntax:         diskSyntaxVolume,
-				disk: qemuDisk{
-					Id:           12,
-					Storage:      "storage",
-					Format:       QemuDiskFormat_Qcow,
-					LinkedDiskId: util.Pointer(GuestID(8)),
-				},
-			},
-			output: "storage:base-110-disk-8/vm-100-disk-12",
-		},
-		{name: "normal file",
-			input: localInput{
-				vmID:           100,
-				currentStorage: "storage",
-				currentFormat:  QemuDiskFormat_Qcow2,
-				syntax:         diskSyntaxFile,
-				disk: qemuDisk{
-					Id:      9,
-					Storage: "storage",
-					Format:  QemuDiskFormat_Qcow2,
-				},
-			},
-			output: "storage:100/vm-100-disk-9.qcow2",
-		},
-		{name: "normal volume",
-			input: localInput{
-				vmID:           100,
-				currentStorage: "storage",
-				currentFormat:  QemuDiskFormat_Qcow2,
-				syntax:         diskSyntaxVolume,
-				disk: qemuDisk{
-					Id:      45,
-					Storage: "storage",
-					Format:  QemuDiskFormat_Qed,
-				},
-			},
-			output: "storage:vm-100-disk-45",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			result := test.input.disk.formatDisk(test.input.vmID, test.input.linkedVmId, test.input.currentStorage, test.input.currentFormat, test.input.syntax)
-			require.Equal(t, test.output, result, test.name)
-		})
-	}
-}
-
 func Test_qemuDisk_mapToStruct(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -211,62 +126,84 @@ func Test_qemuDisk_mapToStruct(t *testing.T) {
 	}
 }
 
-func Test_qemuDisk_parseDisk(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name   string
-		input  string
-		output qemuDisk
+func test_qemuDisk_parseDisk_data() []struct {
+	name     string
+	input    string
+	output   qemuDisk
+	linkedID GuestID
+} {
+	return []struct {
+		name     string
+		input    string
+		output   qemuDisk
+		linkedID GuestID
 	}{
-		{name: "linked file",
-			input: "storage:110/base-110-disk-1.qcow2/100/vm-100-disk-6.qcow2",
+		{name: `linked file`,
+			input:    "storage:110/base-110-disk-1.qcow2/100/vm-100-disk-6.qcow2",
+			linkedID: 110,
 			output: qemuDisk{
-				Id:           6,
-				Storage:      "storage",
-				VolumePath:   "110/base-110-disk-1.qcow2/100/vm-100-disk-6.qcow2",
 				Format:       QemuDiskFormat_Qcow2,
-				LinkedDiskId: util.Pointer(GuestID(1)),
-				fileSyntax:   diskSyntaxFile,
-			},
-		},
-		{name: "linked volume",
-			input: "storage:base-110-disk-8/vm-100-disk-12",
-			output: qemuDisk{
-				Id:           12,
+				Id:           6,
+				LinkedDiskId: new(GuestID(1)),
 				Storage:      "storage",
-				VolumePath:   "base-110-disk-8/vm-100-disk-12",
+				VolumePath:   "110/base-110-disk-1.qcow2/100/vm-100-disk-6.qcow2"}},
+		{name: `linked volume raw`,
+			input:    "storage:base-110-disk-8/vm-100-disk-12",
+			linkedID: 110,
+			output: qemuDisk{
 				Format:       QemuDiskFormat_Raw,
-				LinkedDiskId: util.Pointer(GuestID(8)),
-				fileSyntax:   diskSyntaxVolume,
-			},
-		},
-		{name: "normal file",
+				Id:           12,
+				LinkedDiskId: new(GuestID(8)),
+				Storage:      "storage",
+				VolumePath:   "base-110-disk-8/vm-100-disk-12"}},
+		{name: `linked volume non raw`,
+			input:    "storage:base-6403-disk-1/vm-100-disk-0.qcow2",
+			linkedID: 6403,
+			output: qemuDisk{
+				Format:       QemuDiskFormat_Qcow2,
+				Id:           0,
+				LinkedDiskId: new(GuestID(1)),
+				Storage:      "storage",
+				VolumePath:   "base-6403-disk-1/vm-100-disk-0.qcow2"}},
+		{name: `normal file`,
 			input: "storage:100/vm-100-disk-9.qcow2",
 			output: qemuDisk{
+				Format:     QemuDiskFormat_Qcow2,
 				Id:         9,
 				Storage:    "storage",
-				VolumePath: "100/vm-100-disk-9.qcow2",
-				Format:     QemuDiskFormat_Qcow2,
-				fileSyntax: diskSyntaxFile,
-			},
-		},
-		{name: "normal volume",
+				VolumePath: "100/vm-100-disk-9.qcow2"}},
+		{name: `normal volume`,
 			input: "storage:vm-100-disk-45",
 			output: qemuDisk{
+				Format:     QemuDiskFormat_Raw,
 				Id:         45,
 				Storage:    "storage",
-				VolumePath: "vm-100-disk-45",
-				Format:     QemuDiskFormat_Raw,
-				fileSyntax: diskSyntaxVolume,
-			},
-		},
+				VolumePath: "vm-100-disk-45"}},
 	}
+}
+
+func Benchmark_qemuDisk_parseDisk(b *testing.B) {
+	tests := test_qemuDisk_parseDisk_data()
+	var linkedVmId GuestID
+	linkedPTR := &linkedVmId
+	for b.Loop() {
+		for _, test := range tests {
+			disk := &qemuDisk{}
+			disk.parseDisk(test.input, linkedPTR)
+		}
+	}
+}
+
+func Test_qemuDisk_parseDisk(t *testing.T) {
+	t.Parallel()
+	tests := test_qemuDisk_parseDisk_data()
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
 			var linkedVmId GuestID
-			disk := qemuDisk{}
-			disk.Id, disk.Storage, disk.VolumePath, disk.Format, disk.LinkedDiskId, disk.fileSyntax = qemuDisk{}.parseDisk(test.input, &linkedVmId)
-			require.Equal(t, test.output, disk, test.name)
+			disk := &qemuDisk{}
+			disk.parseDisk(test.input, &linkedVmId)
+			require.Equal(t, &test.output, disk)
+			require.Equal(t, test.linkedID, linkedVmId)
 		})
 	}
 }
@@ -1218,10 +1155,9 @@ func Test_QemuStorages_selectInitialResize(t *testing.T) {
 		},
 		{name: "No current disks 5 x kibibyte",
 			input: testInput{currentStorages: &QemuStorages{
-				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}},
-				Sata:   &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{}}},
-				Scsi:   &QemuScsiDisks{Disk_6: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{}}},
-				VirtIO: &QemuVirtIODisks{Disk_7: &QemuVirtIOStorage{CdRom: &QemuCdRom{}}},
+				Ide:  &QemuIdeDisks{Disk_0: &QemuIdeStorage{CdRom: &QemuCdRom{}}},
+				Sata: &QemuSataDisks{Disk_5: &QemuSataStorage{Passthrough: &QemuSataPassthrough{}}},
+				Scsi: &QemuScsiDisks{Disk_6: &QemuScsiStorage{CloudInit: &QemuCloudInitDisk{}}},
 			}, newStorages: QemuStorages{
 				Ide:    &QemuIdeDisks{Disk_0: &QemuIdeStorage{Disk: &QemuIdeDisk{SizeInKibibytes: 7867}}},
 				Sata:   &QemuSataDisks{Disk_5: &QemuSataStorage{Disk: &QemuSataDisk{SizeInKibibytes: 985947483}}},

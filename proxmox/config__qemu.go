@@ -145,6 +145,8 @@ type (
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
+	// Deprecated
+	Iso              *IsoFile              `json:"iso,omitempty"`  // Same as Disks.Ide.Disk_2.CdRom.Iso
 	ID               *GuestID              `json:"id,omitempty"`   // Required for creation, cannot be changed
 	Node             *NodeName             `json:"node,omitempty"` // Required for creation
 	Agent            *QemuGuestAgent       `json:"agent,omitempty"`
@@ -162,7 +164,6 @@ type ConfigQemu struct {
 	HaState          string                `json:"hastate,omitempty"` // TODO should be custom type with enum
 	Hookscript       string                `json:"hookscript,omitempty"`
 	Hotplug          string                `json:"hotplug,omitempty"`   // TODO should be a struct
-	Iso              *IsoFile              `json:"iso,omitempty"`       // Same as Disks.Ide.Disk_2.CdRom.Iso
 	LinkedID         *GuestID              `json:"linked_id,omitempty"` // Only returned setting it has no effect
 	Machine          string                `json:"machine,omitempty"`   // TODO should be custom type with enum
 	Memory           *QemuMemory           `json:"memory,omitempty"`
@@ -285,16 +286,12 @@ func (config *ConfigQemu) defaults() {
 	}
 }
 
-func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (params map[string]interface{}) {
+func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (params map[string]interface{}) {
 	// TODO check if cloudInit settings changed, they require a reboot to take effect.
 	var itemsToDelete string
 
 	params = map[string]any{}
 
-	var guestID GuestID
-	if config.ID != nil {
-		guestID = *config.ID
-	}
 	if config.Args != "" {
 		params["args"] = config.Args
 	}
@@ -373,25 +370,6 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (pa
 			config.Disks.Ide.Disk_2.CdRom = &QemuCdRom{Iso: config.Iso}
 		}
 	}
-	// Disks
-	if currentConfig.Disks != nil {
-		if config.Disks != nil {
-			// Create,Update,Delete
-			var linkedID GuestID
-			if currentConfig.LinkedID != nil {
-				linkedID = *currentConfig.LinkedID
-			}
-			delete := config.Disks.mapToApiValues(*currentConfig.Disks, guestID, linkedID, params)
-			if delete != "" {
-				itemsToDelete = AddToList(itemsToDelete, delete)
-			}
-		}
-	} else {
-		if config.Disks != nil {
-			// Create
-			config.Disks.mapToApiValues(QemuStorages{}, guestID, 0, params)
-		}
-	}
 
 	if config.CPU != nil {
 		itemsToDelete += config.CPU.mapToApi(currentConfig.CPU, params, version)
@@ -440,13 +418,13 @@ func (config ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (pa
 
 func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byte) {
 	params := config.mapToAPI(ConfigQemu{}, version)
-	if len(params) == 0 {
-		params = nil
-	}
 	builder := strings.Builder{}
 	if config.Description != nil && *config.Description != "" {
 		builder.WriteString("&" + qemuApiKeyDescription + "=")
 		builder.WriteString(body.Escape(*config.Description))
+	}
+	if config.Disks != nil {
+		config.Disks.mapToApiCreate(params)
 	}
 	if config.EfiDisk != nil {
 		config.EfiDisk.mapToApiCreate(&builder)
@@ -460,6 +438,9 @@ func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byt
 			builder.WriteString(v)
 		}
 	}
+	if len(params) == 0 {
+		params = nil
+	}
 	if builder.Len() > 0 {
 		return params, new(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
@@ -468,15 +449,19 @@ func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byt
 
 func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current configQemuUpdate, version Version) (map[string]any, *[]byte) {
 	params := config.mapToAPI(*currentLegacy, version)
-	if len(params) == 0 {
-		params = nil
-	}
 	builder := strings.Builder{}
 	delete := strings.Builder{}
 	if config.Description != nil {
 		if *config.Description != current.raw.GetDescription() {
 			builder.WriteString("&" + qemuApiKeyDescription + "=")
 			builder.WriteString(body.Escape(*config.Description))
+		}
+	}
+	if config.Disks != nil {
+		if current.disks != nil { // Update
+			config.Disks.mapToApiUpdate(*current.disks, params, &delete)
+		} else { // Create
+			config.Disks.mapToApiCreate(params)
 		}
 	}
 	if config.EfiDisk != nil {
@@ -505,8 +490,11 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 			params["delete"] = v.(string) + delete.String()
 		} else {
 			builder.WriteString("&delete=")
-			builder.WriteString(delete.String()[1:]) // remove leading comma
+			builder.WriteString(delete.String()[1:]) // remove leading '&'
 		}
+	}
+	if len(params) == 0 {
+		params = nil
 	}
 	if builder.Len() > 0 {
 		return params, new(bytes.NewBufferString(builder.String()[1:]).Bytes())
@@ -676,18 +664,21 @@ func (config ConfigQemu) updateNoCheck(
 	}
 
 	var markedDisks qemuUpdateChanges
-	if config.Disks != nil && currentLegacy.Disks != nil {
-		markedDisks = *config.Disks.markDiskChanges(*currentLegacy.Disks)
-		for _, e := range markedDisks.Move { // move disk to different storage or change disk format
-			_, err = e.move(ctx, true, vmr, client)
-			if err != nil {
-				return
+	if config.Disks != nil {
+		updateConfig.disks, _ = updateConfig.raw.GetDisks()
+		if updateConfig.disks != nil {
+			markedDisks = *config.Disks.markDiskChanges(*updateConfig.disks)
+			for _, e := range markedDisks.Move { // move disk to different storage or change disk format
+				_, err = e.move(ctx, true, vmr, client)
+				if err != nil {
+					return
+				}
 			}
+			if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
+				return false, err
+			}
+			config.Disks.cloudInitRemove(*updateConfig.disks, deleteBuilder)
 		}
-		if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
-			return false, err
-		}
-		config.Disks.cloudInitRemove(*currentLegacy.Disks, deleteBuilder)
 	}
 
 	if config.TPM != nil && currentLegacy.TPM != nil { // delete or move TPM
@@ -1323,6 +1314,7 @@ func (c ConfigQemu) String() string { // String is for fmt.Stringer.
 
 // We have some special properties as they would have to be decoded more than once.
 type configQemuUpdate struct {
+	disks   *QemuStorages
 	efiDisk *EfiDisk
 	raw     *rawConfigQemu
 }

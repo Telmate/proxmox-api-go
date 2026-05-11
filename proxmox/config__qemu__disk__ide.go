@@ -15,7 +15,6 @@ type QemuIdeDisk struct {
 	Serial          QemuDiskSerial    `json:"serial,omitempty"`
 	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Storage         string            `json:"storage"`
-	syntax          diskSyntaxEnum
 	volumePath      string
 	WorldWideName   QemuWorldWideName `json:"wwn"`
 	ImportFrom      string            `json:"import_from,omitempty"`
@@ -34,7 +33,6 @@ func (disk *QemuIdeDisk) convertDataStructure() *qemuDisk {
 		Discard:         disk.Discard,
 		Disk:            true,
 		EmulateSSD:      disk.EmulateSSD,
-		fileSyntax:      disk.syntax,
 		Format:          disk.Format,
 		Id:              disk.Id,
 		LinkedDiskId:    disk.LinkedDiskId,
@@ -70,7 +68,7 @@ func (q QemuIdeDisks) listCloudInitDisk() string {
 	return ""
 }
 
-func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID GuestID, LinkedVmId GuestID, params map[string]interface{}, delete string) string {
+func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, params map[string]any, delete *strings.Builder) {
 	tmpCurrentDisks := QemuIdeDisks{}
 	if currentDisks != nil {
 		tmpCurrentDisks = *currentDisks
@@ -81,9 +79,8 @@ func (disks QemuIdeDisks) mapToApiValues(currentDisks *QemuIdeDisks, vmID GuestI
 		if diskMap[i] == nil {
 			continue
 		}
-		delete = diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), vmID, LinkedVmId, QemuDiskId("ide"+strconv.Itoa(int(i))), params, delete)
+		diskMap[i].convertDataStructure().mapToApiValues(currentDiskMap[i].convertDataStructure(), QemuDiskId("ide"+strconv.Itoa(int(i))), params, delete)
 	}
-	return delete
 }
 
 func (disks QemuIdeDisks) mapToIntMap() map[uint8]*QemuIdeStorage {
@@ -283,8 +280,7 @@ func (QemuIdeStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuIdeSto
 			Serial:          tmpDisk.Serial,
 			SizeInKibibytes: tmpDisk.SizeInKibibytes,
 			Storage:         tmpDisk.Storage,
-			syntax:          tmpDisk.fileSyntax,
-			volumePath:      "",
+			volumePath:      tmpDisk.VolumePath,
 			WorldWideName:   tmpDisk.WorldWideName,
 		}}
 	}
