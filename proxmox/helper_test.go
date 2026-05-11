@@ -53,7 +53,7 @@ func testParamsEqualRaw(t *testing.T, expected map[string]string, params *[]byte
 	out := make(map[string]string)
 	for i := range values {
 		if len(values[i]) > 0 {
-			index := strings.Index(values[i], "=")
+			index := strings.IndexByte(values[i], '=')
 			if index > 0 {
 				out[values[i][0:index]] = values[i][index+1:]
 			}

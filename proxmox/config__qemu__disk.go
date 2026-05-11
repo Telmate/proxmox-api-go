@@ -12,13 +12,6 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
-type diskSyntaxEnum bool
-
-const (
-	diskSyntaxFile   diskSyntaxEnum = false
-	diskSyntaxVolume diskSyntaxEnum = true
-)
-
 type IsoFile struct {
 	File    string `json:"file"`
 	Storage string `json:"storage"`
@@ -189,7 +182,6 @@ type qemuDisk struct {
 	LinkedDiskId    *GuestID // Only set for Disk
 	AsyncIO         QemuDiskAsyncIO
 	Cache           QemuDiskCache
-	fileSyntax      diskSyntaxEnum // private enum to determine the syntax of the file path, as this changes depending on the type of backing storage. ie nfs, lvm, local, etc.
 	Format          QemuDiskFormat // Only set for Disk
 	Serial          QemuDiskSerial
 	SizeInKibibytes QemuDiskSize
@@ -218,155 +210,135 @@ const (
 	Error_QemuDisk_Storage           string = "storage may not be empty"
 )
 
-// create the disk string for the api
-func (disk qemuDisk) formatDisk(vmID, LinkedVmId GuestID, currentStorage string, currentFormat QemuDiskFormat, syntax diskSyntaxEnum) (settings string) {
-	tmpId := strconv.Itoa(int(vmID))
-	// vm-100-disk-0
-	settings = "vm-" + tmpId + "-disk-" + strconv.Itoa(int(disk.Id))
-	switch syntax {
-	case diskSyntaxFile:
-		// format is ignored when syntax is diskSyntaxVolume
-		// normal disk syntax
-		// 100/vm-100-disk-0.raw
-		settings = tmpId + "/" + settings + "." + string(disk.Format)
-		if disk.LinkedDiskId != nil && disk.Storage == currentStorage && disk.Format == currentFormat {
-			// linked clone disk syntax
-			// 110/base-110-disk-1.raw/100/vm-100-disk-0.raw
-			tmpId = strconv.Itoa(int(LinkedVmId))
-			settings = tmpId + "/base-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.LinkedDiskId)) + "." + string(disk.Format) + "/" + settings
-		}
-	case diskSyntaxVolume:
-		// normal disk syntax
-		// vm-100-disk-0
-		if disk.LinkedDiskId != nil && disk.Storage == currentStorage {
-			// linked clone disk syntax
-			// base-110-disk-1/vm-100-disk-0
-			tmpId = strconv.Itoa(int(LinkedVmId))
-			settings = "base-" + tmpId + "-disk-" + strconv.Itoa(int(*disk.LinkedDiskId)) + "/" + settings
-		}
-	}
-	// storage:100/vm-100-disk-0.raw
-	// storage:110/base-110-disk-1.raw/100/vm-100-disk-0.raw
-	// storage:vm-100-disk-0
-	// storage:base-110-disk-1/vm-100-disk-0
-	settings = disk.Storage + ":" + settings
-	return
-}
-
 // Maps all the disk related settings to api values proxmox understands.
-func (disk qemuDisk) mapToApiValues(vmID, LinkedVmId GuestID, currentStorage string, currentFormat QemuDiskFormat, syntax diskSyntaxEnum, create bool) (settings string) {
+func (disk qemuDisk) mapToApiValues(create bool) string {
+	builder := strings.Builder{}
 	if disk.Storage != "" {
+		builder.WriteString(disk.Storage)
 		if create {
 			if disk.ImportFrom != "" {
-				settings = disk.Storage + ":0,import-from=" + disk.ImportFrom
+				builder.WriteString(":0,import-from=")
+				builder.WriteString(disk.ImportFrom)
 			} else if disk.SizeInKibibytes%gibibyte == 0 {
-				settings = disk.Storage + ":" + strconv.FormatInt(int64(disk.SizeInKibibytes/gibibyte), 10)
+				builder.WriteRune(':')
+				builder.WriteString(strconv.FormatInt(int64(disk.SizeInKibibytes/gibibyte), 10))
 			} else {
-				settings = disk.Storage + ":0.001"
+				builder.WriteString(":0.001")
 			}
 		} else {
-			if disk.VolumePath != "" {
-				settings = disk.Storage + ":" + disk.VolumePath
-			} else {
-				settings = disk.formatDisk(vmID, LinkedVmId, currentStorage, currentFormat, syntax)
-			}
+			builder.WriteRune(':')
+			builder.WriteString(disk.VolumePath)
 		}
 	}
 
 	if disk.File != "" {
-		settings = disk.File
+		builder.WriteString(disk.File)
 	}
 	// Set File
 
 	if disk.AsyncIO != "" {
-		settings = settings + ",aio=" + string(disk.AsyncIO)
+		builder.WriteString(",aio=")
+		builder.WriteString(disk.AsyncIO.String())
 	}
 	if !disk.Backup {
-		settings = settings + ",backup=0"
+		builder.WriteString(",backup=0")
 	}
 	if disk.Cache != "" {
-		settings = settings + ",cache=" + string(disk.Cache)
+		builder.WriteString(",cache=")
+		builder.WriteString(disk.Cache.String())
 	}
 	if disk.Discard {
-		settings = settings + ",discard=on"
+		builder.WriteString(",discard=on")
 	}
 	if disk.Format != "" && create {
-		settings = settings + ",format=" + string(disk.Format)
+		builder.WriteString(",format=")
+		builder.WriteString(disk.Format.String())
 	}
 	// media
 
 	if disk.Bandwidth.Iops.ReadLimit.Concurrent != 0 {
-		settings = settings + ",iops_rd=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Concurrent))
+		builder.WriteString(",iops_rd=")
+		builder.WriteString(strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Concurrent)))
 	}
 	if disk.Bandwidth.Iops.ReadLimit.Burst != 0 {
-		settings = settings + ",iops_rd_max=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Burst))
+		builder.WriteString(",iops_rd_max=")
+		builder.WriteString(strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.Burst)))
 	}
 	if disk.Bandwidth.Iops.ReadLimit.BurstDuration != 0 {
-		settings = settings + ",iops_rd_max_length=" + strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.BurstDuration))
+		builder.WriteString(",iops_rd_max_length=")
+		builder.WriteString(strconv.Itoa(int(disk.Bandwidth.Iops.ReadLimit.BurstDuration)))
 	}
 
 	if disk.Bandwidth.Iops.WriteLimit.Concurrent != 0 {
-		settings = settings + ",iops_wr=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Concurrent))
+		builder.WriteString(",iops_wr=")
+		builder.WriteString(strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Concurrent)))
 	}
 	if disk.Bandwidth.Iops.WriteLimit.Burst != 0 {
-		settings = settings + ",iops_wr_max=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Burst))
+		builder.WriteString(",iops_wr_max=")
+		builder.WriteString(strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.Burst)))
 	}
 	if disk.Bandwidth.Iops.WriteLimit.BurstDuration != 0 {
-		settings = settings + ",iops_wr_max_length=" + strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.BurstDuration))
+		builder.WriteString(",iops_wr_max_length=")
+		builder.WriteString(strconv.Itoa(int(disk.Bandwidth.Iops.WriteLimit.BurstDuration)))
 	}
 
 	if (disk.Type == scsi || disk.Type == virtIO) && disk.IOThread {
-		settings = settings + ",iothread=1"
+		builder.WriteString(",iothread=1")
 	}
 
 	if disk.Bandwidth.MBps.ReadLimit.Concurrent != 0 {
-		settings = settings + ",mbps_rd=" + floatToTrimmedString(float64(disk.Bandwidth.MBps.ReadLimit.Concurrent), 2)
+		builder.WriteString(",mbps_rd=")
+		builder.WriteString(floatToTrimmedString(float64(disk.Bandwidth.MBps.ReadLimit.Concurrent), 2))
 	}
 	if disk.Bandwidth.MBps.ReadLimit.Burst != 0 {
-		settings = settings + ",mbps_rd_max=" + floatToTrimmedString(float64(disk.Bandwidth.MBps.ReadLimit.Burst), 2)
+		builder.WriteString(",mbps_rd_max=")
+		builder.WriteString(floatToTrimmedString(float64(disk.Bandwidth.MBps.ReadLimit.Burst), 2))
 	}
 
 	if disk.Bandwidth.MBps.WriteLimit.Concurrent != 0 {
-		settings = settings + ",mbps_wr=" + floatToTrimmedString(float64(disk.Bandwidth.MBps.WriteLimit.Concurrent), 2)
+		builder.WriteString(",mbps_wr=")
+		builder.WriteString(floatToTrimmedString(float64(disk.Bandwidth.MBps.WriteLimit.Concurrent), 2))
 	}
 	if disk.Bandwidth.MBps.WriteLimit.Burst != 0 {
-		settings = settings + ",mbps_wr_max=" + floatToTrimmedString(float64(disk.Bandwidth.MBps.WriteLimit.Burst), 2)
+		builder.WriteString(",mbps_wr_max=")
+		builder.WriteString(floatToTrimmedString(float64(disk.Bandwidth.MBps.WriteLimit.Burst), 2))
 	}
 
 	if !disk.Replicate {
-		settings = settings + ",replicate=0"
+		builder.WriteString(",replicate=0")
 	}
 	if (disk.Type == scsi || disk.Type == virtIO) && disk.ReadOnly {
-		settings = settings + ",ro=1"
+		builder.WriteString(",ro=1")
 	}
 	if disk.Serial != "" {
-		settings = settings + ",serial=" + string(disk.Serial)
+		builder.WriteString(",serial=")
+		builder.WriteString(disk.Serial.String())
 	}
 	if disk.Type != virtIO && disk.EmulateSSD {
-		settings = settings + ",ssd=1"
+		builder.WriteString(",ssd=1")
 	}
 	if disk.WorldWideName != "" {
-		settings = settings + ",wwn=" + string(disk.WorldWideName)
+		builder.WriteString(",wwn=")
+		builder.WriteString(disk.WorldWideName.String())
 	}
-	return
+	return builder.String()
 }
 
 // Maps all the disk related settings to our own data structure.
 func (qemuDisk) mapToStruct(diskData string, settings map[string]string, linkedVmId *GuestID) *qemuDisk {
-	disk := qemuDisk{Backup: true}
-
-	if diskData[0:1] == "/" {
+	disk := qemuDisk{
+		Backup:    true,
+		Replicate: true}
+	diskPTR := &disk
+	if diskData[0:1] == "/" { // Passthrough
 		disk.File = diskData
-	} else {
-		disk.Id, disk.Storage, disk.VolumePath, disk.Format, disk.LinkedDiskId, disk.fileSyntax = qemuDisk{}.parseDisk(diskData, linkedVmId)
+	} else { // Disk
+		diskPTR.parseDisk(diskData, linkedVmId)
 	}
 
 	if len(settings) == 0 {
 		return nil
 	}
-
-	// Replicate defaults to true
-	disk.Replicate = true
 
 	if value, isSet := settings["aio"]; isSet {
 		disk.AsyncIO = QemuDiskAsyncIO(value)
@@ -443,72 +415,71 @@ func (qemuDisk) mapToStruct(diskData string, settings map[string]string, linkedV
 	if value, isSet := settings["wwn"]; isSet {
 		disk.WorldWideName = QemuWorldWideName(value)
 	}
-	return &disk
+	return diskPTR
 }
 
 // parse and extract the values from the disk data
 // storage:110/base-110-disk-1.qcow2/100/vm-100-disk-0.qcow2
 // storage:100/vm-100-disk-0.qcow2
-// storage:base-110-disk-1/vm-100-disk-0
 // storage:vm-100-disk-0
-func (qemuDisk) parseDisk(diskData string, linkedVmId *GuestID) (diskId uint, storage string, volumePath string, format QemuDiskFormat, linkedDiskId *GuestID, syntax diskSyntaxEnum) {
-	parts := strings.Split(diskData, ":")
-	storage = parts[0]
-
-	if len(parts) != 2 {
+// storage:vm-100-disk-0.qcow2 (for volume syntax with non-raw format)
+// storage:base-110-disk-1.qcow2/vm-100-disk-0
+// storage:base-110-disk-1/vm-100-disk-0.qcow2 (for linked clone volume syntax with non-raw format)
+func (disk *qemuDisk) parseDisk(diskData string, linkedVmId *GuestID) {
+	index := strings.IndexByte(diskData, ':')
+	if index <= 0 {
 		return
 	}
-	volumePath = parts[1]
-	pathParts := strings.Split(parts[1], "/")
+	disk.Storage = diskData[0:index]
+	disk.VolumePath = diskData[index+1:]
+	pathParts := strings.Split(disk.VolumePath, "/")
 	switch len(pathParts) {
-	case 1:
-		syntax = diskSyntaxVolume
 	case 2:
-		if _, err := strconv.Atoi(pathParts[0]); err != nil { // linked clone
-			tmp := strings.Split(strings.Split(pathParts[0], ".")[0], "-")
+		if pathParts[0][0:1] == "b" { // Linked Volumes are prefixed with "base"
+			index = strings.IndexByte(pathParts[0], '.')
+			if index <= 0 {
+				index = len(pathParts[0])
+			}
+			tmp := strings.Split(pathParts[0][0:index], "-")
 			if len(tmp) > 1 {
 				if tmpVmId, err := strconv.Atoi(tmp[1]); err == nil {
 					*linkedVmId = GuestID(tmpVmId)
 				}
 				if tmpDiskId, err := strconv.Atoi(tmp[len(tmp)-1]); err == nil {
-					linkedDiskId = util.Pointer(GuestID(tmpDiskId))
+					disk.LinkedDiskId = new(GuestID(tmpDiskId))
 				}
-				syntax = diskSyntaxVolume
 			}
-		} else {
-			syntax = diskSyntaxFile
 		}
-	case 4: // Linked Clone
+	case 4: // Linked File
 		if tmpVmId, err := strconv.Atoi(pathParts[0]); err == nil {
 			*linkedVmId = GuestID(tmpVmId)
 		}
-		tmp := strings.Split(strings.Split(pathParts[1], ".")[0], "-")
+		index = strings.IndexByte(pathParts[1], '.')
+		if index <= 0 {
+			index = len(pathParts[1])
+		}
+		tmp := strings.Split(pathParts[1][0:index], "-")
 		if len(tmp) > 1 {
 			if tmpDiskId, err := strconv.Atoi(tmp[len(tmp)-1]); err == nil {
-				linkedDiskId = util.Pointer(GuestID(tmpDiskId))
+				disk.LinkedDiskId = new(GuestID(tmpDiskId))
 			}
 		}
-		syntax = diskSyntaxFile
 	}
 
 	diskNameAndFormat := strings.Split(pathParts[len(pathParts)-1], ".")
-	if len(diskNameAndFormat) > 0 {
-		tmp := strings.Split(diskNameAndFormat[0], "-")
-		if len(tmp) > 1 {
-			if tmpDiskId, err := strconv.Atoi(tmp[len(tmp)-1]); err == nil {
-				diskId = uint(tmpDiskId)
-			}
-		}
 
-		// set disk format, default to raw
-		if len(diskNameAndFormat) == 2 {
-			format = QemuDiskFormat(diskNameAndFormat[1])
-		} else {
-			format = QemuDiskFormat_Raw
+	index = strings.LastIndexByte(diskNameAndFormat[0], '-')
+	if index > 0 {
+		if tmpDiskId, err := strconv.Atoi(diskNameAndFormat[0][index+1:]); err == nil {
+			disk.Id = uint(tmpDiskId)
 		}
 	}
 
-	return
+	if len(diskNameAndFormat) == 2 { // set disk format, default to raw
+		disk.Format = QemuDiskFormat(diskNameAndFormat[1])
+	} else {
+		disk.Format = QemuDiskFormat_Raw
+	}
 }
 
 func (disk *qemuDisk) validate() (err error) {
@@ -564,6 +535,8 @@ const (
 func (QemuDiskAsyncIO) Error() error {
 	return fmt.Errorf("asyncio can only be one of the following values: %s,%s,%s", QemuDiskAsyncIO_Native, QemuDiskAsyncIO_Threads, QemuDiskAsyncIO_IOuring)
 }
+
+func (asyncIO QemuDiskAsyncIO) String() string { return string(asyncIO) } // For fmt.Stringer
 
 func (asyncIO QemuDiskAsyncIO) Validate() error {
 	switch asyncIO {
@@ -704,6 +677,8 @@ const (
 func (QemuDiskCache) Error() error {
 	return fmt.Errorf("cache can only be one of the following values: %s,%s,%s,%s,%s", QemuDiskCache_None, QemuDiskCache_WriteThrough, QemuDiskCache_WriteBack, QemuDiskCache_Unsafe, QemuDiskCache_DirectSync)
 }
+
+func (cache QemuDiskCache) String() string { return string(cache) } // For fmt.Stringer
 
 func (cache QemuDiskCache) Validate() error {
 	switch cache {
@@ -859,6 +834,8 @@ const (
 	Error_QemuDiskSerial_IllegalLength    string = "serial may only be 60 characters long"
 )
 
+func (serial QemuDiskSerial) String() string { return string(serial) } // For fmt.Stringer
+
 // QemuDiskSerial may only contain the following characters: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_
 // And has a max length of 60 characters
 func (serial QemuDiskSerial) Validate() error {
@@ -967,69 +944,70 @@ type qemuStorage struct {
 	delete      bool
 }
 
-func (storage qemuStorage) mapToApiValues(currentStorage *qemuStorage, vmID, linkedVmId GuestID, id QemuDiskId, params map[string]interface{}, delete string) string {
+func (storage qemuStorage) mapToApiValues(currentStorage *qemuStorage, id QemuDiskId, params map[string]any, delete *strings.Builder) {
 	if storage.delete {
 		if currentStorage == nil {
-			return delete
+			return
 		}
-		return delete + "," + id.String()
+		delete.WriteRune(',')
+		delete.WriteString(id.String())
+		return
 	}
 	// CDROM
 	if storage.CdRom != nil {
 		if currentStorage == nil || currentStorage.CdRom == nil { // Create
-			params[string(id)] = storage.CdRom.mapToApiValues()
+			params[id.String()] = storage.CdRom.mapToApiValues()
 		} else { // Update
 			cdRom := storage.CdRom.mapToApiValues()
 			if cdRom != currentStorage.CdRom.mapToApiValues() {
-				params[string(id)] = cdRom
+				params[id.String()] = cdRom
 			}
 		}
-		return delete
+		return
 	}
 	// CloudInit
 	if storage.CloudInit != nil {
 		if currentStorage == nil || currentStorage.CloudInit == nil { // Create
-			params[string(id)] = storage.CloudInit.mapToApiValues()
+			params[id.String()] = storage.CloudInit.mapToApiValues()
 		} else { // Update
 			cloudInit := storage.CloudInit.mapToApiValues()
 			if cloudInit != currentStorage.CloudInit.mapToApiValues() {
-				params[string(id)] = cloudInit
+				params[id.String()] = cloudInit
 			}
 		}
-		return delete
+		return
 	}
 	// Disk
 	if storage.Disk != nil {
 		if currentStorage == nil || currentStorage.Disk == nil { // Create
-			params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", false, true)
+			params[id.String()] = storage.Disk.mapToApiValues(true)
 		} else {
 			if storage.Disk.SizeInKibibytes >= currentStorage.Disk.SizeInKibibytes { // Update
 				storage.Disk.Id = currentStorage.Disk.Id
 				storage.Disk.LinkedDiskId = currentStorage.Disk.LinkedDiskId
 				storage.Disk.VolumePath = currentStorage.Disk.VolumePath
-				disk := storage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, currentStorage.Disk.fileSyntax, false)
-				if disk != currentStorage.Disk.mapToApiValues(vmID, linkedVmId, currentStorage.Disk.Storage, currentStorage.Disk.Format, currentStorage.Disk.fileSyntax, false) {
-					params[string(id)] = disk
+				disk := storage.Disk.mapToApiValues(false)
+				if disk != currentStorage.Disk.mapToApiValues(false) {
+					params[id.String()] = disk
 				}
 			} else { // Delete and Create
 				// creating a disk on top of an existing disk is the same as detaching the disk and creating a new one.
-				params[string(id)] = storage.Disk.mapToApiValues(vmID, 0, "", "", false, true)
+				params[id.String()] = storage.Disk.mapToApiValues(true)
 			}
 		}
-		return delete
+		return
 	}
 	// Passthrough
 	if storage.Passthrough != nil {
 		if currentStorage == nil || currentStorage.Passthrough == nil { // Create
-			params[string(id)] = storage.Passthrough.mapToApiValues(0, 0, "", "", false, false)
+			params[id.String()] = storage.Passthrough.mapToApiValues(false)
 		} else { // Update
-			passthrough := storage.Passthrough.mapToApiValues(0, 0, "", "", false, false)
-			if passthrough != currentStorage.Passthrough.mapToApiValues(0, 0, "", "", false, false) {
-				params[string(id)] = passthrough
+			passthrough := storage.Passthrough.mapToApiValues(false)
+			if passthrough != currentStorage.Passthrough.mapToApiValues(false) {
+				params[id.String()] = passthrough
 			}
 		}
 	}
-	return delete
 }
 
 type QemuStorages struct {
@@ -1072,20 +1050,27 @@ func (q QemuStorages) listCloudInitDisk() string {
 	return ""
 }
 
-func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, vmID, linkedVmId GuestID, params map[string]interface{}) (delete string) {
+func (storages QemuStorages) mapToApiCreate(params map[string]any) {
+	storages.mapToApiValues(QemuStorages{}, params, nil)
+}
+
+func (storages QemuStorages) mapToApiUpdate(current QemuStorages, params map[string]any, delete *strings.Builder) {
+	storages.mapToApiValues(current, params, delete)
+}
+
+func (storages QemuStorages) mapToApiValues(currentStorages QemuStorages, params map[string]any, delete *strings.Builder) {
 	if storages.Ide != nil {
-		delete = storages.Ide.mapToApiValues(currentStorages.Ide, vmID, linkedVmId, params, delete)
+		storages.Ide.mapToApiValues(currentStorages.Ide, params, delete)
 	}
 	if storages.Sata != nil {
-		delete = storages.Sata.mapToApiValues(currentStorages.Sata, vmID, linkedVmId, params, delete)
+		storages.Sata.mapToApiValues(currentStorages.Sata, params, delete)
 	}
 	if storages.Scsi != nil {
-		delete = storages.Scsi.mapToApiValues(currentStorages.Scsi, vmID, linkedVmId, params, delete)
+		storages.Scsi.mapToApiValues(currentStorages.Scsi, params, delete)
 	}
 	if storages.VirtIO != nil {
-		delete = storages.VirtIO.mapToApiValues(currentStorages.VirtIO, vmID, linkedVmId, params, delete)
+		storages.VirtIO.mapToApiValues(currentStorages.VirtIO, params, delete)
 	}
-	return delete
 }
 
 func (raw *rawConfigQemu) GetDisks() (disks *QemuStorages, linkedID *GuestID) {
@@ -1209,6 +1194,8 @@ type QemuWorldWideName string
 const Error_QemuWorldWideName_Invalid string = "world wide name should be prefixed with 0x followed by 8 hexadecimal values"
 
 var regexp_QemuWorldWideName = regexp.MustCompile(`^0x[0-9A-Fa-f]{16}$`)
+
+func (wwn QemuWorldWideName) String() string { return string(wwn) } // For fmt.Stringer
 
 func (wwn QemuWorldWideName) Validate() error {
 	if wwn == "" || regexp_QemuWorldWideName.MatchString(string(wwn)) {

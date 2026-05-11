@@ -152,5 +152,5 @@ func ListFiles(ctx context.Context, client *Client, node, storage string, conten
 }
 
 func volumeIdToFileName(volumeId string) string {
-	return volumeId[strings.Index(volumeId, "/")+1:]
+	return volumeId[strings.IndexByte(volumeId, '/')+1:]
 }
