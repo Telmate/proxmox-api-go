@@ -264,6 +264,8 @@ var cpuTypeTableV7 = map[string]string{
 	string(cpuType_IntelSkylakeServerNoTSXIBRS_Lower): string(CpuType_IntelSkylakeServerNoTSXIBRS),
 	string(cpuType_IntelWestmere_Lower):               string(CpuType_IntelWestmere),
 	string(cpuType_IntelWestmereIBRS_Lower):           string(CpuType_IntelWestmereIBRS),
+	string(cpuType_ArmCortexA57_Lower):                string(CpuType_ArmCortexA57),
+	string(cpuType_ArmCortexA72_Lower):                string(CpuType_ArmCortexA72),
 }
 
 var cpuTypeTableV8 = map[string]string{
@@ -436,6 +438,10 @@ const (
 	cpuType_X86_64_v3_Lower                   CpuType = "x8664v3"
 	CpuType_X86_64_v4                         CpuType = "x86-64-v4"
 	cpuType_X86_64_v4_Lower                   CpuType = "x8664v4"
+	CpuType_ArmCortexA57                      CpuType = "cortex-a57"
+	cpuType_ArmCortexA57_Lower                CpuType = "cortexa57"
+	CpuType_ArmCortexA72                      CpuType = "cortex-a72"
+	cpuType_ArmCortexA72_Lower                CpuType = "cortexa72"
 )
 
 func (CpuType) Error(version Version) error {

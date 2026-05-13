@@ -3549,6 +3549,24 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output: map[string]interface{}{"usb1": "spice"}},
 			},
 		},
+		{category: `CreateOptions.Architecture`,
+			create: []qemuTestCaseAPI{
+				{name: `nil CreateOptions`,
+					config: &ConfigQemu{}},
+				{name: `nil Architecture`,
+					config: &ConfigQemu{CreateOptions: &QemuCreateOptions{}}},
+				{name: `aarch64`,
+					config: &ConfigQemu{CreateOptions: &QemuCreateOptions{
+						Architecture: util.Pointer(CpuArchitecture("aarch64"))}},
+					output: map[string]interface{}{"arch": "aarch64"}},
+				{name: `x86_64`,
+					config: &ConfigQemu{CreateOptions: &QemuCreateOptions{
+						Architecture: util.Pointer(CpuArchitecture("x86_64"))}},
+					output: map[string]interface{}{"arch": "x86_64"}}},
+			update: []qemuTestCaseAPI{
+				{name: `ignored on update`,
+					config: &ConfigQemu{CreateOptions: &QemuCreateOptions{
+						Architecture: util.Pointer(CpuArchitecture("aarch64"))}}}}},
 	}
 	for _, test := range tests {
 		for _, subTest := range append(test.create, test.createUpdate...) {
@@ -3567,6 +3585,26 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				testParamsEqualRaw(t, subTest.body, tmpBody, name+" Body")
 			})
 		}
+	}
+}
+
+func Test_ConfigQemu_mapToStruct_Architecture(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		input  map[string]interface{}
+		output CpuArchitecture
+	}{
+		{name: `absent`, input: map[string]interface{}{}, output: ""},
+		{name: `aarch64`, input: map[string]interface{}{"arch": "aarch64"}, output: "aarch64"},
+		{name: `x86_64`, input: map[string]interface{}{"arch": "x86_64"}, output: "x86_64"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &ConfigQemu{}
+			require.NoError(t, config.mapToStruct(nil, tt.input))
+			require.Equal(t, tt.output, config.Architecture)
+		})
 	}
 }
 
