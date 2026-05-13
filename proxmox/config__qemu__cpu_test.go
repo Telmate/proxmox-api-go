@@ -176,6 +176,18 @@ func test_CpuTypeValidate_data() []struct {
 		{name: `Valid EPYC-Turin`,
 			config:  CpuType_AmdEPYCTurin,
 			version: Version{Major: 9}.max()},
+		{name: `Valid cortex-a57`,
+			config:  CpuType_ArmCortexA57,
+			version: Version{}.max()},
+		{name: `Valid cortex-a57 hyphen-stripped lookup`,
+			config:  CpuType("cortexa57"),
+			version: Version{}.max()},
+		{name: `Valid cortex-a72`,
+			config:  CpuType_ArmCortexA72,
+			version: Version{}.max()},
+		{name: `Valid cortex-a72 hyphen-stripped lookup`,
+			config:  CpuType("cortexa72"),
+			version: Version{}.max()},
 	}
 }
 
