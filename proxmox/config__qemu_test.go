@@ -282,6 +282,17 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					config:        &ConfigQemu{Agent: &QemuGuestAgent{}},
 					currentLegacy: ConfigQemu{Agent: &QemuGuestAgent{}},
 					output:        map[string]interface{}{"agent": "0"}}}},
+		{category: `Architecture`,
+			create: []qemuTestCaseAPI{
+				{name: `aarch64`,
+					config: &ConfigQemu{Architecture: new(QemuCpuArchitecture("aarch64"))},
+					body:   map[string]string{"arch": "aarch64"}},
+				{name: `x86_64`,
+					config: &ConfigQemu{Architecture: new(QemuCpuArchitecture("x86_64"))},
+					body:   map[string]string{"arch": "x86_64"}}},
+			update: []qemuTestCaseAPI{
+				{name: `ignored on update`,
+					config: &ConfigQemu{Architecture: new(QemuCpuArchitecture("x86_64"))}}}},
 		{category: `CPU`,
 			create: []qemuTestCaseAPI{
 				{name: `Affinity empty`,
@@ -3549,24 +3560,6 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 					output: map[string]interface{}{"usb1": "spice"}},
 			},
 		},
-		{category: `CreateOptions.Architecture`,
-			create: []qemuTestCaseAPI{
-				{name: `nil CreateOptions`,
-					config: &ConfigQemu{}},
-				{name: `nil Architecture`,
-					config: &ConfigQemu{CreateOptions: &QemuCreateOptions{}}},
-				{name: `aarch64`,
-					config: &ConfigQemu{CreateOptions: &QemuCreateOptions{
-						Architecture: util.Pointer(CpuArchitecture("aarch64"))}},
-					output: map[string]interface{}{"arch": "aarch64"}},
-				{name: `x86_64`,
-					config: &ConfigQemu{CreateOptions: &QemuCreateOptions{
-						Architecture: util.Pointer(CpuArchitecture("x86_64"))}},
-					output: map[string]interface{}{"arch": "x86_64"}}},
-			update: []qemuTestCaseAPI{
-				{name: `ignored on update`,
-					config: &ConfigQemu{CreateOptions: &QemuCreateOptions{
-						Architecture: util.Pointer(CpuArchitecture("aarch64"))}}}}},
 	}
 	for _, test := range tests {
 		for _, subTest := range append(test.create, test.createUpdate...) {
@@ -3585,26 +3578,6 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 				testParamsEqualRaw(t, subTest.body, tmpBody, name+" Body")
 			})
 		}
-	}
-}
-
-func Test_ConfigQemu_mapToStruct_Architecture(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name   string
-		input  map[string]interface{}
-		output CpuArchitecture
-	}{
-		{name: `absent`, input: map[string]interface{}{}, output: ""},
-		{name: `aarch64`, input: map[string]interface{}{"arch": "aarch64"}, output: "aarch64"},
-		{name: `x86_64`, input: map[string]interface{}{"arch": "x86_64"}, output: "x86_64"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			config := &ConfigQemu{}
-			require.NoError(t, config.mapToStruct(nil, tt.input))
-			require.Equal(t, tt.output, config.Architecture)
-		})
 	}
 }
 
@@ -3655,6 +3628,14 @@ func Test_ConfigQemu_get(t *testing.T) {
 				{name: `Type`,
 					input:  map[string]interface{}{"agent": string("1,type=virtio")},
 					output: baseConfig(ConfigQemu{Agent: &QemuGuestAgent{Enable: util.Pointer(true), Type: util.Pointer(QemuGuestAgentType_VirtIO)}})}}},
+		{category: `Architecture`,
+			tests: []qemuTestCaseGet{
+				{name: `aarch64`,
+					input:  map[string]any{"arch": string("aarch64")},
+					output: baseConfig(ConfigQemu{Architecture: new(QemuCpuArchitectureArm64)})},
+				{name: `x86_64`,
+					input:  map[string]any{"arch": string("x86_64")},
+					output: baseConfig(ConfigQemu{Architecture: new(QemuCpuArchitectureAmd64)})}}},
 		{category: `CPU`,
 			tests: []qemuTestCaseGet{
 				{name: `all`,
@@ -6828,6 +6809,17 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 		valid    qemuTestTypeValidate
 		invalid  qemuTestTypeValidate
 	}{
+		{category: `Architecture`,
+			valid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
+					{input: baseConfig(ConfigQemu{
+						Architecture: new(QemuCpuArchitecture("aarch64"))})}}},
+			invalid: qemuTestTypeValidate{
+				create: []qemuTestCaseValidate{
+					{name: `errors.New(QemuCpuArchitecture_Error)`,
+						input: baseConfig(ConfigQemu{
+							Architecture: new(QemuCpuArchitecture("invalid"))}),
+						err: errors.New(QemuCpuArchitecture_Error)}}}},
 		{category: `Agent`,
 			valid: qemuTestTypeValidate{
 				createUpdate: []qemuTestCaseValidate{

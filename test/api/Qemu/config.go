@@ -97,8 +97,9 @@ func MinimumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 
 func MaximumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestName) (set pveSDK.ConfigQemu, expected *pveSDK.ConfigQemu) {
 	set = pveSDK.ConfigQemu{
-		CPU:         &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
-		Description: new(body.Alphanumeric + body.Symbols),
+		Architecture: new(pveSDK.QemuCpuArchitectureAmd64),
+		CPU:          &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
+		Description:  new(body.Alphanumeric + body.Symbols),
 		Disks: &pveSDK.QemuStorages{
 			Ide: &pveSDK.QemuIdeDisks{
 				Disk_0: &pveSDK.QemuIdeStorage{CdRom: &pveSDK.QemuCdRom{}},

@@ -150,14 +150,13 @@ type ConfigQemu struct {
 	ID               *GuestID              `json:"id,omitempty"`   // Required for creation, cannot be changed
 	Node             *NodeName             `json:"node,omitempty"` // Required for creation
 	Agent            *QemuGuestAgent       `json:"agent,omitempty"`
-	Architecture     CpuArchitecture       `json:"architecture,omitempty"` // only returned
+	Architecture     *QemuCpuArchitecture  `json:"architecture,omitempty"` // only used during creation
 	Args             string                `json:"args,omitempty"`
 	Bios             string                `json:"bios,omitempty"`
 	Boot             string                `json:"boot,omitempty"`     // TODO should be an array of custom enums
 	BootDisk         string                `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
 	CPU              *QemuCPU              `json:"cpu,omitempty"`      // never nil when returned
 	CloudInit        *CloudInit            `json:"cloudinit,omitempty"`
-	CreateOptions    *QemuCreateOptions    `json:"create,omitempty"`      // only used during creation, never returned
 	Description      *string               `json:"description,omitempty"` // never nil when returned
 	Disks            *QemuStorages         `json:"disks,omitempty"`
 	EfiDisk          *EfiDisk              `json:"efidisk,omitempty"`
@@ -201,17 +200,6 @@ const (
 	ConfigQemu_Error_MemoryRequired              string = "memory is required during creation"
 	ConfigQemu_Error_NodeRequired                string = "node is required during creation"
 )
-
-// QemuCreateOptions groups settings PVE only honors in the initial create POST; mapToApiUpdate must not touch them.
-type QemuCreateOptions struct {
-	Architecture *CpuArchitecture `json:"architecture,omitempty"`
-}
-
-func (config QemuCreateOptions) mapToAPI(params map[string]any) {
-	if config.Architecture != nil {
-		params["arch"] = config.Architecture.String()
-	}
-}
 
 // Deprecated: use QemuGuestInterface.Create() instead.
 // Create - Tell Proxmox API to make the VM
@@ -432,8 +420,9 @@ func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (p
 func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byte) {
 	params := config.mapToAPI(ConfigQemu{}, version)
 	builder := strings.Builder{}
-	if config.CreateOptions != nil {
-		config.CreateOptions.mapToAPI(params)
+	if config.Architecture != nil {
+		builder.WriteString("&" + qemuApiKeyArchitecture + "=")
+		builder.WriteString(config.Architecture.String())
 	}
 	if config.Description != nil && *config.Description != "" {
 		builder.WriteString("&" + qemuApiKeyDescription + "=")
@@ -552,9 +541,6 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 	}
 	if _, isSet := params["bootdisk"]; isSet {
 		config.BootDisk = params["bootdisk"].(string)
-	}
-	if v, isSet := params["arch"]; isSet {
-		config.Architecture = CpuArchitecture(v.(string))
 	}
 	if _, isSet := params["bios"]; isSet {
 		config.Bios = params["bios"].(string)
@@ -878,6 +864,11 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 		if err = config.Node.Validate(); err != nil {
 			return
+		}
+		if config.Architecture != nil {
+			if err = config.Architecture.Validate(); err != nil {
+				return
+			}
 		}
 		if config.CPU == nil {
 			return errors.New(ConfigQemu_Error_CpuRequired)
@@ -1341,6 +1332,7 @@ type configQemuUpdate struct {
 type RawConfigQemu interface {
 	Get(vmr VmRef) (*ConfigQemu, error)
 	GetAgent() *QemuGuestAgent
+	GetArchitecture() *QemuCpuArchitecture
 	GetCPU() *QemuCPU
 	GetCloudInit() *CloudInit
 	GetDescription() string
@@ -1373,6 +1365,7 @@ func (raw *rawConfigQemu) Get(vmr VmRef) (*ConfigQemu, error) {
 func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 	config := ConfigQemu{
 		Agent:            raw.GetAgent(),
+		Architecture:     raw.GetArchitecture(),
 		CPU:              raw.GetCPU(),
 		CloudInit:        raw.GetCloudInit(),
 		Description:      util.Pointer(raw.GetDescription()),
@@ -1456,6 +1449,7 @@ const (
 	qemuApiKeyCpuUnits          = "cpuunits"
 	qemuApiKeyCpuVirtual        = "vcpus"
 	qemuApiKeyDescription       = "description"
+	qemuApiKeyArchitecture      = "arch"
 	qemuApiKeyEfiDisk           = "efidisk0"
 	qemuApiKeyGuestAgent        = "agent"
 	qemuApiKeyMemoryBallooning  = "balloon"
