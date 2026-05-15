@@ -5,7 +5,7 @@ import "crypto/sha1"
 // RawConfigLXCMock is a mock implementation of the RawConfigLXC interface
 type RawConfigLXCMock struct {
 	GetFunc                func(vmr VmRef, state PowerState) *ConfigLXC
-	GetArchitectureFunc    func() CpuArchitecture
+	GetArchitectureFunc    func() LxcCpuArchitecture
 	GetBootMountFunc       func() *LxcBootMount
 	GetDNSFunc             func() *GuestDNS
 	GetDescriptionFunc     func() *string
@@ -31,7 +31,7 @@ func (m *RawConfigLXCMock) Get(vmr VmRef, state PowerState) *ConfigLXC {
 	return m.GetFunc(vmr, state)
 }
 
-func (m *RawConfigLXCMock) GetArchitecture() CpuArchitecture {
+func (m *RawConfigLXCMock) GetArchitecture() LxcCpuArchitecture {
 	if m.GetArchitectureFunc == nil {
 		m.panic("GetArchitectureFunc")
 	}

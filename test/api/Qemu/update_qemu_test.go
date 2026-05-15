@@ -203,8 +203,10 @@ func Test_Qemu_Upate_Max_To_Reduced(t *testing.T) {
 	c := cl.New()
 	var vmr *pveSDK.VmRef
 	setMax, expectedMax := MaximumConfig(guestID, node, guestName)
-	setReduced, expectedReduced := ReducedConfig(guestID, node, guestName)
 	expectedMax.Boot = "order=ide1;ide0"
+	expectedMax.Architecture = new(pveSDK.QemuCpuArchitectureAmd64)
+	setReduced, expectedReduced := ReducedConfig(guestID, node, guestName)
+	expectedReduced.Architecture = new(pveSDK.QemuCpuArchitectureAmd64)
 	tests := []struct {
 		name string
 		test func(t *testing.T)

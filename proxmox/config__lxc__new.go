@@ -12,14 +12,14 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
-type CpuArchitecture string
+type LxcCpuArchitecture string
 
-func (arch CpuArchitecture) String() string { return string(arch) } // String is for fmt.Stringer.
+func (arch LxcCpuArchitecture) String() string { return string(arch) } // String is for fmt.Stringer.
 
 type OperatingSystem string
 
 type ConfigLXC struct {
-	Architecture    CpuArchitecture     `json:"architecture"` // only returned
+	Architecture    LxcCpuArchitecture  `json:"architecture"` // only returned
 	BootMount       *LxcBootMount       `json:"boot_mount,omitempty"`
 	CPU             *LxcCPU             `json:"cpu,omitempty"`
 	CreateOptions   *LxcCreateOptions   `json:"create,omitempty"` // only used during creation, never returned
@@ -575,7 +575,7 @@ func (config ConfigLXC) validateUpdate(current ConfigLXC) (err error) {
 
 type RawConfigLXC interface {
 	Get(vmr VmRef, state PowerState) *ConfigLXC
-	GetArchitecture() CpuArchitecture
+	GetArchitecture() LxcCpuArchitecture
 	GetBootMount() *LxcBootMount
 	GetDNS() *GuestDNS
 	GetDescription() *string
@@ -640,9 +640,9 @@ func (raw *rawConfigLXC) get(vmr VmRef) *ConfigLXC {
 	return &config
 }
 
-func (raw *rawConfigLXC) GetArchitecture() CpuArchitecture {
+func (raw *rawConfigLXC) GetArchitecture() LxcCpuArchitecture {
 	if v, isSet := raw.a[lxcApiKeyArchitecture]; isSet {
-		return CpuArchitecture(v.(string))
+		return LxcCpuArchitecture(v.(string))
 	}
 	return ""
 }

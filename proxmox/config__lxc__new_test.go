@@ -16,7 +16,7 @@ import (
 
 func Test_CpuArchitecture_String(t *testing.T) {
 	t.Parallel()
-	require.Equal(t, "amd64", CpuArchitecture("amd64").String())
+	require.Equal(t, "amd64", LxcCpuArchitecture("amd64").String())
 }
 
 func Test_ConfigLXC_mapToAPI(t *testing.T) {
