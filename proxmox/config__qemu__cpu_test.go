@@ -155,6 +155,8 @@ func test_CpuTypeValidate_data() []struct {
 			version: Version{Major: 8}.max(),
 			output:  CpuType("").Error(Version{Major: 8}.max())},
 		// Valid
+		{name: `Valid custom`,
+			config: CpuType("custom-TeSt")},
 		{name: `Valid empty`,
 			config:  CpuType(""),
 			version: Version{}.max()},

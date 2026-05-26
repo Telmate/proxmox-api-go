@@ -475,7 +475,11 @@ func (CpuType) Error(version Version) error {
 }
 
 func (cpu CpuType) mapToApi(version Version) string {
-	cpuNormalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(string(cpu), "_", ""), "-", ""))
+	cpuString := string(cpu)
+	if strings.HasPrefix(cpuString, "custom-") {
+		return cpuString
+	}
+	cpuNormalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(cpuString, "_", ""), "-", ""))
 	if v, ok := cpuTypeTableV7[cpuNormalized]; ok {
 		return v
 	}
@@ -488,7 +492,6 @@ func (cpu CpuType) mapToApi(version Version) string {
 				return v
 			}
 		}
-
 	}
 	return ""
 }
