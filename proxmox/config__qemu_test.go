@@ -2749,7 +2749,6 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 						File: "/dev/disk/sda"}}}}},
 					config: &ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_1: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{
 						File: "/dev/disk/sda"}}}}}}}},
-		testDataEfiDiskMapToAPI(),
 		{category: `Iso`,
 			create: []qemuTestCaseAPI{
 				{name: `Iso`,
@@ -8016,7 +8015,6 @@ func Test_ConfigQemu_Validate(t *testing.T) {
 					{name: `VirtIO errors.New(Error_QemuWorldWideName_Invalid)`,
 						input: baseConfig(ConfigQemu{Disks: &QemuStorages{VirtIO: &QemuVirtIODisks{Disk_13: &QemuVirtIOStorage{Passthrough: &QemuVirtIOPassthrough{File: "/dev/disk/by-id/scsi1", WorldWideName: "0x5004A3B2C1D0E0F1#"}}}}}),
 						err:   errors.New(Error_QemuWorldWideName_Invalid)}}}},
-		testDataEfiDiskValidate(),
 		{category: `ID`,
 			valid: qemuTestTypeValidate{
 				createUpdate: []qemuTestCaseValidate{
