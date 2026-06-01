@@ -688,6 +688,17 @@ func (cache QemuDiskCache) Validate() error {
 	return QemuDiskCache("").Error()
 }
 
+// Enum
+//
+//	const (
+//		QemuDiskFormat_Cow
+//		QemuDiskFormat_Cloop
+//		QemuDiskFormat_Qcow
+//		QemuDiskFormat_Qcow2
+//		QemuDiskFormat_Qed
+//		QemuDiskFormat_Vmdk
+//		QemuDiskFormat_Raw
+//	)
 type QemuDiskFormat string
 
 const (

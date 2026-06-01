@@ -1008,11 +1008,11 @@ func (config ConfigQemu) validateCreate() error {
 
 func (config ConfigQemu) validateUpdate(current *ConfigQemu) error {
 	if config.EfiDisk != nil {
-		if current.EfiDisk != nil {
+		if current.EfiDisk != nil { // update
 			if err := config.EfiDisk.validateUpdate(); err != nil {
 				return err
 			}
-		} else {
+		} else { // create
 			if err := config.EfiDisk.validateCreate(); err != nil {
 				return err
 			}

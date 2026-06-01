@@ -43,6 +43,7 @@ func testParamsEqual(t *testing.T, expected map[string]string, params *[]byte, m
 }
 
 func testParamsEqualRaw(t *testing.T, expected map[string]string, params *[]byte, msgAndArgs ...any) {
+	t.Helper()
 	if params == nil {
 		require.Nil(t, expected, msgAndArgs...)
 		return
