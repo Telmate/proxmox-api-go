@@ -174,6 +174,12 @@ func (efi *EfiDisk) validateShared() error {
 type EfiDiskSize uint
 
 // Enum
+//
+//	const (
+//		EfiDiskTypeUnset
+//		EfiDiskType2M
+//		EfiDiskType4M
+//	)
 type EfiDiskType string
 
 const (
