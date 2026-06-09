@@ -404,10 +404,6 @@ func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (p
 		params["vga"] = strings.Join(vgaParam, ",")
 	}
 
-	if config.USBs != nil {
-		itemsToDelete += config.USBs.mapToAPI(currentConfig.USBs, params)
-	}
-
 	if config.PciDevices != nil {
 		itemsToDelete += config.PciDevices.mapToAPI(currentConfig.PciDevices, params)
 	}
@@ -443,6 +439,9 @@ func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byt
 			builder.WriteString("&" + qemuApiKeyTags + "=")
 			builder.WriteString(v)
 		}
+	}
+	if config.USBs != nil {
+		config.USBs.mapToApiCreate(&builder)
 	}
 	if config.Watchdog != nil && !config.Watchdog.Delete {
 		config.Watchdog.mapToApiCreate(&builder)
@@ -491,6 +490,13 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 				builder.WriteString("&" + qemuApiKeyTags + "=")
 				builder.WriteString(v)
 			}
+		}
+	}
+	if config.USBs != nil {
+		if currentLegacy.USBs != nil {
+			config.USBs.mapToApiUpdate(currentLegacy.USBs, &builder, &delete)
+		} else if len(config.USBs) > 0 {
+			config.USBs.mapToApiCreate(&builder)
 		}
 	}
 	if config.Watchdog != nil {
@@ -915,11 +921,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
-		if config.USBs != nil {
-			if err = config.USBs.Validate(nil); err != nil {
-				return
-			}
-		}
 		if err = config.validateCreate(); err != nil {
 			return
 		}
@@ -956,11 +957,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 		}
 		if config.TPM != nil {
 			if err = config.TPM.Validate(current.TPM); err != nil {
-				return
-			}
-		}
-		if config.USBs != nil {
-			if err = config.USBs.Validate(current.USBs); err != nil {
 				return
 			}
 		}
@@ -1014,6 +1010,11 @@ func (config ConfigQemu) validateCreate() error {
 			return err
 		}
 	}
+	if config.USBs != nil {
+		if err := config.USBs.validateCreate(); err != nil {
+			return err
+		}
+	}
 	if config.Watchdog != nil {
 		if err := config.Watchdog.validateCreate(); err != nil {
 			return err
@@ -1030,6 +1031,17 @@ func (config ConfigQemu) validateUpdate(current *ConfigQemu) error {
 			}
 		} else { // create
 			if err := config.EfiDisk.validateCreate(); err != nil {
+				return err
+			}
+		}
+	}
+	if config.USBs != nil {
+		if len(current.USBs) > 0 { // update
+			if err := config.USBs.validateUpdate(current.USBs); err != nil {
+				return err
+			}
+		} else {
+			if err := config.USBs.validateCreate(); err != nil {
 				return err
 			}
 		}
