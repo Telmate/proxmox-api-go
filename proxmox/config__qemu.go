@@ -191,6 +191,7 @@ type ConfigQemu struct {
 	TPM              *TpmState             `json:"tpm,omitempty"`
 	Tablet           *bool                 `json:"tablet,omitempty"` // never nil when returned
 	Tags             *Tags                 `json:"tags,omitempty"`   // Never nil when returned
+	Watchdog         *Watchdog             `json:"watchdog,omitempty"`
 	RandomnessDevice *VirtIoRNG            `json:"randomness_device,omitempty"`
 }
 
@@ -443,6 +444,9 @@ func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byt
 			builder.WriteString(v)
 		}
 	}
+	if config.Watchdog != nil && !config.Watchdog.Delete {
+		config.Watchdog.mapToApiCreate(&builder)
+	}
 	if len(params) == 0 {
 		params = nil
 	}
@@ -487,6 +491,13 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 				builder.WriteString("&" + qemuApiKeyTags + "=")
 				builder.WriteString(v)
 			}
+		}
+	}
+	if config.Watchdog != nil {
+		if currentLegacy.Watchdog != nil {
+			config.Watchdog.mapToApiUpdate(currentLegacy.Watchdog, &builder, &delete)
+		} else if !config.Watchdog.Delete {
+			config.Watchdog.mapToApiCreate(&builder)
 		}
 	}
 
@@ -1003,6 +1014,11 @@ func (config ConfigQemu) validateCreate() error {
 			return err
 		}
 	}
+	if config.Watchdog != nil {
+		if err := config.Watchdog.validateCreate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -1014,6 +1030,17 @@ func (config ConfigQemu) validateUpdate(current *ConfigQemu) error {
 			}
 		} else { // create
 			if err := config.EfiDisk.validateCreate(); err != nil {
+				return err
+			}
+		}
+	}
+	if config.Watchdog != nil {
+		if current.Watchdog != nil { // update
+			if err := config.Watchdog.validateUpdate(); err != nil {
+				return err
+			}
+		} else { // create
+			if err := config.Watchdog.validateCreate(); err != nil {
 				return err
 			}
 		}
@@ -1349,6 +1376,7 @@ type RawConfigQemu interface {
 	GetTablet() bool
 	GetTags() Tags
 	GetUSBs() QemuUSBs
+	GetWatchdog() *Watchdog
 }
 
 type rawConfigQemu struct{ a map[string]any }
@@ -1384,6 +1412,7 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 		Tablet:           util.Pointer(raw.GetTablet()),
 		Tags:             new(raw.GetTags()),
 		USBs:             raw.GetUSBs(),
+		Watchdog:         raw.GetWatchdog(),
 	}
 	config.Disks, config.LinkedID = raw.GetDisks()
 	if err := config.mapToStruct(&vmr, raw.a); err != nil {
@@ -1435,6 +1464,7 @@ func (raw *rawConfigQemu) GetTags() Tags {
 }
 
 const (
+	qemuApiKeyArchitecture      = "arch"
 	qemuApiKeyCloudInitCustom   = "cicustom"
 	qemuApiKeyCloudInitPassword = "cipassword"
 	qemuApiKeyCloudInitSshKeys  = "sshkeys"
@@ -1449,7 +1479,6 @@ const (
 	qemuApiKeyCpuUnits          = "cpuunits"
 	qemuApiKeyCpuVirtual        = "vcpus"
 	qemuApiKeyDescription       = "description"
-	qemuApiKeyArchitecture      = "arch"
 	qemuApiKeyEfiDisk           = "efidisk0"
 	qemuApiKeyGuestAgent        = "agent"
 	qemuApiKeyMemoryBallooning  = "balloon"
@@ -1460,6 +1489,7 @@ const (
 	qemuApiKeyRandomnessDevice  = "rng0"
 	qemuApiKeyTablet            = "tablet"
 	qemuApiKeyTags              = "tags"
+	qemuApiKeyWatchdog          = "watchdog"
 	qemuPrefixApiKeyDiskIde     = "ide"
 	qemuPrefixApiKeyDiskSCSI    = "scsi"
 	qemuPrefixApiKeyDiskSata    = "sata"
