@@ -5,40 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Telmate/proxmox-api-go/internal/util"
-)
-
-type qemuUSB struct {
-	enum    qemuUsbEnum
-	Host    string
-	Usb3    bool
-	Mapping ResourceMappingUsbID
-}
-
-func (usb qemuUSB) String() (param string) { // String is for fmt.Stringer.
-	switch usb.enum {
-	case qemuUsbEnumSpice:
-		param = "spice"
-	case qemuUsbEnumMapping:
-		param = "mapping=" + usb.Mapping.String()
-	case qemuUsbEnumDevice:
-		param = "host=" + usb.Host
-	case qemuUsbEnumPort:
-		param = "host=" + usb.Host
-	}
-	if usb.Usb3 {
-		param += ",usb3=1"
-	}
-	return
-}
-
-type qemuUsbEnum uint8
-
-const (
-	qemuUsbEnumSpice   qemuUsbEnum = 0
-	qemuUsbEnumMapping qemuUsbEnum = 1
-	qemuUsbEnumDevice  qemuUsbEnum = 2
-	qemuUsbEnumPort    qemuUsbEnum = 3
+	"github.com/Telmate/proxmox-api-go/internal/body"
 )
 
 type QemuUSBs map[QemuUsbID]QemuUSB
@@ -47,7 +14,7 @@ const QemuUSBsAmount = uint8(QemuUsbIDMaximum) + 1
 
 func (raw *rawConfigQemu) GetUSBs() QemuUSBs {
 	usbList := make(QemuUSBs)
-	for i := QemuUsbID(0); i < QemuUsbID(QemuUSBsAmount); i++ {
+	for i := range QemuUsbID(QemuUSBsAmount) {
 		if v, isSet := raw.a[qemuPrefixApiKeyUSB+i.String()]; isSet {
 			usbList[i] = QemuUSB{}.mapToSDK(v.(string))
 		}
@@ -58,26 +25,61 @@ func (raw *rawConfigQemu) GetUSBs() QemuUSBs {
 	return nil
 }
 
-func (config QemuUSBs) mapToAPI(current QemuUSBs, params map[string]interface{}) string {
-	var builder strings.Builder
+func (config QemuUSBs) mapToApiCreate(b *strings.Builder) {
 	for i, e := range config {
-		if v, isSet := current[i]; isSet {
+		if e.Delete {
+			continue
+		}
+		b.WriteString("&" + qemuPrefixApiKeyUSB)
+		b.WriteString(i.String())
+		b.WriteRune('=')
+		e.mapToApiCreate(b)
+	}
+}
+
+func (config QemuUSBs) mapToApiUpdate(current QemuUSBs, b, delete *strings.Builder) {
+	for i, e := range config {
+		if v, ok := current[i]; ok { // update / delete
 			if e.Delete {
-				builder.WriteString("," + qemuPrefixApiKeyUSB + i.String())
-				continue
+				delete.WriteString("," + qemuPrefixApiKeyUSB)
+				delete.WriteString(i.String())
+			} else {
+				e.mapToApiUpdate(v, i, b)
 			}
-			params[qemuPrefixApiKeyUSB+i.String()] = e.mapToAPI(&v)
-		} else {
-			if e.Delete {
-				continue
+		} else { // create
+			if !e.Delete {
+				b.WriteString("&" + qemuPrefixApiKeyUSB)
+				b.WriteString(i.String())
+				b.WriteRune('=')
+				e.mapToApiCreate(b)
 			}
-			params[qemuPrefixApiKeyUSB+i.String()] = e.mapToAPI(nil)
 		}
 	}
-	return builder.String()
 }
 
 func (config QemuUSBs) Validate(current QemuUSBs) (err error) {
+	if len(current) > 0 {
+		return config.validateUpdate(current)
+	}
+	return config.validateCreate()
+}
+
+func (config QemuUSBs) validateCreate() (err error) {
+	for i, e := range config {
+		if err = i.Validate(); err != nil {
+			return
+		}
+		if e.Delete {
+			continue
+		}
+		if err = e.validate(QemuUSB{}); err != nil {
+			return
+		}
+	}
+	return nil
+}
+
+func (config QemuUSBs) validateUpdate(current QemuUSBs) (err error) {
 	for i, e := range config {
 		if err = i.Validate(); err != nil {
 			return
@@ -90,9 +92,7 @@ func (config QemuUSBs) Validate(current QemuUSBs) (err error) {
 				if err = e.validate(v); err != nil {
 					return
 				}
-			}
-		} else {
-			if err = e.validate(QemuUSB{}); err != nil {
+			} else if err = e.validate(QemuUSB{}); err != nil {
 				return
 			}
 		}
@@ -100,6 +100,13 @@ func (config QemuUSBs) Validate(current QemuUSBs) (err error) {
 	return nil
 }
 
+// Enum
+//
+//	const (
+//		QemuUsbID0
+//		...
+//		QemuUsbID4
+//	)
 type QemuUsbID uint8
 
 const (
@@ -124,11 +131,11 @@ func (id QemuUsbID) Validate() error {
 }
 
 type QemuUSB struct {
-	Delete  bool            `json:"delete,omitempty"`
 	Device  *QemuUsbDevice  `json:"device,omitempty"`
 	Mapping *QemuUsbMapping `json:"mapping,omitempty"`
 	Port    *QemuUsbPort    `json:"port,omitempty"`
 	Spice   *QemuUsbSpice   `json:"spice,omitempty"`
+	Delete  bool            `json:"delete,omitempty"`
 }
 
 const (
@@ -138,46 +145,134 @@ const (
 	QemuUSB_Error_PortID          string = "usb port id is required during creation"
 )
 
-func (config QemuUSB) mapToAPI(current *QemuUSB) string {
-	var usedConfig qemuUSB
-	if current != nil {
-		usedConfig = current.mapToApiIntermediary(usedConfig)
-	}
-	return config.mapToApiIntermediary(usedConfig).String()
-}
-
-func (config QemuUSB) mapToApiIntermediary(usedConfig qemuUSB) qemuUSB {
+func (config QemuUSB) mapToApiCreate(b *strings.Builder) {
 	if config.Device != nil {
-		usedConfig.enum = qemuUsbEnumDevice
-		if config.Device.USB3 != nil {
-			usedConfig.Usb3 = *config.Device.USB3
-		}
+		b.WriteString("host" + equal)
 		if config.Device.ID != nil {
-			usedConfig.Host = (*config.Device.ID).String()
+			b.WriteString(body.Escape(config.Device.ID.String()))
+		}
+		if config.Device.USB3 != nil && *config.Device.USB3 {
+			b.WriteString(comma + "usb3" + equal + "1")
 		}
 	} else if config.Mapping != nil {
-		usedConfig.enum = qemuUsbEnumMapping
-		if config.Mapping.USB3 != nil {
-			usedConfig.Usb3 = *config.Mapping.USB3
-		}
+		b.WriteString("mapping" + equal)
 		if config.Mapping.ID != nil {
-			usedConfig.Mapping = *config.Mapping.ID
+			b.WriteString(config.Mapping.ID.String())
+		}
+		if config.Mapping.USB3 != nil && *config.Mapping.USB3 {
+			b.WriteString(comma + "usb3" + equal + "1")
 		}
 	} else if config.Port != nil {
-		usedConfig.enum = qemuUsbEnumPort
-		if config.Port.USB3 != nil {
-			usedConfig.Usb3 = *config.Port.USB3
-		}
+		b.WriteString("host" + equal)
 		if config.Port.ID != nil {
-			usedConfig.Host = (*config.Port.ID).String()
+			b.WriteString(config.Port.ID.String())
+		}
+		if config.Port.USB3 != nil && *config.Port.USB3 {
+			b.WriteString(comma + "usb3" + equal + "1")
 		}
 	} else if config.Spice != nil {
-		usedConfig.enum = qemuUsbEnumSpice
+		b.WriteString("spice")
 		if config.Spice.USB3 {
-			usedConfig.Usb3 = config.Spice.USB3
+			b.WriteString(comma + "usb3" + equal + "1")
 		}
 	}
-	return usedConfig
+}
+
+func (config QemuUSB) mapToApiUpdate(current QemuUSB, id QemuUsbID, builder *strings.Builder) {
+	var b strings.Builder
+	current.mapToApiCreate(&b)
+	currentVal := b.String()
+	b = strings.Builder{}
+	if config.Device != nil {
+		b.WriteString("host" + equal)
+		if current.Device != nil {
+			if config.Device.ID != nil {
+				b.WriteString(body.Escape(config.Device.ID.String()))
+			} else {
+				b.WriteString(body.Escape(current.Device.ID.String()))
+			}
+			if config.Device.USB3 != nil {
+				if *config.Device.USB3 {
+					b.WriteString(comma + "usb3" + equal + "1")
+				}
+			} else {
+				if *current.Device.USB3 {
+					b.WriteString(comma + "usb3" + equal + "1")
+				}
+			}
+		} else {
+			if config.Device.ID != nil {
+				b.WriteString(body.Escape(config.Device.ID.String()))
+			}
+			if config.Device.USB3 != nil && *config.Device.USB3 {
+				b.WriteString(comma + "usb3" + equal + "1")
+			}
+		}
+	} else if config.Mapping != nil {
+		b.WriteString("mapping" + equal)
+		if current.Mapping != nil {
+			if config.Mapping.ID != nil {
+				b.WriteString(config.Mapping.ID.String())
+			} else {
+				b.WriteString(current.Mapping.ID.String())
+			}
+			if config.Mapping.USB3 != nil {
+				if *config.Mapping.USB3 {
+					b.WriteString(comma + "usb3" + equal + "1")
+				}
+			} else {
+				if *current.Mapping.USB3 {
+					b.WriteString(comma + "usb3" + equal + "1")
+				}
+			}
+		} else {
+			if config.Mapping.ID != nil {
+				b.WriteString(config.Mapping.ID.String())
+			}
+			if config.Mapping.USB3 != nil && *config.Mapping.USB3 {
+				b.WriteString(comma + "usb3" + equal + "1")
+			}
+		}
+	} else if config.Port != nil {
+		b.WriteString("host" + equal)
+		if current.Port != nil {
+			if config.Port.ID != nil {
+				b.WriteString(config.Port.ID.String())
+			} else {
+				b.WriteString(current.Port.ID.String())
+			}
+			if config.Port.USB3 != nil {
+				if *config.Port.USB3 {
+					b.WriteString(comma + "usb3" + equal + "1")
+				}
+			} else {
+				if *current.Port.USB3 {
+					b.WriteString(comma + "usb3" + equal + "1")
+				}
+			}
+		} else {
+			if config.Port.ID != nil {
+				b.WriteString(config.Port.ID.String())
+			}
+			if config.Port.USB3 != nil && *config.Port.USB3 {
+				b.WriteString(comma + "usb3" + equal + "1")
+			}
+		}
+	} else if config.Spice != nil {
+		b.WriteString("spice")
+		if config.Spice.USB3 {
+			b.WriteString(comma + "usb3" + equal + "1")
+		}
+	} else {
+		return
+	}
+	newVal := b.String()
+	if newVal != currentVal {
+		builder.WriteString("&" + qemuPrefixApiKeyUSB)
+		builder.WriteString(id.String())
+		builder.WriteRune('=')
+		builder.WriteString(newVal)
+	}
 }
 
 func (QemuUSB) mapToSDK(rawUSB string) QemuUSB {
@@ -190,24 +285,22 @@ func (QemuUSB) mapToSDK(rawUSB string) QemuUSB {
 	switch usbType[0] {
 	case "host":
 		if strings.Contains(usbType[1], ":") {
-			return QemuUSB{Device: &QemuUsbDevice{ID: util.Pointer(UsbDeviceID(usbType[1])), USB3: &usb3}}
+			return QemuUSB{Device: &QemuUsbDevice{ID: new(UsbDeviceID(usbType[1])), USB3: &usb3}}
 		}
-		return QemuUSB{Port: &QemuUsbPort{ID: util.Pointer(UsbPortID(usbType[1])), USB3: &usb3}}
+		return QemuUSB{Port: &QemuUsbPort{ID: new(UsbPortID(usbType[1])), USB3: &usb3}}
 	case "mapping":
-		return QemuUSB{Mapping: &QemuUsbMapping{ID: util.Pointer(ResourceMappingUsbID(usbType[1])), USB3: &usb3}}
+		return QemuUSB{Mapping: &QemuUsbMapping{ID: new(ResourceMappingUsbID(usbType[1])), USB3: &usb3}}
 	case "spice":
 		return QemuUSB{Spice: &QemuUsbSpice{USB3: usb3}}
 	}
 	return QemuUSB{}
 }
 
-func (config QemuUSB) Validate(current *QemuUSB) (err error) {
+func (config QemuUSB) Validate(current *QemuUSB) error {
 	if current != nil {
-		err = config.validate(*current)
-	} else {
-		err = config.validate(QemuUSB{})
+		return config.validate(*current)
 	}
-	return err
+	return config.validate(QemuUSB{})
 }
 
 func (config QemuUSB) validate(current QemuUSB) error {
@@ -255,8 +348,8 @@ func (config QemuUSB) validate(current QemuUSB) error {
 }
 
 type QemuUsbDevice struct {
-	ID   *UsbDeviceID `json:"id,omitempty"`
-	USB3 *bool        `json:"usb3,omitempty"`
+	ID   *UsbDeviceID `json:"id,omitempty"`   // never nil when returned
+	USB3 *bool        `json:"usb3,omitempty"` // never nil when returned
 }
 
 func (config QemuUsbDevice) Validate() error {
@@ -267,8 +360,8 @@ func (config QemuUsbDevice) Validate() error {
 }
 
 type QemuUsbMapping struct {
-	ID   *ResourceMappingUsbID `json:"id,omitempty"`
-	USB3 *bool                 `json:"usb3,omitempty"`
+	ID   *ResourceMappingUsbID `json:"id,omitempty"`   // never nil when returned
+	USB3 *bool                 `json:"usb3,omitempty"` // never nil when returned
 }
 
 func (config QemuUsbMapping) Validate() error {
@@ -279,8 +372,8 @@ func (config QemuUsbMapping) Validate() error {
 }
 
 type QemuUsbPort struct {
-	ID   *UsbPortID `json:"id,omitempty"`
-	USB3 *bool      `json:"usb3,omitempty"`
+	ID   *UsbPortID `json:"id,omitempty"`   // never nil when returned
+	USB3 *bool      `json:"usb3,omitempty"` // never nil when returned
 }
 
 func (config QemuUsbPort) Validate() error {
@@ -320,9 +413,7 @@ func (id UsbDeviceID) String() string { return string(id) } // String is for fmt
 
 type UsbPortID string // regex: \d+-\d+
 
-const (
-	UsbPortID_Error_Invalid string = "invalid usb port id. Expected expression of the form '<bus>-<port>(.<port>)*' where bus and port are integers"
-)
+const UsbPortID_Error_Invalid string = "invalid usb port id. Expected expression of the form '<bus>-<port>(.<port>)*' where bus and port are integers"
 
 func (id UsbPortID) String() string { return string(id) } // String is for fmt.Stringer.
 

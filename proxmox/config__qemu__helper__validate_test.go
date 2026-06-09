@@ -89,28 +89,28 @@ func (tests qemuTestTypeValidateFunc) Inject(t *testing.T,
 	refrence := tests.format()
 	if testFunc != nil {
 		for i := range test.invalidCreate {
-			t.Run("create/invalid/"+test.invalidCreate[i].name, func(t *testing.T) {
+			t.Run("invalid/create/"+test.invalidCreate[i].name, func(t *testing.T) {
 				config := test.invalidCreate[i].input
-				testFunc(t, config, test.invalidCreate[i].current, test.invalidCreate[i].version, test.invalidCreate[i].err, false)
+				testFunc(t, config, nil, test.invalidCreate[i].version, test.invalidCreate[i].err, false)
 				require.Equal(t, refrence.invalidCreate[i].input, config, "mutated input config")
 			})
 		}
 		for i := range test.invalidUpdate {
-			t.Run("update/invalid/"+test.invalidUpdate[i].name, func(t *testing.T) {
+			t.Run("invalid/update/"+test.invalidUpdate[i].name, func(t *testing.T) {
 				config := test.invalidUpdate[i].input
 				testFunc(t, config, test.invalidUpdate[i].current, test.invalidUpdate[i].version, test.invalidUpdate[i].err, false)
 				require.Equal(t, refrence.invalidUpdate[i].input, config, "mutated input config")
 			})
 		}
 		for i := range test.validCreate {
-			t.Run("create/valid/"+test.validCreate[i].name, func(t *testing.T) {
+			t.Run("valid/create/"+test.validCreate[i].name, func(t *testing.T) {
 				config := test.validCreate[i].input
-				testFunc(t, config, test.validCreate[i].current, test.validCreate[i].version, nil, true)
+				testFunc(t, config, nil, test.validCreate[i].version, nil, true)
 				require.Equal(t, refrence.validCreate[i].input, config, "mutated input config")
 			})
 		}
 		for i := range test.validUpdate {
-			t.Run("update/valid/"+test.validUpdate[i].name, func(t *testing.T) {
+			t.Run("valid/udpate/"+test.validUpdate[i].name, func(t *testing.T) {
 				config := test.validUpdate[i].input
 				testFunc(t, config, test.validUpdate[i].current, test.validUpdate[i].version, nil, true)
 				require.Equal(t, refrence.validUpdate[i].input, config, "mutated input config")
