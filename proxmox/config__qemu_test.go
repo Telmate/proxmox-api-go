@@ -43,10 +43,37 @@ type (
 		version Version
 	}
 
+	qemuTestCaseInvalid struct {
+		name    string
+		input   ConfigQemu
+		current *ConfigQemu
+		err     error
+		version Version
+	}
+
+	qemuTestCaseValid struct {
+		name    string
+		input   ConfigQemu
+		current *ConfigQemu
+		version Version
+	}
+
 	qemuTestTypeValidate struct {
 		create       []qemuTestCaseValidate
 		createUpdate []qemuTestCaseValidate // value of currentConfig wil be used for update and ignored for create
 		update       []qemuTestCaseValidate
+	}
+
+	qemuTestTypeInvalid struct {
+		create       []qemuTestCaseInvalid
+		createUpdate []qemuTestCaseInvalid // value of currentConfig wil be used for update and ignored for create
+		update       []qemuTestCaseInvalid
+	}
+
+	qemuTestTypeValid struct {
+		create       []qemuTestCaseValid
+		createUpdate []qemuTestCaseValid // value of currentConfig wil be used for update and ignored for create
+		update       []qemuTestCaseValid
 	}
 
 	qemuTestsAPI struct {

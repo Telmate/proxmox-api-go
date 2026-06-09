@@ -7,6 +7,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_Append(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		inputA []string
+		inputB []string
+		inputC []string
+		output []string
+	}{
+		{name: `empty`,
+			output: []string{}},
+		{name: `single array`,
+			inputA: []string{"a", "b", "c"},
+			output: []string{"a", "b", "c"}},
+		{name: `multiple array`,
+			inputA: []string{"a", "b", "c"},
+			inputB: []string{"d", "e", "f"},
+			inputC: []string{"g", "h", "i"},
+			output: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, Append(test.inputA, test.inputB, test.inputC))
+		})
+	}
+}
+
 func Test_Combine(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
