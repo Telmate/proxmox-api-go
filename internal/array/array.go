@@ -5,6 +5,23 @@ import (
 	"strings"
 )
 
+// Append appends multiple arrays together
+func Append[T any](in ...[]T) []T {
+	var totalLength int
+	for i := range in {
+		totalLength += len(in[i])
+	}
+	array := make([]T, totalLength)
+	var index int
+	for i := range in {
+		for ii := range in[i] {
+			array[index] = in[i][ii]
+			index++
+		}
+	}
+	return array
+}
+
 // Combine two arrays of comparable types into one, removing duplicates.
 // The output order is not guaranteed.
 func Combine[T comparable](a, b []T) []T {
