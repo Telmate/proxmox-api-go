@@ -120,7 +120,6 @@ func (efi EfiDisk) replace(current *EfiDisk) bool {
 	return false
 }
 
-// TODO test
 func (efi EfiDisk) Validate(current *EfiDisk) error {
 	if current == nil {
 		return efi.validateCreate()

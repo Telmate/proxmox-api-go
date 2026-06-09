@@ -8,280 +8,273 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testData_ConfigQemu_EfiDisk() qemuTests {
-	return qemuTests{
-		Invalid: qemuInvalid{
-			CreateUpdate: []qemuInvalidUpdate{
-				{name: `errors.New(EFiDisk_Error_StorageRequired)`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{}}),
-					output: map[string]string{"efidisk0": "%3A1"}, // ":1"
-					err:    errors.New(EFiDisk_Error_StorageRequired)},
-				{name: `QemuDiskFormat("").Error()`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Format:  new(QemuDiskFormat("invalid")),
-						Storage: new(StorageName("local-zfs"))}}),
-					output: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Dinvalid"}, // "local-zfs:1,format=invalid"
-					err:    QemuDiskFormat("").Error()},
-				{name: `errors.New(EfiDiskType_Error)`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Format:  new(QemuDiskFormat_Raw),
-						Storage: new(StorageName("local-zfs")),
-						Type:    new(EfiDiskType("invalid"))}}),
-					output: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Draw%2Cefitype%3Dinvalid"}, // "local-zfs:1,format=raw,efitype=invalid"
-					err:    errors.New(EfiDiskType_Error)},
+func testData_ConfigQemu_EfiDisk_Api() qemuTestsApiFunc {
+	return qemuTestsApiFunc(func() qemuTestsAPI {
+		return qemuTestsAPI{
+			createUpdate: []qemuTestCaseAPI{
 				{name: `PreEnrolledKeys True`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						PreEnrolledKeys: new(true)}}),
-					output: map[string]string{"efidisk0": "%3A1%2Cpre-enrolled-keys%3D1"}}, // :1,pre-enrolled-keys=1
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						PreEnrolledKeys: new(true)}},
+					body: map[string]string{"efidisk0": "%3A1%2Cpre-enrolled-keys%3D1"}}, // :1,pre-enrolled-keys=1
 				{name: `PreEnrolledKeys False`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						PreEnrolledKeys: new(false)}}),
-					output: map[string]string{"efidisk0": "%3A1"}}, // ":1"
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						PreEnrolledKeys: new(false)}},
+					body: map[string]string{"efidisk0": "%3A1"}}, // ":1"
 				{name: `Type 2M`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Type: new(EfiDiskType2M)}}),
-					output: map[string]string{"efidisk0": "%3A1%2Cefitype%3D2m"}}, // ":1,efitype=2m"
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Type: new(EfiDiskType2M)}},
+					body: map[string]string{"efidisk0": "%3A1%2Cefitype%3D2m"}}, // ":1,efitype=2m"
 				{name: `Type 4M`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Type: new(EfiDiskType4M)}}),
-					output: map[string]string{"efidisk0": "%3A1%2Cefitype%3D4m"}}, // ":1,efitype=4m"
-			},
-		},
-		Valid: qemuValid{
-			CreateUpdate: []qemuValidUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Type: new(EfiDiskType4M)}},
+					body: map[string]string{"efidisk0": "%3A1%2Cefitype%3D4m"}}, // ":1,efitype=4m"
 				{name: `full`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
 						Format:          new(QemuDiskFormat_Raw),
 						PreEnrolledKeys: new(true),
 						Storage:         new(StorageName("local-zfs")),
-						Type:            new(EfiDiskType4M)}}),
-					output: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Draw%2Cpre-enrolled-keys%3D1%2Cefitype%3D4m"}}, // "local-zfs:1,format=raw,pre-enrolled-keys=1,efitype=4m"
+						Type:            new(EfiDiskType4M)}},
+					body: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Draw%2Cpre-enrolled-keys%3D1%2Cefitype%3D4m"}}, // "local-zfs:1,format=raw,pre-enrolled-keys=1,efitype=4m"
 				{name: `minimal`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Storage: new(StorageName("local-zfs"))}}),
-					output: map[string]string{"efidisk0": "local-zfs%3A1"}}, // "local-zfs:1"
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Storage: new(StorageName("local-zfs"))}},
+					body: map[string]string{"efidisk0": "local-zfs%3A1"}}, // "local-zfs:1"
 				{name: `delete full, no effect`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
 						Delete:          true,
 						Format:          new(QemuDiskFormat_Raw),
 						PreEnrolledKeys: new(true),
 						Storage:         new(StorageName("local-zfs")),
-						Type:            new(EfiDiskType4M)}})},
+						Type:            new(EfiDiskType4M)}}},
 				{name: `delete minimal, no effect`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{Delete: true}})},
+					config: &ConfigQemu{EfiDisk: &EfiDisk{Delete: true}}},
 				{name: `unset`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
 						Type:    new(EfiDiskTypeUnset),
-						Storage: new(StorageName("local-zfs"))}}),
-					output: map[string]string{"efidisk0": "local-zfs%3A1"}}, // "local-zfs:1"
+						Storage: new(StorageName("local-zfs"))}},
+					body: map[string]string{"efidisk0": "local-zfs%3A1"}}, // "local-zfs:1"
 			},
-			Update: []qemuValidUpdate{
+			update: []qemuTestCaseAPI{
 				{name: `delete existing`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{Delete: true}}),
-					current: ConfigQemu{EfiDisk: &EfiDisk{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{Delete: true}},
+					currentUpdate: configQemuUpdate{efiDisk: &EfiDisk{
 						Storage: new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{efiDisk: &EfiDisk{
-						Storage: new(StorageName("local-zfs"))}},
-					output: map[string]string{"delete": "efidisk0"}},
+					body: map[string]string{"delete": "efidisk0"}},
 				{name: `change all`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
 						Format:          new(QemuDiskFormat_Qcow2),
 						PreEnrolledKeys: new(true),
 						Storage:         new(StorageName("local-lvm")),
-						Type:            new(EfiDiskType4M)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Format:          new(QemuDiskFormat_Raw),
-							PreEnrolledKeys: new(false),
-							Storage:         new(StorageName("local-zfs")),
-							Type:            new(EfiDiskType2M)}},
-					current2: configQemuUpdate{
+						Type:            new(EfiDiskType4M)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Format:          new(QemuDiskFormat_Raw),
 							PreEnrolledKeys: new(false),
 							Storage:         new(StorageName("local-zfs")),
 							Type:            new(EfiDiskType2M)}},
-					output: map[string]string{"efidisk0": "local-lvm%3A1%2Cformat%3Dqcow2%2Cpre-enrolled-keys%3D1%2Cefitype%3D4m"}}, // "local-lvm:1,format=qcow2,pre-enrolled-keys=1,efitype=4m"
+					body: map[string]string{"efidisk0": "local-lvm%3A1%2Cformat%3Dqcow2%2Cpre-enrolled-keys%3D1%2Cefitype%3D4m"}}, // "local-lvm:1,format=qcow2,pre-enrolled-keys=1,efitype=4m"
 				{name: `PreEnrolledKeys False`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						PreEnrolledKeys: new(false)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							PreEnrolledKeys: new(false),
-							Storage:         new(StorageName("local-lvm"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						PreEnrolledKeys: new(false)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							PreEnrolledKeys: new(true),
 							Storage:         new(StorageName("local-lvm"))}},
-					output: map[string]string{"efidisk0": "local-lvm%3A1"}}, // "local-lvm:1"
+					body: map[string]string{"efidisk0": "local-lvm%3A1"}}, // "local-lvm:1"
 				{name: `PreEnrolledKeys False same`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						PreEnrolledKeys: new(false)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							PreEnrolledKeys: new(false),
-							Storage:         new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						PreEnrolledKeys: new(false)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							PreEnrolledKeys: new(false),
 							Storage:         new(StorageName("local-zfs"))}}},
 				{name: `PreEnrolledKeys True`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						PreEnrolledKeys: new(true)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							PreEnrolledKeys: new(false),
-							Storage:         new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						PreEnrolledKeys: new(true)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							PreEnrolledKeys: new(false),
 							Storage:         new(StorageName("local-zfs"))}},
-					output: map[string]string{"efidisk0": "local-zfs%3A1%2Cpre-enrolled-keys%3D1"}}, // "local-zfs:1,pre-enrolled-keys=1"
+					body: map[string]string{"efidisk0": "local-zfs%3A1%2Cpre-enrolled-keys%3D1"}}, // "local-zfs:1,pre-enrolled-keys=1"
 				{name: `PreEnrolledKeys True same`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						PreEnrolledKeys: new(true)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							PreEnrolledKeys: new(true),
-							Storage:         new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						PreEnrolledKeys: new(true)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							PreEnrolledKeys: new(true),
 							Storage:         new(StorageName("local-zfs"))}}},
 				{name: `Type 2M`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Type: new(EfiDiskType2M)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Type:    new(EfiDiskType4M),
-							Storage: new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Type: new(EfiDiskType2M)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Type:    new(EfiDiskType4M),
 							Storage: new(StorageName("local-zfs"))}},
-					output: map[string]string{"efidisk0": "local-zfs%3A1%2Cefitype%3D2m"}}, // "local-zfs:1,efitype=2m"
+					body: map[string]string{"efidisk0": "local-zfs%3A1%2Cefitype%3D2m"}}, // "local-zfs:1,efitype=2m"
 				{name: `Type 2M same`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Type: new(EfiDiskType2M)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Type:    new(EfiDiskType2M),
-							Storage: new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Type: new(EfiDiskType2M)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Type:    new(EfiDiskType2M),
 							Storage: new(StorageName("local-zfs"))}}},
 				{name: `Type 2M unset`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Type: new(EfiDiskTypeUnset)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Type:    new(EfiDiskType2M),
-							Storage: new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Type: new(EfiDiskTypeUnset)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Type:    new(EfiDiskType2M),
 							Storage: new(StorageName("local-zfs"))}},
-					output: map[string]string{"efidisk0": "local-zfs%3A1"}}, // "local-zfs:1"
+					body: map[string]string{"efidisk0": "local-zfs%3A1"}}, // "local-zfs:1"
 				{name: `Type 4M`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Type: new(EfiDiskType4M)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Type:    new(EfiDiskType2M),
-							Format:  new(QemuDiskFormat_Qcow2),
-							Storage: new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Type: new(EfiDiskType4M)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Type:    new(EfiDiskType2M),
 							Format:  new(QemuDiskFormat_Qcow2),
 							Storage: new(StorageName("local-zfs"))}},
-					output: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Dqcow2%2Cefitype%3D4m"}}, // "local-zfs:1,format=qcow2,efitype=4m"
+					body: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Dqcow2%2Cefitype%3D4m"}}, // "local-zfs:1,format=qcow2,efitype=4m"
 				{name: `Type 4M same`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Type: new(EfiDiskType4M)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Type:    new(EfiDiskType4M),
-							Storage: new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Type: new(EfiDiskType4M)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Type:    new(EfiDiskType4M),
 							Storage: new(StorageName("local-zfs"))}}},
 				{name: `Type 4M unset`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
-						Type: new(EfiDiskTypeUnset)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Type:    new(EfiDiskType4M),
-							Format:  new(QemuDiskFormat_Raw),
-							Storage: new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
+						Type: new(EfiDiskTypeUnset)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Type:    new(EfiDiskType4M),
 							Format:  new(QemuDiskFormat_Raw),
 							Storage: new(StorageName("local-zfs"))}},
-					output: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Draw"}}, // "local-zfs:1,format=raw"
+					body: map[string]string{"efidisk0": "local-zfs%3A1%2Cformat%3Draw"}}, // "local-zfs:1,format=raw"
 				{name: `Format no inherit`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
 						Storage: new(StorageName("local-lvm")),
-						Type:    new(EfiDiskTypeUnset)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Format:          new(QemuDiskFormat_Qcow2),
-							Type:            new(EfiDiskType4M),
-							PreEnrolledKeys: new(true),
-							Storage:         new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+						Type:    new(EfiDiskTypeUnset)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Format:          new(QemuDiskFormat_Qcow2),
 							Type:            new(EfiDiskType4M),
 							PreEnrolledKeys: new(true),
 							Storage:         new(StorageName("local-zfs"))}},
-					output: map[string]string{"efidisk0": "local-lvm%3A1%2Cpre-enrolled-keys%3D1"}}, // "local-lvm:1,pre-enrolled-keys=1"
+					body: map[string]string{"efidisk0": "local-lvm%3A1%2Cpre-enrolled-keys%3D1"}}, // "local-lvm:1,pre-enrolled-keys=1"
 				{name: `Format change`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
 						Storage:         new(StorageName("local-lvm")),
 						Format:          new(QemuDiskFormat_Raw),
-						PreEnrolledKeys: new(false)}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Format:          new(QemuDiskFormat_Qcow2),
-							Type:            new(EfiDiskType2M),
-							PreEnrolledKeys: new(true),
-							Storage:         new(StorageName("local-zfs"))}},
-					current2: configQemuUpdate{
+						PreEnrolledKeys: new(false)}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Format:          new(QemuDiskFormat_Qcow2),
 							Type:            new(EfiDiskType2M),
 							PreEnrolledKeys: new(true),
 							Storage:         new(StorageName("local-zfs"))}},
-					output: map[string]string{"efidisk0": "local-lvm%3A1%2Cformat%3Draw%2Cefitype%3D2m"}}, // "local-lvm:1,format=raw,efitype=2m"
+					body: map[string]string{"efidisk0": "local-lvm%3A1%2Cformat%3Draw%2Cefitype%3D2m"}}, // "local-lvm:1,format=raw,efitype=2m"
 				{name: `Format, Storage change`,
-					config: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+					config: &ConfigQemu{EfiDisk: &EfiDisk{
 						Format:  new(QemuDiskFormat_Vmdk),
-						Storage: new(StorageName("local-zfs"))}}),
-					current: ConfigQemu{
-						EfiDisk: &EfiDisk{
-							Format:  new(QemuDiskFormat_Qcow2),
-							Storage: new(StorageName("local-lvm"))}},
-					current2: configQemuUpdate{
+						Storage: new(StorageName("local-zfs"))}},
+					currentUpdate: configQemuUpdate{
 						efiDisk: &EfiDisk{
 							Format:  new(QemuDiskFormat_Qcow2),
 							Storage: new(StorageName("local-lvm"))}}},
 			},
-		},
-	}
+		}
+	})
 }
 
-func Test_ConfigQemu_EfiDisk_set(t *testing.T) {
+func testData_ConfigQemu_EfiDisk_Validate() qemuTestTypeValidateFunc {
+	return qemuTestTypeValidateFunc(func() (qemuTestTypeInvalid, qemuTestTypeValid) {
+		invalid := qemuTestTypeInvalid{
+			create: []qemuTestCaseInvalid{
+				{name: `errors.New(EFiDisk_Error_StorageRequired)`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{}}),
+					err:   errors.New(EFiDisk_Error_StorageRequired)},
+			},
+			createUpdate: []qemuTestCaseInvalid{
+				{name: `QemuDiskFormat("").Error()`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+						Format:  new(QemuDiskFormat("invalid")),
+						Storage: new(StorageName("local-zfs"))}}),
+					err: QemuDiskFormat("").Error()},
+				{name: `errors.New(EfiDiskType_Error)`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+						Format:  new(QemuDiskFormat_Raw),
+						Storage: new(StorageName("local-zfs")),
+						Type:    new(EfiDiskType("invalid"))}}),
+					err: errors.New(EfiDiskType_Error)},
+			},
+		}
+		valid := qemuTestTypeValid{
+			createUpdate: []qemuTestCaseValid{
+				{name: `full`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+						Format:          new(QemuDiskFormat("raw")),
+						PreEnrolledKeys: new(true),
+						Storage:         new(StorageName("local-zfs")),
+						Type:            new(EfiDiskType("4m"))}}),
+					current: &ConfigQemu{}},
+				{name: `minimal`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+						Storage: new(StorageName("local-zfs"))}}),
+					current: &ConfigQemu{}},
+				{name: `delete full`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+						Delete:          true,
+						Format:          new(QemuDiskFormat("raw")),
+						PreEnrolledKeys: new(true),
+						Storage:         new(StorageName("local-zfs")),
+						Type:            new(EfiDiskType("4m"))}}),
+					current: &ConfigQemu{}},
+				{name: `delete minimal`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+						Delete: true}}),
+					current: &ConfigQemu{}},
+				{name: `unset`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+						Type:    new(EfiDiskType("")),
+						Storage: new(StorageName("local-zfs"))}}),
+					current: &ConfigQemu{}},
+			},
+			update: []qemuTestCaseValid{
+				{name: `delete existing`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{Delete: true}}),
+					current: &ConfigQemu{EfiDisk: &EfiDisk{
+						Storage: new(StorageName("local-zfs"))}}},
+				{name: `change all`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{EfiDisk: &EfiDisk{
+						Format:          new(QemuDiskFormat("qcow2")),
+						PreEnrolledKeys: new(true),
+						Storage:         new(StorageName("local-lvm")),
+						Type:            new(EfiDiskType("4m"))}}),
+					current: &ConfigQemu{EfiDisk: &EfiDisk{
+						Format:  new(QemuDiskFormat("raw")),
+						Storage: new(StorageName("local-zfs")),
+						Type:    new(EfiDiskType("2m"))}}},
+			},
+		}
+		return invalid, valid
+	})
+}
+
+func Test_ConfigQemu_EfiDisk_Api(t *testing.T) {
 	t.Parallel()
-	qemuTestHelper(t, testData_ConfigQemu_EfiDisk)
+	testData_ConfigQemu_EfiDisk_Api().Test(t)
 }
 
 func Test_ConfigQemu_EfiDisk_Validate(t *testing.T) {
 	t.Parallel()
-	test := func(t *testing.T, config ConfigQemu, current *ConfigQemu, version Version, output map[string]string, expectedErr error, valid bool) {
+	testData_ConfigQemu_EfiDisk_Validate().Test(t)
+}
+
+func Test_EfiDisk_Validate(t *testing.T) {
+	t.Parallel()
+	validate := func(t *testing.T, config ConfigQemu, current *ConfigQemu, version Version, expectedErr error, valid bool) {
+		t.Helper()
 		var currentEfiDisk *EfiDisk
 		if current != nil {
 			currentEfiDisk = current.EfiDisk
@@ -296,7 +289,7 @@ func Test_ConfigQemu_EfiDisk_Validate(t *testing.T) {
 			}
 		}
 	}
-	qemuTestInjected(t, testData_ConfigQemu_EfiDisk, test)
+	testData_ConfigQemu_EfiDisk_Validate().Inject(t, validate)
 }
 
 func testDataEfiDiskGet() []qemuTestCaseGet {
