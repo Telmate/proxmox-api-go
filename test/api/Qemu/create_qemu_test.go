@@ -138,6 +138,9 @@ func Test_Qemu_Create_Max(t *testing.T) {
 					Memory: &pveSDK.QemuMemory{CapacityMiB: util.Pointer(pveSDK.QemuMemoryCapacity(16))},
 					Name:   util.Pointer(pveSDK.GuestName(guestName)),
 					Node:   util.Pointer(node),
+					Watchdog: &pveSDK.Watchdog{
+						Action: new(pveSDK.WatchdogActionNone),
+						Model:  new(pveSDK.WatchdogModelIb700)},
 				}
 				vmr, err = c.QemuGuest.Create(ctx, config)
 				require.NoError(t, err)
@@ -165,6 +168,9 @@ func Test_Qemu_Create_Max(t *testing.T) {
 					Bios:            "seabios",
 					Boot:            " ",
 					Tags:            new(pveSDK.Tags),
+					Watchdog: &pveSDK.Watchdog{
+						Action: new(pveSDK.WatchdogActionNone),
+						Model:  new(pveSDK.WatchdogModelIb700)},
 				})
 			}},
 		{name: `Delete guest`,

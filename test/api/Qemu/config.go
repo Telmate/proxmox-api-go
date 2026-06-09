@@ -38,6 +38,7 @@ func ReducedConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 		StartAtNodeBoot: new(false),
 		Tablet:          new(false),
 		Tags:            new(pveSDK.Tags{}),
+		Watchdog:        &pveSDK.Watchdog{Delete: true},
 	}
 	expected = &pveSDK.ConfigQemu{
 		Bios:            "seabios",
@@ -142,6 +143,9 @@ func MaximumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 		StartAtNodeBoot: new(true),
 		Tablet:          new(true),
 		Tags:            new(pveSDK.Tags{"Debian", "test", pveSDK.Tag(name)}),
+		Watchdog: &pveSDK.Watchdog{
+			Action: new(pveSDK.WatchdogActionReset),
+			Model:  new(pveSDK.WatchdogModelI6300esb)},
 	}
 	expected = &pveSDK.ConfigQemu{
 		Bios:        "seabios",
@@ -202,6 +206,9 @@ func MaximumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 		StartAtNodeBoot: new(true),
 		Tablet:          new(true),
 		Tags:            new(pveSDK.Tags{"debian", "test", pveSDK.Tag(strings.ToLower(name.String()))}),
+		Watchdog: &pveSDK.Watchdog{
+			Action: new(pveSDK.WatchdogActionReset),
+			Model:  new(pveSDK.WatchdogModelI6300esb)},
 	}
 	return
 }

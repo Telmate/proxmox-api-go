@@ -6584,6 +6584,8 @@ func Test_ConfigQemu_get(t *testing.T) {
 				{name: `code coverage`,
 					input:  map[string]interface{}{"usb3": ""},
 					output: baseConfig(ConfigQemu{USBs: QemuUSBs{QemuUsbID3: QemuUSB{}}})}}},
+		{category: `watchdog`,
+			tests: testData_ConfigQemu_Watchdog_Get()},
 		{category: `ID`,
 			tests: []qemuTestCaseGet{
 				{name: `vmr empty`,
