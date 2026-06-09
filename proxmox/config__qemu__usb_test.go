@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/Telmate/proxmox-api-go/test/data/test_data_resourcemapping"
 	"github.com/stretchr/testify/require"
 )
@@ -597,20 +596,20 @@ func Test_QemuUsbDevice_Validate(t *testing.T) {
 	}{
 		{name: "Valid set",
 			input: QemuUsbDevice{
-				ID: util.Pointer(UsbDeviceID("1234:5678"))}},
+				ID: new(UsbDeviceID("1234:5678"))}},
 		{name: "Valid nil"},
 		// Invalid
 		{name: "UsbDeviceID_Error_Invalid",
 			input: QemuUsbDevice{
-				ID: util.Pointer(UsbDeviceID("162E"))},
+				ID: new(UsbDeviceID("162E"))},
 			output: errors.New(UsbDeviceID_Error_Invalid)},
 		{name: "UsbDeviceID_Error_VendorID",
 			input: QemuUsbDevice{
-				ID: util.Pointer(UsbDeviceID("7P03:162E"))},
+				ID: new(UsbDeviceID("7P03:162E"))},
 			output: errors.New(UsbDeviceID_Error_VendorID)},
 		{name: "UsbDeviceID_Error_ProductID",
 			input: QemuUsbDevice{
-				ID: util.Pointer(UsbDeviceID("162e:7P03"))},
+				ID: new(UsbDeviceID("162e:7P03"))},
 			output: errors.New(UsbDeviceID_Error_ProductID)},
 	}
 	for _, test := range tests {
@@ -629,24 +628,24 @@ func Test_QemuUsbMapped_Validate(t *testing.T) {
 	}{
 		{name: "Valid set",
 			input: QemuUsbMapping{
-				ID: util.Pointer(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Legal()[0]))}},
+				ID: new(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Legal()[0]))}},
 		{name: "Valid nil"},
 		// Invalid
 		{name: "ResourceMappingUsbID_Error_MinLength",
 			input: QemuUsbMapping{
-				ID: util.Pointer(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Min_Illegal()[0]))},
+				ID: new(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Min_Illegal()[0]))},
 			output: errors.New(ResourceMappingUsbID_Error_MinLength)},
 		{name: "ResourceMappingUsbID_Error_MaxLength",
 			input: QemuUsbMapping{
-				ID: util.Pointer(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Max_Illegal()))},
+				ID: new(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Max_Illegal()))},
 			output: errors.New(ResourceMappingUsbID_Error_MaxLength)},
 		{name: "ResourceMappingUsbID_Error_Start",
 			input: QemuUsbMapping{
-				ID: util.Pointer(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Start_Illegal()[0]))},
+				ID: new(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Start_Illegal()[0]))},
 			output: errors.New(ResourceMappingUsbID_Error_Start)},
 		{name: "ResourceMappingUsbID_Error_Invalid",
 			input: QemuUsbMapping{
-				ID: util.Pointer(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Character_Illegal()[0]))},
+				ID: new(ResourceMappingUsbID(test_data_resourcemapping.ResourceMappingUsbID_Character_Illegal()[0]))},
 			output: errors.New(ResourceMappingUsbID_Error_Invalid)},
 	}
 	for _, test := range tests {
@@ -664,11 +663,11 @@ func Test_QemuUsbPort_Validate(t *testing.T) {
 		output error
 	}{
 		{name: "Valid set",
-			input: QemuUsbPort{ID: util.Pointer(UsbPortID("1-3"))}},
+			input: QemuUsbPort{ID: new(UsbPortID("1-3"))}},
 		{name: "Valid nil"},
 		// Invalid
 		{name: "UsbDeviceID_Error_Invalid",
-			input:  QemuUsbPort{ID: util.Pointer(UsbPortID("2-4-5"))},
+			input:  QemuUsbPort{ID: new(UsbPortID("2-4-5"))},
 			output: errors.New(UsbPortID_Error_Invalid)},
 	}
 	for _, test := range tests {
