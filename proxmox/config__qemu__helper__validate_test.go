@@ -20,7 +20,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 			if test.invalidCreate[i].err != nil {
 				require.Equal(t, test.invalidCreate[i].err, err)
 			}
-			err = config.Validate(test.invalidCreate[i].current, test.invalidCreate[i].version)
+			err = config.Validate(nil, test.invalidCreate[i].version)
 			require.Error(t, err)
 			if test.invalidCreate[i].err != nil {
 				require.Equal(t, test.invalidCreate[i].err, err)
@@ -53,7 +53,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 			config := test.validCreate[i].input
 			err := config.validateCreate(test.validCreate[i].version)
 			require.NoError(t, err)
-			err = config.Validate(test.validCreate[i].current, test.validCreate[i].version)
+			err = config.Validate(nil, test.validCreate[i].version)
 			require.NoError(t, err)
 			require.Equal(t, refrence.validCreate[i].input, config, "mutated input config")
 		})
