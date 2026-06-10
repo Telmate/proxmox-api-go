@@ -3,12 +3,10 @@ package proxmox
 import (
 	"errors"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/Telmate/proxmox-api-go/internal/parse"
-	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 type CpuFlags struct {
@@ -26,10 +24,9 @@ type CpuFlags struct {
 	VirtSSBD   *TriBool `json:"cirtssbd,omitempty"`   // Basis for "Speculative Store Bypass" protection for AMD models.
 }
 
-func (flags CpuFlags) mapToApi(current *CpuFlags) string {
-	var builder strings.Builder
-
-	flagNames := []string{
+func (flags CpuFlags) mapToApi(current *CpuFlags, b *strings.Builder) {
+	const numberOfFlags = 12
+	flagNames := [numberOfFlags]string{
 		"aes",
 		"amd-no-ssb",
 		"amd-ssbd",
@@ -43,7 +40,7 @@ func (flags CpuFlags) mapToApi(current *CpuFlags) string {
 		"spec-ctrl",
 		"virt-ssbd"}
 
-	flagValues := []*TriBool{
+	flagValues := [numberOfFlags]*TriBool{
 		flags.AES,
 		flags.AmdNoSSB,
 		flags.AmdSSBD,
@@ -57,9 +54,9 @@ func (flags CpuFlags) mapToApi(current *CpuFlags) string {
 		flags.SpecCtrl,
 		flags.VirtSSBD}
 
-	var currentValues []*TriBool
+	var currentValues [numberOfFlags]*TriBool
 	if current != nil {
-		currentValues = []*TriBool{
+		currentValues = [numberOfFlags]*TriBool{
 			current.AES,
 			current.AmdNoSSB,
 			current.AmdSSBD,
@@ -73,28 +70,29 @@ func (flags CpuFlags) mapToApi(current *CpuFlags) string {
 			current.SpecCtrl,
 			current.VirtSSBD,
 		}
-	} else {
-		currentValues = make([]*TriBool, len(flagValues))
 	}
 
 	for i, value := range flagValues {
 		if value != nil {
 			switch *value {
 			case TriBoolTrue:
-				builder.WriteString(";+" + flagNames[i])
+				b.WriteString(semicolon + plus)
+				b.WriteString(flagNames[i])
 			case TriBoolFalse:
-				builder.WriteString(";-" + flagNames[i])
+				b.WriteString(semicolon + "-")
+				b.WriteString(flagNames[i])
 			}
 		} else if currentValues[i] != nil {
 			switch *currentValues[i] {
 			case TriBoolTrue:
-				builder.WriteString(";+" + flagNames[i])
+				b.WriteString(semicolon + plus)
+				b.WriteString(flagNames[i])
 			case TriBoolFalse:
-				builder.WriteString(";-" + flagNames[i])
+				b.WriteString(semicolon + "-")
+				b.WriteString(flagNames[i])
 			}
 		}
 	}
-	return builder.String()
 }
 
 func (CpuFlags) mapToSDK(flags []string) *CpuFlags {
@@ -199,6 +197,8 @@ func (flags CpuFlags) Validate() (err error) {
 type CpuLimit uint8 // min value 0 is unlimited, max value of 128
 
 const CpuLimit_Error_Maximum string = "maximum value of CpuLimit is 128"
+
+func (limit CpuLimit) String() string { return strconv.FormatUint(uint64(limit), 10) } // For fmt.Stringer
 
 func (limit CpuLimit) Validate() error {
 	if limit > 128 {
@@ -503,11 +503,13 @@ func (cpu CpuType) Validate(version Version) error {
 	return CpuType("").Error(version)
 }
 
-type CpuUnits uint32 // min value 0 is unset, max value of 262144
+type QemuCpuUnits uint32 // min value 0 is unset, max value of 262144
 
-const CpuUnits_Error_Maximum string = "maximum value of CpuUnits is 262144"
+const CpuUnits_Error_Maximum string = "maximum value of QemuCpuUnits is 262144"
 
-func (units CpuUnits) Validate() error {
+func (units QemuCpuUnits) String() string { return strconv.FormatUint(uint64(units), 10) } // For fmt.Stringer
+
+func (units QemuCpuUnits) Validate() error {
 	if units > 262144 {
 		return errors.New(CpuUnits_Error_Maximum)
 	}
@@ -519,6 +521,8 @@ type CpuVirtualCores uint16 // min value 0 is unset, max value 512. is QemuCpuCo
 func (cores CpuVirtualCores) Error() error {
 	return errors.New("CpuVirtualCores may have a maximum of " + strconv.FormatInt(int64(cores), 10))
 }
+
+func (cores CpuVirtualCores) String() string { return strconv.FormatUint(uint64(cores), 10) } // For fmt.Stringer
 
 func (vCores CpuVirtualCores) Validate(cores *QemuCpuCores, sockets *QemuCpuSockets, current *QemuCPU) error {
 	var usedCores, usedSockets CpuVirtualCores
@@ -540,13 +544,13 @@ func (vCores CpuVirtualCores) Validate(cores *QemuCpuCores, sockets *QemuCpuSock
 
 type QemuCPU struct {
 	Affinity     *[]uint          `json:"affinity,omitempty"`
-	Cores        *QemuCpuCores    `json:"cores,omitempty"` // Required during creation
+	Cores        *QemuCpuCores    `json:"cores,omitempty"` // Required during creation, never nil when returned
 	Flags        *CpuFlags        `json:"flags,omitempty"`
 	Limit        *CpuLimit        `json:"limit,omitempty"`
-	Numa         *bool            `json:"numa,omitempty"`
-	Sockets      *QemuCpuSockets  `json:"sockets,omitempty"`
+	Numa         *bool            `json:"numa,omitempty"`    // Never nil when returned
+	Sockets      *QemuCpuSockets  `json:"sockets,omitempty"` // Never nil when returned
 	Type         *CpuType         `json:"type,omitempty"`
-	Units        *CpuUnits        `json:"units,omitempty"`
+	Units        *QemuCpuUnits    `json:"units,omitempty"`
 	VirtualCores *CpuVirtualCores `json:"vcores,omitempty"`
 }
 
@@ -554,79 +558,200 @@ const (
 	QemuCPU_Error_CoresRequired string = "cores is required"
 )
 
-func (cpu QemuCPU) mapToApi(current *QemuCPU, params map[string]any, version Version) (delete string) {
-	if cpu.Affinity != nil {
-		if len(*cpu.Affinity) != 0 {
-			params[qemuApiKeyCpuAffinity] = cpu.mapToApiAffinity(*cpu.Affinity)
-		} else if current != nil && current.Affinity != nil {
-			delete += "," + qemuApiKeyCpuAffinity
-		}
+func (cpu QemuCPU) mapToApiCreate(version Version, b *strings.Builder) {
+	if cpu.Affinity != nil && len(*cpu.Affinity) > 0 {
+		b.WriteString("&" + qemuApiKeyCpuAffinity + "=")
+		affinity := make([]uint, len(*cpu.Affinity))
+		copy(affinity, *cpu.Affinity)
+		qemuCpuMapToApiAffinity(affinity, b)
 	}
 	if cpu.Cores != nil {
-		params[qemuApiKeyCpuCores] = int(*cpu.Cores)
+		b.WriteString("&" + qemuApiKeyCpuCores + "=")
+		b.WriteString(cpu.Cores.String())
 	}
-	if cpu.Limit != nil {
-		if *cpu.Limit != 0 {
-			params[qemuApiKeyCpuLimit] = int(*cpu.Limit)
-		} else if current != nil && current.Limit != nil {
-			delete += "," + qemuApiKeyCpuLimit
-		}
+	if cpu.Limit != nil && *cpu.Limit != 0 {
+		b.WriteString("&" + qemuApiKeyCpuLimit + "=")
+		b.WriteString(cpu.Limit.String())
 	}
 	if cpu.Numa != nil {
-		params[qemuApiKeyCpuNuma] = Btoi(*cpu.Numa)
+		b.WriteString("&" + qemuApiKeyCpuNuma + "=")
+		b.WriteRune(bTOr(*cpu.Numa))
 	}
 	if cpu.Sockets != nil {
-		params[qemuApiKeyCpuSockets] = int(*cpu.Sockets)
+		b.WriteString("&" + qemuApiKeyCpuSockets + "=")
+		b.WriteString(cpu.Sockets.String())
 	}
 	if cpu.Flags != nil || cpu.Type != nil {
-		var cpuType, flags string
-		if current == nil { // Create
-			if cpu.Flags != nil {
-				flags = cpu.Flags.mapToApi(nil)
+		var cpuType string
+		var tmpBuilder strings.Builder
+		if cpu.Type != nil {
+			cpuType = cpu.Type.mapToApi(version)
+		}
+		if cpu.Flags != nil {
+			cpu.Flags.mapToApi(nil, &tmpBuilder)
+		}
+		if cpuType != "" || tmpBuilder.Len() > 0 {
+			b.WriteString("&" + qemuApiKeyCpuType + "=")
+			if cpuType != "" {
+				b.WriteString(cpuType)
 			}
-			if cpu.Type != nil {
-				cpuType = cpu.Type.mapToApi(version)
-			}
-		} else { // Update
-			if cpu.Flags != nil {
-				flags = cpu.Flags.mapToApi(current.Flags)
-			} else if current.Flags != nil {
-				flags = current.Flags.mapToApi(nil)
-			}
-			if cpu.Type != nil {
-				cpuType = cpu.Type.mapToApi(version)
-			} else if current.Type != nil {
-				cpuType = current.Type.mapToApi(version)
+			if tmpBuilder.Len() > 3 {
+				b.WriteString(comma + "flags" + equal)
+				b.WriteString(tmpBuilder.String()[3:])
 			}
 		}
-		if len(flags) != 0 {
-			params[qemuApiKeyCpuType] = cpuType + ",flags=" + flags[1:]
-		} else if cpuType != "" {
-			params[qemuApiKeyCpuType] = cpuType
+	}
+	if cpu.Units != nil && *cpu.Units != 0 {
+		b.WriteString("&" + qemuApiKeyCpuUnits + "=")
+		b.WriteString(cpu.Units.String())
+	}
+	if cpu.VirtualCores != nil && *cpu.VirtualCores != 0 {
+		b.WriteString("&" + qemuApiKeyCpuVirtual + "=")
+		b.WriteString(cpu.VirtualCores.String())
+	}
+}
+
+func (cpu QemuCPU) mapToApiUpdate(current QemuCPU, version Version, b, delete *strings.Builder) {
+	if cpu.Affinity != nil {
+		if current.Affinity == nil {
+			if len(*cpu.Affinity) > 0 { // create
+				b.WriteString("&" + qemuApiKeyCpuAffinity + "=")
+				affinity := make([]uint, len(*cpu.Affinity))
+				copy(affinity, *cpu.Affinity)
+				qemuCpuMapToApiAffinity(affinity, b)
+			}
+		} else if len(*current.Affinity) > 0 {
+			if len(*cpu.Affinity) == 0 { // delete
+				delete.WriteString("," + qemuApiKeyCpuAffinity)
+			} else { // update
+				var tmpBuilder strings.Builder
+				qemuCpuMapToApiAffinity(*current.Affinity, &tmpBuilder)
+				currentAffinity := tmpBuilder.String()
+				tmpBuilder = strings.Builder{}
+				affinity := make([]uint, len(*cpu.Affinity))
+				copy(affinity, *cpu.Affinity)
+				qemuCpuMapToApiAffinity(affinity, &tmpBuilder)
+				newAffinity := tmpBuilder.String()
+				if newAffinity != currentAffinity {
+					b.WriteString("&" + qemuApiKeyCpuAffinity + "=")
+					b.WriteString(newAffinity)
+				}
+			}
+		}
+	}
+	if cpu.Cores != nil && *cpu.Cores != *current.Cores {
+		b.WriteString("&" + qemuApiKeyCpuCores + "=")
+		b.WriteString(cpu.Cores.String())
+	}
+	if cpu.Limit != nil {
+		if current.Limit == nil {
+			if *cpu.Limit != 0 {
+				b.WriteString("&" + qemuApiKeyCpuLimit + "=")
+				b.WriteString(cpu.Limit.String())
+			}
+		} else if *cpu.Limit != *current.Limit {
+			if *cpu.Limit == 0 {
+				delete.WriteString("," + qemuApiKeyCpuLimit)
+			} else {
+				b.WriteString("&" + qemuApiKeyCpuLimit + "=")
+				b.WriteString(cpu.Limit.String())
+			}
+		}
+	}
+	if cpu.Numa != nil && *cpu.Numa != *current.Numa {
+		b.WriteString("&" + qemuApiKeyCpuNuma + "=")
+		b.WriteRune(bTOr(*cpu.Numa))
+	}
+	if cpu.Sockets != nil && *cpu.Sockets != *current.Sockets {
+		b.WriteString("&" + qemuApiKeyCpuSockets + "=")
+		b.WriteString(cpu.Sockets.String())
+	}
+	if cpu.Flags != nil || cpu.Type != nil {
+		var changes bool
+		var cpuType, flags string
+		if cpu.Type != nil {
+			cpuType = cpu.Type.mapToApi(version)
+			if current.Type != nil {
+				if cpuType != string(*current.Type) {
+					changes = true
+				}
+			} else if *cpu.Type != "" {
+				changes = true
+			}
+		} else if current.Type != nil {
+			cpuType = string(*current.Type)
+		}
+		if cpu.Flags != nil {
+			var tmpBuilder strings.Builder
+			if current.Flags != nil { // update
+				current.Flags.mapToApi(nil, &tmpBuilder)
+				flags = tmpBuilder.String()
+				tmpBuilder = strings.Builder{}
+				cpu.Flags.mapToApi(current.Flags, &tmpBuilder)
+				newFlags := tmpBuilder.String()
+				if newFlags != flags {
+					flags = newFlags
+					changes = true
+				}
+			} else { // create
+				cpu.Flags.mapToApi(nil, &tmpBuilder)
+				flags = tmpBuilder.String()
+				changes = true
+			}
+		} else if changes && current.Flags != nil {
+			var tmpBuilder strings.Builder
+			current.Flags.mapToApi(nil, &tmpBuilder)
+			flags = tmpBuilder.String()
+		}
+		if changes {
+			if cpuType != "" || flags != "" {
+				b.WriteString("&" + qemuApiKeyCpuType + "=")
+				if cpuType != "" {
+					b.WriteString(cpuType)
+				}
+				if len(flags) > 3 {
+					b.WriteString(comma + "flags" + equal)
+					b.WriteString(flags[3:])
+				}
+			} else {
+				delete.WriteString("," + qemuApiKeyCpuType)
+			}
 		}
 	}
 	if cpu.Units != nil {
-		if *cpu.Units != 0 {
-			params[qemuApiKeyCpuUnits] = int(*cpu.Units)
-		} else if current != nil {
-			delete += "," + qemuApiKeyCpuUnits
+		if current.Units == nil {
+			if *cpu.Units != 0 {
+				b.WriteString("&" + qemuApiKeyCpuUnits + "=")
+				b.WriteString(cpu.Units.String())
+			}
+		} else if *cpu.Units != *current.Units {
+			if *cpu.Units == 0 {
+				delete.WriteString("," + qemuApiKeyCpuUnits)
+			} else {
+				b.WriteString("&" + qemuApiKeyCpuUnits + "=")
+				b.WriteString(cpu.Units.String())
+			}
 		}
 	}
 	if cpu.VirtualCores != nil {
-		if *cpu.VirtualCores != 0 {
-			params[qemuApiKeyCpuVirtual] = int(*cpu.VirtualCores)
-		} else if current != nil && current.VirtualCores != nil {
-			delete += "," + qemuApiKeyCpuVirtual
+		if current.VirtualCores == nil {
+			if *cpu.VirtualCores != 0 {
+				b.WriteString("&" + qemuApiKeyCpuVirtual + "=")
+				b.WriteString(cpu.VirtualCores.String())
+			}
+		} else if *cpu.VirtualCores != *current.VirtualCores {
+			if *cpu.VirtualCores == 0 {
+				delete.WriteString("," + qemuApiKeyCpuVirtual)
+			} else {
+				b.WriteString("&" + qemuApiKeyCpuVirtual + "=")
+				b.WriteString(cpu.VirtualCores.String())
+			}
 		}
 	}
-	return
 }
 
-func (QemuCPU) mapToApiAffinity(affinity []uint) string {
-	sort.Slice(affinity, func(i, j int) bool {
-		return affinity[i] < affinity[j]
-	})
-	var builder strings.Builder
+func qemuCpuMapToApiAffinity(affinity []uint, b *strings.Builder) {
+	slices.Sort(affinity)
 	rangeStart, rangeEnd := affinity[0], affinity[0]
 	for i := 1; i < len(affinity); i++ {
 		if affinity[i] == affinity[i-1] {
@@ -635,40 +760,45 @@ func (QemuCPU) mapToApiAffinity(affinity []uint) string {
 		if affinity[i] == rangeEnd+1 {
 			// Continue the range
 			rangeEnd = affinity[i]
-		} else {
-			// Close the current range and start a new range
-			if rangeStart == rangeEnd {
-				builder.WriteString(strconv.Itoa(int(rangeStart)) + ",")
-			} else {
-				builder.WriteString(strconv.Itoa(int(rangeStart)) + "-" + strconv.Itoa(int(rangeEnd)) + ",")
-			}
-			rangeStart, rangeEnd = affinity[i], affinity[i]
+			continue
 		}
+		// Close the current range and start a new range
+		b.WriteString(strconv.Itoa(int(rangeStart)))
+		if rangeStart == rangeEnd {
+			b.WriteString(comma)
+		} else {
+			b.WriteRune('-')
+			b.WriteString(strconv.Itoa(int(rangeEnd)))
+			b.WriteString(comma)
+		}
+		rangeStart, rangeEnd = affinity[i], affinity[i]
 	}
+	b.WriteString(strconv.Itoa(int(rangeStart)))
 	// Append the last range
-	if rangeStart == rangeEnd {
-		builder.WriteString(strconv.Itoa(int(rangeStart)))
-	} else {
-		builder.WriteString(strconv.Itoa(int(rangeStart)) + "-" + strconv.Itoa(int(rangeEnd)))
+	if rangeStart != rangeEnd {
+		b.WriteRune('-')
+		b.WriteString(strconv.Itoa(int(rangeEnd)))
 	}
-	return builder.String()
 }
 
-func (raw *rawConfigQemu) GetCPU() *QemuCPU {
-	var cpu QemuCPU
+func (raw *rawConfigQemu) GetCPU() QemuCPU {
+	cpu := QemuCPU{
+		Cores:   new(QemuCpuCores(1)),
+		Numa:    new(false),
+		Sockets: new(QemuCpuSockets(1))}
 	if v, isSet := raw.a[qemuApiKeyCpuAffinity]; isSet {
 		if v.(string) != "" {
-			cpu.Affinity = util.Pointer(QemuCPU{}.mapToSdkAffinity(v.(string)))
+			cpu.Affinity = new(QemuCPU{}.mapToSdkAffinity(v.(string)))
 		} else {
-			cpu.Affinity = util.Pointer(make([]uint, 0))
+			cpu.Affinity = new(make([]uint, 0))
 		}
 	}
 	if v, isSet := raw.a[qemuApiKeyCpuCores]; isSet {
-		cpu.Cores = util.Pointer(QemuCpuCores(v.(float64)))
+		*cpu.Cores = QemuCpuCores(v.(float64))
 	}
 	if v, isSet := raw.a[qemuApiKeyCpuType]; isSet {
 		cpuParams := strings.SplitN(v.(string), ",", 2)
-		cpu.Type = util.Pointer((CpuType)(cpuParams[0]))
+		cpu.Type = new((CpuType)(cpuParams[0]))
 		if len(cpuParams) > 1 && len(cpuParams[1]) > 6 {
 			// `flags=` is the 6 characters bieng removed from the start of the string
 			cpu.Flags = CpuFlags{}.mapToSDK(strings.Split(cpuParams[1][6:], ";"))
@@ -676,21 +806,21 @@ func (raw *rawConfigQemu) GetCPU() *QemuCPU {
 	}
 	if v, isSet := raw.a[qemuApiKeyCpuLimit]; isSet {
 		tmp, _ := parse.Uint(v)
-		cpu.Limit = util.Pointer(CpuLimit(tmp))
+		cpu.Limit = new(CpuLimit(tmp))
 	}
 	if v, isSet := raw.a[qemuApiKeyCpuUnits]; isSet {
-		cpu.Units = util.Pointer(CpuUnits((v.(float64))))
+		cpu.Units = new(QemuCpuUnits((v.(float64))))
 	}
 	if v, isSet := raw.a[qemuApiKeyCpuNuma]; isSet {
-		cpu.Numa = util.Pointer(v.(float64) == 1)
+		*cpu.Numa = v.(float64) == 1
 	}
 	if v, isSet := raw.a[qemuApiKeyCpuSockets]; isSet {
-		cpu.Sockets = util.Pointer(QemuCpuSockets(v.(float64)))
+		*cpu.Sockets = QemuCpuSockets(v.(float64))
 	}
 	if v, isSet := raw.a[qemuApiKeyCpuVirtual]; isSet {
-		cpu.VirtualCores = util.Pointer(CpuVirtualCores((v.(float64))))
+		cpu.VirtualCores = new(CpuVirtualCores((v.(float64))))
 	}
-	return &cpu
+	return cpu
 }
 
 func (QemuCPU) mapToSdkAffinity(rawAffinity string) []uint {
@@ -759,6 +889,8 @@ const (
 	QemuCpuCores_Error_UpperBound string = "maximum value of QemuCpuCores is 128"
 )
 
+func (cores QemuCpuCores) String() string { return strconv.FormatUint(uint64(cores), 10) } // For fmt.Stringer
+
 func (cores QemuCpuCores) Validate() error {
 	if cores < 1 {
 		return errors.New(QemuCpuCores_Error_LowerBound)
@@ -775,6 +907,8 @@ const (
 	QemuCpuSockets_Error_LowerBound string = "minimum value of QemuCpuSockets is 1"
 	QemuCpuSockets_Error_UpperBound string = "maximum value of QemuCpuSockets is 4"
 )
+
+func (sockets QemuCpuSockets) String() string { return strconv.FormatUint(uint64(sockets), 10) } // For fmt.Stringer
 
 func (sockets QemuCpuSockets) Validate() error {
 	if sockets < 1 {

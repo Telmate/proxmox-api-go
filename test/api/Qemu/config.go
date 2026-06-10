@@ -10,7 +10,30 @@ import (
 
 func ReducedConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestName) (set pveSDK.ConfigQemu, expected *pveSDK.ConfigQemu) {
 	set = pveSDK.ConfigQemu{
-		CPU:         &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
+		CPU: &pveSDK.QemuCPU{
+			Affinity: &[]uint{},
+			Cores:    new(pveSDK.QemuCpuCores(1)),
+			Flags: &pveSDK.CpuFlags{
+				AES:        new(pveSDK.TriBoolNone),
+				AmdNoSSB:   new(pveSDK.TriBoolNone),
+				AmdSSBD:    new(pveSDK.TriBoolNone),
+				HvEvmcs:    new(pveSDK.TriBoolNone),
+				HvTlbFlush: new(pveSDK.TriBoolNone),
+				Ibpb:       new(pveSDK.TriBoolNone),
+				MdClear:    new(pveSDK.TriBoolNone),
+				PCID:       new(pveSDK.TriBoolNone),
+				Pdpe1GB:    new(pveSDK.TriBoolNone),
+				SSBD:       new(pveSDK.TriBoolNone),
+				SpecCtrl:   new(pveSDK.TriBoolNone),
+				VirtSSBD:   new(pveSDK.TriBoolNone)},
+			Limit:   new(pveSDK.CpuLimit(0)),
+			Numa:    new(false),
+			Sockets: new(pveSDK.QemuCpuSockets(1)),
+
+			Type: new(pveSDK.CpuType("")),
+
+			Units:        new(pveSDK.QemuCpuUnits(0)),
+			VirtualCores: new(pveSDK.CpuVirtualCores(0))},
 		Description: new(""),
 		Disks: &pveSDK.QemuStorages{
 			Ide: &pveSDK.QemuIdeDisks{
@@ -41,9 +64,12 @@ func ReducedConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 		Watchdog:        &pveSDK.Watchdog{Delete: true},
 	}
 	expected = &pveSDK.ConfigQemu{
-		Bios:            "seabios",
-		Boot:            " ",
-		CPU:             &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
+		Bios: "seabios",
+		Boot: " ",
+		CPU: &pveSDK.QemuCPU{
+			Cores:   new(pveSDK.QemuCpuCores(1)),
+			Numa:    new(false),
+			Sockets: new(pveSDK.QemuCpuSockets(1))},
 		Description:     new(""),
 		Hotplug:         "network,disk,usb",
 		ID:              &id,
@@ -73,9 +99,12 @@ func MinimumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 		Node:   &node,
 	}
 	expected = &pveSDK.ConfigQemu{
-		Bios:            "seabios",
-		Boot:            " ",
-		CPU:             &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
+		Bios: "seabios",
+		Boot: " ",
+		CPU: &pveSDK.QemuCPU{
+			Cores:   new(pveSDK.QemuCpuCores(1)),
+			Numa:    new(false),
+			Sockets: new(pveSDK.QemuCpuSockets(1))},
 		Description:     new(""),
 		Hotplug:         "network,disk,usb",
 		ID:              &id,
@@ -99,8 +128,29 @@ func MinimumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 func MaximumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestName) (set pveSDK.ConfigQemu, expected *pveSDK.ConfigQemu) {
 	set = pveSDK.ConfigQemu{
 		Architecture: new(pveSDK.QemuCpuArchitectureAmd64),
-		CPU:          &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
-		Description:  new(body.Alphanumeric + body.Symbols),
+		CPU: &pveSDK.QemuCPU{
+			Affinity: &[]uint{2, 1, 2},
+			Cores:    new(pveSDK.QemuCpuCores(2)),
+			Flags: &pveSDK.CpuFlags{
+				AES:        new(pveSDK.TriBoolTrue),
+				AmdNoSSB:   new(pveSDK.TriBoolFalse),
+				AmdSSBD:    new(pveSDK.TriBoolTrue),
+				HvEvmcs:    new(pveSDK.TriBoolFalse),
+				HvTlbFlush: new(pveSDK.TriBoolTrue),
+				Ibpb:       new(pveSDK.TriBoolFalse),
+				MdClear:    new(pveSDK.TriBoolTrue),
+				PCID:       new(pveSDK.TriBoolFalse),
+				Pdpe1GB:    new(pveSDK.TriBoolTrue),
+				SSBD:       new(pveSDK.TriBoolFalse),
+				SpecCtrl:   new(pveSDK.TriBoolTrue),
+				VirtSSBD:   new(pveSDK.TriBoolFalse)},
+			Limit:        new(pveSDK.CpuLimit(100)),
+			Numa:         new(true),
+			Sockets:      new(pveSDK.QemuCpuSockets(1)),
+			Type:         new(pveSDK.CpuType("HoSt")),
+			Units:        new(pveSDK.QemuCpuUnits(128)),
+			VirtualCores: new(pveSDK.CpuVirtualCores(1))},
+		Description: new(body.Alphanumeric + body.Symbols),
 		Disks: &pveSDK.QemuStorages{
 			Ide: &pveSDK.QemuIdeDisks{
 				Disk_0: &pveSDK.QemuIdeStorage{CdRom: &pveSDK.QemuCdRom{}},
@@ -148,9 +198,30 @@ func MaximumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 			Model:  new(pveSDK.WatchdogModelI6300esb)},
 	}
 	expected = &pveSDK.ConfigQemu{
-		Bios:        "seabios",
-		Boot:        " ",
-		CPU:         &pveSDK.QemuCPU{Cores: new(pveSDK.QemuCpuCores(1))},
+		Bios: "seabios",
+		Boot: " ",
+		CPU: &pveSDK.QemuCPU{
+			Affinity: &[]uint{1, 2},
+			Cores:    new(pveSDK.QemuCpuCores(2)),
+			Flags: &pveSDK.CpuFlags{
+				AES:        new(pveSDK.TriBoolTrue),
+				AmdNoSSB:   new(pveSDK.TriBoolFalse),
+				AmdSSBD:    new(pveSDK.TriBoolTrue),
+				HvEvmcs:    new(pveSDK.TriBoolFalse),
+				HvTlbFlush: new(pveSDK.TriBoolTrue),
+				Ibpb:       new(pveSDK.TriBoolFalse),
+				MdClear:    new(pveSDK.TriBoolTrue),
+				PCID:       new(pveSDK.TriBoolFalse),
+				Pdpe1GB:    new(pveSDK.TriBoolTrue),
+				SSBD:       new(pveSDK.TriBoolFalse),
+				SpecCtrl:   new(pveSDK.TriBoolTrue),
+				VirtSSBD:   new(pveSDK.TriBoolFalse)},
+			Limit:        new(pveSDK.CpuLimit(100)),
+			Numa:         new(true),
+			Sockets:      new(pveSDK.QemuCpuSockets(1)),
+			Type:         new(pveSDK.CpuType_Host),
+			Units:        new(pveSDK.QemuCpuUnits(128)),
+			VirtualCores: new(pveSDK.CpuVirtualCores(1))},
 		Description: new(body.Alphanumeric + body.Symbols),
 		Disks: &pveSDK.QemuStorages{
 			Ide: &pveSDK.QemuIdeDisks{

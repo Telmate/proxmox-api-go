@@ -149,7 +149,10 @@ func Test_Qemu_Create_Max(t *testing.T) {
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
 				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
-					CPU:             &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
+					CPU: &pveSDK.QemuCPU{
+						Cores:   new(pveSDK.QemuCpuCores(1)),
+						Numa:    new(false),
+						Sockets: new(pveSDK.QemuCpuSockets(1))},
 					Description:     util.Pointer(""),
 					Hotplug:         "network,disk,usb",
 					ID:              util.Pointer(pveSDK.GuestID(guestID)),
@@ -222,9 +225,12 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
 				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
-					Bios:        "seabios",
-					Boot:        " ",
-					CPU:         &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
+					Bios: "seabios",
+					Boot: " ",
+					CPU: &pveSDK.QemuCPU{
+						Cores:   new(pveSDK.QemuCpuCores(1)),
+						Numa:    new(false),
+						Sockets: new(pveSDK.QemuCpuSockets(1))},
 					Description: util.Pointer(""),
 					EfiDisk: &pveSDK.EfiDisk{
 						PreEnrolledKeys: util.Pointer(false),

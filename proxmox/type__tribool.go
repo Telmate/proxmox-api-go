@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+// Enum
+//
+//	const (
+//		TriBoolFalse
+//		TriBoolNone
+//		TriBoolTrue
+//	)
 type TriBool int8
 
 const (

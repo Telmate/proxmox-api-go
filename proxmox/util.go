@@ -19,9 +19,11 @@ const (
 )
 
 const (
-	colon = "%3A"
-	comma = "%2C"
-	equal = "%3D"
+	colon     = "%3A"
+	comma     = "%2C"
+	equal     = "%3D"
+	plus      = "%2B"
+	semicolon = "%3B"
 )
 
 const hexPrefix string = "0x"
@@ -33,6 +35,13 @@ func Btoi(b bool) int {
 	default:
 		return 0
 	}
+}
+
+func bTOr(in bool) rune {
+	if in {
+		return '1'
+	}
+	return '0'
 }
 
 // Combines params and raw body into a new body.

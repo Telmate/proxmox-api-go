@@ -373,9 +373,6 @@ func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (p
 		}
 	}
 
-	if config.CPU != nil {
-		itemsToDelete += config.CPU.mapToApi(currentConfig.CPU, params, version)
-	}
 	if config.CloudInit != nil {
 		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params, version)
 	}
@@ -421,6 +418,9 @@ func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byt
 		builder.WriteString("&" + qemuApiKeyArchitecture + "=")
 		builder.WriteString(config.Architecture.String())
 	}
+	if config.CPU != nil {
+		config.CPU.mapToApiCreate(version, &builder)
+	}
 	if config.Description != nil && *config.Description != "" {
 		builder.WriteString("&" + qemuApiKeyDescription + "=")
 		builder.WriteString(body.Escape(*config.Description))
@@ -459,6 +459,9 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 	params := config.mapToAPI(*currentLegacy, version)
 	builder := strings.Builder{}
 	delete := strings.Builder{}
+	if config.CPU != nil {
+		config.CPU.mapToApiUpdate(*currentLegacy.CPU, version, &builder, &delete)
+	}
 	if config.Description != nil {
 		if *config.Description != current.raw.GetDescription() {
 			builder.WriteString("&" + qemuApiKeyDescription + "=")
@@ -1372,7 +1375,7 @@ type RawConfigQemu interface {
 	Get(vmr VmRef) (*ConfigQemu, error)
 	GetAgent() *QemuGuestAgent
 	GetArchitecture() *QemuCpuArchitecture
-	GetCPU() *QemuCPU
+	GetCPU() QemuCPU
 	GetCloudInit() *CloudInit
 	GetDescription() string
 	GetEfiDisk() *EfiDisk
@@ -1406,7 +1409,7 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 	config := ConfigQemu{
 		Agent:            raw.GetAgent(),
 		Architecture:     raw.GetArchitecture(),
-		CPU:              raw.GetCPU(),
+		CPU:              new(raw.GetCPU()),
 		CloudInit:        raw.GetCloudInit(),
 		Description:      util.Pointer(raw.GetDescription()),
 		EfiDisk:          raw.GetEfiDisk(),

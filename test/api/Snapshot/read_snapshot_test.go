@@ -59,8 +59,9 @@ func Test_Snapshot_ReadQemu(t *testing.T) {
 					Bios: "seabios",
 					Boot: " ",
 					CPU: &pveSDK.QemuCPU{
-						Cores: util.Pointer(pveSDK.QemuCpuCores(1)),
-					},
+						Cores:   new(pveSDK.QemuCpuCores(1)),
+						Numa:    new(false),
+						Sockets: new(pveSDK.QemuCpuSockets(1))},
 					Description: util.Pointer("Test snapshot" + body.Symbols),
 					Hotplug:     "network,disk,usb",
 					Memory: &pveSDK.QemuMemory{

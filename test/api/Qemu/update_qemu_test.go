@@ -53,9 +53,12 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
 				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
-					Bios:        "seabios",
-					Boot:        " ",
-					CPU:         &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
+					Bios: "seabios",
+					Boot: " ",
+					CPU: &pveSDK.QemuCPU{
+						Cores:   new(pveSDK.QemuCpuCores(1)),
+						Numa:    new(false),
+						Sockets: new(pveSDK.QemuCpuSockets(1))},
 					Description: util.Pointer(""),
 					EfiDisk: &pveSDK.EfiDisk{
 						Size:            1024,
@@ -100,9 +103,12 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 		{name: `Check guest config after update`,
 			test: func(t *testing.T) {
 				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
-					Bios:        "seabios",
-					Boot:        " ",
-					CPU:         &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
+					Bios: "seabios",
+					Boot: " ",
+					CPU: &pveSDK.QemuCPU{
+						Cores:   new(pveSDK.QemuCpuCores(1)),
+						Numa:    new(false),
+						Sockets: new(pveSDK.QemuCpuSockets(1))},
 					Description: util.Pointer(""),
 					EfiDisk: &pveSDK.EfiDisk{
 						Size:            1024,
