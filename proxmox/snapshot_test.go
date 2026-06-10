@@ -472,7 +472,10 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 			c.Boot = "cdn"
 		}
 		if c.CPU == nil {
-			c.CPU = &QemuCPU{}
+			c.CPU = &QemuCPU{
+				Cores:   new(QemuCpuCores(1)),
+				Numa:    new(false),
+				Sockets: new(QemuCpuSockets(1))}
 		}
 		if c.Description == nil {
 			c.Description = util.Pointer("")

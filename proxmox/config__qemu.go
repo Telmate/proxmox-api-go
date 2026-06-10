@@ -373,9 +373,6 @@ func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (p
 		}
 	}
 
-	if config.CPU != nil {
-		itemsToDelete += config.CPU.mapToApi(currentConfig.CPU, params, version)
-	}
 	if config.CloudInit != nil {
 		itemsToDelete += config.CloudInit.mapToAPI(currentConfig.CloudInit, params, version)
 	}
@@ -421,6 +418,9 @@ func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byt
 		builder.WriteString("&" + qemuApiKeyArchitecture + "=")
 		builder.WriteString(config.Architecture.String())
 	}
+	if config.CPU != nil {
+		config.CPU.mapToApiCreate(version, &builder)
+	}
 	if config.Description != nil && *config.Description != "" {
 		builder.WriteString("&" + qemuApiKeyDescription + "=")
 		builder.WriteString(body.Escape(*config.Description))
@@ -459,6 +459,9 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 	params := config.mapToAPI(*currentLegacy, version)
 	builder := strings.Builder{}
 	delete := strings.Builder{}
+	if config.CPU != nil {
+		config.CPU.mapToApiUpdate(*currentLegacy.CPU, version, &builder, &delete)
+	}
 	if config.Description != nil {
 		if *config.Description != current.raw.GetDescription() {
 			builder.WriteString("&" + qemuApiKeyDescription + "=")
@@ -887,13 +890,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
-		if config.CPU == nil {
-			return errors.New(ConfigQemu_Error_CpuRequired)
-		} else {
-			if err = config.CPU.Validate(nil, version); err != nil {
-				return
-			}
-		}
 		if config.Memory == nil {
 			return errors.New(ConfigQemu_Error_MemoryRequired)
 		} else {
@@ -921,17 +917,12 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
-		if err = config.validateCreate(); err != nil {
+		if err = config.validateCreate(version); err != nil {
 			return
 		}
 	} else { // Update
 		if config.Node != nil {
 			if err = config.Node.Validate(); err != nil {
-				return
-			}
-		}
-		if config.CPU != nil {
-			if err = config.CPU.Validate(current.CPU, version); err != nil {
 				return
 			}
 		}
@@ -960,7 +951,7 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
-		if err = config.validateUpdate(current); err != nil {
+		if err = config.validateUpdate(current, version); err != nil {
 			return
 		}
 	}
@@ -1004,7 +995,14 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 	return
 }
 
-func (config ConfigQemu) validateCreate() error {
+func (config ConfigQemu) validateCreate(version Version) error {
+	if config.CPU == nil {
+		return errors.New(ConfigQemu_Error_CpuRequired)
+	} else {
+		if err := config.CPU.validateCreate(version); err != nil {
+			return err
+		}
+	}
 	if config.EfiDisk != nil {
 		if err := config.EfiDisk.validateCreate(); err != nil {
 			return err
@@ -1023,7 +1021,12 @@ func (config ConfigQemu) validateCreate() error {
 	return nil
 }
 
-func (config ConfigQemu) validateUpdate(current *ConfigQemu) error {
+func (config ConfigQemu) validateUpdate(current *ConfigQemu, version Version) error {
+	if config.CPU != nil {
+		if err := config.CPU.validateUpdate(current.CPU, version); err != nil {
+			return err
+		}
+	}
 	if config.EfiDisk != nil {
 		if current.EfiDisk != nil { // update
 			if err := config.EfiDisk.validateUpdate(); err != nil {
@@ -1372,7 +1375,7 @@ type RawConfigQemu interface {
 	Get(vmr VmRef) (*ConfigQemu, error)
 	GetAgent() *QemuGuestAgent
 	GetArchitecture() *QemuCpuArchitecture
-	GetCPU() *QemuCPU
+	GetCPU() QemuCPU
 	GetCloudInit() *CloudInit
 	GetDescription() string
 	GetEfiDisk() *EfiDisk
@@ -1406,7 +1409,7 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 	config := ConfigQemu{
 		Agent:            raw.GetAgent(),
 		Architecture:     raw.GetArchitecture(),
-		CPU:              raw.GetCPU(),
+		CPU:              new(raw.GetCPU()),
 		CloudInit:        raw.GetCloudInit(),
 		Description:      util.Pointer(raw.GetDescription()),
 		EfiDisk:          raw.GetEfiDisk(),
