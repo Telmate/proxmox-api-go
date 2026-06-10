@@ -15,7 +15,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 	for i := range test.invalidCreate {
 		t.Run("invalid/create/"+test.invalidCreate[i].name, func(t *testing.T) {
 			config := test.invalidCreate[i].input
-			err := config.validateCreate()
+			err := config.validateCreate(test.invalidCreate[i].version)
 			require.Error(t, err)
 			if test.invalidCreate[i].err != nil {
 				require.Equal(t, test.invalidCreate[i].err, err)
@@ -35,7 +35,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 			if v := test.invalidUpdate[i].current; v != nil {
 				current = *v
 			}
-			err := config.validateUpdate(&current)
+			err := config.validateUpdate(&current, test.invalidUpdate[i].version)
 			require.Error(t, err)
 			if test.invalidUpdate[i].err != nil {
 				require.Equal(t, test.invalidUpdate[i].err, err)
@@ -51,7 +51,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 	for i := range test.validCreate {
 		t.Run("valid/create/"+test.validCreate[i].name, func(t *testing.T) {
 			config := test.validCreate[i].input
-			err := config.validateCreate()
+			err := config.validateCreate(test.validCreate[i].version)
 			require.NoError(t, err)
 			err = config.Validate(test.validCreate[i].current, test.validCreate[i].version)
 			require.NoError(t, err)
@@ -65,7 +65,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 			if v := test.validUpdate[i].current; v != nil {
 				current = *v
 			}
-			err := config.validateUpdate(&current)
+			err := config.validateUpdate(&current, test.validUpdate[i].version)
 			require.NoError(t, err)
 			err = config.Validate(&current, test.validUpdate[i].version)
 			require.NoError(t, err)

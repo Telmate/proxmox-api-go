@@ -174,6 +174,219 @@ func testData_ConfigQemu_CPU_Get() []qemuTestCaseGet {
 			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{VirtualCores: new(CpuVirtualCores(1))})})}}
 }
 
+func testData_ConfigQemu_CPU_Validate_1() qemuTestTypeValidateFunc {
+	return qemuTestTypeValidateFunc(func() (qemuTestTypeInvalid, qemuTestTypeValid) {
+		invalid := qemuTestTypeInvalid{
+			create: []qemuTestCaseInvalid{
+				{name: `errors.New(QemuCPU_Error_CoresRequired)`,
+					input: ConfigQemu{
+						CPU:    &QemuCPU{},
+						ID:     new(GuestID(111)),
+						Memory: &QemuMemory{CapacityMiB: new(QemuMemoryCapacity(16))},
+						Node:   new(NodeName("test"))},
+					err: errors.New(QemuCPU_Error_CoresRequired)}},
+			createUpdate: []qemuTestCaseInvalid{
+				{name: `errors.New(CpuLimit_Error_Maximum)`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Limit: new(CpuLimit(129))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(CpuLimit_Error_Maximum)},
+				{name: `errors.New(CpuUnits_Error_Maximum)`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Units: new(QemuCpuUnits(262145))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(CpuUnits_Error_Maximum)},
+				{name: `errors.New(QemuCpuCores_Error_LowerBound)`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Cores: new(QemuCpuCores(0))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(QemuCpuCores_Error_LowerBound)},
+				{name: `errors.New(QemuCpuSockets_Error_LowerBound)`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{
+						Cores:   new(QemuCpuCores(1)),
+						Sockets: new(QemuCpuSockets(0))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(QemuCpuSockets_Error_LowerBound)},
+				{name: `CpuVirtualCores(1).Error() 1 1`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{
+						Cores:        new(QemuCpuCores(1)),
+						Sockets:      new(QemuCpuSockets(1)),
+						VirtualCores: new(CpuVirtualCores(2))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     CpuVirtualCores(1).Error()},
+				{name: `Invalid AES`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						AES: new(TriBool(-2))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid AmdNoSSB`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						AmdNoSSB: new(TriBool(2))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid AmdSSBD`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						AmdSSBD: new(TriBool(-27))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid HvEvmcs`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						HvEvmcs: new(TriBool(32))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid HvTlbFlush`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						HvTlbFlush: new(TriBool(-2))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid Ibpb`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						Ibpb: new(TriBool(52))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid MdClear`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						MdClear: new(TriBool(-52))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid PCID`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						PCID: new(TriBool(82))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid Pdpe1GB`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						Pdpe1GB: new(TriBool(-2))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid SSBD`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						SSBD: new(TriBool(3))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid SpecCtrl`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						SpecCtrl: new(TriBool(-2))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Invalid VirtSSBD`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						VirtSSBD: new(TriBool(2))}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					err:     errors.New(TriBool_Error_Invalid)},
+				{name: `Type`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Type: new(CpuType("invalid"))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					version: Version{}.max(),
+					err:     CpuType("").Error(Version{}.max())}}}
+		valid := qemuTestTypeValid{
+			createUpdate: []qemuTestCaseValid{
+				{name: `Cores`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Cores: new(QemuCpuCores(1))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Maximum`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{
+						Cores: new(QemuCpuCores(128)),
+						Flags: new(CpuFlags{
+							AES:        new(TriBoolTrue),
+							AmdNoSSB:   new(TriBoolFalse),
+							AmdSSBD:    new(TriBoolNone),
+							HvEvmcs:    new(TriBoolTrue),
+							HvTlbFlush: new(TriBoolFalse),
+							Ibpb:       new(TriBoolNone),
+							MdClear:    new(TriBoolTrue),
+							PCID:       new(TriBoolFalse),
+							Pdpe1GB:    new(TriBoolNone),
+							SSBD:       new(TriBoolTrue),
+							SpecCtrl:   new(TriBoolFalse),
+							VirtSSBD:   new(TriBoolNone)}),
+						Limit:        new(CpuLimit(128)),
+						Sockets:      new(QemuCpuSockets(4)),
+						Type:         new(CpuType(cpuType_AmdEPYCRomeV2_Lower)),
+						Units:        new(QemuCpuUnits(262144)),
+						VirtualCores: new(CpuVirtualCores(512))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					version: Version{}.max()},
+				{name: `Minimum`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{
+						Cores:        new(QemuCpuCores(128)),
+						Flags:        new(CpuFlags{}),
+						Limit:        new(CpuLimit(0)),
+						Sockets:      new(QemuCpuSockets(4)),
+						Type:         new(CpuType("")),
+						Units:        new(QemuCpuUnits(0)),
+						VirtualCores: new(CpuVirtualCores(0))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}},
+					version: Version{}.max()},
+				{name: `Flags all set`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						AES:        new(TriBoolFalse),
+						AmdNoSSB:   new(TriBoolNone),
+						AmdSSBD:    new(TriBoolTrue),
+						HvEvmcs:    new(TriBoolFalse),
+						HvTlbFlush: new(TriBoolNone),
+						Ibpb:       new(TriBoolTrue),
+						MdClear:    new(TriBoolFalse),
+						PCID:       new(TriBoolNone),
+						Pdpe1GB:    new(TriBoolTrue),
+						SSBD:       new(TriBoolFalse),
+						SpecCtrl:   new(TriBoolNone),
+						VirtSSBD:   new(TriBoolTrue)}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Flags all nil`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Flags mixed`,
+					input: testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Flags: &CpuFlags{
+						AmdNoSSB:   new(TriBoolTrue),
+						AmdSSBD:    new(TriBoolFalse),
+						HvTlbFlush: new(TriBoolTrue),
+						Ibpb:       new(TriBoolFalse),
+						MdClear:    new(TriBoolNone),
+						PCID:       new(TriBoolTrue),
+						Pdpe1GB:    new(TriBoolFalse),
+						SpecCtrl:   new(TriBoolTrue)}}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Limit maximum`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Limit: new(CpuLimit(128))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Limit minimum`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Limit: new(CpuLimit(0))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Sockets`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Sockets: new(QemuCpuSockets(1))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Type empty`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Type: new(CpuType(""))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Type host`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Type: new(CpuType_Host)}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Units Minimum`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Units: new(QemuCpuUnits(0))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}},
+				{name: `Units Maximum`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{Units: new(QemuCpuUnits(262144))}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}}},
+			update: []qemuTestCaseValid{
+				{name: `nothing`,
+					input:   testQemuBaseConfig_Validate(ConfigQemu{CPU: &QemuCPU{}}),
+					current: &ConfigQemu{CPU: &QemuCPU{}}}}}
+		return invalid, valid
+	})
+}
+
+func testData_ConfigQemu_CPU_Validate_2() qemuTestTypeValidateFunc {
+	return qemuTestTypeValidateFunc(func() (qemuTestTypeInvalid, qemuTestTypeValid) {
+		invalid := qemuTestTypeInvalid{
+			create: []qemuTestCaseInvalid{
+				{name: `erross.New(ConfigQemu_Error_CpuRequired)`,
+					input: ConfigQemu{
+						ID:     new(GuestID(111)),
+						Memory: &QemuMemory{CapacityMiB: new(QemuMemoryCapacity(16))},
+						Node:   new(NodeName("test"))},
+					err: errors.New(ConfigQemu_Error_CpuRequired)}}}
+		return invalid, qemuTestTypeValid{}
+	})
+}
+
 func Test_ConfigQemu_CPU_MapToApi(t *testing.T) {
 	t.Parallel()
 	tests := qemuTestsApiFunc(func() qemuTestsAPI {
@@ -467,6 +680,12 @@ func Test_ConfigQemu_CPU_MapToApi(t *testing.T) {
 					body:          map[string]string{"vcpus": "7"}}}}
 	})
 	tests.Test(t)
+}
+
+func Test_ConfigQemu_CPU_Validate(t *testing.T) {
+	t.Parallel()
+	testData_ConfigQemu_CPU_Validate_1().Test(t)
+	testData_ConfigQemu_CPU_Validate_2().Test(t)
 }
 
 func Test_CpuFlags_Validate(t *testing.T) {
@@ -777,141 +996,23 @@ func Test_CpuVirtualCores_Validate(t *testing.T) {
 
 func Test_QemuCPU_Validate(t *testing.T) {
 	t.Parallel()
-	baseConfig := func(config QemuCPU) QemuCPU {
-		if config.Cores == nil {
-			config.Cores = new(QemuCpuCores(1))
+	validate := func(t *testing.T, config ConfigQemu, current *ConfigQemu, version Version, expectedErr error, valid bool) {
+		t.Helper()
+		var currentCPU *QemuCPU
+		if current != nil {
+			currentCPU = current.CPU
 		}
-		return config
+		err := config.CPU.Validate(currentCPU, version)
+		if valid {
+			require.NoError(t, err)
+		} else {
+			require.Error(t, err)
+			if expectedErr != nil {
+				require.Equal(t, expectedErr, err)
+			}
+		}
 	}
-	type testInput struct {
-		config  QemuCPU
-		current *QemuCPU
-		version Version
-	}
-	testData := []struct {
-		name   string
-		input  testInput
-		output error
-	}{
-		// Invalid
-		{name: `Invalid errors.New(CpuLimit_Error_Maximum)`,
-			input:  testInput{config: baseConfig(QemuCPU{Limit: new(CpuLimit(129))})},
-			output: errors.New(CpuLimit_Error_Maximum)},
-		{name: `Invalid errors.New(QemuCpuCores_Error_LowerBound)`,
-			input:  testInput{config: QemuCPU{Cores: new(QemuCpuCores(0))}},
-			output: errors.New(QemuCpuCores_Error_LowerBound)},
-		{name: `Invalid errors.New(QemuCPU_Error_CoresRequired)`,
-			input:  testInput{config: QemuCPU{}},
-			output: errors.New(QemuCPU_Error_CoresRequired)},
-		{name: `Invalid errors.New(QemuCpuSockets_Error_LowerBound)`,
-			input:  testInput{config: baseConfig(QemuCPU{Sockets: new(QemuCpuSockets(0))})},
-			output: errors.New(QemuCpuSockets_Error_LowerBound)},
-		{name: `Invalid errors.New(CpuUnits_Error_Maximum)`,
-			input:  testInput{config: baseConfig(QemuCPU{Units: new(QemuCpuUnits(262145))})},
-			output: errors.New(CpuUnits_Error_Maximum)},
-		{name: `Invalid CpuVirtualCores(1).Error() 1 1`,
-			input: testInput{config: QemuCPU{
-				Cores:        new(QemuCpuCores(1)),
-				Sockets:      new(QemuCpuSockets(1)),
-				VirtualCores: new(CpuVirtualCores(2))}},
-			output: CpuVirtualCores(1).Error()},
-		{name: `Invalid Flags.AES errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				AES: new(TriBool(2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.AmdNoSSB errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				AmdNoSSB: new(TriBool(-2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.AmdSSBD errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				AmdSSBD: new(TriBool(2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.HvEvmcs errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				HvEvmcs: new(TriBool(-2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.HvTlbFlush errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				HvTlbFlush: new(TriBool(2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.Ibpb errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				Ibpb: new(TriBool(-2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.MdClear errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				MdClear: new(TriBool(2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.PCID errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				PCID: new(TriBool(-2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.Pdpe1GB errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				Pdpe1GB: new(TriBool(2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.SSBD errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				SSBD: new(TriBool(-2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.SpecCtrl errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				SpecCtrl: new(TriBool(2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Flags.VirtSSBD errors.New(TriBool_Error_Invalid)`,
-			input: testInput{config: baseConfig(QemuCPU{Flags: new(CpuFlags{
-				VirtSSBD: new(TriBool(-2))})})},
-			output: errors.New(TriBool_Error_Invalid)},
-		{name: `Invalid Type`,
-			input: testInput{
-				config:  baseConfig(QemuCPU{Type: new(CpuType("gibbers"))}),
-				version: Version{}.max()},
-			output: CpuType("").Error(Version{}.max())},
-		// Valid
-		{name: `Valid Maximum`,
-			input: testInput{
-				config: QemuCPU{
-					Cores: new(QemuCpuCores(128)),
-					Flags: new(CpuFlags{
-						AES:        new(TriBoolTrue),
-						AmdNoSSB:   new(TriBoolFalse),
-						AmdSSBD:    new(TriBoolNone),
-						HvEvmcs:    new(TriBoolTrue),
-						HvTlbFlush: new(TriBoolFalse),
-						Ibpb:       new(TriBoolNone),
-						MdClear:    new(TriBoolTrue),
-						PCID:       new(TriBoolFalse),
-						Pdpe1GB:    new(TriBoolNone),
-						SSBD:       new(TriBoolTrue),
-						SpecCtrl:   new(TriBoolFalse),
-						VirtSSBD:   new(TriBoolNone)}),
-					Limit:        new(CpuLimit(128)),
-					Sockets:      new(QemuCpuSockets(4)),
-					Type:         new(CpuType(cpuType_AmdEPYCRomeV2_Lower)),
-					Units:        new(QemuCpuUnits(262144)),
-					VirtualCores: new(CpuVirtualCores(512))},
-				version: Version{}.max()}},
-		{name: `Valid Minimum`,
-			input: testInput{config: QemuCPU{
-				Cores:        new(QemuCpuCores(128)),
-				Flags:        new(CpuFlags{}),
-				Limit:        new(CpuLimit(0)),
-				Sockets:      new(QemuCpuSockets(4)),
-				Type:         new(CpuType("")),
-				Units:        new(QemuCpuUnits(0)),
-				VirtualCores: new(CpuVirtualCores(0))},
-				version: Version{}.max()}},
-		{name: `Valid Update`,
-			input: testInput{
-				config:  QemuCPU{},
-				current: &QemuCPU{}}},
-	}
-	for _, test := range testData {
-		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.input.config.Validate(test.input.current, test.input.version), test.output, test.name)
-		})
-	}
+	testData_ConfigQemu_CPU_Validate_1().Inject(t, validate)
 }
 
 func Test_QemuCpuCores_Validate(t *testing.T) {

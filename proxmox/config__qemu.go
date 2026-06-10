@@ -890,13 +890,6 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
-		if config.CPU == nil {
-			return errors.New(ConfigQemu_Error_CpuRequired)
-		} else {
-			if err = config.CPU.Validate(nil, version); err != nil {
-				return
-			}
-		}
 		if config.Memory == nil {
 			return errors.New(ConfigQemu_Error_MemoryRequired)
 		} else {
@@ -924,17 +917,12 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
-		if err = config.validateCreate(); err != nil {
+		if err = config.validateCreate(version); err != nil {
 			return
 		}
 	} else { // Update
 		if config.Node != nil {
 			if err = config.Node.Validate(); err != nil {
-				return
-			}
-		}
-		if config.CPU != nil {
-			if err = config.CPU.Validate(current.CPU, version); err != nil {
 				return
 			}
 		}
@@ -963,7 +951,7 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 				return
 			}
 		}
-		if err = config.validateUpdate(current); err != nil {
+		if err = config.validateUpdate(current, version); err != nil {
 			return
 		}
 	}
@@ -1007,7 +995,14 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 	return
 }
 
-func (config ConfigQemu) validateCreate() error {
+func (config ConfigQemu) validateCreate(version Version) error {
+	if config.CPU == nil {
+		return errors.New(ConfigQemu_Error_CpuRequired)
+	} else {
+		if err := config.CPU.validateCreate(version); err != nil {
+			return err
+		}
+	}
 	if config.EfiDisk != nil {
 		if err := config.EfiDisk.validateCreate(); err != nil {
 			return err
@@ -1026,7 +1021,12 @@ func (config ConfigQemu) validateCreate() error {
 	return nil
 }
 
-func (config ConfigQemu) validateUpdate(current *ConfigQemu) error {
+func (config ConfigQemu) validateUpdate(current *ConfigQemu, version Version) error {
+	if config.CPU != nil {
+		if err := config.CPU.validateUpdate(current.CPU, version); err != nil {
+			return err
+		}
+	}
 	if config.EfiDisk != nil {
 		if current.EfiDisk != nil { // update
 			if err := config.EfiDisk.validateUpdate(); err != nil {

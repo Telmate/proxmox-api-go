@@ -841,14 +841,50 @@ func (QemuCPU) mapToSdkAffinity(rawAffinity string) []uint {
 	return result
 }
 
-func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
+func (cpu QemuCPU) Validate(current *QemuCPU, version Version) error {
+	if current != nil {
+		return cpu.validateUpdate(current, version)
+	}
+	return cpu.validateCreate(version)
+}
+
+func (cpu QemuCPU) validateCreate(version Version) (err error) {
 	if cpu.Cores != nil {
 		if err = cpu.Cores.Validate(); err != nil {
 			return
 		}
-	} else if current == nil {
+	} else {
 		return errors.New(QemuCPU_Error_CoresRequired)
 	}
+	if err = cpu.validateShared(version); err != nil {
+		return
+	}
+	if cpu.VirtualCores != nil {
+		if err = cpu.VirtualCores.Validate(cpu.Cores, cpu.Sockets, nil); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (cpu QemuCPU) validateUpdate(current *QemuCPU, version Version) (err error) {
+	if cpu.Cores != nil {
+		if err = cpu.Cores.Validate(); err != nil {
+			return
+		}
+	}
+	if err = cpu.validateShared(version); err != nil {
+		return
+	}
+	if cpu.VirtualCores != nil {
+		if err = cpu.VirtualCores.Validate(cpu.Cores, cpu.Sockets, current); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (cpu QemuCPU) validateShared(version Version) (err error) {
 	if cpu.Flags != nil {
 		if err = cpu.Flags.Validate(); err != nil {
 			return
@@ -871,11 +907,6 @@ func (cpu QemuCPU) Validate(current *QemuCPU, version Version) (err error) {
 	}
 	if cpu.Units != nil {
 		if err = cpu.Units.Validate(); err != nil {
-			return
-		}
-	}
-	if cpu.VirtualCores != nil {
-		if err = cpu.VirtualCores.Validate(cpu.Cores, cpu.Sockets, current); err != nil {
 			return
 		}
 	}
