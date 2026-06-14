@@ -24,7 +24,8 @@ func (config *QemuMTU) mapToApiUnsafe(builder *strings.Builder) {
 		return
 	}
 	if config.Value != 0 {
-		builder.WriteString(",mtu=" + config.Value.string())
+		builder.WriteString(",mtu=")
+		builder.WriteString(config.Value.string())
 	}
 }
 
@@ -78,7 +79,8 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 				} else {
 					mac = strings.ToUpper(mac)
 				}
-				builder.WriteString("=" + mac)
+				builder.WriteRune('=')
+				builder.WriteString(mac)
 			}
 		} else if current.MAC != nil {
 			if current.mac != "" {
@@ -86,26 +88,33 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 			} else {
 				mac = strings.ToUpper(current.MAC.String())
 			}
-			builder.WriteString("=" + mac)
+			builder.WriteRune('=')
+			builder.WriteString(mac)
 		}
 		if config.Bridge != nil {
-			builder.WriteString(",bridge=" + *config.Bridge)
+			builder.WriteString(",bridge=")
+			builder.WriteString(*config.Bridge)
 		} else if current.Bridge != nil {
-			builder.WriteString(",bridge=" + *current.Bridge)
+			builder.WriteString(",bridge=")
+			builder.WriteString(*current.Bridge)
 		}
 		if config.Firewall != nil {
 			if *config.Firewall {
-				builder.WriteString(",firewall=" + boolToIntString(*config.Firewall))
+				builder.WriteString(",firewall=")
+				builder.WriteRune(bTOr(*config.Firewall))
 			}
 		} else if current.Firewall != nil && *current.Firewall {
-			builder.WriteString(",firewall=" + boolToIntString(*current.Firewall))
+			builder.WriteString(",firewall=")
+			builder.WriteRune(bTOr(*current.Firewall))
 		}
 		if config.Connected != nil {
 			if !*config.Connected {
-				builder.WriteString(",link_down=" + boolToIntString(!*config.Connected))
+				builder.WriteString(",link_down=")
+				builder.WriteRune(bTOr(!*config.Connected))
 			}
 		} else if current.Connected != nil && !*current.Connected {
-			builder.WriteString(",link_down=" + boolToIntString(!*current.Connected))
+			builder.WriteString(",link_down=")
+			builder.WriteRune(bTOr(!*current.Connected))
 		}
 		if model == string(QemuNetworkModelVirtIO) {
 			if config.MTU != nil {
@@ -116,10 +125,12 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 		}
 		if config.MultiQueue != nil {
 			if *config.MultiQueue != 0 {
-				builder.WriteString(",queues=" + strconv.Itoa(int(*config.MultiQueue)))
+				builder.WriteString(",queues=")
+				builder.WriteString(strconv.Itoa(int(*config.MultiQueue)))
 			}
 		} else if current.MultiQueue != nil && *current.MultiQueue != 0 {
-			builder.WriteString(",queues=" + strconv.Itoa(int(*current.MultiQueue)))
+			builder.WriteString(",queues=")
+			builder.WriteString(strconv.Itoa(int(*current.MultiQueue)))
 		}
 		if config.RateLimitKBps != nil {
 			builder.WriteString(config.RateLimitKBps.mapToAPI())
@@ -128,18 +139,22 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 		}
 		if config.NativeVlan != nil {
 			if *config.NativeVlan != 0 {
-				builder.WriteString(",tag=" + config.NativeVlan.String())
+				builder.WriteString(",tag=")
+				builder.WriteString(config.NativeVlan.String())
 			}
 		} else if current.NativeVlan != nil && *current.NativeVlan != 0 {
-			builder.WriteString(",tag=" + current.NativeVlan.String())
+			builder.WriteString(",tag=")
+			builder.WriteString(current.NativeVlan.String())
 		}
 		if config.TaggedVlans != nil {
 			if v := config.TaggedVlans.string(); v != "" {
-				builder.WriteString(",trunks=" + v)
+				builder.WriteString(",trunks=")
+				builder.WriteString(v)
 			}
 		} else if current.TaggedVlans != nil {
 			if v := current.TaggedVlans.string(); v != "" {
-				builder.WriteString(",trunks=" + v)
+				builder.WriteString(",trunks=")
+				builder.WriteString(v)
 			}
 		}
 		return builder.String()
@@ -152,33 +167,40 @@ func (config QemuNetworkInterface) mapToApi(current *QemuNetworkInterface) (sett
 	if config.MAC != nil {
 		mac = config.MAC.String()
 		if mac != "" {
-			builder.WriteString("=" + strings.ToUpper(mac))
+			builder.WriteRune('=')
+			builder.WriteString(strings.ToUpper(mac))
 		}
 	}
 	if config.Bridge != nil {
-		builder.WriteString(",bridge=" + *config.Bridge)
+		builder.WriteString(",bridge=")
+		builder.WriteString(*config.Bridge)
 	}
 	if config.Firewall != nil && *config.Firewall {
-		builder.WriteString(",firewall=" + boolToIntString(*config.Firewall))
+		builder.WriteString(",firewall=")
+		builder.WriteRune(bTOr(*config.Firewall))
 	}
 	if config.Connected != nil && !*config.Connected {
-		builder.WriteString(",link_down=" + boolToIntString(!*config.Connected))
+		builder.WriteString(",link_down=")
+		builder.WriteRune(bTOr(!*config.Connected))
 	}
 	if config.MTU != nil && model == string(QemuNetworkModelVirtIO) {
 		config.MTU.mapToApiUnsafe(&builder)
 	}
 	if config.MultiQueue != nil && *config.MultiQueue != 0 {
-		builder.WriteString(",queues=" + strconv.Itoa(int(*config.MultiQueue)))
+		builder.WriteString(",queues=")
+		builder.WriteString(strconv.Itoa(int(*config.MultiQueue)))
 	}
 	if config.RateLimitKBps != nil {
 		builder.WriteString(config.RateLimitKBps.mapToAPI())
 	}
 	if config.NativeVlan != nil && *config.NativeVlan != 0 {
-		builder.WriteString(",tag=" + config.NativeVlan.String())
+		builder.WriteString(",tag=")
+		builder.WriteString(config.NativeVlan.String())
 	}
 	if config.TaggedVlans != nil {
 		if v := config.TaggedVlans.string(); v != "" {
-			builder.WriteString(",trunks=" + v)
+			builder.WriteString(",trunks=")
+			builder.WriteString(v)
 		}
 	}
 	return builder.String()

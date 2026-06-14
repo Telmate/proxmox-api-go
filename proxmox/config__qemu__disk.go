@@ -1033,7 +1033,8 @@ func (newStorages QemuStorages) cloudInitRemove(currentStorages QemuStorages, de
 	newCloudInit := newStorages.listCloudInitDisk()
 	currentCloudInit := currentStorages.listCloudInitDisk()
 	if newCloudInit != "" && currentCloudInit != "" && newCloudInit != currentCloudInit {
-		delete.WriteString(comma + currentCloudInit)
+		delete.WriteString(comma)
+		delete.WriteString(currentCloudInit)
 	}
 }
 

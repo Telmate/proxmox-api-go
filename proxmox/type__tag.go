@@ -23,7 +23,8 @@ func (t Tags) mapToApiCreate() string {
 	}
 	builder := strings.Builder{}
 	for i := range t {
-		builder.WriteString(comma + t[i].String())
+		builder.WriteString(comma)
+		builder.WriteString(t[i].String())
 	}
 	return builder.String()[3:]
 }
@@ -36,7 +37,8 @@ func (t Tags) mapToApiCreateLower() string {
 	}
 	builder := strings.Builder{}
 	for i := range t {
-		builder.WriteString(comma + strings.ToLower(t[i].String()))
+		builder.WriteString(comma)
+		builder.WriteString(strings.ToLower(t[i].String()))
 	}
 	return builder.String()[3:]
 }
@@ -82,7 +84,8 @@ func (t Tags) String() string { // String is for fmt.Stringer.
 	}
 	builder := strings.Builder{}
 	for i := range t {
-		builder.WriteString("," + t[i].String())
+		builder.WriteRune(',')
+		builder.WriteString(t[i].String())
 	}
 	return builder.String()[1:]
 }
