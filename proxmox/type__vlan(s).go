@@ -44,7 +44,8 @@ func (config Vlans) string() string {
 	slices.Sort(uniqueArr)
 	builder := strings.Builder{}
 	for i := range uniqueArr {
-		builder.WriteString(";" + strconv.Itoa(uniqueArr[i]))
+		builder.WriteRune(';')
+		builder.WriteString(strconv.Itoa(uniqueArr[i]))
 	}
 	return builder.String()[1:] // Skip the leading semicolon
 }

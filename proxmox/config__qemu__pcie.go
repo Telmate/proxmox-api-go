@@ -17,7 +17,8 @@ func (config QemuPciDevices) mapToAPI(current QemuPciDevices, params map[string]
 	for i, e := range config {
 		if v, isSet := current[i]; isSet {
 			if e.Delete {
-				builder.WriteString("," + qemuPrefixApiKeyPCI + i.String())
+				builder.WriteString("," + qemuPrefixApiKeyPCI)
+				builder.WriteString(i.String())
 				continue
 			}
 			params[qemuPrefixApiKeyPCI+i.String()] = e.mapToAPI(&v)
@@ -310,19 +311,24 @@ func (config qemuPci) String() string { // String is for fmt.Stringer.
 		builder.WriteString(",rombar=0")
 	}
 	if config.vendorID != "" {
-		builder.WriteString(",vendor-id=" + config.vendorID.String())
+		builder.WriteString(",vendor-id=")
+		builder.WriteString(config.vendorID.String())
 	}
 	if config.deviceID != "" {
-		builder.WriteString(",device-id=" + config.deviceID.String())
+		builder.WriteString(",device-id=")
+		builder.WriteString(config.deviceID.String())
 	}
 	if config.subVendorID != "" {
-		builder.WriteString(",sub-vendor-id=" + config.subVendorID.String())
+		builder.WriteString(",sub-vendor-id=")
+		builder.WriteString(config.subVendorID.String())
 	}
 	if config.subDeviceID != "" {
-		builder.WriteString(",sub-device-id=" + config.subDeviceID.String())
+		builder.WriteString(",sub-device-id=")
+		builder.WriteString(config.subDeviceID.String())
 	}
 	if config.mDev != "" {
-		builder.WriteString(",mdev=" + config.mDev.String())
+		builder.WriteString(",mdev=")
+		builder.WriteString(config.mDev.String())
 	}
 	var settings string
 	switch config.enum {

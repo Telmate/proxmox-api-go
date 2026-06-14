@@ -139,17 +139,19 @@ func (token ApiTokenConfig) create(ctx context.Context, c *clientAPI, userID Use
 func (token ApiTokenConfig) mapToApiCreate() *[]byte {
 	builder := strings.Builder{}
 	if token.PrivilegeSeparation != nil {
-		builder.WriteString("&" + apiTokenApiKeyPrivilegeSeparation + "=" + boolToIntString(*token.PrivilegeSeparation))
+		builder.WriteString("&" + apiTokenApiKeyPrivilegeSeparation + "=")
+		builder.WriteRune(bTOr(*token.PrivilegeSeparation))
 	}
 	if token.Expiration != nil && *token.Expiration > 0 {
-		builder.WriteString("&" + apiTokenApiKeyExpiration + "=" + strconv.FormatUint(uint64(*token.Expiration), 10))
+		builder.WriteString("&" + apiTokenApiKeyExpiration + "=")
+		builder.WriteString(strconv.FormatUint(uint64(*token.Expiration), 10))
 	}
 	if token.Comment != nil && *token.Comment != "" {
-		builder.WriteString("&" + apiTokenApiKeyComment + "=" + body.Escape(*token.Comment))
+		builder.WriteString("&" + apiTokenApiKeyComment + "=")
+		builder.WriteString(body.Escape(*token.Comment))
 	}
 	if builder.Len() > 0 {
-		b := bytes.NewBufferString(builder.String()[1:]).Bytes()
-		return &b
+		return new(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
 	return nil
 }
@@ -157,22 +159,24 @@ func (token ApiTokenConfig) mapToApiCreate() *[]byte {
 func (token ApiTokenConfig) mapToApiUpdate() *[]byte {
 	builder := strings.Builder{}
 	if token.PrivilegeSeparation != nil {
-		builder.WriteString("&" + apiTokenApiKeyPrivilegeSeparation + "=" + boolToIntString(*token.PrivilegeSeparation))
+		builder.WriteString("&" + apiTokenApiKeyPrivilegeSeparation + "=")
+		builder.WriteRune(bTOr(*token.PrivilegeSeparation))
 	}
 	if token.Expiration != nil {
-		builder.WriteString("&" + apiTokenApiKeyExpiration + "=" + strconv.FormatUint(uint64(*token.Expiration), 10))
+		builder.WriteString("&" + apiTokenApiKeyExpiration + "=")
+		builder.WriteString(strconv.FormatUint(uint64(*token.Expiration), 10))
 	}
 	if token.Comment != nil {
 		builder.WriteString("&" + apiTokenApiKeyComment)
 		if *token.Comment == "" { // Bug in PVE API: setting empty comment has no effect, must use "= "
 			builder.WriteString("=%20")
 		} else {
-			builder.WriteString("=" + body.Escape(*token.Comment))
+			builder.WriteRune('=')
+			builder.WriteString(body.Escape(*token.Comment))
 		}
 	}
 	if builder.Len() > 0 {
-		b := bytes.NewBufferString(builder.String()[1:]).Bytes()
-		return &b
+		return new(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
 	return nil
 }

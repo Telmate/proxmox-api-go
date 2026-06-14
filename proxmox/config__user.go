@@ -242,11 +242,7 @@ func (config ConfigUser) mapToApiUpdate() *[]byte {
 	}
 	if config.Enable != nil {
 		builder.WriteString("&" + userApiKeyEnable + "=")
-		if *config.Enable {
-			builder.WriteRune('1')
-		} else {
-			builder.WriteRune('0')
-		}
+		builder.WriteRune(bTOr(*config.Enable))
 	}
 	if config.Expire != nil {
 		builder.WriteString("&" + userApiKeyExpire + "=")
