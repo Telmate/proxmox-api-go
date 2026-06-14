@@ -83,3 +83,9 @@ func testCompareRawMap[key comparable, compareObject any, get getAble[compareObj
 func generateUPID(node NodeName, task string, guest GuestID, user UserID) string {
 	return "UPID:" + node.String() + ":0006E4CB:17C8E729:6972A08C:" + task + ":" + guest.String() + ":" + user.String() + ":"
 }
+
+type mapToApiTest[V any] struct {
+	output map[string]string
+	input  V
+	name   string
+}

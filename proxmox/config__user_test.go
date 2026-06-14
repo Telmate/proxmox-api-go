@@ -594,21 +594,20 @@ func Test_userClient_Update(t *testing.T) {
 	}
 }
 
-func Test_ConfigUser_mapToAPI(t *testing.T) {
-	t.Parallel()
-	type test struct {
-		name   string
-		input  ConfigUser
-		output map[string]string
-	}
-	tests := []struct {
+func testData_ConfigUser_mapToAPI() []struct {
+	category     string
+	create       []mapToApiTest[ConfigUser]
+	createUpdate []mapToApiTest[ConfigUser]
+	update       []mapToApiTest[ConfigUser]
+} {
+	return []struct {
 		category     string
-		create       []test
-		createUpdate []test
-		update       []test
+		create       []mapToApiTest[ConfigUser]
+		createUpdate []mapToApiTest[ConfigUser]
+		update       []mapToApiTest[ConfigUser]
 	}{
 		{category: `Comment`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{Comment: util.Pointer("")},
 					output: map[string]string{"userid": ""}},
@@ -617,7 +616,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					output: map[string]string{
 						"comment": "Test comment " + body.Symbols,
 						"userid":  ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{Comment: util.Pointer("")},
 					output: map[string]string{"comment": ""}},
@@ -625,7 +624,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					input:  ConfigUser{Comment: util.Pointer("Test comment " + body.Symbols)},
 					output: map[string]string{"comment": "Test comment " + body.Symbols}}}},
 		{category: `Email`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{Email: util.Pointer("")},
 					output: map[string]string{"userid": ""}},
@@ -634,7 +633,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					output: map[string]string{
 						"email":  "tony@stark-industries.com",
 						"userid": ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{Email: util.Pointer("")},
 					output: map[string]string{"email": ""}},
@@ -642,7 +641,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					input:  ConfigUser{Email: util.Pointer("tony@stark-industries.com")},
 					output: map[string]string{"email": "tony@stark-industries.com"}}}},
 		{category: `Enable`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `true`,
 					input: ConfigUser{Enable: util.Pointer(true)},
 					output: map[string]string{
@@ -652,7 +651,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					output: map[string]string{
 						"enable": "0",
 						"userid": ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `true`,
 					input:  ConfigUser{Enable: util.Pointer(true)},
 					output: map[string]string{"enable": "1"}},
@@ -660,7 +659,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					input:  ConfigUser{Enable: util.Pointer(false)},
 					output: map[string]string{"enable": "0"}}}},
 		{category: `Expire`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `zero`,
 					input:  ConfigUser{Expire: util.Pointer(uint(0))},
 					output: map[string]string{"userid": ""}},
@@ -669,7 +668,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					output: map[string]string{
 						"expire": "784873474",
 						"userid": ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `zero`,
 					input:  ConfigUser{Expire: util.Pointer(uint(0))},
 					output: map[string]string{"expire": "0"}},
@@ -677,7 +676,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					input:  ConfigUser{Expire: util.Pointer(uint(784873474))},
 					output: map[string]string{"expire": "784873474"}}}},
 		{category: `FirstName`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{FirstName: util.Pointer("")},
 					output: map[string]string{"userid": ""}},
@@ -686,7 +685,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					output: map[string]string{
 						"firstname": "Tony",
 						"userid":    ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{FirstName: util.Pointer("")},
 					output: map[string]string{"firstname": ""}},
@@ -694,7 +693,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					input:  ConfigUser{FirstName: util.Pointer("Tony")},
 					output: map[string]string{"firstname": "Tony"}}}},
 		{category: `Groups`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{Groups: &[]GroupName{}},
 					output: map[string]string{"userid": ""}},
@@ -703,7 +702,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					output: map[string]string{
 						"groups": "admin,user",
 						"userid": ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{Groups: &[]GroupName{}},
 					output: map[string]string{"groups": ""}},
@@ -711,7 +710,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					input:  ConfigUser{Groups: &[]GroupName{"admin", "user"}},
 					output: map[string]string{"groups": "admin,user"}}}},
 		{category: `Keys`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{Keys: util.Pointer("")},
 					output: map[string]string{"userid": ""}},
@@ -720,7 +719,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					output: map[string]string{
 						"keys":   "aaaa",
 						"userid": ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{Keys: util.Pointer("")},
 					output: map[string]string{"keys": ""}},
@@ -728,7 +727,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					input:  ConfigUser{Keys: util.Pointer("aaaa")},
 					output: map[string]string{"keys": "aaaa"}}}},
 		{category: `LastName`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{LastName: util.Pointer("")},
 					output: map[string]string{"userid": ""}},
@@ -737,7 +736,7 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					output: map[string]string{
 						"lastname": "Stark",
 						"userid":   ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `empty`,
 					input:  ConfigUser{LastName: util.Pointer("")},
 					output: map[string]string{"lastname": ""}},
@@ -745,27 +744,31 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 					input:  ConfigUser{LastName: util.Pointer("Stark")},
 					output: map[string]string{"lastname": "Stark"}}}},
 		{category: `Password`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `set`,
 					input:  ConfigUser{Password: util.Pointer(UserPassword("Enter123!"))},
 					output: map[string]string{"userid": ""}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `set`,
 					input:  ConfigUser{Password: util.Pointer(UserPassword("Enter123!"))},
 					output: nil}}},
 		{category: `UserID`,
-			create: []test{
+			create: []mapToApiTest[ConfigUser]{
 				{name: `set`,
 					input: ConfigUser{
 						User: UserID{Name: "tony", Realm: "pve"}},
 					output: map[string]string{
 						"userid": "tony@pve"}}},
-			update: []test{
+			update: []mapToApiTest[ConfigUser]{
 				{name: `set`,
 					input: ConfigUser{
 						User: UserID{Name: "tony", Realm: "pve"}},
-					output: nil}}},
-	}
+					output: nil}}}}
+}
+
+func Test_ConfigUser_mapToAPI(t *testing.T) {
+	t.Parallel()
+	tests := testData_ConfigUser_mapToAPI()
 	for _, test := range tests {
 		for _, subTest := range append(test.create, test.createUpdate...) {
 			name := test.category + "/Create/" + subTest.name
@@ -778,6 +781,46 @@ func Test_ConfigUser_mapToAPI(t *testing.T) {
 			t.Run(name, func(*testing.T) {
 				testParamsEqual(t, subTest.output, subTest.input.mapToApiUpdate())
 			})
+		}
+	}
+}
+
+func Benchmark_ConfigUser_mapToApiCreate(b *testing.B) {
+	tests := testData_ConfigUser_mapToAPI()
+	var create []ConfigUser
+	for _, test := range tests {
+		var tmpCreate []ConfigUser
+		for i := range test.create {
+			tmpCreate = append(tmpCreate, test.create[i].input)
+		}
+		for i := range test.createUpdate {
+			tmpCreate = append(tmpCreate, test.createUpdate[i].input)
+		}
+		create = append(create, tmpCreate...)
+	}
+	for b.Loop() {
+		for i := range create {
+			create[i].mapToApiCreate()
+		}
+	}
+}
+
+func Benchmark_ConfigUser_mapToApiUpdate(b *testing.B) {
+	tests := testData_ConfigUser_mapToAPI()
+	var update []ConfigUser
+	for _, test := range tests {
+		var tmpUpdate []ConfigUser
+		for i := range test.update {
+			tmpUpdate = append(tmpUpdate, test.update[i].input)
+		}
+		for i := range test.createUpdate {
+			tmpUpdate = append(tmpUpdate, test.createUpdate[i].input)
+		}
+		update = append(update, tmpUpdate...)
+	}
+	for b.Loop() {
+		for i := range update {
+			update[i].mapToApiUpdate()
 		}
 	}
 }
