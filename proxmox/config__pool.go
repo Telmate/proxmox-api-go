@@ -778,7 +778,7 @@ func (pool PoolName) addGuests(
 	if version.Major >= 8 {
 		return pool.addGuestsV8(ctx, c, guests, storages)
 	}
-	raw, err := listGuests_Unsafe(ctx, c)
+	raw, err := c.listGuestResources(ctx)
 	if err != nil {
 		return err
 	}
@@ -979,11 +979,8 @@ func (pool PoolName) Validate() error {
 	return nil
 }
 
-func guestsToAddAndRemoveFromPools(guests RawGuestResources, guestsToAdd []GuestID, targetPool PoolName) ([]GuestID, map[PoolName][]GuestID) {
-	guestsMap := make(map[GuestID]RawGuestResource)
-	for i := range guests {
-		guestsMap[guests[i].GetID()] = guests[i]
-	}
+func guestsToAddAndRemoveFromPools(guests *rawGuestResources, guestsToAdd []GuestID, targetPool PoolName) ([]GuestID, map[PoolName][]GuestID) {
+	guestsMap := guests.asMap()
 	add := make([]GuestID, 0, len(guestsToAdd))
 	remove := make(map[PoolName][]GuestID)
 	for _, id := range guestsToAdd {

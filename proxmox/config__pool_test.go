@@ -1903,32 +1903,25 @@ func Test_PoolName_Validate(t *testing.T) {
 func test_guestsToAddAndRemoveFromPools_data() []struct {
 	name        string
 	pool        PoolName
-	guests      RawGuestResources
+	guests      rawGuestResources
 	guestsToAdd []GuestID
 	remove      map[PoolName][]GuestID
 	add         []GuestID
 } {
-	set := func(raw []rawGuestResource) RawGuestResources {
-		interfaces := make([]RawGuestResource, len(raw))
-		for i := range raw {
-			interfaces[i] = &raw[i]
-		}
-		return interfaces
-	}
 	return []struct {
 		name        string
 		pool        PoolName
-		guests      RawGuestResources
+		guests      rawGuestResources
 		guestsToAdd []GuestID
 		remove      map[PoolName][]GuestID
 		add         []GuestID
 	}{
 		{name: `'guestsToAdd' Not in 'guests'`,
 			pool: "poolB",
-			guests: set([]rawGuestResource{
-				{a: map[string]any{"vmid": float64(100), "pool": "test"}},
-				{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
-				{a: map[string]any{"vmid": float64(300), "pool": "test"}}}),
+			guests: rawGuestResources{a: []any{
+				map[string]any{"vmid": float64(100), "pool": "test"},
+				map[string]any{"vmid": float64(200), "pool": "poolA"},
+				map[string]any{"vmid": float64(300), "pool": "test"}}},
 			guestsToAdd: []GuestID{700, 800, 900},
 			add:         []GuestID{700, 800, 900},
 			remove:      map[PoolName][]GuestID{}},
@@ -1942,35 +1935,34 @@ func test_guestsToAddAndRemoveFromPools_data() []struct {
 			remove:      map[PoolName][]GuestID{}},
 		{name: `Empty 'guestsToAdd'`,
 			pool: "poolB",
-			guests: set([]rawGuestResource{
-				{a: map[string]any{"vmid": float64(100), "pool": "test"}},
-				{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
-				{a: map[string]any{"vmid": float64(300), "pool": "test"}}}),
+			guests: rawGuestResources{a: []any{
+				map[string]any{"vmid": float64(100), "pool": "test"},
+				map[string]any{"vmid": float64(200), "pool": "poolA"},
+				map[string]any{"vmid": float64(300), "pool": "test"}}},
 			add:    []GuestID{},
 			remove: map[PoolName][]GuestID{}},
 		{name: `Guest already in target pool`,
 			pool: "test",
-			guests: set([]rawGuestResource{
-				{a: map[string]any{"vmid": float64(700), "pool": "test"}}}),
+			guests: rawGuestResources{a: []any{
+				map[string]any{"vmid": float64(700), "pool": "test"}}},
 			guestsToAdd: []GuestID{700},
 			add:         []GuestID{},
 			remove:      map[PoolName][]GuestID{}},
 		{name: `Full`,
 			pool: "poolX",
-			guests: set([]rawGuestResource{
-				{a: map[string]any{"vmid": float64(100), "pool": "test"}},
-				{a: map[string]any{"vmid": float64(200), "pool": "poolA"}},
-				{a: map[string]any{"vmid": float64(300), "pool": "test"}},
-				{a: map[string]any{"vmid": float64(400), "pool": "poolB"}},
-				{a: map[string]any{"vmid": float64(500), "pool": "poolC"}},
-				{a: map[string]any{"vmid": float64(600), "pool": ""}},
-				{a: map[string]any{"vmid": float64(700), "pool": "poolC"}},
-				{a: map[string]any{"vmid": float64(800), "pool": "poolB"}},
-				{a: map[string]any{"vmid": float64(900), "pool": ""}},
-				{a: map[string]any{"vmid": float64(1000), "pool": "test"}},
-				{a: map[string]any{"vmid": float64(1100), "pool": "poolA"}},
-				{a: map[string]any{"vmid": float64(1200), "pool": "poolX"}},
-			}),
+			guests: rawGuestResources{a: []any{
+				map[string]any{"vmid": float64(100), "pool": "test"},
+				map[string]any{"vmid": float64(200), "pool": "poolA"},
+				map[string]any{"vmid": float64(300), "pool": "test"},
+				map[string]any{"vmid": float64(400), "pool": "poolB"},
+				map[string]any{"vmid": float64(500), "pool": "poolC"},
+				map[string]any{"vmid": float64(600), "pool": ""},
+				map[string]any{"vmid": float64(700), "pool": "poolC"},
+				map[string]any{"vmid": float64(800), "pool": "poolB"},
+				map[string]any{"vmid": float64(900), "pool": ""},
+				map[string]any{"vmid": float64(1000), "pool": "test"},
+				map[string]any{"vmid": float64(1100), "pool": "poolA"},
+				map[string]any{"vmid": float64(1200), "pool": "poolX"}}},
 			guestsToAdd: []GuestID{100, 300, 200, 500, 700, 900, 1100, 1200},
 			add:         []GuestID{100, 300, 200, 500, 700, 900, 1100},
 			remove: map[PoolName][]GuestID{
@@ -1984,7 +1976,7 @@ func Test_guestsToAddAndRemoveFromPools(t *testing.T) {
 	t.Parallel()
 	for _, test := range test_guestsToAddAndRemoveFromPools_data() {
 		t.Run(test.name, func(t *testing.T) {
-			add, remove := guestsToAddAndRemoveFromPools(test.guests, test.guestsToAdd, test.pool)
+			add, remove := guestsToAddAndRemoveFromPools(&test.guests, test.guestsToAdd, test.pool)
 			require.ElementsMatch(t, test.add, add)
 			require.Equal(t, test.remove, remove)
 		})
@@ -1993,10 +1985,9 @@ func Test_guestsToAddAndRemoveFromPools(t *testing.T) {
 
 func Benchmark_guestsToAddAndRemoveFromPools(b *testing.B) {
 	tests := test_guestsToAddAndRemoveFromPools_data()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for _, test := range tests {
-			guestsToAddAndRemoveFromPools(test.guests, test.guestsToAdd, test.pool)
+			guestsToAddAndRemoveFromPools(&test.guests, test.guestsToAdd, test.pool)
 		}
 	}
 }

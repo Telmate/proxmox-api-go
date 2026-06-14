@@ -2,45 +2,78 @@ package proxmox
 
 import (
 	"context"
+	"iter"
 	"time"
 )
 
+func (c *guestClient) List(ctx context.Context) (RawGuestResources, error) { return c.ListNoCheck(ctx) }
+
+func (c *guestClient) ListNoCheck(ctx context.Context) (RawGuestResources, error) {
+	return c.api.listGuestResources(ctx)
+}
+
+// Deprecated: use GuestInterface.List() instead.
 // List all guest the user has viewing rights for in the cluster
 func ListGuests(ctx context.Context, c *Client) (RawGuestResources, error) {
-	return c.new().guestListResources(ctx)
+	return c.New().Guest.ListNoCheck(ctx)
 }
 
-func (c *clientNewTest) guestListResources(ctx context.Context) (RawGuestResources, error) {
-	return listGuests_Unsafe(ctx, c.api)
-
+type RawGuestResources interface {
+	AsArray() []RawGuestResource
+	AsMap() map[GuestID]RawGuestResource
+	Iter() iter.Seq[RawGuestResource]
+	Len() int
 }
 
-func listGuests_Unsafe(ctx context.Context, c clientApiInterface) (RawGuestResources, error) {
-	raw, err := c.listGuestResources(ctx)
-	if err != nil {
-		return nil, err
+var _ RawGuestResources = (*rawGuestResources)(nil)
+
+type rawGuestResources struct{ a []any }
+
+func (r *rawGuestResources) AsArray() []RawGuestResource {
+	new := make([]RawGuestResource, len(r.a))
+	for i := range r.a {
+		new[i] = &rawGuestResource{a: r.a[i].(map[string]any)}
 	}
-	resources := make(RawGuestResources, len(raw))
-	for i := range raw {
-		resources[i] = &rawGuestResource{a: raw[i].(map[string]any)}
-	}
-	return resources, nil
+	return new
 }
 
-type RawGuestResources []RawGuestResource
-
-func (r RawGuestResources) Get() []GuestResource {
-	resources := make([]GuestResource, len(r))
-	for i := range r {
-		resources[i] = r[i].Get()
+func (r *rawGuestResources) AsMap() map[GuestID]RawGuestResource {
+	new := make(map[GuestID]RawGuestResource, len(r.a))
+	for i := range r.a {
+		raw := r.a[i].(map[string]any)
+		new[GuestID(raw["vmid"].(float64))] = &rawGuestResource{a: raw}
 	}
-	return resources
+	return new
 }
 
-func (r RawGuestResources) SelectID(id GuestID) (RawGuestResource, bool) {
-	for i := range r {
-		if r[i].GetID() == id {
-			return r[i], true
+func (r *rawGuestResources) asMap() map[GuestID]*rawGuestResource {
+	new := make(map[GuestID]*rawGuestResource, len(r.a))
+	for i := range r.a {
+		raw := r.a[i].(map[string]any)
+		new[GuestID(raw["vmid"].(float64))] = &rawGuestResource{a: raw}
+	}
+	return new
+}
+
+func (raw *rawGuestResources) Iter() iter.Seq[RawGuestResource] {
+	return func(yield func(RawGuestResource) bool) {
+		for i := range raw.a {
+			if !yield(&rawGuestResource{
+				a: raw.a[i].(map[string]any),
+			}) {
+				return
+			}
+		}
+	}
+}
+
+func (r *rawGuestResources) Len() int { return len(r.a) }
+
+func (r *rawGuestResources) selectID(id GuestID) (*rawGuestResource, bool) {
+	for i := range r.a {
+		raw := r.a[i].(map[string]any)
+		if v := raw["vmid"]; GuestID(v.(float64)) == id {
+			return &rawGuestResource{a: raw}, true
 		}
 	}
 	return nil, false

@@ -15,6 +15,10 @@ import (
 
 type (
 	GuestInterface interface {
+		// List all guest and templates the user has viewing rights for in the cluster.
+		List(context.Context) (RawGuestResources, error)
+		ListNoCheck(context.Context) (RawGuestResources, error)
+
 		Reboot(context.Context, VmRef) error
 		RebootNoCheck(context.Context, VmRef) error
 

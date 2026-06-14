@@ -2,7 +2,7 @@ package list
 
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
-	"github.com/Telmate/proxmox-api-go/proxmox"
+	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
@@ -12,8 +12,14 @@ var list_qemuguestsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		c := cli.NewClient()
-		guests, err := proxmox.ListGuests(cli.Context(), c)
+		rawGuests, err := c.New().Guest.List(cli.Context())
 		cli.LogFatalListing("Guests", err)
+		guests := make([]pveSDK.GuestResource, rawGuests.Len())
+		var index int
+		for e := range rawGuests.Iter() {
+			guests[index] = e.Get()
+			index++
+		}
 		cli.PrintRawJson(listCmd.OutOrStdout(), guests)
 	},
 }
