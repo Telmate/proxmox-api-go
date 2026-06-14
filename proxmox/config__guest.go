@@ -15,6 +15,10 @@ import (
 
 type (
 	GuestInterface interface {
+		// Returns true if the guest existed and was deleted, false if the guest did not exist.
+		Delete(context.Context, VmRef) (bool, error)
+		DeleteNoCheck(context.Context, VmRef) (bool, error)
+
 		// List all guest and templates the user has viewing rights for in the cluster.
 		List(context.Context) (RawGuestResources, error)
 		ListNoCheck(context.Context) (RawGuestResources, error)

@@ -25,6 +25,7 @@ func Test_Lxc_Create_Minimal_Unprivileged(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	c := cl.New()
 	set, expected := MinimumConfig(guest, node, storage, new(false), name)
 	var vmr *pveSDK.VmRef
 	tests := []struct {
@@ -33,7 +34,9 @@ func Test_Lxc_Create_Minimal_Unprivileged(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				require.Error(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -47,7 +50,9 @@ func Test_Lxc_Create_Minimal_Unprivileged(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {
@@ -65,6 +70,7 @@ func Test_Lxc_Create_Minimal_Privileged(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	c := cl.New()
 	set, expected := MinimumConfig(guest, node, storage, new(true), name)
 	var vmr *pveSDK.VmRef
 	tests := []struct {
@@ -73,7 +79,9 @@ func Test_Lxc_Create_Minimal_Privileged(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				require.Error(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -87,7 +95,9 @@ func Test_Lxc_Create_Minimal_Privileged(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {
@@ -105,6 +115,7 @@ func Test_Lxc_Create_Minimal_Privileged_Unset(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	c := cl.New()
 	set, expected := MinimumConfig(guest, node, storage, nil, name)
 	var vmr *pveSDK.VmRef
 	tests := []struct {
@@ -113,7 +124,9 @@ func Test_Lxc_Create_Minimal_Privileged_Unset(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				require.Error(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -127,7 +140,9 @@ func Test_Lxc_Create_Minimal_Privileged_Unset(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {
@@ -169,7 +184,8 @@ func Test_Lxc_Create_Client_Race(t *testing.T) {
 		{name: `Delete previously created guests`,
 			test: func(t *testing.T) {
 				for i := range previousVmrS {
-					require.NoError(t, previousVmrS[i].Delete(ctx, cl))
+					_, err := c.Guest.Delete(ctx, *previousVmrS[i])
+					require.NoError(t, err)
 				}
 				previousVmrS = nil
 			}},
@@ -228,7 +244,9 @@ func Test_Lxc_Create_Client_Race(t *testing.T) {
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
 				for i := range vmrS {
-					require.NoError(t, vmrS[i].Delete(ctx, cl))
+					existed, err := c.Guest.Delete(ctx, *vmrS[i])
+					require.NoError(t, err)
+					require.True(t, existed)
 				}
 			}},
 	}

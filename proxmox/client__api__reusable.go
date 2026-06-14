@@ -49,6 +49,8 @@ func (c *clientAPI) deleteRetry(ctx context.Context, url string, tries int) (err
 	return
 }
 
+// Makes a DELETE request and waits on proxmox for the task to complete.
+// It returns the HTTP error as 'err'.
 func (c *clientAPI) deleteTask(ctx context.Context, url string) error {
 	var response *http.Response
 	var retry bool

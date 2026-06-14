@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
@@ -114,8 +115,10 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 		vmType: GuestQemu}, nil
 }
 
+// Deprecated: use GuestInterface.Delete() instead.
 func (vmr VmRef) Delete(ctx context.Context, c *Client) error { return c.new().guestDelete(ctx, &vmr) }
 
+// Deprecated
 func (c *clientNewTest) guestDelete(ctx context.Context, vmr *VmRef) error {
 	guestID := vmr.VmId()
 	if guestID == 0 {
@@ -132,7 +135,7 @@ func (c *clientNewTest) guestDelete(ctx context.Context, vmr *VmRef) error {
 	if !ok {
 		return errorMsg{}.guestDoesNotExist(vmr.vmId)
 	}
-	if haState := rawGuest.GetHaState(); haState != "" {
+	if haState := rawGuest.GetHaState(); haState != nil {
 		if _, err = guestID.deleteHaResource(ctx, ca); err != nil {
 			return err
 		}
@@ -181,19 +184,33 @@ func (c *clientNewTest) guestDelete(ctx context.Context, vmr *VmRef) error {
 			}
 		}
 	}
-	return vmr.delete_Unsafe(ctx, c.oldClient)
+	return vmr.delete_Unsafe(ctx, c.api, false)
 }
 
+// Deprecated: use GuestInterface.DeleteNoCheck() instead.
 func (vmr VmRef) DeleteNoCheck(ctx context.Context, c *Client) error {
 	if err := c.checkInitialized(); err != nil {
 		return err
 	}
-	return vmr.delete_Unsafe(ctx, c)
+	return vmr.delete_Unsafe(ctx, c.new().apiGet(), false)
 }
 
-func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *Client) error {
-	_, err := c.DeleteVmParams(ctx, vmr, nil) // TODO use a more optimized version
-	return err
+func (vmr *VmRef) delete_Unsafe(ctx context.Context, c clientApiInterface, purge bool) error {
+	return c.deleteGuest(ctx, vmr, purge)
+}
+
+func (c *clientAPI) deleteGuest(ctx context.Context, vmr *VmRef, purge bool) error {
+	var url strings.Builder
+	url.WriteString("/nodes/")
+	url.WriteString(vmr.node.String())
+	url.WriteRune('/')
+	url.WriteString(vmr.vmType.String())
+	url.WriteRune('/')
+	url.WriteString(vmr.vmId.String())
+	if purge {
+		url.WriteString("?purge=1")
+	}
+	return c.deleteTask(ctx, url.String())
 }
 
 // ForceStop stops the guest immediately without a graceful shutdown and cancels any stop/shutdown operations in progress.

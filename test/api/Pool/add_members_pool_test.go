@@ -48,7 +48,9 @@ func pool_AddMembers(t *testing.T, pool pveSDK.ConfigPool, initialGuests, additi
 		{name: `Ensure guests do not exist`,
 			test: func(t *testing.T) {
 				for _, guest := range allGuests {
-					require.Error(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+					existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+					require.NoError(t, err)
+					require.False(t, existed)
 				}
 			}},
 		{name: `Ensure pool does not exist`,
@@ -110,7 +112,9 @@ func pool_AddMembers(t *testing.T, pool pveSDK.ConfigPool, initialGuests, additi
 		{name: `Delete guests`,
 			test: func(t *testing.T) {
 				for _, guest := range allGuests {
-					require.NoError(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+					existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+					require.NoError(t, err)
+					require.True(t, existed)
 				}
 			}},
 		{name: `Delete pool`,
@@ -199,7 +203,9 @@ func Test_Pool_AddMembers_Move(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 		{name: `Delete pools`,
 			test: func(t *testing.T) {

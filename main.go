@@ -161,7 +161,8 @@ func main() {
 		failError(c.New().Guest.Stop(ctx, *proxmox.NewVmRef(vmid), true))
 
 	case "destroy":
-		failError(proxmox.NewVmRef(vmid).Delete(ctx, c))
+		_, err = c.New().Guest.Delete(ctx, *proxmox.NewVmRef(vmid))
+		failError(err)
 
 	case "getConfig":
 		vmr = proxmox.NewVmRef(vmid)

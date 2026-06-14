@@ -30,8 +30,9 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				vmr = pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				require.Error(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(pveSDK.GuestID(guestID)))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -135,7 +136,9 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {
@@ -163,8 +166,9 @@ func Test_Qemu_Upate_Reduced_To_Max(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				vmr = pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				require.Error(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(pveSDK.GuestID(guestID)))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -189,7 +193,9 @@ func Test_Qemu_Upate_Reduced_To_Max(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {
@@ -219,8 +225,9 @@ func Test_Qemu_Upate_Max_To_Reduced(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				vmr = pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				require.Error(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(pveSDK.GuestID(guestID)))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -243,7 +250,9 @@ func Test_Qemu_Upate_Max_To_Reduced(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {
@@ -270,8 +279,9 @@ func Test_Qemu_Upate_Min_To_Reduced(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				vmr = pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				require.Error(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(pveSDK.GuestID(guestID)))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -294,7 +304,9 @@ func Test_Qemu_Upate_Min_To_Reduced(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {
@@ -322,8 +334,9 @@ func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				vmr = pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				require.Error(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(pveSDK.GuestID(guestID)))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -348,7 +361,9 @@ func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {

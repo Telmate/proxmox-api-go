@@ -49,7 +49,8 @@ func Test_Qemu_Create_Client_Race(t *testing.T) {
 		{name: `Delete previously created guests`,
 			test: func(t *testing.T) {
 				for i := range previousVmrS {
-					require.NoError(t, previousVmrS[i].Delete(ctx, cl))
+					_, err := c.Guest.Delete(ctx, *previousVmrS[i])
+					require.NoError(t, err)
 				}
 				previousVmrS = nil
 			}},
@@ -102,7 +103,9 @@ func Test_Qemu_Create_Client_Race(t *testing.T) {
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
 				for i := range vmrS {
-					require.NoError(t, vmrS[i].Delete(ctx, cl))
+					existed, err := c.Guest.Delete(ctx, *vmrS[i])
+					require.NoError(t, err)
+					require.True(t, existed)
 				}
 			}},
 	}
@@ -129,8 +132,9 @@ func Test_Qemu_Create_Max(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				require.Error(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(pveSDK.GuestID(guestID)))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -180,7 +184,9 @@ func Test_Qemu_Create_Max(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {
@@ -205,8 +211,9 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-				require.Error(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(pveSDK.GuestID(guestID)))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -259,7 +266,9 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, vmr.Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *vmr)
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {

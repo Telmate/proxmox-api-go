@@ -6,6 +6,7 @@ import (
 
 type mockClientAPI struct {
 	createHaRuleFunc           func(ctx context.Context, params map[string]any) error
+	deleteGuestFunc            func(ctx context.Context, vmr *VmRef, purge bool) error
 	deleteHaResourceFunc       func(ctx context.Context, id GuestID) error
 	deleteHaRuleFunc           func(ctx context.Context, id HaRuleID) error
 	getGuestConfigFunc         func(ctx context.Context, vmr *VmRef) (map[string]any, error)
@@ -31,6 +32,13 @@ func (m *mockClientAPI) createHaRule(ctx context.Context, params map[string]any)
 		m.panic("createHaRuleFunc")
 	}
 	return m.createHaRuleFunc(ctx, params)
+}
+
+func (m *mockClientAPI) deleteGuest(ctx context.Context, vmr *VmRef, purge bool) error {
+	if m.deleteGuestFunc == nil {
+		m.panic("deleteGuestFunc")
+	}
+	return m.deleteGuestFunc(ctx, vmr, purge)
 }
 
 func (m *mockClientAPI) deleteHaResource(ctx context.Context, id GuestID) error {
