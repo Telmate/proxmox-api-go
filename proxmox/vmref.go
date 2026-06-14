@@ -21,15 +21,14 @@ func (vmr *VmRef) check_unsafe(ctx context.Context, c clientApiInterface) (*rawG
 	if vmr.node != "" && vmr.vmType != guestUnknown {
 		return nil, nil
 	}
-	raws, err := listGuests_Unsafe(ctx, c)
+	raws, err := c.listGuestResources(ctx)
 	if err != nil {
 		return nil, err
 	}
-	rawInterface, ok := raws.SelectID(vmr.vmId)
+	raw, ok := raws.selectID(vmr.vmId)
 	if !ok {
 		return nil, errorMsg{}.guestDoesNotExist(vmr.vmId)
 	}
-	raw := rawInterface.(*rawGuestResource)
 	vmr.node = raw.GetNode()
 	vmr.vmType = raw.GetType()
 	return raw, nil
@@ -124,12 +123,12 @@ func (c *clientNewTest) guestDelete(ctx context.Context, vmr *VmRef) error {
 	}
 	ca := c.apiGet()
 	cr := c.apiRaw()
-	rawGuests, err := listGuests_Unsafe(ctx, ca)
+	rawGuests, err := ca.listGuestResources(ctx)
 	if err != nil {
 		return err
 	}
 
-	rawGuest, ok := rawGuests.SelectID(guestID)
+	rawGuest, ok := rawGuests.selectID(guestID)
 	if !ok {
 		return errorMsg{}.guestDoesNotExist(vmr.vmId)
 	}

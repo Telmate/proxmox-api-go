@@ -26,6 +26,7 @@ func Test_Qemu_Create_Client_Race(t *testing.T) {
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
+	c := cl.New()
 	vmrS := make([]*pveSDK.VmRef, guestsAmount)
 	var previousVmrS []*pveSDK.VmRef
 	tests := []struct {
@@ -34,9 +35,10 @@ func Test_Qemu_Create_Client_Race(t *testing.T) {
 	}{
 		{name: `Find previously created guests`,
 			test: func(t *testing.T) {
-				guests, err := pveSDK.ListGuests(ctx, cl)
+				rawGuests, err := c.Guest.List(ctx)
 				require.NoError(t, err)
-				require.NotNil(t, guests)
+				require.NotNil(t, rawGuests)
+				guests := rawGuests.AsArray()
 				for i := range guests {
 					if guests[i].GetName() == guestName {
 						previousVmrS = append(previousVmrS, pveSDK.NewVmRef(guests[i].GetID()))

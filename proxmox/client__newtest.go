@@ -24,7 +24,6 @@ type ClientNewTest interface {
 	guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error)
 	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error)
 	guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
-	guestListResources(ctx context.Context) (RawGuestResources, error)
 	guestStop(ctx context.Context, vmr *VmRef) error
 	guestStopForce(ctx context.Context, vmr *VmRef) error
 	// HA
@@ -66,11 +65,11 @@ func (c *clientNewTest) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
 
 func (c *clientNewTest) guestCheckVmRef_Unsafe(ctx context.Context, vmr *VmRef) error {
 	if vmr.node == "" || vmr.vmType == guestUnknown {
-		raw, err := c.guestListResources(ctx)
+		raw, err := c.api.listGuestResources(ctx)
 		if err != nil {
 			return err
 		}
-		rawGuest, ok := raw.SelectID(vmr.vmId)
+		rawGuest, ok := raw.selectID(vmr.vmId)
 		if !ok {
 			return errorMsg{}.guestDoesNotExist(vmr.vmId)
 		}

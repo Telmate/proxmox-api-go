@@ -16,11 +16,13 @@ import (
 const RequestRetryCount = 3
 
 func (c *clientAPI) getResourceList(ctx context.Context, resourceType string) ([]any, error) {
-	url := "/cluster/resources"
+	var url strings.Builder
+	url.WriteString("/cluster/resources")
 	if resourceType != "" {
-		url = url + "?type=" + resourceType
+		url.WriteString("?type=")
+		url.WriteString(resourceType)
 	}
-	return c.getList(ctx, url, "", "")
+	return c.getList(ctx, url.String(), "", "")
 }
 
 // Primitive methods

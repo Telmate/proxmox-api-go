@@ -5,41 +5,6 @@ import (
 	"errors"
 )
 
-type (
-	GuestInterface interface {
-		Reboot(context.Context, VmRef) error
-		RebootNoCheck(context.Context, VmRef) error
-
-		Shutdown(context.Context, VmRef) error
-		ShutdownNoCheck(context.Context, VmRef) error
-
-		ShutdownForce(context.Context, VmRef) error
-		ShutdownForceNoCheck(context.Context, VmRef) error
-
-		Start(context.Context, VmRef) error
-		StartNoCheck(context.Context, VmRef) error
-
-		// Stop will stop the guest.
-		// The overrule flag will opportunistically set the overrule-shutdown parameter if the Proxmox VE version is 8.0 or higher.
-		// If the version is lower, overrule will be ignored and the normal stop command will be executed, as overrule is not supported on versions lower than 8.0.
-		Stop(ctx context.Context, vmr VmRef, overrule bool) error
-		StopNoCheck(context.Context, VmRef) error
-
-		// StopOverrule is not supported on Proxmox VE versions lower than 8.0.
-		// On unsupported versions, this method will return an error.
-		// On supported versions, this method will stop the guest and overrule any shutdown hooks or timeouts.
-		StopOverrule(context.Context, VmRef) error
-		StopOverruleNoCheck(context.Context, VmRef) error
-	}
-
-	guestClient struct {
-		api       *clientAPI
-		oldClient *Client
-	}
-)
-
-var _ GuestInterface = (*guestClient)(nil)
-
 func (c *guestClient) Reboot(ctx context.Context, vmr VmRef) error {
 	if _, err := vmr.check_unsafe(ctx, c.api); err != nil {
 		return err

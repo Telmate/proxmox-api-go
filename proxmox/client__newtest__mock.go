@@ -12,7 +12,6 @@ type MockClient struct {
 	GuestGetLxcRawConfigFunc        func(ctx context.Context, vmr *VmRef) (*rawConfigLXC, error)
 	GuestGetQemuActiveRawConfigFunc func(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error)
 	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error)
-	GuestListResourcesFunc          func(ctx context.Context) (RawGuestResources, error)
 	GuestStopFunc                   func(ctx context.Context, vmr *VmRef) error
 	GuestStopForceFunc              func(ctx context.Context, vmr *VmRef) error
 	// HA
@@ -101,13 +100,6 @@ func (m *MockClient) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*ra
 		m.panic("GuestGetQemuRawConfigFunc")
 	}
 	return m.GuestGetQemuRawConfigFunc(ctx, vmr)
-}
-
-func (m *MockClient) guestListResources(ctx context.Context) (RawGuestResources, error) {
-	if m.GuestListResourcesFunc == nil {
-		m.panic("GuestListResourcesFunc")
-	}
-	return m.GuestListResourcesFunc(ctx)
 }
 
 func (m *MockClient) guestStop(ctx context.Context, vmr *VmRef) error {

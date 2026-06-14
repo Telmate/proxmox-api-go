@@ -14,7 +14,7 @@ type mockClientAPI struct {
 	getHaRuleFunc              func(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfigFunc          func(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfigFunc          func(ctx context.Context, userId UserID) (map[string]any, bool, error)
-	listGuestResourcesFunc     func(ctx context.Context) ([]any, error)
+	listGuestResourcesFunc     func(ctx context.Context) (*rawGuestResources, error)
 	listHaRulesFunc            func(ctx context.Context) ([]any, error)
 	updateGuestStatusFunc      func(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error
 	updateHaRuleFunc           func(ctx context.Context, id HaRuleID, params map[string]any) error
@@ -89,7 +89,7 @@ func (m *mockClientAPI) getUserConfig(ctx context.Context, userId UserID) (map[s
 	return m.getUserConfigFunc(ctx, userId)
 }
 
-func (m *mockClientAPI) listGuestResources(ctx context.Context) ([]any, error) {
+func (m *mockClientAPI) listGuestResources(ctx context.Context) (*rawGuestResources, error) {
 	if m.listGuestResourcesFunc == nil {
 		m.panic("listGuestResourcesFunc")
 	}

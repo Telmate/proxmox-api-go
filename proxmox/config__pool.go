@@ -778,7 +778,7 @@ func (pool PoolName) addGuests(
 	if version.Major >= 8 {
 		return pool.addGuestsV8(ctx, c, guests, storages)
 	}
-	raw, err := listGuests_Unsafe(ctx, c)
+	raw, err := c.listGuestResources(ctx)
 	if err != nil {
 		return err
 	}
@@ -803,7 +803,8 @@ func (pool PoolName) addGuestsV8(ctx context.Context, c *clientAPI, guests *[]Gu
 func (pool PoolName) addGuestsV(ctx context.Context, c *clientAPI, guests *[]GuestID, storages *[]StorageName, move string) error {
 	builder := strings.Builder{}
 	if guests != nil && len(*guests) > 0 {
-		builder.WriteString(move + poolApiKeyGuests + "=")
+		builder.WriteString(move)
+		builder.WriteString(poolApiKeyGuests + "=")
 		builder.WriteString(array.CSV(*guests))
 	}
 	if storages != nil && len(*storages) > 0 {
@@ -827,7 +828,8 @@ func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs [
 }
 
 func (pool PoolName) delete(ctx context.Context, c *clientAPI) (bool, error) {
-	if err := c.deleteRetry(ctx, "/pools/"+pool.String(), 3); err != nil {
+	url := "/pools/" + pool.String()
+	if err := c.deleteRetry(ctx, url, 3); err != nil {
 		if apiErr, ok := err.(*ApiError); ok {
 			const prefix = "delete pool failed: pool '"
 			const prefixLen = len(prefix)
@@ -836,7 +838,7 @@ func (pool PoolName) delete(ctx context.Context, c *clientAPI) (bool, error) {
 					if err = pool.empty(ctx, c); err != nil {
 						return false, err
 					}
-					if err = c.deleteRetry(ctx, "/pools/"+pool.String(), 3); err != nil {
+					if err = c.deleteRetry(ctx, url, 3); err != nil {
 						return false, err
 					}
 					return true, nil
@@ -977,11 +979,8 @@ func (pool PoolName) Validate() error {
 	return nil
 }
 
-func guestsToAddAndRemoveFromPools(guests RawGuestResources, guestsToAdd []GuestID, targetPool PoolName) ([]GuestID, map[PoolName][]GuestID) {
-	guestsMap := make(map[GuestID]RawGuestResource)
-	for i := range guests {
-		guestsMap[guests[i].GetID()] = guests[i]
-	}
+func guestsToAddAndRemoveFromPools(guests *rawGuestResources, guestsToAdd []GuestID, targetPool PoolName) ([]GuestID, map[PoolName][]GuestID) {
+	guestsMap := guests.asMap()
 	add := make([]GuestID, 0, len(guestsToAdd))
 	remove := make(map[PoolName][]GuestID)
 	for _, id := range guestsToAdd {

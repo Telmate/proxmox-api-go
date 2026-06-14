@@ -17,7 +17,7 @@ type clientApiInterface interface {
 	getHaRule(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfig(ctx context.Context, userId UserID) (map[string]any, bool, error)
-	listGuestResources(ctx context.Context) ([]any, error)
+	listGuestResources(ctx context.Context) (*rawGuestResources, error)
 	listHaRules(ctx context.Context) ([]any, error)
 	updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error
 	updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error
@@ -97,8 +97,12 @@ func (c *clientAPI) getUserConfig(ctx context.Context, userID UserID) (map[strin
 	return config, false, err
 }
 
-func (c *clientAPI) listGuestResources(ctx context.Context) ([]any, error) {
-	return c.getResourceList(ctx, resourceListGuest)
+func (c *clientAPI) listGuestResources(ctx context.Context) (*rawGuestResources, error) {
+	raw, err := c.getResourceList(ctx, resourceListGuest)
+	if err != nil {
+		return nil, err
+	}
+	return &rawGuestResources{a: raw}, nil
 }
 
 func (c *clientAPI) listHaRules(ctx context.Context) ([]any, error) {
@@ -106,7 +110,16 @@ func (c *clientAPI) listHaRules(ctx context.Context) ([]any, error) {
 }
 
 func (c *clientAPI) updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error {
-	return c.postRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/"+setStatus, body)
+	var url strings.Builder
+	url.WriteString("/nodes/")
+	url.WriteString(vmr.node.String())
+	url.WriteRune('/')
+	url.WriteString(vmr.vmType.String())
+	url.WriteRune('/')
+	url.WriteString(vmr.vmId.String())
+	url.WriteString("/status/")
+	url.WriteString(setStatus)
+	return c.postRawTask(ctx, url.String(), body)
 }
 
 func (c *clientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error {

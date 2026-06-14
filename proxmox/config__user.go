@@ -194,69 +194,82 @@ func (config ConfigUser) DeleteUser(ctx context.Context, client *Client) error {
 
 func (config ConfigUser) mapToApiCreate() *[]byte {
 	builder := strings.Builder{}
-	builder.WriteString(userApiKeyUserID + "=" + config.User.String())
+	builder.WriteString(userApiKeyUserID + "=")
+	builder.WriteString(config.User.String())
 	if config.Comment != nil && *config.Comment != "" {
-		builder.WriteString("&" + userApiKeyComment + "=" + body.Escape(*config.Comment))
+		builder.WriteString("&" + userApiKeyComment + "=")
+		builder.WriteString(body.Escape(*config.Comment))
 	}
 	if config.Email != nil && *config.Email != "" {
-		builder.WriteString("&" + userApiKeyEmail + "=" + body.Escape(*config.Email))
+		builder.WriteString("&" + userApiKeyEmail + "=")
+		builder.WriteString(body.Escape(*config.Email))
 	}
 	if config.Enable != nil && !*config.Enable { // defaults to enabled when unset
 		builder.WriteString("&" + userApiKeyEnable + "=0")
 	}
 	if config.Expire != nil && *config.Expire != 0 {
-		builder.WriteString("&" + userApiKeyExpire + "=" + strconv.FormatUint(uint64(*config.Expire), 10))
+		builder.WriteString("&" + userApiKeyExpire + "=")
+		builder.WriteString(strconv.FormatUint(uint64(*config.Expire), 10))
 	}
 	if config.FirstName != nil && *config.FirstName != "" {
-		builder.WriteString("&" + userApiKeyFirstName + "=" + body.Escape(*config.FirstName))
+		builder.WriteString("&" + userApiKeyFirstName + "=")
+		builder.WriteString(body.Escape(*config.FirstName))
 	}
 	if config.Groups != nil && len(*config.Groups) != 0 {
-		builder.WriteString("&" + userApiKeyGroups + "=" + body.Escape(array.CSV(*config.Groups)))
+		builder.WriteString("&" + userApiKeyGroups + "=")
+		builder.WriteString(body.Escape(array.CSV(*config.Groups)))
 	}
 	if config.Keys != nil && *config.Keys != "" {
-		builder.WriteString("&" + userApiKeyKeys + "=" + body.Escape(*config.Keys))
+		builder.WriteString("&" + userApiKeyKeys + "=")
+		builder.WriteString(body.Escape(*config.Keys))
 	}
 	if config.LastName != nil && *config.LastName != "" {
-		builder.WriteString("&" + userApiKeyLastName + "=" + body.Escape(*config.LastName))
+		builder.WriteString("&" + userApiKeyLastName + "=")
+		builder.WriteString(body.Escape(*config.LastName))
 	}
-	b := []byte(builder.String())
-	return &b
+	return new([]byte(builder.String()))
 }
 
 func (config ConfigUser) mapToApiUpdate() *[]byte {
 	builder := strings.Builder{}
 	if config.Comment != nil {
-		builder.WriteString("&" + userApiKeyComment + "=" + body.Escape(*config.Comment))
+		builder.WriteString("&" + userApiKeyComment + "=")
+		builder.WriteString(body.Escape(*config.Comment))
 	}
 	if config.Email != nil {
-		builder.WriteString("&" + userApiKeyEmail + "=" + body.Escape(*config.Email))
+		builder.WriteString("&" + userApiKeyEmail + "=")
+		builder.WriteString(body.Escape(*config.Email))
 	}
 	if config.Enable != nil {
 		builder.WriteString("&" + userApiKeyEnable + "=")
 		if *config.Enable {
-			builder.WriteString("1")
+			builder.WriteRune('1')
 		} else {
-			builder.WriteString("0")
+			builder.WriteRune('0')
 		}
 	}
 	if config.Expire != nil {
-		builder.WriteString("&" + userApiKeyExpire + "=" + strconv.FormatUint(uint64(*config.Expire), 10))
+		builder.WriteString("&" + userApiKeyExpire + "=")
+		builder.WriteString(strconv.FormatUint(uint64(*config.Expire), 10))
 	}
 	if config.FirstName != nil {
-		builder.WriteString("&" + userApiKeyFirstName + "=" + body.Escape(*config.FirstName))
+		builder.WriteString("&" + userApiKeyFirstName + "=")
+		builder.WriteString(body.Escape(*config.FirstName))
 	}
 	if config.Groups != nil {
-		builder.WriteString("&" + userApiKeyGroups + "=" + body.Escape(array.CSV(*config.Groups)))
+		builder.WriteString("&" + userApiKeyGroups + "=")
+		builder.WriteString(body.Escape(array.CSV(*config.Groups)))
 	}
 	if config.Keys != nil {
-		builder.WriteString("&" + userApiKeyKeys + "=" + body.Escape(*config.Keys))
+		builder.WriteString("&" + userApiKeyKeys + "=")
+		builder.WriteString(body.Escape(*config.Keys))
 	}
 	if config.LastName != nil {
-		builder.WriteString("&" + userApiKeyLastName + "=" + body.Escape(*config.LastName))
+		builder.WriteString("&" + userApiKeyLastName + "=")
+		builder.WriteString(body.Escape(*config.LastName))
 	}
 	if builder.Len() > 0 {
-		b := bytes.NewBufferString(builder.String()[1:]).Bytes()
-		return &b
+		return new(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
 	return nil
 }

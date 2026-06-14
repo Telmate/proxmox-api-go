@@ -13,6 +13,45 @@ import (
 
 // All code LXC and Qemu have in common should be placed here.
 
+type (
+	GuestInterface interface {
+		// List all guest and templates the user has viewing rights for in the cluster.
+		List(context.Context) (RawGuestResources, error)
+		ListNoCheck(context.Context) (RawGuestResources, error)
+
+		Reboot(context.Context, VmRef) error
+		RebootNoCheck(context.Context, VmRef) error
+
+		Shutdown(context.Context, VmRef) error
+		ShutdownNoCheck(context.Context, VmRef) error
+
+		ShutdownForce(context.Context, VmRef) error
+		ShutdownForceNoCheck(context.Context, VmRef) error
+
+		Start(context.Context, VmRef) error
+		StartNoCheck(context.Context, VmRef) error
+
+		// Stop will stop the guest.
+		// The overrule flag will opportunistically set the overrule-shutdown parameter if the Proxmox VE version is 8.0 or higher.
+		// If the version is lower, overrule will be ignored and the normal stop command will be executed, as overrule is not supported on versions lower than 8.0.
+		Stop(ctx context.Context, vmr VmRef, overrule bool) error
+		StopNoCheck(context.Context, VmRef) error
+
+		// StopOverrule is not supported on Proxmox VE versions lower than 8.0.
+		// On unsupported versions, this method will return an error.
+		// On supported versions, this method will stop the guest and overrule any shutdown hooks or timeouts.
+		StopOverrule(context.Context, VmRef) error
+		StopOverruleNoCheck(context.Context, VmRef) error
+	}
+
+	guestClient struct {
+		api       *clientAPI
+		oldClient *Client
+	}
+)
+
+var _ GuestInterface = (*guestClient)(nil)
+
 type GuestDNS struct {
 	NameServers  *[]netip.Addr `json:"nameservers,omitempty"`
 	SearchDomain *string       `json:"searchdomain,omitempty"` // we are not validating this field, as validating domain names is a complex topic.
@@ -471,6 +510,11 @@ const GuestStartupOrderAny GuestStartupOrder = -1
 func (o GuestStartupOrder) String() string { return strconv.Itoa(int(o)) } // String is for fmt.Stringer.
 
 // GuestType is an enum for the type of guest (lxc or qemu)
+//
+//	const (
+//		GuestLxc
+//		GuestQemu
+//	)
 type GuestType uint8
 
 const (
