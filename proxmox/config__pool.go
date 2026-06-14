@@ -803,7 +803,8 @@ func (pool PoolName) addGuestsV8(ctx context.Context, c *clientAPI, guests *[]Gu
 func (pool PoolName) addGuestsV(ctx context.Context, c *clientAPI, guests *[]GuestID, storages *[]StorageName, move string) error {
 	builder := strings.Builder{}
 	if guests != nil && len(*guests) > 0 {
-		builder.WriteString(move + poolApiKeyGuests + "=")
+		builder.WriteString(move)
+		builder.WriteString(poolApiKeyGuests + "=")
 		builder.WriteString(array.CSV(*guests))
 	}
 	if storages != nil && len(*storages) > 0 {
@@ -827,7 +828,8 @@ func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs [
 }
 
 func (pool PoolName) delete(ctx context.Context, c *clientAPI) (bool, error) {
-	if err := c.deleteRetry(ctx, "/pools/"+pool.String(), 3); err != nil {
+	url := "/pools/" + pool.String()
+	if err := c.deleteRetry(ctx, url, 3); err != nil {
 		if apiErr, ok := err.(*ApiError); ok {
 			const prefix = "delete pool failed: pool '"
 			const prefixLen = len(prefix)
@@ -836,7 +838,7 @@ func (pool PoolName) delete(ctx context.Context, c *clientAPI) (bool, error) {
 					if err = pool.empty(ctx, c); err != nil {
 						return false, err
 					}
-					if err = c.deleteRetry(ctx, "/pools/"+pool.String(), 3); err != nil {
+					if err = c.deleteRetry(ctx, url, 3); err != nil {
 						return false, err
 					}
 					return true, nil

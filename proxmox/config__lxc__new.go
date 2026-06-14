@@ -356,8 +356,6 @@ func (config ConfigLXC) update_Unsafe(
 	var resize []lxcMountResize
 	var getRootMount, getMounts, requiresOffStateForMountActions bool
 
-	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String()
-
 	targetState := config.State.combine(currentState)
 
 	// Check if we have to move or resize any mounts
@@ -431,7 +429,13 @@ func (config ConfigLXC) update_Unsafe(
 	params, body := config.mapToApiUpdate(*current)
 
 	if body = combineParamsAndBody(params, body); body != nil {
-		if err = ca.putRawRetry(ctx, url+"/config", body, 3); err != nil {
+		var urlBuilder strings.Builder
+		urlBuilder.WriteString("/nodes/")
+		urlBuilder.WriteString(vmr.node.String())
+		urlBuilder.WriteString("/lxc/")
+		urlBuilder.WriteString(vmr.vmId.String())
+		urlBuilder.WriteString("/config")
+		if err = ca.putRawRetry(ctx, urlBuilder.String(), body, 3); err != nil {
 			return err
 		}
 		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes

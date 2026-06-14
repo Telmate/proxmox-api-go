@@ -667,7 +667,11 @@ func (config ConfigQemu) updateNoCheck(
 
 	ca := client.new().apiGet()
 
-	urlPart := "/" + vmr.vmType.String() + "/" + vmr.vmId.String() + "/config"
+	var urlBuilder strings.Builder
+	urlBuilder.WriteString("/qemu/")
+	urlBuilder.WriteString(vmr.vmId.String())
+	urlBuilder.WriteString("/config")
+	urlPart := urlBuilder.String()
 	deleteBuilder := &strings.Builder{} // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
 
 	var currentState *PowerState
@@ -738,7 +742,11 @@ func (config ConfigQemu) updateNoCheck(
 		pending = true
 		itemsToDeleteBeforeUpdate := deleteBuilder.String()[len(comma):] // remove leading comma
 		cl := client.new().apiRaw()
-		if err := cl.putRawRetry(ctx, "/nodes/"+vmr.node.String()+urlPart, util.Pointer([]byte("delete="+itemsToDeleteBeforeUpdate)), 3); err != nil {
+		urlBuilder = strings.Builder{}
+		urlBuilder.WriteString("/nodes/")
+		urlBuilder.WriteString(vmr.node.String())
+		urlBuilder.WriteString(urlPart)
+		if err := cl.putRawRetry(ctx, urlBuilder.String(), new([]byte("delete="+itemsToDeleteBeforeUpdate)), 3); err != nil {
 			return false, fmt.Errorf("error updating VM: %v", err)
 		}
 	}
@@ -783,7 +791,11 @@ func (config ConfigQemu) updateNoCheck(
 	params, body := config.mapToApiUpdate(currentLegacy, updateConfig, version)
 	body = combineParamsAndBody(params, body)
 	if body != nil {
-		if err = c.putRawRetry(ctx, "/nodes/"+vmr.node.String()+urlPart, body, 3); err != nil {
+		urlBuilder = strings.Builder{}
+		urlBuilder.WriteString("/nodes/")
+		urlBuilder.WriteString(vmr.node.String())
+		urlBuilder.WriteString(urlPart)
+		if err = c.putRawRetry(ctx, urlBuilder.String(), body, 3); err != nil {
 			return false, fmt.Errorf("error updating VM: %v", err)
 		}
 		pending = true
@@ -1393,6 +1405,8 @@ type RawConfigQemu interface {
 	GetUSBs() QemuUSBs
 	GetWatchdog() *Watchdog
 }
+
+var _ RawConfigQemu = (*rawConfigQemu)(nil)
 
 type rawConfigQemu struct{ a map[string]any }
 
