@@ -525,20 +525,20 @@ func RollbackSnapshot(ctx context.Context, c *Client, vmr *VmRef, snapshot Snaps
 
 // Used for formatting the output when retrieving snapshots
 type Snapshot struct {
-	Name        SnapshotName
+	Parent      *Snapshot  // Nil if root snapshot
 	Time        *time.Time // Nil for current snapshot
+	VmState     *bool      // Nil for LXC snapshots
+	Name        SnapshotName
 	Description string
-	VmState     *bool // Nil for LXC snapshots
 	Children    []*Snapshot
-	Parent      *Snapshot // Nil if root snapshot
 }
 
 type SnapshotInfo struct {
-	Name        SnapshotName
-	Time        *time.Time // Nil for current snapshot
-	Description string
-	VmState     *bool         // Nil for LXC snapshots and the running snapshot.
 	Parent      *SnapshotName // Nil if root snapshot
+	Time        *time.Time    // Nil for current snapshot
+	VmState     *bool         // Nil for LXC snapshots and the running snapshot.
+	Name        SnapshotName
+	Description string
 }
 
 // Minimum length of 3 characters
