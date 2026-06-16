@@ -161,7 +161,7 @@ func (c *clientNewTest) guestStopForce(ctx context.Context, vmr *VmRef) error {
 	if err != nil {
 		return err
 	}
-	if version.Encode() < version_8_0_0 {
+	if version.Major < 8 {
 		return functionalityNotSupportedInVersion("force stop", version)
 	}
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
