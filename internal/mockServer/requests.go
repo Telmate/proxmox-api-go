@@ -48,6 +48,10 @@ func RequestsGetJson(urlPath Path, v any) []Request {
 		}}}
 }
 
+func RequestsGetJsonData(urlPath Path, v any) []Request {
+	return RequestsGetJson(urlPath, map[string]any{"data": v})
+}
+
 func RequestsVersion(version string) []Request {
 	return []Request{{
 		Path:   "/version",

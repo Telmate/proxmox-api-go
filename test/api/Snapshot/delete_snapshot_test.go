@@ -29,7 +29,9 @@ func Test_Snapshot_Delete(t *testing.T) {
 	}{
 		{name: `Ensure guest does not exist`,
 			test: func(t *testing.T) {
-				require.Error(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+				require.NoError(t, err)
+				require.False(t, existed)
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
@@ -75,7 +77,9 @@ func Test_Snapshot_Delete(t *testing.T) {
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
-				require.NoError(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+				existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+				require.NoError(t, err)
+				require.True(t, existed)
 			}},
 	}
 	for i, test := range tests {

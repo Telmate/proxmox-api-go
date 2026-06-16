@@ -14,13 +14,12 @@ var delete_guestCmd = &cobra.Command{
 		id := cli.ValidateGuestIDset(args, "GuestID")
 		vmr := proxmox.NewVmRef(id)
 		c := cli.NewClient()
-		if err = vmr.Delete(cli.Context(), c); err != nil {
+		if _, err = c.New().Guest.Delete(cli.Context(), *vmr); err != nil {
 			return
 		}
 		cli.PrintItemDeleted(deleteCmd.OutOrStdout(), id.String(), "GuestID")
 		return
-	},
-}
+	}}
 
 func init() {
 	deleteCmd.AddCommand(delete_guestCmd)

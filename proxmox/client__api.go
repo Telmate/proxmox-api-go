@@ -9,6 +9,7 @@ import (
 // in the future we might put the interface even lower, but for now this is sufficient
 type clientApiInterface interface {
 	createHaRule(ctx context.Context, params map[string]any) error
+	deleteGuest(ctx context.Context, vmr *VmRef, purge bool) error
 	deleteHaResource(ctx context.Context, id GuestID) error
 	deleteHaRule(ctx context.Context, id HaRuleID) error
 	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)
@@ -39,8 +40,7 @@ func (c *clientAPI) createHaRule(ctx context.Context, params map[string]any) err
 }
 
 func (c *clientAPI) deleteHaResource(ctx context.Context, id GuestID) error {
-	_, err := c.delete(ctx, "/cluster/ha/resources/"+id.String())
-	return err
+	return c.deleteRetry(ctx, "/cluster/ha/resources/"+id.String(), 3)
 }
 
 func (c *clientAPI) deleteHaRule(ctx context.Context, id HaRuleID) error {
@@ -110,16 +110,7 @@ func (c *clientAPI) listHaRules(ctx context.Context) ([]any, error) {
 }
 
 func (c *clientAPI) updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error {
-	var url strings.Builder
-	url.WriteString("/nodes/")
-	url.WriteString(vmr.node.String())
-	url.WriteRune('/')
-	url.WriteString(vmr.vmType.String())
-	url.WriteRune('/')
-	url.WriteString(vmr.vmId.String())
-	url.WriteString("/status/")
-	url.WriteString(setStatus)
-	return c.postRawTask(ctx, url.String(), body)
+	return c.postRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/"+setStatus, body)
 }
 
 func (c *clientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error {

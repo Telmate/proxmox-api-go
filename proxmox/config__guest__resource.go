@@ -86,7 +86,7 @@ type GuestResource struct {
 	DiskSizeInBytes    uint          `json:"disk_size"`
 	DiskUsedInBytes    uint          `json:"disk_used"`
 	DiskWriteTotal     uint          `json:"disk_write"`
-	HaState            string        `json:"hastate"` // TODO custom type?
+	HaState            *string       `json:"hastate"` // TODO custom type?
 	ID                 GuestID       `json:"id"`
 	MemoryTotalInBytes uint          `json:"memory_total"`
 	MemoryUsedInBytes  uint          `json:"memory_used"`
@@ -111,7 +111,7 @@ type RawGuestResource interface {
 	GetDiskSizeInBytes() uint
 	GetDiskUsedInBytes() uint
 	GetDiskWriteTotal() uint
-	GetHaState() string
+	GetHaState() *string
 	GetID() GuestID
 	GetLocked() bool
 	GetMemoryTotalInBytes() uint
@@ -198,11 +198,11 @@ func (raw *rawGuestResource) GetDiskWriteTotal() uint {
 	return 0
 }
 
-func (raw *rawGuestResource) GetHaState() string {
+func (raw *rawGuestResource) GetHaState() *string {
 	if v, isSet := raw.a["hastate"]; isSet {
-		return v.(string)
+		return new(v.(string))
 	}
-	return ""
+	return nil
 }
 
 func (raw *rawGuestResource) GetID() GuestID {

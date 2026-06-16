@@ -49,7 +49,8 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 		{name: `Delete previously created guests`,
 			test: func(t *testing.T) {
 				for i := range previousVmrS {
-					require.NoError(t, previousVmrS[i].Delete(ctx, cl))
+					_, err := c.Guest.Delete(ctx, *previousVmrS[i])
+					require.NoError(t, err)
 				}
 				previousVmrS = nil
 			}},
@@ -101,10 +102,23 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 					require.NoError(t, err)
 				}
 			}},
+		{name: `Check guest existence`,
+			test: func(t *testing.T) {
+				raws, err := c.Guest.List(ctx)
+				require.NoError(t, err)
+				require.NotNil(t, raws)
+				guestMap := raws.AsMap()
+				for i := range vmrS {
+					_, exists := guestMap[vmrS[i].VmId()]
+					require.True(t, exists, "guest does not exist")
+				}
+			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
 				for i := range vmrS {
-					require.NoError(t, vmrS[i].Delete(ctx, cl))
+					existed, err := c.Guest.Delete(ctx, *vmrS[i])
+					require.NoError(t, err)
+					require.True(t, existed)
 				}
 			}},
 	}

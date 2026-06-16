@@ -15,6 +15,10 @@ import (
 
 type (
 	GuestInterface interface {
+		// Returns true if the guest existed and was deleted, false if the guest did not exist.
+		Delete(context.Context, VmRef) (bool, error)
+		DeleteNoCheck(context.Context, VmRef) (bool, error)
+
 		// List all guest and templates the user has viewing rights for in the cluster.
 		List(context.Context) (RawGuestResources, error)
 		ListNoCheck(context.Context) (RawGuestResources, error)
@@ -315,14 +319,15 @@ func (id GuestID) DeleteHaResource(ctx context.Context, c *Client) (bool, error)
 }
 
 func (c *clientNewTest) haDeleteResource(ctx context.Context, id GuestID) (bool, error) {
-	return id.deleteHaResource(ctx, c.apiGet())
+	return id.deleteHaResource(ctx, c.apiRaw())
 }
 
-func (id GuestID) deleteHaResource(ctx context.Context, c clientApiInterface) (bool, error) {
-	err := c.deleteHaResource(ctx, id)
-	if err != nil {
-		if strings.HasPrefix(err.Error(), "500 cannot delete service") {
-			return false, nil
+func (id GuestID) deleteHaResource(ctx context.Context, c *clientAPI) (bool, error) {
+	if err := c.deleteHaResource(ctx, id); err != nil {
+		if apiErr, ok := err.(*ApiError); ok {
+			if strings.HasPrefix(apiErr.Message, "cannot delete service") {
+				return false, nil
+			}
 		}
 		return false, err
 	}

@@ -34,7 +34,9 @@ func Test_Pool_Create(t *testing.T) {
 		{name: `Ensure guests do not exist`,
 			test: func(t *testing.T) {
 				for _, guest := range *pool.Guests {
-					require.Error(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+					existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+					require.NoError(t, err)
+					require.False(t, existed)
 				}
 			}},
 		{name: `Ensure pool does not exist`,
@@ -66,7 +68,9 @@ func Test_Pool_Create(t *testing.T) {
 		{name: `Delete guests`,
 			test: func(t *testing.T) {
 				for _, guest := range *pool.Guests {
-					require.NoError(t, pveSDK.NewVmRef(guest).Delete(ctx, cl))
+					existed, err := c.Guest.Delete(ctx, *pveSDK.NewVmRef(guest))
+					require.NoError(t, err)
+					require.True(t, existed)
 				}
 			}},
 	}
