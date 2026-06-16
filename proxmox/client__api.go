@@ -40,8 +40,7 @@ func (c *clientAPI) createHaRule(ctx context.Context, params map[string]any) err
 }
 
 func (c *clientAPI) deleteHaResource(ctx context.Context, id GuestID) error {
-	_, err := c.delete(ctx, "/cluster/ha/resources/"+id.String())
-	return err
+	return c.deleteRetry(ctx, "/cluster/ha/resources/"+id.String(), 3)
 }
 
 func (c *clientAPI) deleteHaRule(ctx context.Context, id HaRuleID) error {

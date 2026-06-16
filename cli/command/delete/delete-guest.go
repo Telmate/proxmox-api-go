@@ -19,8 +19,7 @@ var delete_guestCmd = &cobra.Command{
 		}
 		cli.PrintItemDeleted(deleteCmd.OutOrStdout(), id.String(), "GuestID")
 		return
-	},
-}
+	}}
 
 func init() {
 	deleteCmd.AddCommand(delete_guestCmd)

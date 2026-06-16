@@ -116,75 +116,9 @@ func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget
 }
 
 // Deprecated: use GuestInterface.Delete() instead.
-func (vmr VmRef) Delete(ctx context.Context, c *Client) error { return c.new().guestDelete(ctx, &vmr) }
-
-// Deprecated
-func (c *clientNewTest) guestDelete(ctx context.Context, vmr *VmRef) error {
-	guestID := vmr.VmId()
-	if guestID == 0 {
-		return errors.New(VmRef_Error_IDnotSet)
-	}
-	ca := c.apiGet()
-	cr := c.apiRaw()
-	rawGuests, err := ca.listGuestResources(ctx)
-	if err != nil {
-		return err
-	}
-
-	rawGuest, ok := rawGuests.selectID(guestID)
-	if !ok {
-		return errorMsg{}.guestDoesNotExist(vmr.vmId)
-	}
-	if haState := rawGuest.GetHaState(); haState != nil {
-		if _, err = guestID.deleteHaResource(ctx, ca); err != nil {
-			return err
-		}
-	}
-
-	guestType := rawGuest.GetType()
-	vmr.node = rawGuest.GetNode()
-	vmr.vmType = guestType
-
-	var protection bool // Check if guest is protected
-	switch guestType {
-	case GuestQemu:
-		rawConfig, err := guestGetRawQemuConfig_Unsafe(ctx, vmr, ca)
-		if err != nil {
-			return err
-		}
-		protection = rawConfig.GetProtection()
-	case GuestLxc:
-		rawConfig, err := guestGetLxcRawConfig_Unsafe(ctx, vmr, ca)
-		if err != nil {
-			return err
-		}
-		protection = rawConfig.GetProtection()
-	}
-	if protection {
-		return errorMsg{}.guestIsProtectedCantDelete(guestID)
-	}
-
-	version, err := c.oldClient.Version(ctx)
-	if err != nil {
-		return err
-	}
-
-	if rawGuest.GetStatus() != PowerStateStopped { // Check if guest is running
-		for {
-			var guestStatus RawGuestStatus
-			guestStatus, err = vmr.getRawGuestStatus_Unsafe(ctx, c.oldClient)
-			if err != nil {
-				return err
-			}
-			if guestStatus.GetState() == PowerStateStopped {
-				break
-			}
-			if err = vmr.stopOverruleOpertunistic_Unsafe(ctx, cr, version); err != nil {
-				return err
-			}
-		}
-	}
-	return vmr.delete_Unsafe(ctx, c.api, false)
+func (vmr VmRef) Delete(ctx context.Context, c *Client) error {
+	_, err := c.New().Guest.Delete(ctx, vmr)
+	return err
 }
 
 // Deprecated: use GuestInterface.DeleteNoCheck() instead.
@@ -192,25 +126,28 @@ func (vmr VmRef) DeleteNoCheck(ctx context.Context, c *Client) error {
 	if err := c.checkInitialized(); err != nil {
 		return err
 	}
-	return vmr.delete_Unsafe(ctx, c.new().apiGet(), false)
+	_, err := vmr.delete_Unsafe(ctx, c.new().apiRaw(), false)
+	return err
 }
 
-func (vmr *VmRef) delete_Unsafe(ctx context.Context, c clientApiInterface, purge bool) error {
-	return c.deleteGuest(ctx, vmr, purge)
+func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *clientAPI, purge bool) (bool, error) {
+	if err := c.deleteGuest(ctx, vmr, purge); err != nil {
+		if taskErr, ok := err.(*TaskError); ok {
+			if strings.HasPrefix(taskErr.Message, "Configuration file '") { // task id: UPID:pve-9l:00120E24:08C58A66:6A2F4143:qmdestroy:105:root@pam: | message: Configuration file 'nodes/pve-9l/qemu-server/105.conf' does not exist
+				return false, nil
+			}
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (c *clientAPI) deleteGuest(ctx context.Context, vmr *VmRef, purge bool) error {
-	var url strings.Builder
-	url.WriteString("/nodes/")
-	url.WriteString(vmr.node.String())
-	url.WriteRune('/')
-	url.WriteString(vmr.vmType.String())
-	url.WriteRune('/')
-	url.WriteString(vmr.vmId.String())
+	url := "/nodes/" + vmr.node.String() + "/" + vmr.vmType.String() + "/" + vmr.vmId.String()
 	if purge {
-		url.WriteString("?purge=1")
+		url += "?purge=1"
 	}
-	return c.deleteTask(ctx, url.String())
+	return c.deleteTask(ctx, url)
 }
 
 // ForceStop stops the guest immediately without a graceful shutdown and cancels any stop/shutdown operations in progress.
@@ -361,9 +298,10 @@ func (vmr *VmRef) stop_Unsafe(ctx context.Context, c *clientAPI) error {
 	return c.updateGuestStatus(ctx, vmr, "stop", nil)
 }
 
+// Doesn't see the difference between a stopped and absend guest
 func (vmr *VmRef) stopOverruleOpertunistic_Unsafe(ctx context.Context, c *clientAPI, version Version) error {
 	if version.Major >= 8 {
-		vmr.stopOverrule_Unsafe(ctx, c)
+		return vmr.stopOverrule_Unsafe(ctx, c)
 	}
 	return vmr.stop_Unsafe(ctx, c)
 }

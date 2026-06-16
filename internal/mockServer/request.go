@@ -14,6 +14,7 @@ type Request struct {
 }
 
 func (rule Request) handle(w http.ResponseWriter, r *http.Request, t *testing.T) {
+	t.Helper()
 	if r.Method != rule.Method.String() {
 		assert.FailNow(t, "Unexpected method. Expected: "+rule.Method.String()+" Got: "+r.Method)
 	}

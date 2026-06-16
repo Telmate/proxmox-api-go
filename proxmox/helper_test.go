@@ -14,6 +14,7 @@ import (
 
 // Creates a test server and returns a authenticated client connected to it.
 func testMockServerInit(t *testing.T) (*mockServer.Server, *Client) {
+	t.Helper()
 	server := mockServer.New(t)
 	server.Set(mockServer.RequestsAuth(), t)
 	c, err := NewClient(server.Url(), nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
@@ -25,6 +26,7 @@ func testMockServerInit(t *testing.T) (*mockServer.Server, *Client) {
 }
 
 func testParamsEqual(t *testing.T, expected map[string]string, params *[]byte, msgAndArgs ...any) {
+	t.Helper()
 	if params == nil {
 		require.Nil(t, expected, msgAndArgs...)
 		return
@@ -67,6 +69,7 @@ func testParamsEqualRaw(t *testing.T, expected map[string]string, params *[]byte
 type getAble[V any] interface{ Get() V }
 
 func testCompareRawMap[key comparable, compareObject any, get getAble[compareObject]](t *testing.T, expected map[key]compareObject, actual map[key]get) {
+	t.Helper()
 	if len(expected) != len(actual) {
 		t.Fatalf("expected %d, got %d", len(expected), len(actual))
 	}

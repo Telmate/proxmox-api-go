@@ -6,7 +6,6 @@ type MockClient struct {
 	// Guest
 	GuestCheckPendingChangesFunc    func(ctx context.Context, vmr *VmRef) (bool, error)
 	GuestCheckVmRefFunc             func(ctx context.Context, vmr *VmRef) error
-	GuestDeleteFunc                 func(ctx context.Context, vmr *VmRef) error
 	GuestGetRawAgentInformationFunc func(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
 	GuestGetLxcActiveRawConfigFunc  func(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error)
 	GuestGetLxcRawConfigFunc        func(ctx context.Context, vmr *VmRef) (*rawConfigLXC, error)
@@ -58,13 +57,6 @@ func (m *MockClient) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
 		m.panic("GuestCheckVmRefFunc")
 	}
 	return m.GuestCheckVmRefFunc(ctx, vmr)
-}
-
-func (m *MockClient) guestDelete(ctx context.Context, vmr *VmRef) error {
-	if m.GuestDeleteFunc == nil {
-		m.panic("GuestDeleteFunc")
-	}
-	return m.GuestDeleteFunc(ctx, vmr)
 }
 
 func (m *MockClient) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {

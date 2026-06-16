@@ -146,7 +146,7 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 	return client, err_s
 }
 
-func (c *Client) New() ClientNew {
+func (c *Client) api() *clientAPI {
 	var user UserID
 	if c.Username != "" {
 		index := strings.IndexRune(c.Username, '@')
@@ -157,14 +157,16 @@ func (c *Client) New() ClientNew {
 		indexEx := strings.IndexRune(token[indexAt+1:], '!')
 		user = UserID{Name: token[:indexAt], Realm: token[indexAt+1 : indexAt+indexEx+1]}
 	}
-
-	apiClientPtr := &clientAPI{
+	return &clientAPI{
 		session:     c.session,
 		taskTimeout: time.Duration(c.TaskTimeout) * time.Second,
 		timeUnit:    c.timeUnit,
 		url:         c.ApiUrl,
 		user:        user}
+}
 
+func (c *Client) New() ClientNew {
+	apiClientPtr := c.api()
 	return ClientNew{
 		ApiToken:  &apiTokenClient{oldClient: c, api: apiClientPtr},
 		Group:     &groupClient{oldClient: c, api: apiClientPtr},
