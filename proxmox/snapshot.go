@@ -161,7 +161,7 @@ func (c *snapshotClient) ReadQemuNoCheck(ctx context.Context, guest VmRef, name 
 	if err != nil {
 		return nil, err
 	}
-	return &rawConfigQemu{a: params}, nil
+	return &rawConfigQemu{a: params, id: guest.vmId, node: guest.node}, nil
 }
 
 func (c *snapshotClient) Rollback(ctx context.Context, guest VmRef, name SnapshotName, start bool) error {

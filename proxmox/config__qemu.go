@@ -759,7 +759,7 @@ func (config ConfigQemu) updateNoCheck(
 		if err != nil {
 			return
 		}
-		currentLegacy, err = (&rawConfigQemu{a: rawConfig}).get(*vmr)
+		currentLegacy, err = (&rawConfigQemu{a: rawConfig, id: vmr.vmId, node: vmr.node}).get(*vmr)
 		if err != nil {
 			return
 		}
@@ -1391,9 +1391,11 @@ type RawConfigQemu interface {
 	GetCloudInit() *CloudInit
 	GetDescription() string
 	GetEfiDisk() *EfiDisk
+	GetID() GuestID
 	GetMemory() *QemuMemory
 	GetName() GuestName
 	GetNetworks() QemuNetworkInterfaces
+	GetNode() NodeName
 	GetPciDevices() QemuPciDevices
 	GetProtection() bool
 	GetRandomnessDevice() *VirtIoRNG
@@ -1408,7 +1410,11 @@ type RawConfigQemu interface {
 
 var _ RawConfigQemu = (*rawConfigQemu)(nil)
 
-type rawConfigQemu struct{ a map[string]any }
+type rawConfigQemu struct {
+	a    map[string]any
+	id   GuestID
+	node NodeName
+}
 
 func (raw *rawConfigQemu) Get(vmr VmRef) (*ConfigQemu, error) {
 	config, err := raw.get(vmr)
@@ -1429,9 +1435,11 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 		EfiDisk:          raw.GetEfiDisk(),
 		HaGroup:          vmr.HaGroup(),
 		HaState:          vmr.HaState(),
+		ID:               new(raw.GetID()),
 		Memory:           raw.GetMemory(),
 		Name:             util.Pointer(raw.GetName()),
 		Networks:         raw.GetNetworks(),
+		Node:             new(raw.GetNode()),
 		PciDevices:       raw.GetPciDevices(),
 		Protection:       util.Pointer(raw.GetProtection()),
 		RandomnessDevice: raw.GetRandomnessDevice(),
@@ -1457,12 +1465,16 @@ func (raw *rawConfigQemu) GetDescription() string {
 	return ""
 }
 
+func (raw *rawConfigQemu) GetID() GuestID { return raw.id }
+
 func (raw *rawConfigQemu) GetName() GuestName {
 	if v, isSet := raw.a[qemuApiKeyName]; isSet {
 		return GuestName(v.(string))
 	}
 	return ""
 }
+
+func (raw *rawConfigQemu) GetNode() NodeName { return raw.node }
 
 func (raw *rawConfigQemu) GetProtection() bool {
 	if v, isSet := raw.a[qemuApiKeyProtection]; isSet {
@@ -1546,7 +1558,7 @@ func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiIn
 	if err != nil {
 		return nil, err
 	}
-	return &rawConfigQemu{a: rawConfig}, nil
+	return &rawConfigQemu{a: rawConfig, id: vmr.vmId, node: vmr.node}, nil
 }
 
 func (c *clientNewTest) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error) {
@@ -1565,7 +1577,7 @@ func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clien
 	if err != nil {
 		return nil, false, err
 	}
-	return &rawConfigQemu{a: tmpConfig}, pending, nil
+	return &rawConfigQemu{a: tmpConfig, id: vmr.vmId, node: vmr.node}, pending, nil
 }
 
 func (c *clientNewTest) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error) {
