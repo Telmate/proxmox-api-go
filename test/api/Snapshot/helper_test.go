@@ -4,20 +4,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/internal/util"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/stretchr/testify/require"
 )
 
-func guestCreate(t *testing.T, ctx context.Context, c pveSDK.ClientNew, guest pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestName) {
-	config := pveSDK.ConfigQemu{
-		CPU:    &pveSDK.QemuCPU{Cores: util.Pointer(pveSDK.QemuCpuCores(1))},
-		ID:     &guest,
-		Memory: &pveSDK.QemuMemory{CapacityMiB: util.Pointer(pveSDK.QemuMemoryCapacity(16))},
-		Name:   util.Pointer(name),
-		Node:   util.Pointer(node),
-	}
+func createQemu(t *testing.T, ctx context.Context, c pveSDK.ClientNew, config pveSDK.ConfigQemu) {
 	vmRef, err := c.QemuGuest.Create(ctx, config)
+	require.NoError(t, err)
+	require.NotNil(t, vmRef)
+}
+
+func createLxc(t *testing.T, ctx context.Context, c *pveSDK.Client, config pveSDK.ConfigLXC) {
+	vmRef, err := config.Create(ctx, c)
 	require.NoError(t, err)
 	require.NotNil(t, vmRef)
 }

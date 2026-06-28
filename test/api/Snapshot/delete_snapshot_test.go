@@ -9,20 +9,25 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/pad"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/test"
+	"github.com/Telmate/proxmox-api-go/test/api/qemu"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_Snapshot_Delete(t *testing.T) {
 	t.Parallel()
-	const snap1 = pveSDK.SnapshotName("snap1")
-	const guest = pveSDK.GuestID(801)
-	const node = pveSDK.NodeName(test.FirstNode)
-	snapshots := []pveSDK.SnapshotName{snap1}
+	const (
+		guest    = pveSDK.GuestID(801)
+		name     = pveSDK.GuestName("Test-Snapshot-Delete")
+		node     = pveSDK.NodeName(test.FirstNode)
+		snapName = pveSDK.SnapshotName("snap1")
+	)
+	snapshots := []pveSDK.SnapshotName{snapName}
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
+	set, _ := qemu.MinimumConfig(guest, node, name)
 	tests := []struct {
 		name string
 		test func(t *testing.T)
@@ -35,11 +40,11 @@ func Test_Snapshot_Delete(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				guestCreate(t, ctx, c, guest, node, "Test-Snapshot-Delete")
+				createQemu(t, ctx, c, set)
 			}},
 		{name: `Create snapshot`,
 			test: func(t *testing.T) {
-				require.NoError(t, c.Snapshot.CreateQemu(ctx, *pveSDK.NewVmRef(guest), snap1, "Test snapshot", false))
+				require.NoError(t, c.Snapshot.CreateQemu(ctx, *pveSDK.NewVmRef(guest), snapName, "Test snapshot", false))
 			}},
 		{name: `List snapshots`,
 			test: func(t *testing.T) {
@@ -54,7 +59,7 @@ func Test_Snapshot_Delete(t *testing.T) {
 			}},
 		{name: `Delete snapshot`,
 			test: func(t *testing.T) {
-				existed, err := c.Snapshot.Delete(ctx, *pveSDK.NewVmRef(guest), snap1)
+				existed, err := c.Snapshot.Delete(ctx, *pveSDK.NewVmRef(guest), snapName)
 				require.NoError(t, err)
 				require.True(t, existed)
 			}},
@@ -71,7 +76,7 @@ func Test_Snapshot_Delete(t *testing.T) {
 			}},
 		{name: `Delete non-existing snapshot`,
 			test: func(t *testing.T) {
-				existed, err := c.Snapshot.Delete(ctx, *pveSDK.NewVmRef(guest), snap1)
+				existed, err := c.Snapshot.Delete(ctx, *pveSDK.NewVmRef(guest), snapName)
 				require.NoError(t, err)
 				require.False(t, existed)
 			}},
