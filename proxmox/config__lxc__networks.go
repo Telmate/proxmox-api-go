@@ -15,9 +15,10 @@ import (
 // https://github.com/proxmox/proxmox-ve-rs/blob/1811e0560cb11186aa94fe24605ce8bf7d05cc62/proxmox-ve-config/src/guest/vm.rs#L154
 
 type LxcNetwork struct {
-	Bridge        *string           `json:"bridge,omitempty"`    // Required for creation. Never nil when returned
-	Connected     *bool             `json:"connected,omitempty"` // Never nil when returned
-	Firewall      *bool             `json:"firewall,omitempty"`  // Never nil when returned
+	Bridge        *string           `json:"bridge,omitempty"`      // Required for creation. Never nil when returned
+	Connected     *bool             `json:"connected,omitempty"`   // Never nil when returned
+	Firewall      *bool             `json:"firewall,omitempty"`    // Never nil when returned
+	HostManaged   *bool             `json:"host_managed,omitempty"` // Set by Proxmox for OCI containers. Never nil when returned
 	IPv4          *LxcIPv4          `json:"ipv4,omitempty"`
 	IPv6          *LxcIPv6          `json:"ipv6,omitempty"`
 	MAC           *net.HardwareAddr `json:"mac,omitempty"` // Never nil when returned
@@ -357,6 +358,7 @@ func (raw *rawConfigLXC) GetNetworks() LxcNetworks {
 			var bridge string
 			var connected bool = true
 			var firewall bool
+			var hostManaged bool
 			var name LxcNetworkName
 			var mac net.HardwareAddr
 			var macOriginal string
@@ -370,6 +372,9 @@ func (raw *rawConfigLXC) GetNetworks() LxcNetworks {
 			if v, isSet := settings["firewall"]; isSet && v == "1" {
 				firewall = true
 			}
+			if v, isSet := settings["host-managed"]; isSet && v == "1" {
+				hostManaged = true
+			}
 			if v, isSet := settings["name"]; isSet {
 				name = LxcNetworkName(v)
 			}
@@ -378,12 +383,13 @@ func (raw *rawConfigLXC) GetNetworks() LxcNetworks {
 				mac, _ = net.ParseMAC(v)
 			}
 			network := LxcNetwork{
-				Bridge:    &bridge,
-				Connected: &connected,
-				Firewall:  &firewall,
-				MAC:       &mac,
-				Name:      &name,
-				mac:       macOriginal}
+				Bridge:      &bridge,
+				Connected:   &connected,
+				Firewall:    &firewall,
+				HostManaged: &hostManaged,
+				MAC:         &mac,
+				Name:        &name,
+				mac:         macOriginal}
 			var ipSet bool
 			var ipv4 LxcIPv4
 			if v, isSet := settings["ip"]; isSet {
