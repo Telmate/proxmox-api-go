@@ -653,7 +653,7 @@ func (raw *rawConfigLXC) GetArchitecture() LxcCpuArchitecture {
 
 func (raw *rawConfigLXC) GetDescription() *string {
 	if v, isSet := raw.a[lxcApiKeyDescription]; isSet {
-		return util.Pointer(v.(string))
+		return new(strings.TrimSpace(v.(string)))
 	}
 	return nil
 }

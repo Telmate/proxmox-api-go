@@ -427,7 +427,7 @@ func (r *rawSnapshotInfo) GetTime() *time.Time {
 
 func (r *rawSnapshotInfo) GetDescription() string {
 	if v, isSet := r.a[snapshotListApiKeyDescription]; isSet {
-		return v.(string)
+		return strings.TrimSpace(v.(string))
 	}
 	return ""
 }
