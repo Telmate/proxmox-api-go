@@ -47,9 +47,9 @@ test_integration_api: # Integration, setting this higher can exhoust the depth o
 		./test/api/Authentication/... \
 		./test/api/Connection/... \
 		./test/api/Group/... \
-		./test/api/Lxc/... \
+		./test/api/lxc/... \
 		./test/api/Pool/... \
-		./test/api/Qemu/... \
+		./test/api/qemu/... \
 		./test/api/Snapshot/... \
 		./test/api/User/...
 

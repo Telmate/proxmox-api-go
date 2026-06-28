@@ -94,11 +94,17 @@ func testQemuBaseConfig_get(config ConfigQemu) *ConfigQemu {
 	if config.Description == nil {
 		config.Description = util.Pointer("")
 	}
+	if config.ID == nil {
+		config.ID = new(GuestID(0))
+	}
 	if config.Memory == nil {
 		config.Memory = &QemuMemory{}
 	}
 	if config.Name == nil {
 		config.Name = util.Pointer(GuestName(""))
+	}
+	if config.Node == nil {
+		config.Node = new(NodeName(""))
 	}
 	if config.Protection == nil {
 		config.Protection = util.Pointer(false)
@@ -6033,11 +6039,17 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		if config.Hotplug == "" {
 			config.Hotplug = "network,disk,usb"
 		}
+		if config.ID == nil {
+			config.ID = new(GuestID(0))
+		}
 		if config.Memory == nil {
 			config.Memory = &QemuMemory{}
 		}
 		if config.Name == nil {
 			config.Name = util.Pointer(GuestName(""))
+		}
+		if config.Node == nil {
+			config.Node = new(NodeName(""))
 		}
 		if config.Protection == nil {
 			config.Protection = util.Pointer(false)

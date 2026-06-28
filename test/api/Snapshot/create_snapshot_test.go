@@ -9,27 +9,31 @@ import (
 
 	"github.com/Telmate/proxmox-api-go/internal/body"
 	"github.com/Telmate/proxmox-api-go/internal/pad"
-	"github.com/Telmate/proxmox-api-go/internal/util"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/test"
+	"github.com/Telmate/proxmox-api-go/test/api/qemu"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_Snapshot_CreateQemu(t *testing.T) {
 	t.Parallel()
-	const snap1 = pveSDK.SnapshotName("snap1")
-	const guest = pveSDK.GuestID(800)
-	const node = pveSDK.NodeName(test.FirstNode)
+	const (
+		guest    = pveSDK.GuestID(800)
+		name     = pveSDK.GuestName("Test-Snapshot-CreateQemu")
+		node     = pveSDK.NodeName(test.FirstNode)
+		snapName = pveSDK.SnapshotName("snap1")
+	)
 	snapshot := pveSDK.SnapshotInfo{
-		Name:        snap1,
+		Name:        snapName,
 		Description: "Test snapshot" + body.Symbols,
-		VmState:     util.Pointer(false),
+		VmState:     new(false),
 	}
 	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
+	set, _ := qemu.MinimumConfig(guest, node, name)
 	var currentTime time.Time
 	currentTimePtr := &currentTime
 	tests := []struct {
@@ -44,7 +48,7 @@ func Test_Snapshot_CreateQemu(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				guestCreate(t, ctx, c, guest, node, "Test-Snapshot-CreateQemu")
+				createQemu(t, ctx, c, set)
 			}},
 		{name: `Create snapshot`,
 			test: func(t *testing.T) {

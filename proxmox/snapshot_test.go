@@ -294,11 +294,11 @@ func Test_snapshotClient_List(t *testing.T) {
 						map[string]any{"name": "snap1",
 							"snaptime": float64(1700000000)},
 						map[string]any{"name": "snap2",
-							"description": "This is snap2",
+							"description": "This is snap2\n", // Lxc has descriptions suffixed with \n
 							"parent":      "snap1",
 							"snaptime":    float64(1700000100)},
 						map[string]any{"name": "current",
-							"description": "You are here!",
+							"description": "You are here!\n",
 							"parent":      "snap2"},
 					}}),
 			)},
@@ -407,9 +407,9 @@ func Test_snapshotClient_ReadLxc(t *testing.T) {
 			guest:    VmRef{vmId: 100, node: "testNode", vmType: GuestLxc},
 			snapName: SnapshotName("snap1"),
 			config: baseConfig(ConfigLXC{
-				ID:   util.Pointer(GuestID(100)),
-				Name: util.Pointer(GuestName("lxc-name")),
-				Node: util.Pointer(NodeName("testNode")),
+				ID:   new(GuestID(100)),
+				Name: new(GuestName("lxc-name")),
+				Node: new(NodeName("testNode")),
 			}),
 			requests: mockServer.RequestsGetJson("/nodes/testNode/lxc/100/snapshot/snap1/config", map[string]any{
 				"data": map[string]any{
@@ -419,9 +419,10 @@ func Test_snapshotClient_ReadLxc(t *testing.T) {
 			guest:    VmRef{vmId: 300},
 			snapName: SnapshotName("snap1"),
 			config: baseConfig(ConfigLXC{
-				ID:   util.Pointer(GuestID(300)),
-				Name: util.Pointer(GuestName("lxc-name")),
-				Node: util.Pointer(NodeName("myNode")),
+				Description: new(string("test")),
+				ID:          new(GuestID(300)),
+				Name:        new(GuestName("lxc-name")),
+				Node:        new(NodeName("myNode")),
 			}),
 			requests: mockServer.Append(
 				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
@@ -431,7 +432,8 @@ func Test_snapshotClient_ReadLxc(t *testing.T) {
 				}}),
 				mockServer.RequestsGetJson("/nodes/myNode/lxc/300/snapshot/snap1/config", map[string]any{
 					"data": map[string]any{
-						"hostname": "lxc-name",
+						"description": "test\n", // Lxc has descriptions suffixed with \n
+						"hostname":    "lxc-name",
 					},
 				}))},
 		{name: `Validate error`,
@@ -542,8 +544,9 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 			guest:    VmRef{vmId: 200},
 			snapName: SnapshotName("snap1"),
 			config: baseConfig(ConfigQemu{
-				ID:   util.Pointer(GuestID(200)),
-				Name: util.Pointer(GuestName("test-qemu")),
+				ID:   new(GuestID(200)),
+				Name: new(GuestName("test-qemu")),
+				Node: new(NodeName("testNode")),
 			}),
 			requests: mockServer.Append(
 				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{

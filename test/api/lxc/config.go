@@ -1,4 +1,4 @@
-package api
+package lxc
 
 import (
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
