@@ -337,6 +337,65 @@ func Test_apiTokenClient_Update(t *testing.T) {
 	}
 }
 
+func Test_ApiToken_Parse(t *testing.T) {
+	t.Parallel()
+	err := errors.New("api token must be in the format user@realm!tokenname=aaaaaaaaa-bbb-cccc-dddd-ef0123456789")
+	tests := []struct {
+		name   string
+		input  string
+		output ApiToken
+		err    error
+	}{
+		{name: `Invalid empty`,
+			input: "",
+			err:   err},
+		{name: `Invalid missing @`,
+			input: "userrealm!tokenname=aaaaaaaaa-bbb-cccc-dddd-ef0123456789",
+			err:   err},
+		{name: `Invalid no realm`,
+			input: "user@!tokenname=aaaaaaaaa-bbb-cccc-dddd-ef0123456789",
+			err:   err},
+		{name: `Invalid missing !`,
+			input: "user@realmtokenname=aaaaaaaaa-bbb-cccc-dddd-ef0123456789",
+			err:   err},
+		{name: `Invalid missing =`,
+			input: "user@realm!tokennameaaaaaaaaa-bbb-cccc-dddd-ef0123456789",
+			err:   err},
+		{name: `Invalid no secret`,
+			input: "user@realm!tokenname",
+			err:   err},
+		{name: `Invalid no secret but =`,
+			input: "user@realm!tokenname=",
+			err:   err},
+		{name: `Valid`,
+			input: "user@realm!tokenname=aaaaaaaaa-bbb-cccc-dddd-ef0123456789",
+			output: ApiToken{
+				ID: ApiTokenID{
+					User:      UserID{Name: "user", Realm: "realm"},
+					TokenName: "tokenname"},
+				Secret: "aaaaaaaaa-bbb-cccc-dddd-ef0123456789"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			var result ApiToken
+			err := result.Parse(test.input)
+			require.Equal(t, test.err, err)
+			require.Equal(t, test.output, result)
+		})
+	}
+}
+
+func Test_ApiToken_String(t *testing.T) {
+	t.Parallel()
+	require.Equal(t, "user@realm!tokenname=aaaaaaaaa-bbb-cccc-dddd-ef0123456789", ApiToken{
+		ID: ApiTokenID{
+			User: UserID{
+				Name:  "user",
+				Realm: "realm"},
+			TokenName: "tokenname"},
+		Secret: "aaaaaaaaa-bbb-cccc-dddd-ef0123456789"}.String())
+}
+
 func Test_ApiTokenConfig_mapToAPI(t *testing.T) {
 	t.Parallel()
 	type test struct {
