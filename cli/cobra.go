@@ -86,9 +86,9 @@ func Client(ctx context.Context, apiUrl, userID, password, otp string, http_head
 	c, err = proxmox.NewClient(apiUrl, nil, http_headers, tlsConf, proxyUrl, timeout, false)
 	LogFatalError(err)
 	if userRequiresAPIToken(userID) {
-		var token proxmox.ApiTokenID
-		LogFatalError(token.Parse(userID))
-		c.SetAPIToken(token, proxmox.ApiTokenSecret(password))
+		var tokenID proxmox.ApiTokenID
+		LogFatalError(tokenID.Parse(userID))
+		c.SetAPIToken(proxmox.ApiToken{ID: tokenID, Secret: proxmox.ApiTokenSecret(password)})
 		// As test, get the version of the server
 		_, err = c.GetVersion(Context())
 		if err != nil {

@@ -121,6 +121,27 @@ func (c *apiTokenClient) UpdateNoCheck(ctx context.Context, user UserID, token A
 	return token.update(ctx, c.api, user)
 }
 
+const ApiToken_Errors_Invalid string = "api token must be in the format user@realm!tokenname=aaaaaaaaa-bbb-cccc-dddd-ef0123456789"
+
+type ApiToken struct {
+	Secret ApiTokenSecret
+	ID     ApiTokenID
+}
+
+func (token *ApiToken) Parse(s string) error {
+	index := strings.IndexByte(s, '=')
+	if index == -1 || len(s) == index+1 {
+		return errors.New(ApiToken_Errors_Invalid)
+	}
+	if err := token.ID.Parse(s[:index]); err != nil {
+		return errors.New(ApiToken_Errors_Invalid)
+	}
+	token.Secret = ApiTokenSecret(s[index+1:])
+	return nil
+}
+
+func (token ApiToken) String() string { return token.ID.String() + "=" + token.Secret.String() }
+
 type ApiTokenConfig struct {
 	Name                ApiTokenName `json:"id"`
 	Comment             *string      `json:"comment,omitempty"` // Never nil when returned

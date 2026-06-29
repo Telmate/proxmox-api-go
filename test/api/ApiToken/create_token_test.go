@@ -57,7 +57,7 @@ func Test_Token_Create(t *testing.T) {
 				cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
 				require.NoError(t, err)
 				require.NotNil(t, cl)
-				cl.SetAPIToken(tokenID, *secret)
+				cl.SetAPIToken(pveSDK.ApiToken{ID: tokenID, Secret: *secret})
 				version, err := cl.Version(ctx)
 				require.NoError(t, err)
 				require.NotEmpty(t, version.String())
