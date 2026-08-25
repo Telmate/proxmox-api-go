@@ -901,7 +901,7 @@ type qemuDiskResize struct {
 
 // Increase the disk size to the specified amount in gigabytes
 // Decrease of disk size is not permitted.
-func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, c *clientAPI) (err error) {
+func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, c *clientAPI) error {
 	body := []byte("disk=" + disk.Id.String() + "&size=" + strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K")
 	return c.putRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/resize", &body)
 }
@@ -912,19 +912,24 @@ type qemuDiskMove struct {
 	Storage string
 }
 
-func (disk qemuDiskMove) mapToApiValues(delete bool) (params map[string]interface{}) {
-	params = map[string]interface{}{"disk": string(disk.Id), "storage": string(disk.Storage)}
+func (disk qemuDiskMove) mapToApiValues(delete bool) *[]byte {
+	var b strings.Builder
+	b.WriteString("disk=")
+	b.WriteString(disk.Id.String())
+	b.WriteString("&storage=")
+	b.WriteString(disk.Storage)
 	if delete {
-		params["delete"] = "1"
+		b.WriteString("&delete=1")
 	}
 	if disk.Format != nil {
-		params["format"] = string(*disk.Format)
+		b.WriteString("&format=")
+		b.WriteString(disk.Format.String())
 	}
-	return
+	return new([]byte(b.String()))
 }
 
-func (disk qemuDiskMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) (exitStatus interface{}, err error) {
-	return client.PostWithTask(ctx, disk.mapToApiValues(delete), fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId))
+func (disk qemuDiskMove) move(ctx context.Context, delete bool, vmr *VmRef, c *clientAPI) error {
+	return c.postRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/move_disk", disk.mapToApiValues(delete))
 }
 
 func (disk qemuDiskMove) Validate() (err error) {
@@ -1229,8 +1234,7 @@ func MoveQemuDisk(ctx context.Context, format *QemuDiskFormat, diskId QemuDiskId
 	if err != nil {
 		return
 	}
-	_, err = disk.move(ctx, deleteAfterMove, vmr, client)
-	return
+	return disk.move(ctx, deleteAfterMove, vmr, client.api())
 }
 
 // increase Disks in size

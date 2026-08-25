@@ -719,9 +719,8 @@ func (config ConfigQemu) updateNoCheck(
 		updateConfig.disks, _ = updateConfig.raw.GetDisks()
 		if updateConfig.disks != nil {
 			markedDisks = *config.Disks.markDiskChanges(*updateConfig.disks)
-			for _, e := range markedDisks.Move { // move disk to different storage or change disk format
-				_, err = e.move(ctx, true, vmr, client)
-				if err != nil {
+			for i := range markedDisks.Move { // move disk to different storage or change disk format
+				if err = markedDisks.Move[i].move(ctx, true, vmr, c); err != nil {
 					return
 				}
 			}
@@ -734,7 +733,7 @@ func (config ConfigQemu) updateNoCheck(
 
 	if config.TPM != nil && currentLegacy.TPM != nil { // delete or move TPM
 		if disk := config.TPM.markChanges(*currentLegacy.TPM, deleteBuilder); disk != nil { // move
-			if _, err := disk.move(ctx, true, vmr, client); err != nil {
+			if err = disk.move(ctx, true, vmr, c); err != nil {
 				return false, err
 			}
 		}
@@ -749,9 +748,9 @@ func (config ConfigQemu) updateNoCheck(
 					if err != nil {
 						return false, err
 					}
-					currentState = util.Pointer(PowerStateStopped)
+					currentState = new(PowerStateStopped)
 				}
-				if _, err := disk.move(ctx, true, vmr, client); err != nil {
+				if err = disk.move(ctx, true, vmr, c); err != nil {
 					return false, err
 				}
 			}
