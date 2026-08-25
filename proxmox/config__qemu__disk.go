@@ -1234,8 +1234,8 @@ func MoveQemuDisk(ctx context.Context, format *QemuDiskFormat, diskId QemuDiskId
 
 // increase Disks in size
 func resizeDisks(ctx context.Context, vmr *VmRef, client *Client, disks []qemuDiskResize) (err error) {
-	for _, e := range disks {
-		_, err = e.resize(ctx, vmr, client)
+	for i := range disks {
+		_, err = disks[i].resize(ctx, vmr, client)
 		if err != nil {
 			return
 		}

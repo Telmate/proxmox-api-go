@@ -104,6 +104,16 @@ func RequestsPutHandler(urlPath Path, handler func(t *testing.T, v url.Values)) 
 		}}}
 }
 
+func RequestsPutResponse(urlPath Path, expected any, response []byte) []Request {
+	return []Request{{
+		Path:   urlPath,
+		Method: PUT,
+		HandlerFunc: func(w http.ResponseWriter, r *http.Request, t *testing.T) {
+			requestsParseParams(expected, r, t)
+			w.Write(response)
+		}}}
+}
+
 func requestsParseParamsPartial(t *testing.T, r *http.Request) url.Values {
 	body, err := io.ReadAll(r.Body)
 	require.NoError(t, err)

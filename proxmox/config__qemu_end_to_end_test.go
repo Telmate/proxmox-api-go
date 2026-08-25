@@ -45,7 +45,7 @@ func Test_QemuGuestInterface_Create(t *testing.T) {
 				mockServer.RequestsGetJson("/nodes/pve3/tasks/"+mockServer.Path(UPID("pve3", "qmcreate", GuestID(100)))+"/status",
 					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
 				mockServer.RequestsGetJson("/access/permissions", map[string]any{"data": map[string]any{}}))},
-		{name: `started`,
+		{name: `started normal`,
 			vmr: VmRef{node: "test", vmId: 2345, vmType: GuestQemu},
 			config: baseConfig(ConfigQemu{
 				ID:    new(GuestID(2345)),
@@ -58,8 +58,39 @@ func Test_QemuGuestInterface_Create(t *testing.T) {
 					"memory": "512",
 					"start":  "1",
 					"vmid":   "2345"},
-					[]byte(`{"data":"`+UPID("test", "qmstart", GuestID(2345))+`"}`)),
-				mockServer.RequestsGetJson("/nodes/test/tasks/"+mockServer.Path(UPID("test", "qmstart", GuestID(2345)))+"/status",
+					[]byte(`{"data":"`+UPID("test", "qmcreate", GuestID(2345))+`"}`)),
+				mockServer.RequestsGetJson("/nodes/test/tasks/"+mockServer.Path(UPID("test", "qmcreate", GuestID(2345)))+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+				mockServer.RequestsGetJson("/access/permissions", map[string]any{"data": map[string]any{}}))},
+		{name: `started disk resize`,
+			vmr: VmRef{node: "test", vmId: 2345, vmType: GuestQemu},
+			config: baseConfig(ConfigQemu{
+				ID:    new(GuestID(2345)),
+				Node:  new(NodeName("test")),
+				State: new(PowerStateRunning),
+				Disks: &QemuStorages{
+					Ide: &QemuIdeDisks{
+						Disk_0: &QemuIdeStorage{
+							Disk: &QemuIdeDisk{
+								Format:          QemuDiskFormat_Raw,
+								SizeInKibibytes: 921600,
+								Storage:         "test",
+							}}}}}),
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/version", map[string]any{"data": map[string]any{"version": "8.0.1"}}),
+				mockServer.RequestsPostResponse("/nodes/test/qemu", map[string]any{
+					"cores":  "1",
+					"ide0":   "test:0.001,backup=0,format=raw,replicate=0",
+					"memory": "512",
+					"vmid":   "2345"},
+					[]byte(`{"data":"`+UPID("test", "qmcreate", GuestID(2345))+`"}`)),
+				mockServer.RequestsGetJson("/nodes/test/tasks/"+mockServer.Path(UPID("test", "qmcreate", GuestID(2345)))+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+				mockServer.RequestsPutResponse("/nodes/test/qemu/2345/resize", map[string]any{
+					"disk": "ide0",
+					"size": "921600K"},
+					[]byte(`{"data":"`+UPID("test", "resize", GuestID(2345))+`"}`)),
+				mockServer.RequestsGetJson("/nodes/test/tasks/"+mockServer.Path(UPID("test", "resize", GuestID(2345)))+"/status",
 					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
 				mockServer.RequestsPostResponse("/nodes/test/qemu/2345/status/start", map[string]any{},
 					[]byte(`{"data":"`+UPID("test", "qmstart", GuestID(2345))+`"}`)),

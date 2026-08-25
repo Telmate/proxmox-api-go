@@ -209,7 +209,11 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 }
 
 func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientAPI, version Version) (*VmRef, error) {
-	params, body := config.mapToApiCreate(version)
+	var disksToResize []qemuDiskResize
+	if config.Disks != nil {
+		disksToResize = config.Disks.selectInitialResize(nil)
+	}
+	params, body := config.mapToApiCreate(version, len(disksToResize) > 0)
 	// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
 	// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
 	var pool PoolName
@@ -242,10 +246,12 @@ func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientA
 		pool:   pool,
 		vmType: GuestQemu,
 	}
-	if err = resizeNewDisks(ctx, vmr, client, config.Disks, nil); err != nil {
-		return nil, err
+	if len(disksToResize) > 0 {
+		if err = resizeDisks(ctx, vmr, client, disksToResize); err != nil {
+			return nil, err
+		}
 	}
-	if config.State != nil && *config.State == PowerStateRunning {
+	if config.State != nil && *config.State == PowerStateRunning && len(disksToResize) > 0 {
 		if err = vmr.start_Unsafe(ctx, ca); err != nil {
 			return nil, err
 		}
@@ -404,7 +410,7 @@ func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (p
 	return
 }
 
-func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byte) {
+func (config ConfigQemu) mapToApiCreate(version Version, resizeDisks bool) (map[string]any, *[]byte) {
 	params := config.mapToAPI(ConfigQemu{}, version)
 	builder := strings.Builder{}
 	bPtr := &builder
@@ -431,7 +437,7 @@ func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byt
 	if len(config.PciDevices) != 0 {
 		config.PciDevices.mapToApiCreate(bPtr)
 	}
-	if config.State != nil && *config.State == PowerStateRunning {
+	if config.State != nil && *config.State == PowerStateRunning && !resizeDisks {
 		builder.WriteString("&start=1")
 	}
 	if config.Tags != nil {
