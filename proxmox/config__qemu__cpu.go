@@ -575,7 +575,7 @@ func (cpu QemuCPU) mapToApiCreate(version Version, b *strings.Builder) {
 	}
 	if cpu.Numa != nil {
 		b.WriteString("&" + qemuApiKeyCpuNuma + "=")
-		b.WriteRune(bTOr(*cpu.Numa))
+		b.WriteByte(bToByte(*cpu.Numa))
 	}
 	if cpu.Sockets != nil {
 		b.WriteString("&" + qemuApiKeyCpuSockets + "=")
@@ -660,7 +660,7 @@ func (cpu QemuCPU) mapToApiUpdate(current QemuCPU, version Version, b, delete *s
 	}
 	if cpu.Numa != nil && *cpu.Numa != *current.Numa {
 		b.WriteString("&" + qemuApiKeyCpuNuma + "=")
-		b.WriteRune(bTOr(*cpu.Numa))
+		b.WriteByte(bToByte(*cpu.Numa))
 	}
 	if cpu.Sockets != nil && *cpu.Sockets != *current.Sockets {
 		b.WriteString("&" + qemuApiKeyCpuSockets + "=")
@@ -767,7 +767,7 @@ func qemuCpuMapToApiAffinity(affinity []uint, b *strings.Builder) {
 		if rangeStart == rangeEnd {
 			b.WriteString(comma)
 		} else {
-			b.WriteRune('-')
+			b.WriteByte('-')
 			b.WriteString(strconv.Itoa(int(rangeEnd)))
 			b.WriteString(comma)
 		}
@@ -776,7 +776,7 @@ func qemuCpuMapToApiAffinity(affinity []uint, b *strings.Builder) {
 	b.WriteString(strconv.Itoa(int(rangeStart)))
 	// Append the last range
 	if rangeStart != rangeEnd {
-		b.WriteRune('-')
+		b.WriteByte('-')
 		b.WriteString(strconv.Itoa(int(rangeEnd)))
 	}
 }

@@ -161,7 +161,7 @@ func (token ApiTokenConfig) mapToApiCreate() *[]byte {
 	builder := strings.Builder{}
 	if token.PrivilegeSeparation != nil {
 		builder.WriteString("&" + apiTokenApiKeyPrivilegeSeparation + "=")
-		builder.WriteRune(bTOr(*token.PrivilegeSeparation))
+		builder.WriteByte(bToByte(*token.PrivilegeSeparation))
 	}
 	if token.Expiration != nil && *token.Expiration > 0 {
 		builder.WriteString("&" + apiTokenApiKeyExpiration + "=")
@@ -181,7 +181,7 @@ func (token ApiTokenConfig) mapToApiUpdate() *[]byte {
 	builder := strings.Builder{}
 	if token.PrivilegeSeparation != nil {
 		builder.WriteString("&" + apiTokenApiKeyPrivilegeSeparation + "=")
-		builder.WriteRune(bTOr(*token.PrivilegeSeparation))
+		builder.WriteByte(bToByte(*token.PrivilegeSeparation))
 	}
 	if token.Expiration != nil {
 		builder.WriteString("&" + apiTokenApiKeyExpiration + "=")
@@ -192,7 +192,7 @@ func (token ApiTokenConfig) mapToApiUpdate() *[]byte {
 		if *token.Comment == "" { // Bug in PVE API: setting empty comment has no effect, must use "= "
 			builder.WriteString("=%20")
 		} else {
-			builder.WriteRune('=')
+			builder.WriteByte('=')
 			builder.WriteString(body.Escape(*token.Comment))
 		}
 	}

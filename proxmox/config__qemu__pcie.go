@@ -20,7 +20,7 @@ func (config QemuPciDevices) mapToApiCreate(b *strings.Builder) {
 		}
 		b.WriteString("&" + qemuPrefixApiKeyPCI)
 		b.WriteString(i.String())
-		b.WriteRune('=')
+		b.WriteByte('=')
 		b.WriteString(e.mapToApiIntermediary(qemuPci{}).String())
 	}
 }
@@ -40,7 +40,7 @@ func (config QemuPciDevices) mapToApiUpdate(current QemuPciDevices, b, delete *s
 			}
 			b.WriteString("&" + qemuPrefixApiKeyPCI)
 			b.WriteString(i.String())
-			b.WriteRune('=')
+			b.WriteByte('=')
 			b.WriteString(e.mapToApiIntermediary(qemuPci{}).String())
 		}
 	}
@@ -161,7 +161,7 @@ func (config QemuPci) mapToAPI(current *QemuPci, id QemuPciID, b *strings.Builde
 	if currentStr != newStr {
 		b.WriteString("&" + qemuPrefixApiKeyPCI)
 		b.WriteString(id.String())
-		b.WriteRune('=')
+		b.WriteByte('=')
 		b.WriteString(newStr)
 	}
 }

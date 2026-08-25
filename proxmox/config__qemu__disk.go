@@ -220,13 +220,13 @@ func (disk qemuDisk) mapToApiValues(create bool) string {
 				builder.WriteString(":0,import-from=")
 				builder.WriteString(disk.ImportFrom)
 			} else if disk.SizeInKibibytes%gibibyte == 0 {
-				builder.WriteRune(':')
+				builder.WriteByte(':')
 				builder.WriteString(strconv.FormatInt(int64(disk.SizeInKibibytes/gibibyte), 10))
 			} else {
 				builder.WriteString(":0.001")
 			}
 		} else {
-			builder.WriteRune(':')
+			builder.WriteByte(':')
 			builder.WriteString(disk.VolumePath)
 		}
 	}
@@ -966,7 +966,7 @@ func (storage qemuStorage) mapToApiValues(currentStorage *qemuStorage, id QemuDi
 		if currentStorage == nil {
 			return
 		}
-		delete.WriteRune(',')
+		delete.WriteByte(',')
 		delete.WriteString(id.String())
 		return
 	}
