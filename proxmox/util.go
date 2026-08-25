@@ -46,13 +46,6 @@ func Btoi(b bool) int {
 	}
 }
 
-func bTOr(in bool) rune {
-	if in {
-		return '1'
-	}
-	return '0'
-}
-
 // Combines params and raw body into a new body.
 // This function can be removed once all bodys are created without the intermidiary params step.
 func combineParamsAndBody(params map[string]any, body *[]byte) *[]byte {
