@@ -216,6 +216,23 @@ func (c *clientAPI) putRawRetry(ctx context.Context, url string, body *[]byte, t
 	return
 }
 
+func (c *clientAPI) putRawTask(ctx context.Context, url string, body *[]byte) error {
+	var response *http.Response
+	var retry bool
+	var err error
+	for i := range time.Duration(RequestRetryCount) {
+		response, retry, err = c.session.put(ctx, url, nil, nil, body)
+		if err == nil || !retry {
+			break
+		}
+		time.Sleep((i + 1) * c.timeUnit)
+	}
+	if err != nil {
+		return err
+	}
+	return c.checkTask(ctx, response)
+}
+
 // checkTask polls the API to check if the Proxmox task has been completed.
 // It returns the body of the HTTP response and any HTTP error occurred during the request.
 func (c *clientAPI) checkTask(ctx context.Context, resp *http.Response) error {

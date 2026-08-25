@@ -247,7 +247,7 @@ func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientA
 		vmType: GuestQemu,
 	}
 	if len(disksToResize) > 0 {
-		if err = resizeDisks(ctx, vmr, client, disksToResize); err != nil {
+		if err = resizeDisks(ctx, vmr, ca, disksToResize); err != nil {
 			return nil, err
 		}
 	}
@@ -725,7 +725,7 @@ func (config ConfigQemu) updateNoCheck(
 					return
 				}
 			}
-			if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
+			if err = resizeDisks(ctx, vmr, c, markedDisks.Resize); err != nil { // increase Disks in size
 				return false, err
 			}
 			config.Disks.cloudInitRemove(*updateConfig.disks, deleteBuilder)
@@ -829,7 +829,7 @@ func (config ConfigQemu) updateNoCheck(
 		}
 	}
 
-	if err = resizeNewDisks(ctx, vmr, client, config.Disks, currentLegacy.Disks); err != nil {
+	if err = resizeNewDisks(ctx, vmr, c, config.Disks, currentLegacy.Disks); err != nil {
 		return
 	}
 
