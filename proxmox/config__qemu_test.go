@@ -23,6 +23,7 @@ type (
 		currentLegacy ConfigQemu
 		currentUpdate configQemuUpdate
 		version       Version
+		resizeDisks   bool
 		output        map[string]any
 		body          map[string]string
 	}
@@ -2846,7 +2847,7 @@ func Test_ConfigQemu_mapToAPI(t *testing.T) {
 		for _, subTest := range append(test.create, test.createUpdate...) {
 			name := test.category + "/Create/" + subTest.name
 			t.Run(name, func(*testing.T) {
-				tmpParams, tmpBody := subTest.config.mapToApiCreate(subTest.version)
+				tmpParams, tmpBody := subTest.config.mapToApiCreate(subTest.version, subTest.resizeDisks)
 				require.Equal(t, subTest.output, tmpParams, name+" Params")
 				testParamsEqualRaw(t, subTest.body, tmpBody, name+" Body")
 			})

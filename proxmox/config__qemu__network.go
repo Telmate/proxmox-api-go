@@ -118,11 +118,11 @@ func (config QemuNetworkInterface) mapToApiShared(model string, b *strings.Build
 	}
 	if config.Firewall != nil && *config.Firewall {
 		b.WriteString(comma + "firewall" + equal)
-		b.WriteRune(bTOr(*config.Firewall))
+		b.WriteByte(bToByte(*config.Firewall))
 	}
 	if config.Connected != nil && !*config.Connected {
 		b.WriteString(comma + "link_down" + equal)
-		b.WriteRune(bTOr(!*config.Connected))
+		b.WriteByte(bToByte(!*config.Connected))
 	}
 	if config.MTU != nil && model == string(QemuNetworkModelVirtIO) {
 		config.MTU.mapToApiUnsafe(b)
@@ -353,7 +353,7 @@ func (config QemuNetworkInterfaces) mapToApiCreate(b *strings.Builder) {
 		}
 		b.WriteString("&" + qemuPrefixApiKeyNetwork)
 		b.WriteString(i.String())
-		b.WriteRune('=')
+		b.WriteByte('=')
 		e.mapToApiCreate(b)
 	}
 }
@@ -376,7 +376,7 @@ func (config QemuNetworkInterfaces) mapToApiUpdate(current QemuNetworkInterfaces
 			if currentString != updateString {
 				b.WriteString("&" + qemuPrefixApiKeyNetwork)
 				b.WriteString(i.String())
-				b.WriteRune('=')
+				b.WriteByte('=')
 				b.WriteString(updateString)
 			}
 		} else { // Create
@@ -385,7 +385,7 @@ func (config QemuNetworkInterfaces) mapToApiUpdate(current QemuNetworkInterfaces
 			}
 			b.WriteString("&" + qemuPrefixApiKeyNetwork)
 			b.WriteString(i.String())
-			b.WriteRune('=')
+			b.WriteByte('=')
 			e.mapToApiCreate(b)
 		}
 	}

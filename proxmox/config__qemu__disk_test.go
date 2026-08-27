@@ -697,7 +697,7 @@ func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
 		name   string
 		delete bool
 		input  qemuDiskMove
-		output map[string]interface{}
+		output string
 	}{
 		{name: "ALL",
 			delete: true,
@@ -706,51 +706,33 @@ func Test_qemuDiskShort_mapToApiValues(t *testing.T) {
 				Id:      "ide0",
 				Storage: "test0",
 			},
-			output: map[string]interface{}{
-				"disk":    "ide0",
-				"storage": "test0",
-				"delete":  "1",
-				"format":  "raw",
-			},
-		},
+			output: "disk=ide0&storage=test0&delete=1&format=raw"},
 		{name: "Format nil",
 			delete: true,
 			input: qemuDiskMove{
 				Id:      "sata4",
 				Storage: "aaa0",
 			},
-			output: map[string]interface{}{
-				"disk":    "sata4",
-				"storage": "aaa0",
-				"delete":  "1",
-			},
-		},
+			output: "disk=sata4&storage=aaa0&delete=1"},
 		{name: "Delete false",
 			input: qemuDiskMove{
 				Format:  &format_Qcow2,
 				Id:      "scsi10",
 				Storage: "test0",
 			},
-			output: map[string]interface{}{
-				"format":  "qcow2",
-				"disk":    "scsi10",
-				"storage": "test0",
-			},
-		},
+			output: "disk=scsi10&storage=test0&format=qcow2"},
 		{name: "MINIMAL",
 			input: qemuDiskMove{
 				Id:      "virtio13",
 				Storage: "Test0",
 			},
-			output: map[string]interface{}{
-				"disk":    "virtio13",
-				"storage": "Test0",
-			},
-		},
+			output: "disk=virtio13&storage=Test0"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, test.input.mapToApiValues(test.delete), test.name)
+			output := test.input.mapToApiValues(test.delete)
+			require.NotNil(t, output)
+			require.Equal(t, test.output, string(*output), test.name)
 		})
 	}
 }

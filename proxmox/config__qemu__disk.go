@@ -220,13 +220,13 @@ func (disk qemuDisk) mapToApiValues(create bool) string {
 				builder.WriteString(":0,import-from=")
 				builder.WriteString(disk.ImportFrom)
 			} else if disk.SizeInKibibytes%gibibyte == 0 {
-				builder.WriteRune(':')
+				builder.WriteByte(':')
 				builder.WriteString(strconv.FormatInt(int64(disk.SizeInKibibytes/gibibyte), 10))
 			} else {
 				builder.WriteString(":0.001")
 			}
 		} else {
-			builder.WriteRune(':')
+			builder.WriteByte(':')
 			builder.WriteString(disk.VolumePath)
 		}
 	}
@@ -901,8 +901,9 @@ type qemuDiskResize struct {
 
 // Increase the disk size to the specified amount in gigabytes
 // Decrease of disk size is not permitted.
-func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, client *Client) (exitStatus string, err error) {
-	return client.PutWithTask(ctx, map[string]interface{}{"disk": disk.Id, "size": strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K"}, fmt.Sprintf("/nodes/%s/%s/%d/resize", vmr.node, vmr.vmType, vmr.vmId))
+func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, c *clientAPI) error {
+	body := []byte("disk=" + disk.Id.String() + "&size=" + strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K")
+	return c.putRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/resize", &body)
 }
 
 type qemuDiskMove struct {
@@ -911,19 +912,24 @@ type qemuDiskMove struct {
 	Storage string
 }
 
-func (disk qemuDiskMove) mapToApiValues(delete bool) (params map[string]interface{}) {
-	params = map[string]interface{}{"disk": string(disk.Id), "storage": string(disk.Storage)}
+func (disk qemuDiskMove) mapToApiValues(delete bool) *[]byte {
+	var b strings.Builder
+	b.WriteString("disk=")
+	b.WriteString(disk.Id.String())
+	b.WriteString("&storage=")
+	b.WriteString(disk.Storage)
 	if delete {
-		params["delete"] = "1"
+		b.WriteString("&delete=1")
 	}
 	if disk.Format != nil {
-		params["format"] = string(*disk.Format)
+		b.WriteString("&format=")
+		b.WriteString(disk.Format.String())
 	}
-	return
+	return new([]byte(b.String()))
 }
 
-func (disk qemuDiskMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) (exitStatus interface{}, err error) {
-	return client.PostWithTask(ctx, disk.mapToApiValues(delete), fmt.Sprintf("/nodes/%s/%s/%d/move_disk", vmr.node, vmr.vmType, vmr.vmId))
+func (disk qemuDiskMove) move(ctx context.Context, delete bool, vmr *VmRef, c *clientAPI) error {
+	return c.postRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/move_disk", disk.mapToApiValues(delete))
 }
 
 func (disk qemuDiskMove) Validate() (err error) {
@@ -960,7 +966,7 @@ func (storage qemuStorage) mapToApiValues(currentStorage *qemuStorage, id QemuDi
 		if currentStorage == nil {
 			return
 		}
-		delete.WriteRune(',')
+		delete.WriteByte(',')
 		delete.WriteString(id.String())
 		return
 	}
@@ -1228,15 +1234,13 @@ func MoveQemuDisk(ctx context.Context, format *QemuDiskFormat, diskId QemuDiskId
 	if err != nil {
 		return
 	}
-	_, err = disk.move(ctx, deleteAfterMove, vmr, client)
-	return
+	return disk.move(ctx, deleteAfterMove, vmr, client.api())
 }
 
 // increase Disks in size
-func resizeDisks(ctx context.Context, vmr *VmRef, client *Client, disks []qemuDiskResize) (err error) {
-	for _, e := range disks {
-		_, err = e.resize(ctx, vmr, client)
-		if err != nil {
+func resizeDisks(ctx context.Context, vmr *VmRef, c *clientAPI, disks []qemuDiskResize) (err error) {
+	for i := range disks {
+		if err = disks[i].resize(ctx, vmr, c); err != nil {
 			return
 		}
 	}
@@ -1244,13 +1248,13 @@ func resizeDisks(ctx context.Context, vmr *VmRef, client *Client, disks []qemuDi
 }
 
 // Resize newly created disks
-func resizeNewDisks(ctx context.Context, vmr *VmRef, client *Client, newDisks, currentDisks *QemuStorages) (err error) {
+func resizeNewDisks(ctx context.Context, vmr *VmRef, c *clientAPI, newDisks, currentDisks *QemuStorages) (err error) {
 	if newDisks == nil {
 		return
 	}
 	resize := newDisks.selectInitialResize(currentDisks)
 	if len(resize) > 0 {
-		if err = resizeDisks(ctx, vmr, client, resize); err != nil {
+		if err = resizeDisks(ctx, vmr, c, resize); err != nil {
 			return
 		}
 	}

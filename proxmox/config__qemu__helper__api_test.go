@@ -15,7 +15,7 @@ func (tests qemuTestsApiFunc) Test(t *testing.T) {
 	for i := range test.create {
 		t.Run("create/"+test.create[i].name, func(*testing.T) {
 			config := test.create[i].config
-			_, output := config.mapToApiCreate(test.create[i].version)
+			_, output := config.mapToApiCreate(test.create[i].version, test.create[i].resizeDisks)
 			testParamsEqualRaw(t, test.create[i].body, output)
 			require.Equal(t, refrence.create[i].config, config, "mutated input config")
 		})

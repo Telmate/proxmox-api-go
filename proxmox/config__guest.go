@@ -65,7 +65,7 @@ func (config GuestDNS) mapToApiCreate(params map[string]any) {
 	if config.NameServers != nil && len(*config.NameServers) > 0 {
 		var nameservers strings.Builder
 		for _, ns := range *config.NameServers {
-			nameservers.WriteRune(' ')
+			nameservers.WriteByte(' ')
 			nameservers.WriteString(ns.String())
 		}
 		params[guestApiKeyNameServer] = nameservers.String()[1:]
@@ -204,7 +204,7 @@ func (rate GuestNetworkRate) mapToAPI(b *strings.Builder) {
 			return
 		} else {
 			b.WriteString(rawRate[:length-3])
-			b.WriteRune('.')
+			b.WriteByte('.')
 			b.WriteString(strings.TrimRight(rawRate[length-3:], "0"))
 			return
 		}

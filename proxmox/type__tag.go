@@ -84,7 +84,7 @@ func (t Tags) String() string { // String is for fmt.Stringer.
 	}
 	builder := strings.Builder{}
 	for i := range t {
-		builder.WriteRune(',')
+		builder.WriteByte(',')
 		builder.WriteString(t[i].String())
 	}
 	return builder.String()[1:]

@@ -32,7 +32,7 @@ func (config QemuUSBs) mapToApiCreate(b *strings.Builder) {
 		}
 		b.WriteString("&" + qemuPrefixApiKeyUSB)
 		b.WriteString(i.String())
-		b.WriteRune('=')
+		b.WriteByte('=')
 		e.mapToApiCreate(b)
 	}
 }
@@ -50,7 +50,7 @@ func (config QemuUSBs) mapToApiUpdate(current QemuUSBs, b, delete *strings.Build
 			if !e.Delete {
 				b.WriteString("&" + qemuPrefixApiKeyUSB)
 				b.WriteString(i.String())
-				b.WriteRune('=')
+				b.WriteByte('=')
 				e.mapToApiCreate(b)
 			}
 		}
@@ -270,7 +270,7 @@ func (config QemuUSB) mapToApiUpdate(current QemuUSB, id QemuUsbID, builder *str
 	if newVal != currentVal {
 		builder.WriteString("&" + qemuPrefixApiKeyUSB)
 		builder.WriteString(id.String())
-		builder.WriteRune('=')
+		builder.WriteByte('=')
 		builder.WriteString(newVal)
 	}
 }

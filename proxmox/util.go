@@ -30,6 +30,13 @@ const (
 
 const hexPrefix string = "0x"
 
+func bToByte(in bool) byte {
+	if in {
+		return '1'
+	}
+	return '0'
+}
+
 func Btoi(b bool) int {
 	switch b {
 	case true:
@@ -37,13 +44,6 @@ func Btoi(b bool) int {
 	default:
 		return 0
 	}
-}
-
-func bTOr(in bool) rune {
-	if in {
-		return '1'
-	}
-	return '0'
 }
 
 // Combines params and raw body into a new body.

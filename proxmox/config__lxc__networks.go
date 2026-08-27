@@ -272,7 +272,7 @@ func (config LxcNetworks) mapToApiCreate(b *strings.Builder) {
 		}
 		b.WriteString("&" + lxcPrefixApiKeyNetwork)
 		b.WriteString(id.String())
-		b.WriteRune('=')
+		b.WriteByte('=')
 		network.mapToApiCreate(b)
 	}
 }
@@ -290,7 +290,7 @@ func (config LxcNetworks) mapToApiUpdate(current LxcNetworks, b, delete *strings
 			if currentBody != updatedBody {
 				b.WriteString("&" + lxcPrefixApiKeyNetwork)
 				b.WriteString(id.String())
-				b.WriteRune('=')
+				b.WriteByte('=')
 				b.WriteString(updatedBody)
 			}
 		} else { // Create
@@ -299,7 +299,7 @@ func (config LxcNetworks) mapToApiUpdate(current LxcNetworks, b, delete *strings
 			}
 			b.WriteString("&" + lxcPrefixApiKeyNetwork)
 			b.WriteString(id.String())
-			b.WriteRune('=')
+			b.WriteByte('=')
 			network.mapToApiCreate(b)
 		}
 	}

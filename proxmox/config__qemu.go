@@ -209,7 +209,11 @@ func (config ConfigQemu) Create(ctx context.Context, client *Client) (*VmRef, er
 }
 
 func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientAPI, version Version) (*VmRef, error) {
-	params, body := config.mapToApiCreate(version)
+	var disksToResize []qemuDiskResize
+	if config.Disks != nil {
+		disksToResize = config.Disks.selectInitialResize(nil)
+	}
+	params, body := config.mapToApiCreate(version, len(disksToResize) > 0)
 	// pool field unsupported by /nodes/%s/vms/%d/config used by update (currentConfig != nil).
 	// To be able to create directly in a configured pool, add pool to mapped params from ConfigQemu, before creating VM
 	var pool PoolName
@@ -242,10 +246,12 @@ func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientA
 		pool:   pool,
 		vmType: GuestQemu,
 	}
-	if err = resizeNewDisks(ctx, vmr, client, config.Disks, nil); err != nil {
-		return nil, err
+	if len(disksToResize) > 0 {
+		if err = resizeDisks(ctx, vmr, ca, disksToResize); err != nil {
+			return nil, err
+		}
 	}
-	if config.State != nil && *config.State == PowerStateRunning {
+	if config.State != nil && *config.State == PowerStateRunning && len(disksToResize) > 0 {
 		if err = vmr.start_Unsafe(ctx, ca); err != nil {
 			return nil, err
 		}
@@ -404,7 +410,7 @@ func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (p
 	return
 }
 
-func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byte) {
+func (config ConfigQemu) mapToApiCreate(version Version, resizeDisks bool) (map[string]any, *[]byte) {
 	params := config.mapToAPI(ConfigQemu{}, version)
 	builder := strings.Builder{}
 	bPtr := &builder
@@ -431,7 +437,7 @@ func (config ConfigQemu) mapToApiCreate(version Version) (map[string]any, *[]byt
 	if len(config.PciDevices) != 0 {
 		config.PciDevices.mapToApiCreate(bPtr)
 	}
-	if config.State != nil && *config.State == PowerStateRunning {
+	if config.State != nil && *config.State == PowerStateRunning && !resizeDisks {
 		builder.WriteString("&start=1")
 	}
 	if config.Tags != nil {
@@ -713,13 +719,12 @@ func (config ConfigQemu) updateNoCheck(
 		updateConfig.disks, _ = updateConfig.raw.GetDisks()
 		if updateConfig.disks != nil {
 			markedDisks = *config.Disks.markDiskChanges(*updateConfig.disks)
-			for _, e := range markedDisks.Move { // move disk to different storage or change disk format
-				_, err = e.move(ctx, true, vmr, client)
-				if err != nil {
+			for i := range markedDisks.Move { // move disk to different storage or change disk format
+				if err = markedDisks.Move[i].move(ctx, true, vmr, c); err != nil {
 					return
 				}
 			}
-			if err = resizeDisks(ctx, vmr, client, markedDisks.Resize); err != nil { // increase Disks in size
+			if err = resizeDisks(ctx, vmr, c, markedDisks.Resize); err != nil { // increase Disks in size
 				return false, err
 			}
 			config.Disks.cloudInitRemove(*updateConfig.disks, deleteBuilder)
@@ -728,7 +733,7 @@ func (config ConfigQemu) updateNoCheck(
 
 	if config.TPM != nil && currentLegacy.TPM != nil { // delete or move TPM
 		if disk := config.TPM.markChanges(*currentLegacy.TPM, deleteBuilder); disk != nil { // move
-			if _, err := disk.move(ctx, true, vmr, client); err != nil {
+			if err = disk.move(ctx, true, vmr, c); err != nil {
 				return false, err
 			}
 		}
@@ -743,9 +748,9 @@ func (config ConfigQemu) updateNoCheck(
 					if err != nil {
 						return false, err
 					}
-					currentState = util.Pointer(PowerStateStopped)
+					currentState = new(PowerStateStopped)
 				}
-				if _, err := disk.move(ctx, true, vmr, client); err != nil {
+				if err = disk.move(ctx, true, vmr, c); err != nil {
 					return false, err
 				}
 			}
@@ -823,7 +828,7 @@ func (config ConfigQemu) updateNoCheck(
 		}
 	}
 
-	if err = resizeNewDisks(ctx, vmr, client, config.Disks, currentLegacy.Disks); err != nil {
+	if err = resizeNewDisks(ctx, vmr, c, config.Disks, currentLegacy.Disks); err != nil {
 		return
 	}
 
