@@ -506,22 +506,22 @@ func (config ConfigLXC) update_Unsafe(
 		if err = ca.putRawRetry(ctx, urlBuilder.String(), body, 3); err != nil {
 			return err
 		}
-		if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes
-			var pendingChanges bool
-			pendingChanges, err = vmr.pendingChanges(ctx, ca)
-			if err != nil {
-				return fmt.Errorf("error checking for pending changes: %w", err)
+	}
+	if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes
+		var pendingChanges bool
+		pendingChanges, err = vmr.pendingChanges(ctx, ca)
+		if err != nil {
+			return fmt.Errorf("error checking for pending changes: %w", err)
+		}
+		if pendingChanges {
+			if !allowRestart {
+				// TODO revert pending changes
+				return errors.New("guest has to be restarted to apply changes")
 			}
-			if pendingChanges {
-				if !allowRestart {
-					// TODO revert pending changes
-					return errors.New("guest has to be restarted to apply changes")
-				}
-				if err = GuestReboot(ctx, vmr, c); err != nil {
-					return fmt.Errorf("error restarting guest: %w", err)
-				}
-				currentState = PowerStateRunning // We assume the guest is running now
+			if err = GuestReboot(ctx, vmr, c); err != nil {
+				return fmt.Errorf("error restarting guest: %w", err)
 			}
+			currentState = PowerStateRunning // We assume the guest is running now
 		}
 	}
 	if currentState != PowerStateRunning && targetState == PowerStateRunning { // We want the guest to be running, so we start it now
