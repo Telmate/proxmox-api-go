@@ -72,7 +72,7 @@ func Test_rawLxcInfoNetworkInterfaces_SelectName(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  []any
-		iName  string
+		iName  LxcNetworkName
 		output LxcInfoNetworkInterface
 		set    bool
 	}{

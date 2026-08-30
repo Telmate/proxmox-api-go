@@ -9,7 +9,7 @@ type (
 	RawLxcInfoNetworkInterfaces interface {
 		Get() []LxcInfoNetworkInterface
 		SelectMacAddress(address net.HardwareAddr) (RawLxcInfoNetworkInterface, bool)
-		SelectName(name string) (RawLxcInfoNetworkInterface, bool)
+		SelectName(name LxcNetworkName) (RawLxcInfoNetworkInterface, bool)
 	}
 	rawLxcInfoNetworkInterfaces struct {
 		a []any
@@ -49,14 +49,15 @@ func (raw *rawLxcInfoNetworkInterfaces) SelectMacAddress(address net.HardwareAdd
 	return nil, false
 }
 
-func (raw *rawLxcInfoNetworkInterfaces) SelectName(name string) (RawLxcInfoNetworkInterface, bool) {
+func (raw *rawLxcInfoNetworkInterfaces) SelectName(name LxcNetworkName) (RawLxcInfoNetworkInterface, bool) {
 	if len(raw.a) == 0 {
 		return nil, false
 	}
+	tmpName := name.String()
 	for i := range raw.a {
 		iFace := raw.a[i].(map[string]any)
 		if v, isSet := iFace[agentApiKeyName]; isSet {
-			if name == v.(string) {
+			if tmpName == v.(string) {
 				return &rawLxcInfoNetworkInterface{a: iFace}, true
 			}
 		}
