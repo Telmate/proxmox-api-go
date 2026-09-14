@@ -5,6 +5,7 @@ type ClientNew struct {
 	Group     GroupInterface
 	Guest     GuestInterface
 	LxcGuest  LxcGuestInterface
+	Node      NodeInterface
 	Pool      PoolInterface
 	QemuGuest QemuGuestInterface
 	Snapshot  SnapshotInterface

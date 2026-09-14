@@ -172,6 +172,7 @@ func (c *Client) New() ClientNew {
 		Group:     &groupClient{oldClient: c, api: apiClientPtr},
 		Guest:     &guestClient{oldClient: c, api: apiClientPtr},
 		LxcGuest:  &lxcGuestClient{oldClient: c, api: apiClientPtr},
+		Node:      &nodeClient{oldClient: c, api: apiClientPtr},
 		Pool:      &poolClient{oldClient: c, api: apiClientPtr},
 		QemuGuest: &qemuGuestClient{oldClient: c, api: apiClientPtr},
 		Snapshot:  &snapshotClient{oldClient: c, api: apiClientPtr},
@@ -277,6 +278,7 @@ func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[str
 	return err
 }
 
+// Deprecated: use NodeInterface.List() instead.
 func (c *Client) GetNodeList(ctx context.Context) (list map[string]interface{}, err error) {
 	err = c.GetJsonRetryable(ctx, "/nodes", &list, 3)
 	return

@@ -409,10 +409,15 @@ func main() {
 		log.Printf("VM %d is moved on %s\n", vmid, args[1])
 
 	case "getNodeList":
-		nodes, err := c.GetNodeList(ctx)
+		raw, err := c.New().Node.List(ctx)
 		if err != nil {
 			log.Printf("Error listing Nodes %+v\n", err)
 			os.Exit(1)
+		}
+		raws := raw.AsArray()
+		nodes := make([]proxmox.NodeInfo, len(raws))
+		for i := range raws {
+			nodes[i] = raws[i].Get()
 		}
 		nodeList, err := json.Marshal(nodes)
 		failError(err)

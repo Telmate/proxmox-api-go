@@ -2,6 +2,7 @@ package node
 
 import (
 	"github.com/Telmate/proxmox-api-go/cli"
+	"github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/spf13/cobra"
 )
 
@@ -11,9 +12,7 @@ var reboot_nodeCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		node := cli.RequiredIDset(args, 0, "node")
-		c := cli.NewClient()
-		_, err = c.RebootNode(cli.Context(), node)
-		if err != nil {
+		if err = cli.NewClient().New().Node.Reboot(cli.Context(), proxmox.NodeName(node)); err != nil {
 			return
 		}
 		cli.RootCmd.Printf("Node %s is rebooting", node)
