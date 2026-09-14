@@ -669,8 +669,8 @@ type RawConfigLXC interface {
 
 type rawConfigLXC struct {
 	a       map[string]any
-	guestID GuestID
 	node    NodeName
+	guestID GuestID
 	version EncodedVersion
 }
 
@@ -926,7 +926,7 @@ type LxcSwap uint
 
 func (swap LxcSwap) String() string { return strconv.Itoa(int(swap)) } // String is for fmt.Stringer.
 
-// Deprecated use LxcGuestInterface.Read() instead.
+// Deprecated: use LxcGuestInterface.Read() instead.
 func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConfigLXC, error) {
 	if vmr == nil {
 		return nil, errors.New(VmRef_Error_Nil)

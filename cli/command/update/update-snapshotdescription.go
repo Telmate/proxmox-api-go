@@ -14,14 +14,12 @@ var update_snapshotCmd = &cobra.Command{
 		id := cli.ValidateGuestIDset(args, "GuestID")
 		snapName := cli.RequiredIDset(args, 1, "SnapshotName")
 		des := cli.OptionalIDset(args, 2)
-		err = proxmox.SnapshotName(snapName).UpdateDescription(cli.Context(), cli.NewClient(), proxmox.NewVmRef(id), des)
-		if err != nil {
+		if err = cli.NewClient().New().Snapshot.Update(cli.Context(), *proxmox.NewVmRef(id), proxmox.SnapshotName(snapName), des); err != nil {
 			return
 		}
 		cli.PrintItemUpdated(updateCmd.OutOrStdout(), snapName, "Snapshot")
 		return
-	},
-}
+	}}
 
 func init() {
 	updateCmd.AddCommand(update_snapshotCmd)

@@ -3,6 +3,7 @@ package proxmox
 import (
 	"context"
 	"crypto/tls"
+	"iter"
 	"net"
 	"net/url"
 	"strings"
@@ -108,4 +109,29 @@ func parseCIDR(cidr string) (net.IP, *net.IPNet) {
 		panic(err)
 	}
 	return ip, net
+}
+
+type testIterInterface[T any] interface {
+	Iter() iter.Seq[T]
+}
+
+func testIter[T any](t *testing.T, a testIterInterface[T], b []T) {
+	t.Helper()
+	var result []T
+	// Test iterating over all items
+	for pool := range a.Iter() {
+		result = append(result, pool)
+	}
+	require.Equal(t, len(b), len(result))
+	for i := range result {
+		require.Equal(t, b[i], result[i])
+	}
+	if len(b) > 0 { // Test early termination (break after first item)
+		count := 0
+		for range a.Iter() {
+			count++
+			break
+		}
+		require.Equal(t, 1, count)
+	}
 }

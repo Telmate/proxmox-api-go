@@ -1197,171 +1197,98 @@ func Test_ConfigPool_Validate(t *testing.T) {
 	}
 }
 
-func Test_RawPools_AsArray(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name   string
-		input  rawPools
-		output []RawConfigPool
+func testData_RawPools() []struct {
+	Name  string
+	Input rawPools
+	Array []RawConfigPool
+	Map   map[PoolName]RawConfigPool
+	Len   int
+} {
+	return []struct {
+		Name  string
+		Input rawPools
+		Array []RawConfigPool
+		Map   map[PoolName]RawConfigPool
+		Len   int
 	}{
-		{name: `Empty`,
-			input:  rawPools{a: []any{}},
-			output: []RawConfigPool{}},
-		{name: `Single Pool`,
-			input: rawPools{a: []any{
+		{Name: `Empty`,
+			Input: rawPools{a: []any{}},
+			Array: []RawConfigPool{},
+			Map:   map[PoolName]RawConfigPool{}},
+		{Name: `Single Pool`,
+			Input: rawPools{a: []any{
 				map[string]any{"poolid": "pool1"}}},
-			output: []RawConfigPool{
-				&rawConfigPool{a: map[string]any{"poolid": "pool1"}}}},
-		{name: `Single Pool with Comment`,
-			input: rawPools{a: []any{
+			Array: []RawConfigPool{
+				&rawConfigPool{a: map[string]any{"poolid": "pool1"}}},
+			Map: map[PoolName]RawConfigPool{
+				"pool1": &rawConfigPool{
+					a:    map[string]any{"poolid": "pool1"},
+					pool: new(PoolName("pool1"))}},
+			Len: 1},
+		{Name: `Single Pool with Comment`,
+			Input: rawPools{a: []any{
 				map[string]any{"poolid": "pool1", "comment": "Test pool"}}},
-			output: []RawConfigPool{
-				&rawConfigPool{a: map[string]any{"poolid": "pool1", "comment": "Test pool"}}}},
-		{name: `Multiple Pools`,
-			input: rawPools{a: []any{
+			Array: []RawConfigPool{
+				&rawConfigPool{a: map[string]any{"poolid": "pool1", "comment": "Test pool"}}},
+			Map: map[PoolName]RawConfigPool{
+				"pool1": &rawConfigPool{
+					a:    map[string]any{"poolid": "pool1", "comment": "Test pool"},
+					pool: new(PoolName("pool1"))}},
+			Len: 1},
+		{Name: `Multiple Pools`,
+			Input: rawPools{a: []any{
 				map[string]any{"poolid": "pool1"},
 				map[string]any{"poolid": "pool2", "comment": "Second pool"},
 				map[string]any{"poolid": "pool3", "comment": ""}}},
-			output: []RawConfigPool{
+			Array: []RawConfigPool{
 				&rawConfigPool{a: map[string]any{"poolid": "pool1"}},
 				&rawConfigPool{a: map[string]any{"poolid": "pool2", "comment": "Second pool"}},
-				&rawConfigPool{a: map[string]any{"poolid": "pool3", "comment": ""}}}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, RawPools(&test.input).AsArray())
+				&rawConfigPool{a: map[string]any{"poolid": "pool3", "comment": ""}}},
+			Map: map[PoolName]RawConfigPool{
+				"pool1": &rawConfigPool{
+					a:    map[string]any{"poolid": "pool1"},
+					pool: new(PoolName("pool1"))},
+				"pool2": &rawConfigPool{
+					a:    map[string]any{"poolid": "pool2", "comment": "Second pool"},
+					pool: new(PoolName("pool2"))},
+				"pool3": &rawConfigPool{
+					a:    map[string]any{"poolid": "pool3", "comment": ""},
+					pool: new(PoolName("pool3"))}},
+			Len: 3}}
+}
+
+func Test_RawPools_AsArray(t *testing.T) {
+	t.Parallel()
+	for _, test := range testData_RawPools() {
+		t.Run(test.Name, func(t *testing.T) {
+			require.Equal(t, test.Array, RawPools(&test.Input).AsArray())
 		})
 	}
 }
 
 func Test_RawPools_AsMap(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name   string
-		input  rawPools
-		output map[PoolName]RawConfigPool
-	}{
-		{name: `Empty`,
-			input:  rawPools{a: []any{}},
-			output: map[PoolName]RawConfigPool{}},
-		{name: `Single Pool`,
-			input: rawPools{a: []any{
-				map[string]any{"poolid": "pool1"}}},
-			output: map[PoolName]RawConfigPool{
-				"pool1": &rawConfigPool{
-					a:    map[string]any{"poolid": "pool1"},
-					pool: util.Pointer(PoolName("pool1"))}}},
-		{name: `Single Pool with Comment`,
-			input: rawPools{a: []any{
-				map[string]any{"poolid": "pool1", "comment": "Test pool"}}},
-			output: map[PoolName]RawConfigPool{
-				"pool1": &rawConfigPool{
-					a:    map[string]any{"poolid": "pool1", "comment": "Test pool"},
-					pool: util.Pointer(PoolName("pool1"))}}},
-		{name: `Multiple Pools`,
-			input: rawPools{a: []any{
-				map[string]any{"poolid": "pool1"},
-				map[string]any{"poolid": "pool2", "comment": "Second pool"},
-				map[string]any{"poolid": "pool3", "comment": ""}}},
-			output: map[PoolName]RawConfigPool{
-				"pool1": &rawConfigPool{
-					a:    map[string]any{"poolid": "pool1"},
-					pool: util.Pointer(PoolName("pool1"))},
-				"pool2": &rawConfigPool{
-					a:    map[string]any{"poolid": "pool2", "comment": "Second pool"},
-					pool: util.Pointer(PoolName("pool2"))},
-				"pool3": &rawConfigPool{
-					a:    map[string]any{"poolid": "pool3", "comment": ""},
-					pool: util.Pointer(PoolName("pool3"))}}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, RawPools(&test.input).AsMap())
+	for _, test := range testData_RawPools() {
+		t.Run(test.Name, func(t *testing.T) {
+			require.Equal(t, test.Map, RawPools(&test.Input).AsMap())
 		})
 	}
 }
 
 func Test_RawPools_Iter(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name   string
-		input  rawPools
-		output []RawConfigPool
-	}{
-		{name: `Empty`,
-			input:  rawPools{a: []any{}},
-			output: []RawConfigPool{}},
-		{name: `Single Pool`,
-			input: rawPools{a: []any{
-				map[string]any{"poolid": "pool1"}}},
-			output: []RawConfigPool{
-				&rawConfigPool{a: map[string]any{"poolid": "pool1"}}}},
-		{name: `Single Pool with Comment`,
-			input: rawPools{a: []any{
-				map[string]any{"poolid": "pool1", "comment": "Test pool"}}},
-			output: []RawConfigPool{
-				&rawConfigPool{a: map[string]any{"poolid": "pool1", "comment": "Test pool"}}}},
-		{name: `Multiple Pools`,
-			input: rawPools{a: []any{
-				map[string]any{"poolid": "pool1"},
-				map[string]any{"poolid": "pool2", "comment": "Second pool"},
-				map[string]any{"poolid": "pool3", "comment": ""}}},
-			output: []RawConfigPool{
-				&rawConfigPool{a: map[string]any{"poolid": "pool1"}},
-				&rawConfigPool{a: map[string]any{"poolid": "pool2", "comment": "Second pool"}},
-				&rawConfigPool{a: map[string]any{"poolid": "pool3", "comment": ""}}}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			// Test iterating over all items
-			var result []RawConfigPool
-			for pool := range RawPools(&test.input).Iter() {
-				result = append(result, pool)
-			}
-			require.Equal(t, len(test.output), len(result))
-			for i := range result {
-				name, comment := result[i].Get()
-				expectedName, expectedComment := test.output[i].Get()
-				require.Equal(t, expectedName, name)
-				require.Equal(t, expectedComment, comment)
-			}
-			// Test early termination (break after first item)
-			if len(test.output) > 0 {
-				count := 0
-				for range RawPools(&test.input).Iter() {
-					count++
-					break
-				}
-				require.Equal(t, 1, count)
-			}
+	for _, test := range testData_RawPools() {
+		t.Run(test.Name, func(t *testing.T) {
+			testIter(t, RawPools(&test.Input), test.Array)
 		})
 	}
 }
 
 func Test_RawPools_Len(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name   string
-		input  rawPools
-		output int
-	}{
-		{name: `Empty`,
-			input:  rawPools{a: []any{}},
-			output: 0},
-		{name: `Single Pool`,
-			input: rawPools{a: []any{
-				map[string]any{"poolid": "pool1"}}},
-			output: 1},
-		{name: `Multiple Pools`,
-			input: rawPools{a: []any{
-				map[string]any{"poolid": "pool1"},
-				map[string]any{"poolid": "pool2"},
-				map[string]any{"poolid": "pool3"}}},
-			output: 3},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, RawPools(&test.input).Len())
+	for _, test := range testData_RawPools() {
+		t.Run(test.Name, func(t *testing.T) {
+			require.Equal(t, test.Len, RawPools(&test.Input).Len())
 		})
 	}
 }

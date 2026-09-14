@@ -27,8 +27,6 @@ func listRaw(ctx context.Context, IDtype string) {
 		list, err = c.GetAcmePluginList(ctx)
 	case "MetricServers":
 		list, err = c.GetMetricsServerList(ctx)
-	case "Nodes":
-		list, err = c.GetNodeList(ctx)
 	case "Resources":
 		list, err = c.GetResourceList(ctx, "")
 	case "Storages":

@@ -17,19 +17,19 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			id := cli.ValidateGuestIDset(args, "GuestID")
 			snapName := cli.RequiredIDset(args, 1, "SnapshotName")
-			config := proxmox.ConfigSnapshot{
-				Name:        proxmox.SnapshotName(snapName),
-				Description: cli.OptionalIDset(args, 2),
-				VmState:     memory,
-			}
-			memory = false
+			description := cli.OptionalIDset(args, 2)
 			client := cli.NewClient()
 			vmr := proxmox.NewVmRef(id)
 			_, err = client.GetVmInfo(cli.Context(), vmr)
 			if err != nil {
 				return
 			}
-			err = config.Create(cli.Context(), client, vmr)
+			switch vmr.GetVmType() {
+			case proxmox.GuestLxc:
+				err = client.New().Snapshot.CreateLxc(cli.Context(), *vmr, proxmox.SnapshotName(snapName), description)
+			case proxmox.GuestQemu:
+				err = client.New().Snapshot.CreateQemu(cli.Context(), *vmr, proxmox.SnapshotName(snapName), description, false)
+			}
 			if err != nil {
 				return
 			}

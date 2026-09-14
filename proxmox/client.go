@@ -75,12 +75,12 @@ const (
 // VmRef - virtual machine ref parts
 // map[type:qemu node:proxmox1-xx id:qemu/132 diskread:5.57424738e+08 disk:0 netin:5.9297450593e+10 mem:3.3235968e+09 uptime:1.4567097e+07 vmid:132 template:0 maxcpu:2 netout:6.053310416e+09 maxdisk:3.4359738368e+10 maxmem:8.592031744e+09 diskwrite:1.49663619584e+12 status:running cpu:0.00386980694947209 name:appt-app1-dev.xxx.xx]
 type VmRef struct { // In the future this will be replaced by GuestRef and guestRef.
-	vmId    GuestID
+	haGroup string
+	haState string
 	node    NodeName
 	pool    PoolName
+	vmId    GuestID
 	vmType  GuestType
-	haState string
-	haGroup string
 }
 
 func (vmr *VmRef) SetNode(node string) {
@@ -172,6 +172,7 @@ func (c *Client) New() ClientNew {
 		Group:     &groupClient{oldClient: c, api: apiClientPtr},
 		Guest:     &guestClient{oldClient: c, api: apiClientPtr},
 		LxcGuest:  &lxcGuestClient{oldClient: c, api: apiClientPtr},
+		Node:      &nodeClient{oldClient: c, api: apiClientPtr},
 		Pool:      &poolClient{oldClient: c, api: apiClientPtr},
 		QemuGuest: &qemuGuestClient{oldClient: c, api: apiClientPtr},
 		Snapshot:  &snapshotClient{oldClient: c, api: apiClientPtr},
@@ -277,6 +278,7 @@ func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[str
 	return err
 }
 
+// Deprecated: use NodeInterface.List() instead.
 func (c *Client) GetNodeList(ctx context.Context) (list map[string]interface{}, err error) {
 	err = c.GetJsonRetryable(ctx, "/nodes", &list, 3)
 	return
@@ -500,7 +502,7 @@ func (c *Client) GetVmSpiceProxy(ctx context.Context, vmr *VmRef) (vmSpiceProxy 
 	return
 }
 
-// deprecated use *VmRef.GetAgentInformation() instead
+// Deprecated: use *VmRef.GetAgentInformation() instead
 func (c *Client) GetVmAgentNetworkInterfaces(ctx context.Context, vmr *VmRef) ([]AgentNetworkInterface, error) {
 	raw, state, err := vmr.GetAgentInformation(ctx, c)
 	if err != nil {
@@ -720,7 +722,7 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 	return
 }
 
-// Deprecated use ConfigQemu.Create() instead
+// Deprecated: use ConfigQemu.Create() instead
 func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[string]interface{}) (exitStatus string, err error) {
 	// Create VM disks first to ensure disks names.
 	createdDisks, createdDisksErr := c.createVMDisks(ctx, node, vmParams)
@@ -823,7 +825,7 @@ func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[strin
 	return
 }
 
-// DEPRECATED superseded by CreateSnapshot()
+// Deprecated: superseded by CreateSnapshot()
 func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
 	ctx := context.Background()
 	err = c.CheckVmRef(ctx, vmr)
@@ -849,12 +851,12 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 	return
 }
 
-// DEPRECATED superseded by DeleteSnapshot()
+// Deprecated: superseded by DeleteSnapshot()
 func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
 	return DeleteSnapshot(context.Background(), c, vmr, SnapshotName(snapshotName))
 }
 
-// DEPRECATED superseded by ListSnapshots()
+// Deprecated: superseded by ListSnapshots()
 func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface{}, exitStatus string, err error) {
 	ctx := context.Background()
 	err = c.CheckVmRef(ctx, vmr)
@@ -873,12 +875,12 @@ func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface
 	return
 }
 
-// DEPRECATED superseded by RollbackSnapshot()
+// Deprecated: superseded by RollbackSnapshot()
 func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string, err error) {
 	return RollbackSnapshot(context.Background(), c, vmr, SnapshotName(snapshot))
 }
 
-// DEPRECATED SetVmConfig - send config options
+// Deprecated: SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config")
 }
@@ -971,7 +973,7 @@ func (c *Client) MoveLxcDisk(ctx context.Context, vmr *VmRef, disk string, stora
 	return
 }
 
-// DEPRECATED use MoveQemuDisk() instead.
+// Deprecated: use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	ctx := context.Background()

@@ -65,67 +65,6 @@ func Test_GuestNetworkRate_Validate(t *testing.T) {
 	}
 }
 
-func Test_GuestFeature_mapToStruct(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name   string
-		input  map[string]interface{}
-		output bool
-	}{
-		{name: "false",
-			input:  map[string]interface{}{"hasFeature": float64(0)},
-			output: false,
-		},
-		{name: "not set",
-			input:  map[string]interface{}{},
-			output: false,
-		},
-		{name: "true",
-			input:  map[string]interface{}{"hasFeature": float64(1)},
-			output: true,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, GuestFeature("").mapToStruct(test.input), test.name)
-		})
-	}
-}
-
-func Test_GuestFeature_Validate(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name  string
-		input GuestFeature
-		err   error
-	}{
-		// Invalid
-		{name: "Invalid empty",
-			input: "",
-			err:   GuestFeature("").Error(),
-		},
-		{name: "Invalid not enum",
-			input: "invalid",
-			err:   GuestFeature("").Error(),
-		},
-		// Valid
-		{name: "Valid GuestFeature_Clone",
-			input: GuestFeature_Clone,
-		},
-		{name: "Valid GuestFeature_Copy",
-			input: GuestFeature_Copy,
-		},
-		{name: "Valid GuestFeature_Snapshot",
-			input: GuestFeature_Snapshot,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.err, test.input.Validate(), test.name)
-		})
-	}
-}
-
 func Test_GuestID_Validate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

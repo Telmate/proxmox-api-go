@@ -8,6 +8,61 @@ import (
 	"net/http"
 )
 
+type (
+	NodeInterface interface {
+		List(context.Context) (RawNodesInfo, error)
+		ListNoCheck(context.Context) (RawNodesInfo, error)
+
+		Reboot(context.Context, NodeName) error
+		RebootNoCheck(context.Context, NodeName) error
+
+		Shutdown(context.Context, NodeName) error
+		ShutdownNoCheck(context.Context, NodeName) error
+	}
+
+	nodeClient struct {
+		api       *clientAPI
+		oldClient *Client
+	}
+)
+
+var _ NodeInterface = (*nodeClient)(nil)
+
+func (c *nodeClient) List(ctx context.Context) (RawNodesInfo, error) { return listNodes(ctx, c.api) }
+
+func (c *nodeClient) ListNoCheck(ctx context.Context) (RawNodesInfo, error) {
+	return listNodes(ctx, c.api)
+}
+
+func (c *nodeClient) Reboot(ctx context.Context, node NodeName) error {
+	if err := node.Validate(); err != nil {
+		return err
+	}
+	return c.RebootNoCheck(ctx, node)
+}
+
+func (c *nodeClient) RebootNoCheck(ctx context.Context, node NodeName) error {
+	return nodeStatusCommand(ctx, c.api, node, "reboot")
+}
+func (c *nodeClient) Shutdown(ctx context.Context, node NodeName) error {
+	if err := node.Validate(); err != nil {
+		return err
+	}
+	return c.ShutdownNoCheck(ctx, node)
+}
+
+func (c *nodeClient) ShutdownNoCheck(ctx context.Context, node NodeName) error {
+	return nodeStatusCommand(ctx, c.api, node, "shutdown")
+}
+
+func listNodes(ctx context.Context, c *clientAPI) (*rawNodesInfo, error) {
+	raw, err := c.getList(ctx, "/nodes", "cluster", "status")
+	if err != nil {
+		return nil, err
+	}
+	return &rawNodesInfo{a: raw}, nil
+}
+
 // Only the following characters are allowed: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-".
 // May not start with a hyphen.
 // May not end with a hyphen.
@@ -57,6 +112,10 @@ func (name NodeName) Validate() error {
 
 func (name NodeName) String() string { return string(name) } // String is for fmt.Stringer.
 
+func nodeStatusCommand(ctx context.Context, c *clientAPI, node NodeName, command string) error {
+	return c.postRawTask(ctx, "/nodes/"+node.String()+"/status", new([]byte("command="+command)))
+}
+
 func (c *Client) nodeStatusCommand(ctx context.Context, node, command string) (exitStatus string, err error) {
 	nodes, err := c.GetNodeList(ctx)
 	if err != nil {
@@ -95,10 +154,12 @@ func (c *Client) nodeStatusCommand(ctx context.Context, node, command string) (e
 	return
 }
 
+// Deprecated: use NodeInterface.Shutdown() instead.
 func (c *Client) ShutdownNode(ctx context.Context, node string) (exitStatus string, err error) {
 	return c.nodeStatusCommand(ctx, node, "shutdown")
 }
 
+// Deprecated: use NodeInterface.Reboot() instead.
 func (c *Client) RebootNode(ctx context.Context, node string) (exitStatus string, err error) {
 	return c.nodeStatusCommand(ctx, node, "reboot")
 }

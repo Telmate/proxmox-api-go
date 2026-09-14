@@ -51,7 +51,8 @@ func CSV[T fmt.Stringer](array []T) string {
 	}
 	builder := strings.Builder{}
 	for i := range array {
-		builder.WriteString("," + array[i].String())
+		builder.WriteByte(',')
+		builder.WriteString(array[i].String())
 	}
 	return builder.String()[1:]
 }

@@ -535,24 +535,7 @@ func Test_rawApiTokens_Iter(t *testing.T) {
 	t.Parallel()
 	for _, test := range test_rawApiTokens_Array_Data() {
 		t.Run(test.name, func(t *testing.T) {
-			// Test iterating over all items
-			var result []RawApiTokenConfig
-			for token := range RawApiTokens(&test.input).Iter() {
-				result = append(result, token)
-			}
-			require.Equal(t, len(test.output), len(result))
-			for i := range result {
-				require.Equal(t, test.output[i].Get(), result[i].Get())
-			}
-			// Test early termination (break after first item)
-			if len(test.output) > 0 {
-				count := 0
-				for range RawApiTokens(&test.input).Iter() {
-					count++
-					break
-				}
-				require.Equal(t, 1, count)
-			}
+			testIter(t, RawApiTokens(&test.input), test.output)
 		})
 	}
 }

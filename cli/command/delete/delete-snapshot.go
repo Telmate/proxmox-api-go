@@ -14,14 +14,12 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			id := cli.ValidateGuestIDset(args, "GuestID")
 			snapName := cli.RequiredIDset(args, 1, "SnapshotName")
-			_, err = proxmox.SnapshotName(snapName).Delete(cli.Context(), cli.NewClient(), proxmox.NewVmRef(id))
-			if err != nil {
+			if _, err = cli.NewClient().New().Snapshot.Delete(cli.Context(), *proxmox.NewVmRef(id), proxmox.SnapshotName(snapName)); err != nil {
 				return
 			}
 			cli.PrintItemDeleted(deleteCmd.OutOrStdout(), snapName, "Snapshot")
 			return
-		},
-	}
+		}}
 )
 
 func init() {
