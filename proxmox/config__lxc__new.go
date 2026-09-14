@@ -669,8 +669,8 @@ type RawConfigLXC interface {
 
 type rawConfigLXC struct {
 	a       map[string]any
-	guestID GuestID
 	node    NodeName
+	guestID GuestID
 	version EncodedVersion
 }
 
