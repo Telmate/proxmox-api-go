@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/netip"
 	"regexp"
@@ -19,9 +20,15 @@ type (
 		Delete(context.Context, VmRef) (bool, error)
 		DeleteNoCheck(context.Context, VmRef) (bool, error)
 
+		HasFeature(context.Context, VmRef, GuestFeature) (bool, error)
+		HasFeatureNoCheck(context.Context, VmRef, GuestFeature) (bool, error)
+
 		// List all guest and templates the user has viewing rights for in the cluster.
 		List(context.Context) (RawGuestResources, error)
 		ListNoCheck(context.Context) (RawGuestResources, error)
+
+		ListFeatures(context.Context, VmRef) (GuestFeatures, error)
+		ListFeaturesNoCheck(context.Context, VmRef) (GuestFeatures, error)
 
 		Reboot(context.Context, VmRef) error
 		RebootNoCheck(context.Context, VmRef) error
@@ -236,40 +243,6 @@ func (rate GuestNetworkRate) Validate() error {
 		return errors.New(GuestNetworkRate_Error_Invalid)
 	}
 	return nil
-}
-
-// Enum
-type GuestFeature string
-
-const (
-	GuestFeature_Clone    GuestFeature = "clone"
-	GuestFeature_Copy     GuestFeature = "copy"
-	GuestFeature_Snapshot GuestFeature = "snapshot"
-)
-
-func (GuestFeature) Error() error {
-	return errors.New("value should be one of (" + string(GuestFeature_Clone) + " ," + string(GuestFeature_Copy) + " ," + string(GuestFeature_Snapshot) + ")")
-}
-
-func (GuestFeature) mapToStruct(params map[string]interface{}) bool {
-	if value, isSet := params["hasFeature"]; isSet {
-		return Itob(int(value.(float64)))
-	}
-	return false
-}
-
-func (feature GuestFeature) Validate() error {
-	switch feature {
-	case GuestFeature_Copy, GuestFeature_Clone, GuestFeature_Snapshot:
-		return nil
-	}
-	return GuestFeature("").Error()
-}
-
-type GuestFeatures struct {
-	Clone    bool `json:"clone"`
-	Copy     bool `json:"copy"`
-	Snapshot bool `json:"snapshot"`
 }
 
 // Positive number between 100 and 1000000000
@@ -537,6 +510,8 @@ const (
 
 const GuestType_Error_Invalid = "guest type should be one of (lxc, qemu)"
 
+func (t GuestType) MarshalJSON() ([]byte, error) { return json.Marshal(t.String()) }
+
 func (t *GuestType) Parse(guestType string) error {
 	switch guestType {
 	case "lxc":
@@ -568,26 +543,10 @@ func (t GuestType) String() string {
 	return "unknown"
 }
 
+// Deprecated: use GuestInterface.HasFeature() instead.
 // check if the guest has the specified feature.
 func GuestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
-	err := feature.Validate()
-	if err != nil {
-		return false, err
-	}
-	err = client.CheckVmRef(ctx, vmr)
-	if err != nil {
-		return false, err
-	}
-	return guestHasFeature(ctx, vmr, client, feature)
-}
-
-func guestHasFeature(ctx context.Context, vmr *VmRef, client *Client, feature GuestFeature) (bool, error) {
-	var params map[string]interface{}
-	params, err := client.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/feature?feature=snapshot", "guest", "FEATURES")
-	if err != nil {
-		return false, err
-	}
-	return GuestFeature("").mapToStruct(params), nil
+	return client.New().Guest.HasFeature(ctx, *vmr, feature)
 }
 
 // Check if there are any pending changes that require a reboot to be applied.
@@ -622,21 +581,22 @@ func GuestStart(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 	return
 }
 
+// Deprecated: use GuestInterface.ListFeatures() instead.
 // List all features the guest has.
 func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (features GuestFeatures, err error) {
 	err = client.CheckVmRef(ctx, vmr)
 	if err != nil {
 		return
 	}
-	features.Clone, err = guestHasFeature(ctx, vmr, client, GuestFeature_Clone)
+	features.Clone, err = guestHasFeature(ctx, client.api(), *vmr, GuestFeatureClone)
 	if err != nil {
 		return
 	}
-	features.Copy, err = guestHasFeature(ctx, vmr, client, GuestFeature_Copy)
+	features.Copy, err = guestHasFeature(ctx, client.api(), *vmr, GuestFeatureCopy)
 	if err != nil {
 		return
 	}
-	features.Snapshot, err = guestHasFeature(ctx, vmr, client, GuestFeature_Snapshot)
+	features.Snapshot, err = guestHasFeature(ctx, client.api(), *vmr, GuestFeatureSnapshot)
 	return
 }
 
