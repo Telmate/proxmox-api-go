@@ -187,9 +187,11 @@ func Test_Version_Smaller(t *testing.T) {
 	}
 }
 
-func Test_EncodedVersion_const(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
+func testData_EncodedVersion_data() []struct {
+	input  Version
+	output EncodedVersion
+} {
+	return []struct {
 		input  Version
 		output EncodedVersion
 	}{
@@ -197,9 +199,23 @@ func Test_EncodedVersion_const(t *testing.T) {
 		{input: Version{Major: 9}, output: version_9_0_0},
 		{input: Version{Major: 8}, output: version_8_0_0},
 	}
+}
+
+func Test_EncodedVersion_const(t *testing.T) {
+	t.Parallel()
+	tests := testData_EncodedVersion_data()
 	for _, test := range tests {
 		t.Run(test.input.String(), func(t *testing.T) {
 			require.Equal(t, test.output, test.input.Encode())
 		})
+	}
+}
+
+func Benchmark_EncodedVersion(b *testing.B) {
+	tests := testData_EncodedVersion_data()
+	for b.Loop() {
+		for i := range tests {
+			tests[i].input.Encode()
+		}
 	}
 }
