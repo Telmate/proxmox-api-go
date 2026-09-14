@@ -85,9 +85,12 @@ func (s stringer) String() string {
 	return string(s)
 }
 
-func Test_CSV(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
+func test_Data_CSV() []struct {
+	name   string
+	input  []stringer
+	output string
+} {
+	return []struct {
 		name   string
 		input  []stringer
 		output string
@@ -121,10 +124,24 @@ func Test_CSV(t *testing.T) {
 				return result[1:]
 			}()},
 	}
+}
+
+func Test_CSV(t *testing.T) {
+	t.Parallel()
+	tests := test_Data_CSV()
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
 			require.Equal(t, test.output, CSV(test.input))
 		})
+	}
+}
+
+func Benchmark_CSV(b *testing.B) {
+	tests := test_Data_CSV()
+	for b.Loop() {
+		for i := range tests {
+			CSV(tests[i].input)
+		}
 	}
 }
 
