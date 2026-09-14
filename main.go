@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -185,11 +186,16 @@ func main() {
 		vmr = proxmox.NewVmRef(vmid)
 		err := c.CheckVmRef(ctx, vmr)
 		failError(err)
-		networkInterfaces, err := c.GetVmAgentNetworkInterfaces(ctx, vmr)
-		failError(err)
 
-		networkInterfaceJSON, err := json.Marshal(networkInterfaces)
+		raw, state, err := vmr.GetAgentInformation(ctx, c)
 		failError(err)
+		if state == proxmox.GuestAgentStateNotRunning {
+			log.Fatal(errors.New("guest agent is not running"))
+		}
+		if state == proxmox.GuestAgentStateVmNotRunning {
+			log.Fatal(errors.New("vm is not running"))
+		}
+		networkInterfaceJSON, _ := json.Marshal(raw.Get())
 		fmt.Println(string(networkInterfaceJSON))
 
 	case "createQemu":
@@ -301,58 +307,32 @@ func main() {
 	case "createQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		failError(err)
-		jbody, err = c.CreateQemuSnapshot(sourceVmr, flag.Args()[2])
-		failError(err)
+		failError(c.New().Snapshot.CreateQemu(ctx, *sourceVmr, proxmox.SnapshotName(flag.Args()[2]), "", false))
 
 	case "deleteQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		failError(err)
-		jbody, err = c.DeleteQemuSnapshot(sourceVmr, flag.Args()[2])
+		_, err = c.New().Snapshot.Delete(ctx, *sourceVmr, proxmox.SnapshotName(flag.Args()[2]))
 		failError(err)
 
 	case "listQemuSnapshot":
 		sourceVmr, err := c.GetVmRefByName(ctx, proxmox.GuestName(flag.Args()[1]))
-		if err == nil {
-			jbody, _, err = c.ListQemuSnapshot(sourceVmr)
-			if rec, ok := jbody.(map[string]interface{}); ok {
-				temp := rec["data"].([]interface{})
-				for _, val := range temp {
-					snapshotName := val.(map[string]interface{})
-					if snapshotName["name"] != "current" {
-						fmt.Println(snapshotName["name"])
-					}
-				}
-			} else {
-				fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
-			}
-		}
 		failError(err)
 
-	case "listQemuSnapshot2":
-		sourceVmrs, err := c.GetVmRefsByName(ctx, proxmox.GuestName(flag.Args()[1]))
-		if err == nil {
-			for _, sourceVmr := range sourceVmrs {
-				jbody, _, err = c.ListQemuSnapshot(sourceVmr)
-				if rec, ok := jbody.(map[string]interface{}); ok {
-					temp := rec["data"].([]interface{})
-					for _, val := range temp {
-						snapshotName := val.(map[string]interface{})
-						if snapshotName["name"] != "current" {
-							fmt.Printf("%d@%s:%s\n", sourceVmr.VmId(), sourceVmr.Node(), snapshotName["name"])
-						}
-					}
-				} else {
-					fmt.Printf("record not a map[string]interface{}: %v\n", jbody)
-				}
-			}
-		}
+		raw, err := c.New().Snapshot.List(ctx, *sourceVmr)
 		failError(err)
+		raws := raw.AsArray()
+		snaps := make([]proxmox.SnapshotInfo, len(raws))
+		for i := range raws {
+			snaps[i] = raws[i].Get()
+		}
+		snapList, _ := json.Marshal(snaps)
+		fmt.Println(snapList)
 
 	case "rollbackQemu":
 		sourceVmr, err := c.GetVmRefByName(ctx, proxmox.GuestName(flag.Args()[1]))
 		failError(err)
-		jbody, err = c.RollbackQemuVm(sourceVmr, flag.Args()[2])
-		failError(err)
+		failError(c.New().Snapshot.Rollback(ctx, *sourceVmr, proxmox.SnapshotName(flag.Args()[2]), false))
 		// TODO make sshforward in new cli
 	case "sshforward":
 		vmr = proxmox.NewVmRef(vmid)

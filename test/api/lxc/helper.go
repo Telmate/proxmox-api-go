@@ -10,8 +10,7 @@ import (
 )
 
 func CheckConfig(t *testing.T, ctx context.Context, c *pveSDK.Client, guestID pveSDK.GuestID, expected pveSDK.ConfigLXC) {
-	vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-	raw, err := pveSDK.NewRawConfigLXCFromAPI(ctx, vmr, c)
+	raw, err := c.New().LxcGuest.Read(ctx, *pveSDK.NewVmRef(pveSDK.GuestID(guestID)))
 	require.NoError(t, err)
 	require.NotNil(t, raw)
 	config := raw.Get(nil, pveSDK.PowerStateUnknown)

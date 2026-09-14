@@ -199,7 +199,7 @@ type ConfigSnapshot struct {
 	VmState     bool         `json:"ram,omitempty"`
 }
 
-// Deprecated use SnapshotInterface.CreateLxc() or SnapshotInterface.CreateQemu() instead
+// Deprecated: use SnapshotInterface.CreateLxc() or SnapshotInterface.CreateQemu() instead
 // Creates a snapshot and validates the input
 func (config ConfigSnapshot) Create(ctx context.Context, c *Client, vmr *VmRef) (err error) {
 	if err = config.Validate(); err != nil {
@@ -217,7 +217,7 @@ func (config ConfigSnapshot) Create(ctx context.Context, c *Client, vmr *VmRef) 
 	return nil
 }
 
-// Deprecated use SnapshotInterface.CreateLxcNoCheck() or SnapshotInterface.CreateQemuNoCheck() instead
+// Deprecated: use SnapshotInterface.CreateLxcNoCheck() or SnapshotInterface.CreateQemuNoCheck() instead
 // Create a snapshot without validating the input, use ConfigSnapshot.Create() to validate the input.
 func (config ConfigSnapshot) CreateNoCheck(ctx context.Context, c *Client, vmr *VmRef) error {
 	if err := c.CheckVmRef(ctx, vmr); err != nil {
@@ -500,24 +500,24 @@ type snapshot struct {
 	snapshot *Snapshot
 }
 
-// Deprecated use SnapshotInterface.List() instead
+// Deprecated: use SnapshotInterface.List() instead
 func ListSnapshots(ctx context.Context, c *Client, vmr *VmRef) (RawSnapshots, error) {
 	return c.New().Snapshot.List(ctx, *vmr)
 }
 
-// Deprecated use SnapshotInterface.Update() instead
+// Deprecated: use SnapshotInterface.Update() instead
 // Updates the description of the specified snapshot, same as SnapshotName.UpdateDescription()
 func UpdateSnapshotDescription(ctx context.Context, c *Client, vmr *VmRef, snapshot SnapshotName, description string) (err error) {
 	return snapshot.UpdateDescription(ctx, c, vmr, description)
 }
 
-// Deprecated use SnapshotInterface.Delete() instead
+// Deprecated: use SnapshotInterface.Delete() instead
 // Deletes a snapshot, same as SnapshotName.Delete()
 func DeleteSnapshot(ctx context.Context, c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
 	return snapshot.Delete(ctx, c, vmr)
 }
 
-// Deprecated use SnapshotInterface.Rollback() instead
+// Deprecated: use SnapshotInterface.Rollback() instead
 // Rollback to a snapshot, same as SnapshotName.Rollback()
 func RollbackSnapshot(ctx context.Context, c *Client, vmr *VmRef, snapshot SnapshotName) (exitStatus string, err error) {
 	return snapshot.Rollback(ctx, c, vmr)
@@ -580,7 +580,7 @@ func (snap SnapshotName) delete(ctx context.Context, c *clientAPI, vmr VmRef) (b
 	return true, nil
 }
 
-// Deprecated use SnapshotName.Delete() instead
+// Deprecated: use SnapshotName.Delete() instead
 // Deletes the specified snapshot, validates the input
 func (snap SnapshotName) Delete(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
 	if err = c.CheckVmRef(ctx, vmr); err != nil {
@@ -593,7 +593,7 @@ func (snap SnapshotName) Delete(ctx context.Context, c *Client, vmr *VmRef) (exi
 	return snap.DeleteNoCheck(ctx, c, vmr)
 }
 
-// Deprecated use SnapshotInterface.DeleteNoCheck() instead
+// Deprecated: use SnapshotInterface.DeleteNoCheck() instead
 // Deletes the specified snapshot without validating the input, use SnapshotName.Delete() to validate the input.
 func (snap SnapshotName) DeleteNoCheck(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
 	_, err = c.New().Snapshot.DeleteNoCheck(ctx, *vmr, snap)
@@ -612,7 +612,7 @@ func (snap SnapshotName) rollback(ctx context.Context, c *clientAPI, vmr VmRef, 
 	return c.postRawRetry(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback", body, 3)
 }
 
-// Deprecated use SnapshotInterface.Rollback() instead
+// Deprecated: use SnapshotInterface.Rollback() instead
 // Rollback to the specified snapshot, validates the input
 func (snap SnapshotName) Rollback(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
 	if err = c.CheckVmRef(ctx, vmr); err != nil {
@@ -621,7 +621,7 @@ func (snap SnapshotName) Rollback(ctx context.Context, c *Client, vmr *VmRef) (e
 	return "", c.New().Snapshot.Rollback(ctx, *vmr, snap, false)
 }
 
-// Deprecated use SnapshotInterface.RollbackNoCheck() instead
+// Deprecated: use SnapshotInterface.RollbackNoCheck() instead
 // Rollback to the specified snapshot without validating the input, use SnapshotName.Rollback() to validate the input.
 func (snap SnapshotName) RollbackNoCheck(ctx context.Context, c *Client, vmr *VmRef) (exitStatus string, err error) {
 	return "", c.New().Snapshot.RollbackNoCheck(ctx, *vmr, snap, false)
@@ -633,13 +633,13 @@ func (snap SnapshotName) update(ctx context.Context, c *clientAPI, vmr VmRef, de
 	return c.putRawRetry(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot/"+string(snap)+"/config", util.Pointer([]byte(snapshotApiKeyDescription+"="+body.Escape(description))), 3)
 }
 
-// Deprecated use SnapshotInterface.Update() instead
+// Deprecated: use SnapshotInterface.Update() instead
 // Updates the description of the specified snapshot, validates the input
 func (snap SnapshotName) UpdateDescription(ctx context.Context, c *Client, vmr *VmRef, description string) (err error) {
 	return c.New().Snapshot.Update(ctx, *vmr, snap, description)
 }
 
-// Deprecated use SnapshotInterface.UpdateNoCheck() instead
+// Deprecated: use SnapshotInterface.UpdateNoCheck() instead
 // Updates the description of the specified snapshot without validating the input, use SnapshotName.UpdateDescription() to validate the input.
 func (snap SnapshotName) UpdateDescriptionNoCheck(ctx context.Context, c *Client, vmr *VmRef, description string) error {
 	return c.New().Snapshot.UpdateNoCheck(ctx, *vmr, snap, description)

@@ -18,14 +18,13 @@ var featureCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		features, err := proxmox.ListGuestFeatures(cli.Context(), vmr, c)
-		if err != nil {
+		var features proxmox.GuestFeatures
+		if features, err = c.New().Guest.ListFeatures(cli.Context(), *vmr); err != nil {
 			return
 		}
 		cli.PrintFormattedJson(guestCmd.OutOrStdout(), features)
 		return
-	},
-}
+	}}
 
 func init() {
 	guestCmd.AddCommand(featureCmd)

@@ -172,8 +172,8 @@ type ConfigQemu struct {
 	Networks         QemuNetworkInterfaces `json:"networks,omitempty"`
 	Pool             *PoolName             `json:"pool,omitempty"`
 	Protection       *bool                 `json:"protection,omitempty"` // never nil when returned
-	QemuDisks        QemuDevices           `json:"disk,omitempty"`       // Deprecated use Disks *QemuStorages instead
-	QemuIso          string                `json:"qemuiso,omitempty"`    // Deprecated use Iso *IsoFile instead
+	QemuDisks        QemuDevices           `json:"disk,omitempty"`       // Deprecated: use Disks *QemuStorages instead
+	QemuIso          string                `json:"qemuiso,omitempty"`    // Deprecated: use Iso *IsoFile instead
 	QemuKVM          *bool                 `json:"kvm,omitempty"`
 	QemuOs           string                `json:"ostype,omitempty"`
 	PciDevices       QemuPciDevices        `json:"pci_devices,omitempty"`

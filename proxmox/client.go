@@ -502,7 +502,7 @@ func (c *Client) GetVmSpiceProxy(ctx context.Context, vmr *VmRef) (vmSpiceProxy 
 	return
 }
 
-// deprecated use *VmRef.GetAgentInformation() instead
+// Deprecated: use *VmRef.GetAgentInformation() instead
 func (c *Client) GetVmAgentNetworkInterfaces(ctx context.Context, vmr *VmRef) ([]AgentNetworkInterface, error) {
 	raw, state, err := vmr.GetAgentInformation(ctx, c)
 	if err != nil {
@@ -722,7 +722,7 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 	return
 }
 
-// Deprecated use ConfigQemu.Create() instead
+// Deprecated: use ConfigQemu.Create() instead
 func (c *Client) CreateQemuVm(ctx context.Context, node NodeName, vmParams map[string]interface{}) (exitStatus string, err error) {
 	// Create VM disks first to ensure disks names.
 	createdDisks, createdDisksErr := c.createVMDisks(ctx, node, vmParams)
@@ -825,7 +825,7 @@ func (c *Client) CloneQemuVm(ctx context.Context, vmr *VmRef, vmParams map[strin
 	return
 }
 
-// DEPRECATED superseded by CreateSnapshot()
+// Deprecated: superseded by CreateSnapshot()
 func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
 	ctx := context.Background()
 	err = c.CheckVmRef(ctx, vmr)
@@ -851,12 +851,12 @@ func (c *Client) CreateQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus
 	return
 }
 
-// DEPRECATED superseded by DeleteSnapshot()
+// Deprecated: superseded by DeleteSnapshot()
 func (c *Client) DeleteQemuSnapshot(vmr *VmRef, snapshotName string) (exitStatus string, err error) {
 	return DeleteSnapshot(context.Background(), c, vmr, SnapshotName(snapshotName))
 }
 
-// DEPRECATED superseded by ListSnapshots()
+// Deprecated: superseded by ListSnapshots()
 func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface{}, exitStatus string, err error) {
 	ctx := context.Background()
 	err = c.CheckVmRef(ctx, vmr)
@@ -875,12 +875,12 @@ func (c *Client) ListQemuSnapshot(vmr *VmRef) (taskResponse map[string]interface
 	return
 }
 
-// DEPRECATED superseded by RollbackSnapshot()
+// Deprecated: superseded by RollbackSnapshot()
 func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string, err error) {
 	return RollbackSnapshot(context.Background(), c, vmr, SnapshotName(snapshot))
 }
 
-// DEPRECATED SetVmConfig - send config options
+// Deprecated: SetVmConfig - send config options
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config")
 }
@@ -973,7 +973,7 @@ func (c *Client) MoveLxcDisk(ctx context.Context, vmr *VmRef, disk string, stora
 	return
 }
 
-// DEPRECATED use MoveQemuDisk() instead.
+// Deprecated: use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	ctx := context.Background()
