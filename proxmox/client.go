@@ -2507,7 +2507,7 @@ type Version struct {
 }
 
 func (v Version) Encode() EncodedVersion {
-	return EncodedVersion(v.Major)*256*256 + EncodedVersion(v.Minor)*256 + EncodedVersion(v.Patch)
+	return EncodedVersion(v.Major)<<16 + EncodedVersion(v.Minor)<<8 + EncodedVersion(v.Patch)
 }
 
 // Greater returns true if the version is greater than the other version.
