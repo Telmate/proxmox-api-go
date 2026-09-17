@@ -880,7 +880,8 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 	return RollbackSnapshot(context.Background(), c, vmr, SnapshotName(snapshot))
 }
 
-// Deprecated: SetVmConfig - send config options
+// SetVmConfig - send config options.
+// TODO deprecate, still used by terraform.
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config")
 }
@@ -973,8 +974,9 @@ func (c *Client) MoveLxcDisk(ctx context.Context, vmr *VmRef, disk string, stora
 	return
 }
 
-// Deprecated: use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
+// TODO deprecate, still used by terraform.
+// use MoveQemuDisk() instead.
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	ctx := context.Background()
 	if disk == "" {
