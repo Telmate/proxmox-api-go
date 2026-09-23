@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -21,6 +20,15 @@ import (
 
 const debugLargeBodyThreshold = 5 * 1024 * 1024
 
+const (
+	headerAuthorization       = "Authorization"
+	headerCSRFPrevention      = "CSRFPreventionToken"
+	prefixAuthorizationCookie = "PVEAuthCookie="
+	prefixAuthorizationToken  = "PVEAPIToken="
+)
+
+const redacted = "<<<REDACTED>>>"
+
 type Session struct {
 	httpClient *http.Client
 	ApiUrl     string
@@ -28,7 +36,7 @@ type Session struct {
 	CsrfToken  string
 	AuthToken  string // Combination of user, realm, token ID and UUID
 	Headers    http.Header
-	Debug      bool
+	Debug      io.Writer
 }
 
 func NewSession(apiUrl string, hclient *http.Client, proxyString string, tls *tls.Config) (session *Session, err error) {
@@ -157,7 +165,7 @@ func (s *Session) login(ctx context.Context, username string, password string, o
 	}
 	reqbody := paramsToBody(reqUser)
 	olddebug := s.Debug
-	s.Debug = false // don't share passwords in debug log
+	s.Debug = nil // don't share passwords in debug log
 	resp, _, err := s.post(ctx, "/access/ticket", nil, &s.Headers, &reqbody)
 	s.Debug = olddebug
 	if err != nil {
@@ -180,7 +188,7 @@ func (s *Session) login(ctx context.Context, username string, password string, o
 		return fmt.Errorf("missing TFA code")
 	}
 	s.AuthTicket = dat["ticket"].(string)
-	s.CsrfToken = dat["CSRFPreventionToken"].(string)
+	s.CsrfToken = dat[headerCSRFPrevention].(string)
 	return nil
 }
 
@@ -193,10 +201,10 @@ func (s *Session) NewRequest(ctx context.Context, method, url string, headers *h
 		req.Header = *headers
 	}
 	if s.AuthToken != "" {
-		req.Header["Authorization"] = []string{"PVEAPIToken=" + s.AuthToken}
+		req.Header[headerAuthorization] = []string{prefixAuthorizationToken + s.AuthToken}
 	} else if s.AuthTicket != "" {
-		req.Header["Authorization"] = []string{"PVEAuthCookie=" + s.AuthTicket}
-		req.Header["CSRFPreventionToken"] = []string{s.CsrfToken}
+		req.Header[headerAuthorization] = []string{prefixAuthorizationCookie + s.AuthTicket}
+		req.Header[headerCSRFPrevention] = []string{s.CsrfToken}
 	}
 	return
 }
@@ -207,13 +215,8 @@ func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err er
 		req.Header[k] = v
 	}
 
-	if s.Debug {
-		includeBody := req.ContentLength < debugLargeBodyThreshold
-		d, _ := httputil.DumpRequestOut(req, includeBody)
-		if !includeBody {
-			d = append(d, fmt.Sprintf("<request body of %d bytes not shown>\n\n", req.ContentLength)...)
-		}
-		log.Printf(">>>>>>>>>> REQUEST:\n%v", string(d))
+	if s.Debug != nil {
+		logRequestOut(req.Clone(req.Context()), s.Debug)
 	}
 
 	resp, err = s.httpClient.Do(req)
@@ -238,13 +241,8 @@ func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err er
 	resp.Body.Close()
 	resp.Body = io.NopCloser(bytes.NewReader(respBody))
 
-	if s.Debug {
-		includeBody := resp.ContentLength < debugLargeBodyThreshold
-		dr, _ := httputil.DumpResponse(resp, includeBody)
-		if !includeBody {
-			dr = append(dr, fmt.Sprintf("<response body of %d bytes not shown>\n\n", resp.ContentLength)...)
-		}
-		log.Printf("<<<<<<<<<< RESULT:\n%v", string(dr))
+	if s.Debug != nil {
+		logRequestResponse(resp, s.Debug)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
@@ -402,4 +400,39 @@ func (s *Session) put(
 		headers.Add("Content-Type", "application/x-www-form-urlencoded")
 	}
 	return s.request(ctx, "PUT", url, params, headers, body)
+}
+
+func logRequestOut(req *http.Request, w io.Writer) {
+	includeBody := req.ContentLength < debugLargeBodyThreshold
+	if v, ok := req.Header[headerAuthorization]; ok {
+		if len(v) > 0 {
+			if strings.HasPrefix(v[0], prefixAuthorizationToken) {
+				req.Header[headerAuthorization] = []string{prefixAuthorizationToken + redacted}
+			} else if strings.HasPrefix(v[0], prefixAuthorizationCookie) {
+				req.Header[headerAuthorization] = []string{prefixAuthorizationCookie + redacted}
+			} else {
+				req.Header[headerAuthorization] = []string{redacted}
+			}
+		}
+	}
+	header := func() string { // to suppress the linter warnings
+		return headerCSRFPrevention
+	}
+	if _, ok := req.Header[header()]; ok {
+		req.Header[headerCSRFPrevention] = []string{redacted}
+	}
+	d, _ := httputil.DumpRequestOut(req, includeBody)
+	if !includeBody {
+		d = append(d, fmt.Sprintf("<request body of %d bytes not shown>\n\n", req.ContentLength)...)
+	}
+	w.Write(append([]byte(">>>>>>>>>> REQUEST:\n"), d...))
+}
+
+func logRequestResponse(resp *http.Response, w io.Writer) {
+	includeBody := resp.ContentLength < debugLargeBodyThreshold
+	d, _ := httputil.DumpResponse(resp, includeBody)
+	if !includeBody {
+		d = append(d, fmt.Sprintf("<response body of %d bytes not shown>\n\n", resp.ContentLength)...)
+	}
+	w.Write(append([]byte("<<<<<<<<<< RESULT:\n"), d...))
 }

@@ -48,7 +48,7 @@ func loadAppConfig() AppConfig {
 	}
 }
 
-func initializeProxmoxClient(ctx context.Context, config AppConfig, insecure bool, proxyURL string, taskTimeout int, debug bool) (*proxmox.Client, error) {
+func initializeProxmoxClient(ctx context.Context, config AppConfig, insecure bool, proxyURL string, taskTimeout int, debug io.Writer) (*proxmox.Client, error) {
 	tlsconf := &tls.Config{InsecureSkipVerify: insecure}
 	if !insecure {
 		tlsconf = nil
@@ -100,8 +100,13 @@ func main() {
 
 	ctx := context.Background()
 
+	var logger *logWriter
+	if *debug {
+		logger = &logWriter{}
+	}
+
 	// Initialize Proxmox client
-	c, err := initializeProxmoxClient(ctx, config, *insecure, *proxyURL, *taskTimeout, *debug)
+	c, err := initializeProxmoxClient(ctx, config, *insecure, *proxyURL, *taskTimeout, logger)
 	if err != nil {
 		log.Fatalf("Failed to initialize Proxmox client: %v", err)
 	}
@@ -1054,4 +1059,11 @@ func failError(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+type logWriter struct{}
+
+func (l *logWriter) Write(a []byte) (int, error) {
+	log.Println(string(a))
+	return len(a), nil
 }

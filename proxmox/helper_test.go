@@ -19,7 +19,7 @@ func testMockServerInit(t *testing.T) (*mockServer.Server, *Client) {
 	t.Helper()
 	server := mockServer.New(t)
 	server.Set(mockServer.RequestsAuth(), t)
-	c, err := NewClient(server.Url(), nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	c, err := NewClient(server.Url(), nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	c.timeUnit = time.Nanosecond
 	require.NoError(t, err)
 	err = c.Login(context.Background(), "root@pam", "", "")

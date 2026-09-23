@@ -83,7 +83,7 @@ func Client(ctx context.Context, apiUrl, userID, password, otp string, http_head
 	if http_headers == "" {
 		http_headers = os.Getenv("PM_HTTP_HEADERS")
 	}
-	c, err = proxmox.NewClient(apiUrl, nil, http_headers, tlsConf, proxyUrl, timeout, false)
+	c, err = proxmox.NewClient(apiUrl, nil, http_headers, tlsConf, proxyUrl, timeout, nil)
 	LogFatalError(err)
 	if userRequiresAPIToken(userID) {
 		var tokenID proxmox.ApiTokenID
