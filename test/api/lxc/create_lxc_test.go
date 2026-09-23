@@ -21,7 +21,7 @@ func Test_Lxc_Create_Minimal_Unprivileged(t *testing.T) {
 	const node = pveSDK.NodeName(test.FirstNode)
 	const storage = pveSDK.StorageName(test.GuestStorage)
 	const name = pveSDK.GuestName("Test-Lxc-Create-Minimal-Unprivileged")
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
@@ -66,7 +66,7 @@ func Test_Lxc_Create_Minimal_Privileged(t *testing.T) {
 	const node = pveSDK.NodeName(test.FirstNode)
 	const storage = pveSDK.StorageName(test.GuestStorage)
 	const name = pveSDK.GuestName("Test-Lxc-Create-Minimal-Privileged")
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
@@ -111,7 +111,7 @@ func Test_Lxc_Create_Minimal_Privileged_Unset(t *testing.T) {
 	const node = pveSDK.NodeName(test.FirstNode)
 	const storage = pveSDK.StorageName(test.GuestStorage)
 	const name = pveSDK.GuestName("Test-Lxc-Create-Minimal-Privileged-Unset")
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
@@ -158,7 +158,7 @@ func Test_Lxc_Create_Client_Race(t *testing.T) {
 	const guestName = "Test-Lxc-Create-Client-Race"
 	const guestsAmount = 5
 	ctx := context.Background()
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
@@ -212,7 +212,7 @@ func Test_Lxc_Create_Client_Race(t *testing.T) {
 					go func(i int) {
 						defer wg.Done()
 
-						cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+						cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 						if err != nil {
 							errCh <- err
 							return

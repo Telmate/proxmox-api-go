@@ -22,7 +22,7 @@ func Test_Snapshot_Update(t *testing.T) {
 		node     = pveSDK.NodeName(test.FirstNode)
 		snapName = pveSDK.SnapshotName("snap1")
 	)
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

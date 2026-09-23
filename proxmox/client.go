@@ -131,7 +131,7 @@ func NewVmRef(vmId GuestID) (vmr *VmRef) {
 	return
 }
 
-func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tls.Config, proxyString string, taskTimeout int, debug bool) (client *Client, err error) {
+func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tls.Config, proxyString string, taskTimeout int, debug io.Writer) (client *Client, err error) {
 	var sess *Session
 	sess, err_s := NewSession(apiUrl, hclient, proxyString, tls)
 	sess, err = createHeaderList(http_headers, sess)
@@ -880,7 +880,8 @@ func (c *Client) RollbackQemuVm(vmr *VmRef, snapshot string) (exitStatus string,
 	return RollbackSnapshot(context.Background(), c, vmr, SnapshotName(snapshot))
 }
 
-// Deprecated: SetVmConfig - send config options
+// SetVmConfig - send config options.
+// TODO deprecate, still used by terraform.
 func (c *Client) SetVmConfig(vmr *VmRef, params map[string]interface{}) (exitStatus interface{}, err error) {
 	return c.PostWithTask(context.Background(), params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config")
 }
@@ -973,8 +974,9 @@ func (c *Client) MoveLxcDisk(ctx context.Context, vmr *VmRef, disk string, stora
 	return
 }
 
-// Deprecated: use MoveQemuDisk() instead.
 // MoveQemuDisk - Move a disk from one storage to another
+// TODO deprecate, still used by terraform.
+// use MoveQemuDisk() instead.
 func (c *Client) MoveQemuDisk(vmr *VmRef, disk string, storage string) (exitStatus interface{}, err error) {
 	ctx := context.Background()
 	if disk == "" {
@@ -2507,7 +2509,7 @@ type Version struct {
 }
 
 func (v Version) Encode() EncodedVersion {
-	return EncodedVersion(v.Major)*256*256 + EncodedVersion(v.Minor)*256 + EncodedVersion(v.Patch)
+	return EncodedVersion(v.Major)<<16 + EncodedVersion(v.Minor)<<8 + EncodedVersion(v.Patch)
 }
 
 // Greater returns true if the version is greater than the other version.
