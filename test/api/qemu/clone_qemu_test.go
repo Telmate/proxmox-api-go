@@ -23,7 +23,7 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 	const guestName = "Test-Qemu-Clone-Client-Race"
 	const guestsAmount = 5
 	ctx := context.Background()
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
@@ -65,7 +65,7 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 					go func(i int) {
 						defer wg.Done()
 
-						cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+						cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 						if err != nil {
 							errCh <- err
 							return

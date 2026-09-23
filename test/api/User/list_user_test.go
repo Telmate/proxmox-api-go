@@ -78,7 +78,7 @@ func Test_User_List(t *testing.T) {
 					Expiration: util.Pointer(uint(123456789))},
 				{Name: "token3",
 					PrivilegeSeparation: util.Pointer(false)}}}}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

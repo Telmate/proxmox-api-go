@@ -19,7 +19,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 	const guestName = "Test-Qemu-Update-Max"
 	const guestID = 1020
 	ctx := context.Background()
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
@@ -152,7 +152,7 @@ func Test_Qemu_Upate_Reduced_To_Max(t *testing.T) {
 	const guestName = "Test-Qemu-Update-Reduced-To-Max"
 	const guestID = 1021
 	ctx := context.Background()
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
@@ -209,7 +209,7 @@ func Test_Qemu_Upate_Max_To_Reduced(t *testing.T) {
 	const guestName = "Test-Qemu-Update-Max-To-Reduced"
 	const guestID = 1022
 	ctx := context.Background()
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
@@ -266,7 +266,7 @@ func Test_Qemu_Upate_Min_To_Reduced(t *testing.T) {
 	const guestName = "Test-Qemu-Update-Min-To-Reduced"
 	const guestID = 1023
 	ctx := context.Background()
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
@@ -320,7 +320,7 @@ func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
 	const guestName = "Test-Qemu-Update-Min-To-Max"
 	const guestID = 1024
 	ctx := context.Background()
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()

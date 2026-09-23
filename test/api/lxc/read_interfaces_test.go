@@ -19,7 +19,7 @@ func Test_Lxc_Read_Interface_Info(t *testing.T) {
 	const node = pveSDK.NodeName(test.FirstNode)
 	const storage = pveSDK.StorageName(test.GuestStorage)
 	const name = pveSDK.GuestName("Test-Lxc-Read-Interface-Info")
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, false)
+	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
