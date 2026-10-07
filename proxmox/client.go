@@ -1741,9 +1741,20 @@ func (c *Client) ReadVMHA(ctx context.Context, vmr *VmRef) (err error) {
 	var list map[string]interface{}
 	url := fmt.Sprintf("/cluster/ha/resources/%d", vmr.vmId)
 	err = c.GetJsonRetryable(ctx, url, &list, 3)
-	if err == nil {
-		list = list["data"].(map[string]interface{})
-		for elem, value := range list {
+	if err != nil {
+		// Proxmox answers this endpoint with a bare HTTP 500 ("no such
+		// resource") instead of 404 whenever the VM isn't HA-managed - the
+		// normal case for most VMs (Proxmox bugzilla #5698, still open as of
+		// writing). That's not a real failure, just "no HA info to report",
+		// so leave vmr.haGroup/haState at their zero value instead of
+		// surfacing an error to the caller.
+		if apiErr, ok := err.(*ApiError); ok && apiErr.Code == "500" && apiErr.Message == "" {
+			return nil
+		}
+		return err
+	}
+	if data, ok := list["data"].(map[string]interface{}); ok {
+		for elem, value := range data {
 			if elem == "group" {
 				vmr.haGroup = value.(string)
 			}
@@ -1752,7 +1763,7 @@ func (c *Client) ReadVMHA(ctx context.Context, vmr *VmRef) (err error) {
 			}
 		}
 	}
-	return
+	return nil
 }
 
 func (c *Client) UpdateVMHA(ctx context.Context, vmr *VmRef, haState string, haGroup string) (exitStatus interface{}, err error) {
