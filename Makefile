@@ -41,7 +41,7 @@ test-integration: # Integration tests
 	@go test -parallel 1 ./test/...
 
 .PHONY: test_integration_api
-test_integration_api: # Integration, setting this higher can exhoust the depth of the task queue on the Proxmox server
+test_integration_api: # Integration, setting this higher can exhaust the depth of the task queue on the Proxmox server
 	@go test -parallel 1 \
 		./test/api/ApiToken/... \
 		./test/api/Authentication/... \

@@ -146,7 +146,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 	}
 }
 
-func Test_Qemu_Upate_Reduced_To_Max(t *testing.T) {
+func Test_Qemu_Update_Reduced_To_Max(t *testing.T) {
 	t.Parallel()
 	const node = pveSDK.NodeName(test.FirstNode)
 	const guestName = "Test-Qemu-Update-Reduced-To-Max"
@@ -203,7 +203,7 @@ func Test_Qemu_Upate_Reduced_To_Max(t *testing.T) {
 	}
 }
 
-func Test_Qemu_Upate_Max_To_Reduced(t *testing.T) {
+func Test_Qemu_Update_Max_To_Reduced(t *testing.T) {
 	t.Parallel()
 	const node = pveSDK.NodeName(test.FirstNode)
 	const guestName = "Test-Qemu-Update-Max-To-Reduced"
@@ -260,7 +260,7 @@ func Test_Qemu_Upate_Max_To_Reduced(t *testing.T) {
 	}
 }
 
-func Test_Qemu_Upate_Min_To_Reduced(t *testing.T) {
+func Test_Qemu_Update_Min_To_Reduced(t *testing.T) {
 	t.Parallel()
 	const node = pveSDK.NodeName(test.FirstNode)
 	const guestName = "Test-Qemu-Update-Min-To-Reduced"
