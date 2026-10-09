@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
@@ -603,6 +604,7 @@ func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (feature
 // Keep trying to create/clone a VM until we get a unique ID
 func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, body *[]byte, c *Client, ca *clientAPI) (GuestID, error) {
 	c.guestCreationMutex.Lock()
+	const backoff = time.Millisecond * 100
 	defer c.guestCreationMutex.Unlock()
 	for {
 		guestID, err := c.getNextID_Unsafe(ctx)
@@ -624,13 +626,26 @@ func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[s
 			// "unable to create VM 106 - VM 106 already exists on node 'pve-9l'"
 			// the task returns the same message
 			if apiErr, ok := err.(*ApiError); ok {
-				if !strings.Contains(apiErr.Message, "already exists") {
-					return 0, err
+				if strings.Contains(apiErr.Message, "already exists") {
+					continue
 				}
+				if strings.HasPrefix(apiErr.Message, "got no worker upid ") { // got no worker upid - start worker failed
+					time.Sleep(backoff) // cluster is overwhelmed
+					continue
+				}
+				return 0, err
 			} else if taskErr, ok := err.(*TaskError); ok {
-				if !strings.Contains(taskErr.Error(), "already exists") {
-					return 0, err
+				if strings.Contains(taskErr.Message, "already exists") {
+					continue
 				}
+				if strings.HasSuffix(taskErr.Message, "ile exists") { // close (rename) atomic file '/etc/pve/nodes/pve/qemu-server/100.conf' failed: File exists
+					continue
+				}
+				if strings.HasSuffix(taskErr.Message, "got timeout") { // can't lock file '/var/lock/qemu-server/lock-100.conf' - got timeout
+					time.Sleep(backoff) // cluster is overwhelmed
+					continue
+				}
+				return 0, err
 			} else {
 				return 0, err
 			}
