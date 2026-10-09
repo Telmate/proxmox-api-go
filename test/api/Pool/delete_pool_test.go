@@ -2,13 +2,13 @@ package api_test
 
 import (
 	"context"
-	"crypto/tls"
 	"strconv"
 	"testing"
 
 	"github.com/Telmate/proxmox-api-go/internal/pad"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/test"
+	api_test "github.com/Telmate/proxmox-api-go/test/api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,7 @@ func Test_Pool_Delete(t *testing.T) {
 	pool := pveSDK.ConfigPool{
 		Name: "Test_Pool_Delete",
 	}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
+	cl, err := api_test.NewClient()
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

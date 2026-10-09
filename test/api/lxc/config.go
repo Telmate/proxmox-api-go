@@ -5,7 +5,7 @@ import (
 	"github.com/Telmate/proxmox-api-go/test"
 )
 
-func MinimumConfig(id pveSDK.GuestID, node pveSDK.NodeName, storage pveSDK.StorageName, privilidge *bool, name pveSDK.GuestName) (set, expected pveSDK.ConfigLXC) {
+func MinimumConfig(id pveSDK.GuestID, node pveSDK.NodeName, storage pveSDK.StorageName, privilege *bool, name pveSDK.GuestName) (set, expected pveSDK.ConfigLXC) {
 	set = pveSDK.ConfigLXC{
 		ID: new(id),
 		BootMount: &pveSDK.LxcBootMount{
@@ -18,11 +18,11 @@ func MinimumConfig(id pveSDK.GuestID, node pveSDK.NodeName, storage pveSDK.Stora
 			}},
 		Name:       new(name),
 		Node:       new(node),
-		Privileged: privilidge,
+		Privileged: privilege,
 	}
 	var expectedPrivileged bool = false
-	if privilidge != nil {
-		expectedPrivileged = *privilidge
+	if privilege != nil {
+		expectedPrivileged = *privilege
 	}
 	var expectedQuota *bool
 	if expectedPrivileged {
