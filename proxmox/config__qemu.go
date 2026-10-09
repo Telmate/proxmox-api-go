@@ -164,7 +164,7 @@ type ConfigQemu struct {
 	HaGroup          string                `json:"hagroup,omitempty"`
 	HaState          string                `json:"hastate,omitempty"` // TODO should be custom type with enum
 	Hookscript       string                `json:"hookscript,omitempty"`
-	Hotplug          string                `json:"hotplug,omitempty"`   // TODO should be a struct
+	HotPlug          *HotPlug              `json:"hotplug,omitempty"`   // Never nil when returned
 	LinkedID         *GuestID              `json:"linked_id,omitempty"` // Only returned setting it has no effect
 	Machine          string                `json:"machine,omitempty"`   // TODO should be custom type with enum
 	Memory           *QemuMemory           `json:"memory,omitempty"`
@@ -271,9 +271,6 @@ func (config *ConfigQemu) defaults() {
 	if config.Bios == "" {
 		config.Bios = "seabios"
 	}
-	if config.Hotplug == "" {
-		config.Hotplug = "network,disk,usb"
-	}
 	if config.QemuDisks == nil {
 		config.QemuDisks = QemuDevices{}
 	}
@@ -314,9 +311,6 @@ func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (p
 	}
 	if config.Hookscript != "" {
 		params["hookscript"] = config.Hookscript
-	}
-	if config.Hotplug != "" {
-		params["hotplug"] = config.Hotplug
 	}
 	if config.QemuKVM != nil {
 		params["kvm"] = *config.QemuKVM
@@ -431,6 +425,9 @@ func (config ConfigQemu) mapToApiCreate(version Version, resizeDisks bool) (map[
 	if config.EfiDisk != nil {
 		config.EfiDisk.mapToApiCreate(bPtr)
 	}
+	if config.HotPlug != nil {
+		config.HotPlug.mapToApiCreate(bPtr)
+	}
 	if len(config.Networks) != 0 {
 		config.Networks.mapToApiCreate(bPtr)
 	}
@@ -489,6 +486,9 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 		} else {
 			config.EfiDisk.mapToApiCreate(bPtr)
 		}
+	}
+	if config.HotPlug != nil {
+		config.HotPlug.mapToApiUpdate(currentLegacy.HotPlug, bPtr)
 	}
 	if len(config.Networks) != 0 {
 		if len(currentLegacy.Networks) != 0 {
@@ -586,10 +586,6 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 	}
 	if _, isSet := params["bios"]; isSet {
 		config.Bios = params["bios"].(string)
-	}
-	//Can be network,disk,cpu,memory,usb
-	if _, isSet := params["hotplug"]; isSet {
-		config.Hotplug = params["hotplug"].(string)
 	}
 	if _, isSet := params["hookscript"]; isSet {
 		config.Hookscript = params["hookscript"].(string)
@@ -1413,6 +1409,7 @@ type RawConfigQemu interface {
 	GetCloudInit() *CloudInit
 	GetDescription() string
 	GetEfiDisk() *EfiDisk
+	GetHotPlug() HotPlug
 	GetID() GuestID
 	GetMemory() *QemuMemory
 	GetName() GuestName
@@ -1457,6 +1454,7 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 		EfiDisk:          raw.GetEfiDisk(),
 		HaGroup:          vmr.HaGroup(),
 		HaState:          vmr.HaState(),
+		HotPlug:          new(raw.GetHotPlug()),
 		ID:               new(raw.GetID()),
 		Memory:           raw.GetMemory(),
 		Name:             util.Pointer(raw.GetName()),
@@ -1544,6 +1542,7 @@ const (
 	qemuApiKeyDescription       = "description"
 	qemuApiKeyEfiDisk           = "efidisk0"
 	qemuApiKeyGuestAgent        = "agent"
+	qemuApiKeyHotPlug           = "hotplug"
 	qemuApiKeyMemoryBallooning  = "balloon"
 	qemuApiKeyMemoryCapacity    = "memory"
 	qemuApiKeyMemoryShares      = "shares"

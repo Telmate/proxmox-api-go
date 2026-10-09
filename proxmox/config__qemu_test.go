@@ -98,7 +98,15 @@ func testQemuBaseConfig_get(config ConfigQemu) *ConfigQemu {
 			Sockets: new(QemuCpuSockets(1))}
 	}
 	if config.Description == nil {
-		config.Description = util.Pointer("")
+		config.Description = new("")
+	}
+	if config.HotPlug == nil {
+		config.HotPlug = &HotPlug{
+			CPU:     new(false),
+			Disk:    new(true),
+			Memory:  new(false),
+			Network: new(true),
+			USB:     new(true)}
 	}
 	if config.ID == nil {
 		config.ID = new(GuestID(0))
@@ -107,19 +115,19 @@ func testQemuBaseConfig_get(config ConfigQemu) *ConfigQemu {
 		config.Memory = &QemuMemory{}
 	}
 	if config.Name == nil {
-		config.Name = util.Pointer(GuestName(""))
+		config.Name = new(GuestName(""))
 	}
 	if config.Node == nil {
 		config.Node = new(NodeName(""))
 	}
 	if config.Protection == nil {
-		config.Protection = util.Pointer(false)
+		config.Protection = new(false)
 	}
 	if config.Tablet == nil {
-		config.Tablet = util.Pointer(true)
+		config.Tablet = new(true)
 	}
 	if config.StartAtNodeBoot == nil {
-		config.StartAtNodeBoot = util.Pointer(false)
+		config.StartAtNodeBoot = new(false)
 	}
 	if config.Tags == nil {
 		config.Tags = new(Tags)
@@ -5445,8 +5453,13 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		if config.Description == nil {
 			config.Description = util.Pointer("")
 		}
-		if config.Hotplug == "" {
-			config.Hotplug = "network,disk,usb"
+		if config.HotPlug == nil {
+			config.HotPlug = &HotPlug{
+				CPU:     new(false),
+				Disk:    new(true),
+				Memory:  new(false),
+				Network: new(true),
+				USB:     new(true)}
 		}
 		if config.ID == nil {
 			config.ID = new(GuestID(0))

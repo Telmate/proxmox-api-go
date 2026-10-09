@@ -483,8 +483,13 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 		if c.Description == nil {
 			c.Description = util.Pointer("")
 		}
-		if c.Hotplug == "" {
-			c.Hotplug = "network,disk,usb"
+		if c.HotPlug == nil {
+			c.HotPlug = &HotPlug{
+				CPU:     new(false),
+				Disk:    new(true),
+				Memory:  new(false),
+				Network: new(true),
+				USB:     new(true)}
 		}
 		if c.Memory == nil {
 			c.Memory = &QemuMemory{}
