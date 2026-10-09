@@ -11,7 +11,7 @@ type qemuTestTypeValidateFunc func() (qemuTestTypeInvalid, qemuTestTypeValid)
 func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 	t.Helper()
 	test := tests.format()
-	refrence := tests.format()
+	reference := tests.format()
 	for i := range test.invalidCreate {
 		t.Run("invalid/create/"+test.invalidCreate[i].name, func(t *testing.T) {
 			config := test.invalidCreate[i].input
@@ -25,7 +25,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 			if test.invalidCreate[i].err != nil {
 				require.Equal(t, test.invalidCreate[i].err, err)
 			}
-			require.Equal(t, refrence.invalidCreate[i].input, config, "mutated input config")
+			require.Equal(t, reference.invalidCreate[i].input, config, "mutated input config")
 		})
 	}
 	for i := range test.invalidUpdate {
@@ -45,7 +45,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 			if test.invalidUpdate[i].err != nil {
 				require.Equal(t, test.invalidUpdate[i].err, err)
 			}
-			require.Equal(t, refrence.invalidUpdate[i].input, config, "mutated input config")
+			require.Equal(t, reference.invalidUpdate[i].input, config, "mutated input config")
 		})
 	}
 	for i := range test.validCreate {
@@ -55,7 +55,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 			require.NoError(t, err)
 			err = config.Validate(nil, test.validCreate[i].version)
 			require.NoError(t, err)
-			require.Equal(t, refrence.validCreate[i].input, config, "mutated input config")
+			require.Equal(t, reference.validCreate[i].input, config, "mutated input config")
 		})
 	}
 	for i := range test.validUpdate {
@@ -69,7 +69,7 @@ func (tests qemuTestTypeValidateFunc) Test(t *testing.T) {
 			require.NoError(t, err)
 			err = config.Validate(&current, test.validUpdate[i].version)
 			require.NoError(t, err)
-			require.Equal(t, refrence.validUpdate[i].input, config, "mutated input config")
+			require.Equal(t, reference.validUpdate[i].input, config, "mutated input config")
 		})
 	}
 }
@@ -86,34 +86,34 @@ func (tests qemuTestTypeValidateFunc) Inject(t *testing.T,
 ) {
 	t.Helper()
 	test := tests.format()
-	refrence := tests.format()
+	reference := tests.format()
 	if testFunc != nil {
 		for i := range test.invalidCreate {
 			t.Run("invalid/create/"+test.invalidCreate[i].name, func(t *testing.T) {
 				config := test.invalidCreate[i].input
 				testFunc(t, config, nil, test.invalidCreate[i].version, test.invalidCreate[i].err, false)
-				require.Equal(t, refrence.invalidCreate[i].input, config, "mutated input config")
+				require.Equal(t, reference.invalidCreate[i].input, config, "mutated input config")
 			})
 		}
 		for i := range test.invalidUpdate {
 			t.Run("invalid/update/"+test.invalidUpdate[i].name, func(t *testing.T) {
 				config := test.invalidUpdate[i].input
 				testFunc(t, config, test.invalidUpdate[i].current, test.invalidUpdate[i].version, test.invalidUpdate[i].err, false)
-				require.Equal(t, refrence.invalidUpdate[i].input, config, "mutated input config")
+				require.Equal(t, reference.invalidUpdate[i].input, config, "mutated input config")
 			})
 		}
 		for i := range test.validCreate {
 			t.Run("valid/create/"+test.validCreate[i].name, func(t *testing.T) {
 				config := test.validCreate[i].input
 				testFunc(t, config, nil, test.validCreate[i].version, nil, true)
-				require.Equal(t, refrence.validCreate[i].input, config, "mutated input config")
+				require.Equal(t, reference.validCreate[i].input, config, "mutated input config")
 			})
 		}
 		for i := range test.validUpdate {
 			t.Run("valid/udpate/"+test.validUpdate[i].name, func(t *testing.T) {
 				config := test.validUpdate[i].input
 				testFunc(t, config, test.validUpdate[i].current, test.validUpdate[i].version, nil, true)
-				require.Equal(t, refrence.validUpdate[i].input, config, "mutated input config")
+				require.Equal(t, reference.validUpdate[i].input, config, "mutated input config")
 			})
 		}
 	}

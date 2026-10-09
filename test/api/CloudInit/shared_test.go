@@ -33,7 +33,10 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 			Type:    util.Pointer(pxapi.CpuType_QemuKvm64),
 		},
 		QemuKVM: util.Pointer(true),
-		Hotplug: "network,disk,usb",
+		HotPlug: &pxapi.HotPlug{
+			Disk:    new(true),
+			Network: new(true),
+			USB:     new(true)},
 
 		Networks: pxapi.QemuNetworkInterfaces{
 			pxapi.QemuNetworkInterfaceID0: pxapi.QemuNetworkInterface{

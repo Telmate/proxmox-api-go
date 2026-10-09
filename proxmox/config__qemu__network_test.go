@@ -457,6 +457,14 @@ func Test_ConfigQemu_QemuNetworkInterfaces_MapToApi(t *testing.T) {
 	tests.Test(t)
 }
 
+func Test_RawConfigQemu_GetNetworks(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_Networks_Get().Inject(t,
+		func(t *testing.T, raw RawConfigQemu, config *ConfigQemu, err error) {
+			require.Equal(t, config.Networks, raw.GetNetworks())
+		})
+}
+
 func Test_RawConfigQemu_Networks_Get(t *testing.T) {
 	t.Parallel()
 	testData_RawConfigQemu_Networks_Get().Test(t)

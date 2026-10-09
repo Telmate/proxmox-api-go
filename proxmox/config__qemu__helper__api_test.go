@@ -11,13 +11,13 @@ type qemuTestsApiFunc func() qemuTestsAPI
 func (tests qemuTestsApiFunc) Test(t *testing.T) {
 	t.Helper()
 	test := tests.format()
-	refrence := tests.format()
+	reference := tests.format()
 	for i := range test.create {
 		t.Run("create/"+test.create[i].name, func(*testing.T) {
 			config := test.create[i].config
 			_, output := config.mapToApiCreate(test.create[i].version, test.create[i].resizeDisks)
 			testParamsEqualRaw(t, test.create[i].body, output)
-			require.Equal(t, refrence.create[i].config, config, "mutated input config")
+			require.Equal(t, reference.create[i].config, config, "mutated input config")
 		})
 	}
 	for i := range test.update {
@@ -25,7 +25,7 @@ func (tests qemuTestsApiFunc) Test(t *testing.T) {
 			config := test.update[i].config
 			_, output := config.mapToApiUpdate(&test.update[i].currentLegacy, test.update[i].currentUpdate, test.update[i].version)
 			testParamsEqualRaw(t, test.update[i].body, output)
-			require.Equal(t, refrence.update[i].config, config, "mutated input config")
+			require.Equal(t, reference.update[i].config, config, "mutated input config")
 		})
 	}
 }
