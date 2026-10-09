@@ -68,6 +68,7 @@ func (c *clientAPI) deleteTask(ctx context.Context, url string) error {
 	return c.checkTask(ctx, response)
 }
 
+// Same as (c *Client) GetItemConfigMapStringInterface()
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[string]any, error) {
 	data, err := c.getRootMap(ctx, url, text, message)
 	if err != nil {
@@ -88,6 +89,7 @@ func (c *clientAPI) getList(ctx context.Context, url, text, message string) ([]a
 	return data, nil
 }
 
+// Same as (c *Client) GetItemConfig()
 func (c *clientAPI) getRootMap(ctx context.Context, url, text, message string) (map[string]any, error) {
 	var config map[string]any
 	if err := c.getJsonRetry(ctx, url, &config, 3); err != nil {
@@ -240,32 +242,37 @@ func (c *clientAPI) checkTask(ctx context.Context, resp *http.Response) error {
 	if err != nil {
 		return err
 	}
-	return c.waitForCompletion(ctx, taskResponse)
+	if v, ok := taskResponse["errors"]; ok {
+		errMsg, _ := json.MarshalIndent(v, "", "  ")
+		return errors.New(string(errMsg))
+	}
+	upID, ok := taskResponse["data"]
+	if !ok { // when we try to get a response for a task that doesn't produce a task.
+		if c.featureFlags.PanicOnInvalidTask {
+			panic("We got a response from the API that doesn't contain a task ID. This is unexpected and should be investigated.")
+		}
+		return nil
+	}
+	if c.featureFlags.AsyncTask {
+		return newTask(ctx, c, upID.(string), TaskStatusCheckInterval*time.Second).WaitForCompletion()
+	}
+	return c.waitForCompletion(ctx, upID.(string))
 }
 
 // waitForCompletion - poll the API for task completion
-func (c *clientAPI) waitForCompletion(ctx context.Context, taskResponse map[string]any) error {
-	if taskResponse["errors"] != nil {
-		err, _ := json.MarshalIndent(taskResponse["errors"], "", "  ")
-		return errors.New(string(err))
-	}
-	if taskResponse["data"] == nil {
-		return nil
-	}
-	waited := time.Duration(0)
-	taskUpid := taskResponse["data"].(string)
-	for waited < c.taskTimeout {
-		retry, err := c.getTaskExitStatus(ctx, taskUpid)
+func (c *clientAPI) waitForCompletion(ctx context.Context, upID string) error {
+	endTime := time.Now().Add(c.taskTimeout)
+	for !time.Now().After(endTime) {
+		retry, err := c.getTaskExitStatus(ctx, upID)
 		if err != nil {
 			return err
 		}
 		if !retry {
 			return nil
 		}
-		time.Sleep(TaskStatusCheckInterval * time.Second)
-		waited = waited + TaskStatusCheckInterval
+		time.Sleep(c.timeUnit)
 	}
-	return errors.New("Wait timeout for:" + taskUpid)
+	return errors.New("Wait timeout for:" + upID)
 }
 
 func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (bool, error) {

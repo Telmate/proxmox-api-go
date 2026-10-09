@@ -40,6 +40,7 @@ type Client struct {
 	versionMutex       sync.Mutex
 	guestCreationMutex sync.Mutex
 	timeUnit           time.Duration
+	featureFlags       FeatureFlags
 }
 
 const (
@@ -47,6 +48,11 @@ const (
 	Client_Error_NotInitialized = "client not initialized"
 	Client_Error_UnableVersion  = "unable to get version"
 )
+
+type FeatureFlags struct {
+	AsyncTask          bool
+	PanicOnInvalidTask bool
+}
 
 // Checks if the client is initialized and returns an error if not
 func (c *Client) checkInitialized() error {
@@ -131,7 +137,7 @@ func NewVmRef(vmId GuestID) (vmr *VmRef) {
 	return
 }
 
-func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tls.Config, proxyString string, taskTimeout int, debug io.Writer) (client *Client, err error) {
+func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tls.Config, proxyString string, taskTimeout int, debug io.Writer, feature ...FeatureFlags) (client *Client, err error) {
 	var sess *Session
 	sess, err_s := NewSession(apiUrl, hclient, proxyString, tls)
 	sess, err = createHeaderList(http_headers, sess)
@@ -141,6 +147,9 @@ func NewClient(apiUrl string, hclient *http.Client, http_headers string, tls *tl
 	sess.Debug = debug
 	if err_s == nil {
 		client = &Client{session: sess, ApiUrl: apiUrl, TaskTimeout: taskTimeout, permissions: make(map[permissionPath]privileges), timeUnit: time.Second}
+	}
+	if len(feature) > 0 {
+		client.featureFlags = feature[0]
 	}
 
 	return client, err_s
@@ -158,11 +167,12 @@ func (c *Client) api() *clientAPI {
 		user = UserID{Name: token[:indexAt], Realm: token[indexAt+1 : indexAt+indexEx+1]}
 	}
 	return &clientAPI{
-		session:     c.session,
-		taskTimeout: time.Duration(c.TaskTimeout) * time.Second,
-		timeUnit:    c.timeUnit,
-		url:         c.ApiUrl,
-		user:        user}
+		featureFlags: c.featureFlags,
+		session:      c.session,
+		taskTimeout:  time.Duration(c.TaskTimeout) * time.Second,
+		timeUnit:     c.timeUnit,
+		url:          c.ApiUrl,
+		user:         user}
 }
 
 func (c *Client) New() ClientNew {

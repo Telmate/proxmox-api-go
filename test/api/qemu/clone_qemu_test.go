@@ -2,16 +2,17 @@ package qemu
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Telmate/proxmox-api-go/internal/pad"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/test"
+	api_test "github.com/Telmate/proxmox-api-go/test/api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,7 +24,7 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 	const guestName = "Test-Qemu-Clone-Client-Race"
 	const guestsAmount = 5
 	ctx := context.Background()
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
+	cl, err := api_test.NewClient()
 	require.NoError(t, err)
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
@@ -65,7 +66,7 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 					go func(i int) {
 						defer wg.Done()
 
-						cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
+						cl, err := api_test.NewClient()
 						if err != nil {
 							errCh <- err
 							return
@@ -101,6 +102,7 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 				for err := range errCh {
 					require.NoError(t, err)
 				}
+				time.Sleep(1 * time.Second) // wait for Proxmox to catch up
 			}},
 		{name: `Check guest existence`,
 			test: func(t *testing.T) {

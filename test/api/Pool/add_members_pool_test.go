@@ -2,7 +2,6 @@ package api_test
 
 import (
 	"context"
-	"crypto/tls"
 	"strconv"
 	"testing"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/util"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/test"
+	api_test "github.com/Telmate/proxmox-api-go/test/api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +36,7 @@ func Test_Pool_AddMembers_NonEmpty(t *testing.T) {
 func pool_AddMembers(t *testing.T, pool pveSDK.ConfigPool, initialGuests, additionalGuests []pveSDK.GuestID) {
 	allGuests := append(initialGuests, additionalGuests...)
 	const node = pveSDK.NodeName(test.FirstNode)
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
+	cl, err := api_test.NewClient()
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
@@ -140,7 +140,7 @@ func Test_Pool_AddMembers_Move(t *testing.T) {
 		Name: "Test_Pool_AddMembers_Move_Target",
 	}
 	const node = pveSDK.NodeName(test.FirstNode)
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
+	cl, err := api_test.NewClient()
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

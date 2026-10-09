@@ -2,7 +2,6 @@ package api_test
 
 import (
 	"context"
-	"crypto/tls"
 	"strconv"
 	"testing"
 
@@ -11,12 +10,13 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/pad"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/test"
+	api_test "github.com/Telmate/proxmox-api-go/test/api"
 )
 
 func Test_User_Delete(t *testing.T) {
 	t.Parallel()
 	userID := pveSDK.UserID{Name: "Test_User_Delete", Realm: "pve"}
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
+	cl, err := api_test.NewClient()
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))

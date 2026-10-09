@@ -2,7 +2,6 @@ package api_test
 
 import (
 	"context"
-	"crypto/tls"
 	"strconv"
 	"testing"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/pad"
 	pveSDK "github.com/Telmate/proxmox-api-go/proxmox"
 	"github.com/Telmate/proxmox-api-go/test"
+	api_test "github.com/Telmate/proxmox-api-go/test/api"
 	"github.com/Telmate/proxmox-api-go/test/api/qemu"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +22,7 @@ func Test_Snapshot_Update(t *testing.T) {
 		node     = pveSDK.NodeName(test.FirstNode)
 		snapName = pveSDK.SnapshotName("snap1")
 	)
-	cl, err := pveSDK.NewClient(test.ApiURL, nil, "", &tls.Config{InsecureSkipVerify: true}, "", 1000, nil)
+	cl, err := api_test.NewClient()
 	require.NoError(t, err)
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
