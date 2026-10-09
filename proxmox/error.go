@@ -95,7 +95,7 @@ func (e ApiError) Error() string {
 		for k, v := range e.Errors {
 			builder.WriteString(k)
 			builder.WriteString(":")
-			builder.WriteString(fmt.Sprintf("%v", v))
+			fmt.Fprintf(&builder, "%v", v)
 			builder.WriteString(" | ")
 		}
 		builder.WriteString(" )")

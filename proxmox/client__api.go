@@ -25,11 +25,12 @@ type clientApiInterface interface {
 }
 
 type clientAPI struct {
-	session     *Session
-	url         string
-	user        UserID
-	taskTimeout time.Duration
-	timeUnit    time.Duration
+	session      *Session
+	url          string
+	user         UserID
+	taskTimeout  time.Duration
+	timeUnit     time.Duration
+	featureFlags FeatureFlags
 }
 
 // Interface methods
