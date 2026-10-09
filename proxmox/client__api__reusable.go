@@ -247,7 +247,10 @@ func (c *clientAPI) checkTask(ctx context.Context, resp *http.Response) error {
 		return errors.New(string(errMsg))
 	}
 	upID, ok := taskResponse["data"]
-	if !ok {
+	if !ok { // when we try to get a response for a task that doesn't produce a task.
+		if c.featureFlags.PanicOnInvalidTask {
+			panic("We got a response from the API that doesn't contain a task ID. This is unexpected and should be investigated.")
+		}
 		return nil
 	}
 	if c.featureFlags.AsyncTask {

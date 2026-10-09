@@ -50,7 +50,8 @@ const (
 )
 
 type FeatureFlags struct {
-	AsyncTask bool
+	AsyncTask          bool
+	PanicOnInvalidTask bool
 }
 
 // Checks if the client is initialized and returns an error if not
