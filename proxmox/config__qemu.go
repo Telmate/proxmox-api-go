@@ -1431,8 +1431,8 @@ var _ RawConfigQemu = (*rawConfigQemu)(nil)
 
 type rawConfigQemu struct {
 	a    map[string]any
-	id   GuestID
 	node NodeName
+	id   GuestID
 }
 
 func (raw *rawConfigQemu) Get(vmr VmRef) (*ConfigQemu, error) {
