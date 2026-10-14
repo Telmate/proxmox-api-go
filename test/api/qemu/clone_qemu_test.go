@@ -22,7 +22,7 @@ func Test_Qemu_Clone_Client_Race(t *testing.T) {
 	t.Parallel()
 	const node = pveSDK.NodeName(test.FirstNode)
 	const guestName = "Test-Qemu-Clone-Client-Race"
-	const guestsAmount = 5
+	guestsAmount := test.GuestRaceAmount
 	ctx := context.Background()
 	cl, err := api_test.NewClient()
 	require.NoError(t, err)

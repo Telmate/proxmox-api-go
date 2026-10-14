@@ -113,7 +113,7 @@ func (name NodeName) Validate() error {
 func (name NodeName) String() string { return string(name) } // String is for fmt.Stringer.
 
 func nodeStatusCommand(ctx context.Context, c *clientAPI, node NodeName, command string) error {
-	return c.postRawTask(ctx, "/nodes/"+node.String()+"/status", new([]byte("command="+command)))
+	return c.postTask(ctx, "/nodes/"+node.String()+"/status", new([]byte("command="+command)))
 }
 
 func (c *Client) nodeStatusCommand(ctx context.Context, node, command string) (exitStatus string, err error) {

@@ -903,7 +903,7 @@ type qemuDiskResize struct {
 // Decrease of disk size is not permitted.
 func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, c *clientAPI) error {
 	body := []byte("disk=" + disk.Id.String() + "&size=" + strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K")
-	return c.putRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/resize", &body)
+	return c.putTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/resize", &body)
 }
 
 type qemuDiskMove struct {
@@ -929,7 +929,7 @@ func (disk qemuDiskMove) mapToApiValues(delete bool) *[]byte {
 }
 
 func (disk qemuDiskMove) move(ctx context.Context, delete bool, vmr *VmRef, c *clientAPI) error {
-	return c.postRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/move_disk", disk.mapToApiValues(delete))
+	return c.postTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/move_disk", disk.mapToApiValues(delete))
 }
 
 func (disk qemuDiskMove) Validate() (err error) {

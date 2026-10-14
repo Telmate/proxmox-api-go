@@ -111,7 +111,7 @@ func (c *clientAPI) listHaRules(ctx context.Context) ([]any, error) {
 }
 
 func (c *clientAPI) updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error {
-	return c.postRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/"+setStatus, body)
+	return c.postTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/"+setStatus, body)
 }
 
 func (c *clientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error {

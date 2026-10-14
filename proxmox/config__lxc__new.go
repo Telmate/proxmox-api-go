@@ -135,7 +135,7 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 			return nil, err
 		}
 	} else {
-		if err = ca.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
+		if err = ca.postTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
 			return nil, fmt.Errorf("error creating LXC: %v", err)
 		}
 		id = *config.ID

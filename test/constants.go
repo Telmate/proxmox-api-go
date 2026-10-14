@@ -19,3 +19,8 @@ var FeatureFlags = pveSDK.FeatureFlags{
 	AsyncTask:          true,
 	PanicOnInvalidTask: true,
 }
+
+// These setting should't be changed
+const (
+	GuestRaceAmount = 5
+)
