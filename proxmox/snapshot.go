@@ -565,7 +565,7 @@ func (snap SnapshotName) create(ctx context.Context, c *clientAPI, vmr VmRef, de
 	if vmState {
 		builder.WriteString("&" + snapshotApiKeyVmState + "=1")
 	}
-	return c.postRawTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot", util.Pointer([]byte(builder.String())))
+	return c.postTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot", util.Pointer([]byte(builder.String())))
 }
 
 func (snap SnapshotName) delete(ctx context.Context, c *clientAPI, vmr VmRef) (bool, error) {

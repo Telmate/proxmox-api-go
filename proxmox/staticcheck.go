@@ -1,13 +1,8 @@
 package proxmox
 
-import "context"
-
 // X_SuppressStaticCheck only exists to suppress warnings for unused functions
 func X_SuppressStaticCheck_DoNotUse() {
 	_ = mockClientAPI{}.new()
-
-	ca := &clientAPI{}
-	_ = ca.postTask(context.Background(), "", nil)
 
 	lxc := &RawConfigLXCMock{}
 	lxc.get(VmRef{})

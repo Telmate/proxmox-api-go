@@ -604,7 +604,6 @@ func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (feature
 // Keep trying to create/clone a VM until we get a unique ID
 func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[string]any, body *[]byte, c *Client, ca *clientAPI) (GuestID, error) {
 	c.guestCreationMutex.Lock()
-	const backoff = time.Millisecond * 100
 	defer c.guestCreationMutex.Unlock()
 	for {
 		guestID, err := c.getNextID_Unsafe(ctx)
@@ -612,7 +611,7 @@ func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[s
 			return 0, err
 		}
 		params[idKey] = int(guestID)
-		if err = ca.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
+		if err = ca.postTaskNoHighLevelRetry(ctx, url, combineParamsAndBody(params, body)); err != nil {
 			// TODO test what happens during a LXC clone
 			//
 			// Create LXC
@@ -629,8 +628,8 @@ func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[s
 				if strings.Contains(apiErr.Message, "already exists") {
 					continue
 				}
-				if strings.HasPrefix(apiErr.Message, "got no worker upid ") { // got no worker upid - start worker failed
-					time.Sleep(backoff) // cluster is overwhelmed
+				if strings.HasPrefix(apiErr.Message, errorPrefixNoWorkerUpID) {
+					time.Sleep(taskBackoff) // cluster is overwhelmed
 					continue
 				}
 				return 0, err
@@ -642,7 +641,7 @@ func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[s
 					continue
 				}
 				if strings.HasSuffix(taskErr.Message, "got timeout") { // can't lock file '/var/lock/qemu-server/lock-100.conf' - got timeout
-					time.Sleep(backoff) // cluster is overwhelmed
+					time.Sleep(taskBackoff) // cluster is overwhelmed
 					continue
 				}
 				return 0, err

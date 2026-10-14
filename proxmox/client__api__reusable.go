@@ -15,6 +15,11 @@ import (
 
 const RequestRetryCount = 3
 
+const (
+	taskBackoff             = time.Millisecond * 100 // cluster is overwhelmed
+	errorPrefixNoWorkerUpID = "got no worker upid "  // got no worker upid - start worker failed
+)
+
 func (c *clientAPI) getResourceList(ctx context.Context, resourceType string) ([]any, error) {
 	var url strings.Builder
 	url.WriteString("/cluster/resources")
@@ -52,6 +57,21 @@ func (c *clientAPI) deleteRetry(ctx context.Context, url string, tries int) (err
 // Makes a DELETE request and waits on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
 func (c *clientAPI) deleteTask(ctx context.Context, url string) error {
+	for {
+		err := c.deleteTaskNoHighLevelRetry(ctx, url)
+		if err != nil {
+			if apiErr, ok := err.(*ApiError); ok {
+				if strings.HasPrefix(apiErr.Message, errorPrefixNoWorkerUpID) {
+					time.Sleep(taskBackoff)
+					continue
+				}
+			}
+		}
+		return err
+	}
+}
+
+func (c *clientAPI) deleteTaskNoHighLevelRetry(ctx context.Context, url string) error {
 	var response *http.Response
 	var retry bool
 	var err error
@@ -169,16 +189,22 @@ func (c *clientAPI) postJsonRetry(ctx context.Context, url string, body *[]byte,
 	return
 }
 
-func (c *clientAPI) postTask(ctx context.Context, url string, params map[string]any) error {
-	requestBody := paramsToBody(params)
-	resp, _, err := c.session.post(ctx, url, nil, nil, &requestBody)
-	if err != nil {
+func (c *clientAPI) postTask(ctx context.Context, url string, body *[]byte) error {
+	for {
+		err := c.postTaskNoHighLevelRetry(ctx, url, body)
+		if err != nil {
+			if apiErr, ok := err.(*ApiError); ok {
+				if strings.HasPrefix(apiErr.Message, errorPrefixNoWorkerUpID) {
+					time.Sleep(taskBackoff)
+					continue
+				}
+			}
+		}
 		return err
 	}
-	return c.checkTask(ctx, resp)
 }
 
-func (c *clientAPI) postRawTask(ctx context.Context, url string, body *[]byte) error {
+func (c *clientAPI) postTaskNoHighLevelRetry(ctx context.Context, url string, body *[]byte) error {
 	var response *http.Response
 	var retry bool
 	var err error
@@ -218,7 +244,22 @@ func (c *clientAPI) putRawRetry(ctx context.Context, url string, body *[]byte, t
 	return
 }
 
-func (c *clientAPI) putRawTask(ctx context.Context, url string, body *[]byte) error {
+func (c *clientAPI) putTask(ctx context.Context, url string, body *[]byte) error {
+	for {
+		err := c.putTaskNoHighLevelRetry(ctx, url, body)
+		if err != nil {
+			if apiErr, ok := err.(*ApiError); ok {
+				if strings.HasPrefix(apiErr.Message, errorPrefixNoWorkerUpID) {
+					time.Sleep(taskBackoff)
+					continue
+				}
+			}
+		}
+		return err
+	}
+}
+
+func (c *clientAPI) putTaskNoHighLevelRetry(ctx context.Context, url string, body *[]byte) error {
 	var response *http.Response
 	var retry bool
 	var err error

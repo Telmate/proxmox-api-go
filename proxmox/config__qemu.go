@@ -235,7 +235,7 @@ func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientA
 	} else {
 		id = *config.ID
 		params["vmid"] = int(id)
-		if err = ca.postRawTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
+		if err = ca.postTask(ctx, url, combineParamsAndBody(params, body)); err != nil {
 			return nil, err
 		}
 	}
