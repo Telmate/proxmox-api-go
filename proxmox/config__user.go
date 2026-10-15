@@ -217,7 +217,7 @@ func (config ConfigUser) mapToApiCreate() *[]byte {
 	}
 	if config.Groups != nil && len(*config.Groups) != 0 {
 		builder.WriteString("&" + userApiKeyGroups + "=")
-		builder.WriteString(body.Escape(array.CSV(*config.Groups)))
+		builder.WriteString(body.Escape(array.ByteSV(*config.Groups, ',')))
 	}
 	if config.Keys != nil && *config.Keys != "" {
 		builder.WriteString("&" + userApiKeyKeys + "=")
@@ -254,7 +254,7 @@ func (config ConfigUser) mapToApiUpdate() *[]byte {
 	}
 	if config.Groups != nil {
 		builder.WriteString("&" + userApiKeyGroups + "=")
-		builder.WriteString(body.Escape(array.CSV(*config.Groups)))
+		builder.WriteString(body.Escape(array.ByteSV(*config.Groups, ',')))
 	}
 	if config.Keys != nil {
 		builder.WriteString("&" + userApiKeyKeys + "=")
@@ -526,7 +526,7 @@ func (id UserID) removeGroups(ctx context.Context, groups *[]GroupName, c *clien
 }
 
 func (id UserID) setGroups(ctx context.Context, groups *[]GroupName, c *clientAPI) error {
-	b := []byte(userApiKeyGroups + "=" + array.CSV(*groups))
+	b := []byte(userApiKeyGroups + "=" + array.ByteSV(*groups, ','))
 	return c.updateUser(ctx, id, &b)
 }
 

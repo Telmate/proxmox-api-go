@@ -85,7 +85,7 @@ func (s stringer) String() string {
 	return string(s)
 }
 
-func test_Data_CSV() []struct {
+func test_Data_CSV(separator string) []struct {
 	name   string
 	input  []stringer
 	output string
@@ -104,7 +104,7 @@ func test_Data_CSV() []struct {
 				"b",
 				"c",
 			},
-			output: "a,b,c"},
+			output: "a" + separator + "b" + separator + "c"},
 		{name: `empty`,
 			input:  []stringer{},
 			output: ""},
@@ -119,29 +119,54 @@ func test_Data_CSV() []struct {
 			output: func() string {
 				var result string
 				for i := range 1000 {
-					result += ",item" + strconv.Itoa(i)
+					result += separator + "item" + strconv.Itoa(i)
 				}
-				return result[1:]
+				return result[len(separator):]
 			}()},
 	}
 }
 
-func Test_CSV(t *testing.T) {
+func Test_ByteSV(t *testing.T) {
 	t.Parallel()
-	tests := test_Data_CSV()
+	tests := test_Data_CSV(",")
 	for _, test := range tests {
 		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, CSV(test.input))
+			require.Equal(t, test.output, ByteSV(test.input, ','))
 		})
 	}
 }
 
-func Benchmark_CSV(b *testing.B) {
-	tests := test_Data_CSV()
-	for b.Loop() {
-		for i := range tests {
-			CSV(tests[i].input)
-		}
+func Benchmark_ByteSV(b *testing.B) {
+	tests := test_Data_CSV(",")
+	for i := range tests {
+		b.Run(tests[i].name, func(b *testing.B) {
+			b.ResetTimer()
+			for b.Loop() {
+				ByteSV(tests[i].input, ',')
+			}
+		})
+	}
+}
+
+func Test_StringSV(t *testing.T) {
+	t.Parallel()
+	tests := test_Data_CSV("%3B")
+	for _, test := range tests {
+		t.Run(test.name, func(*testing.T) {
+			require.Equal(t, test.output, StringSV(test.input, "%3B"))
+		})
+	}
+}
+
+func Benchmark_StringSV(b *testing.B) {
+	tests := test_Data_CSV("%3B")
+	for i := range tests {
+		b.Run(tests[i].name, func(b *testing.B) {
+			b.ResetTimer()
+			for b.Loop() {
+				StringSV(tests[i].input, "%3B")
+			}
+		})
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/array"
 )
 
 type Tags []Tag
@@ -17,17 +19,7 @@ func (t Tags) Len() int           { return len(t) }           // Len is for sort
 func (t Tags) Less(i, j int) bool { return t[i] < t[j] }      // Less is for sort.Interface.
 func (t Tags) Swap(i, j int)      { t[i], t[j] = t[j], t[i] } // Swap is for sort.Interface.
 
-func (t Tags) mapToApiCreate() string {
-	if len(t) == 0 {
-		return ""
-	}
-	builder := strings.Builder{}
-	for i := range t {
-		builder.WriteString(comma)
-		builder.WriteString(t[i].String())
-	}
-	return builder.String()[3:]
-}
+func (t Tags) mapToApiCreate() string { return array.StringSV(t, comma) }
 
 // Tags not converted to lowercase during Qemu VM creation
 // https://bugzilla.proxmox.com/show_bug.cgi?id=7549
@@ -62,33 +54,23 @@ func (t *Tags) mapToSDK(tags string) {
 	if trimmed == "" {
 		return
 	}
-	seperators := countSeperator(trimmed)
-	tagsTyped := make(Tags, seperators+1)
-	var entry, lastSeperator int
+	separators := countSeparator(trimmed)
+	tagsTyped := make(Tags, separators+1)
+	var entry, lastSeparator int
 	for i := 0; i < len(trimmed); i++ {
 		switch trimmed[i] {
 		case ',', ';':
-			tagsTyped[entry] = Tag(trimmed[lastSeperator:i])
+			tagsTyped[entry] = Tag(trimmed[lastSeparator:i])
 			entry++
 			i++
-			lastSeperator = i
+			lastSeparator = i
 		}
 	}
-	tagsTyped[entry] = Tag(trimmed[lastSeperator:])
+	tagsTyped[entry] = Tag(trimmed[lastSeparator:])
 	*t = tagsTyped
 }
 
-func (t Tags) String() string { // String is for fmt.Stringer.
-	if len(t) == 0 {
-		return ""
-	}
-	builder := strings.Builder{}
-	for i := range t {
-		builder.WriteByte(',')
-		builder.WriteString(t[i].String())
-	}
-	return builder.String()[1:]
-}
+func (t Tags) String() string { return array.ByteSV(t, ',') } // String is for fmt.Stringer.
 
 func (t Tags) Validate() error {
 	if len(t) == 0 {
