@@ -383,6 +383,10 @@ const (
 	QemuSataIDMaximum = QemuSataID5
 )
 
+func (id QemuSataID) BootDevice() BootDevice {
+	return BootDevice(qemuPrefixApiKeyDiskSata + id.String())
+}
+
 func (id QemuSataID) String() string { return strconv.FormatUint(uint64(id), 10) }
 
 func (id QemuSataID) Validate() error {

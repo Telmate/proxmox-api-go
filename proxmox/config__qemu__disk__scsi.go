@@ -570,6 +570,10 @@ const (
 	QemuScsiIDMaximum = QemuScsiID30
 )
 
+func (id QemuScsiID) BootDevice() BootDevice {
+	return BootDevice(qemuPrefixApiKeyDiskSCSI + id.String())
+}
+
 func (id QemuScsiID) String() string { return strconv.FormatUint(uint64(id), 10) }
 
 func (id QemuScsiID) Validate() error {

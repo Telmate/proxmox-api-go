@@ -332,6 +332,10 @@ const (
 	QemuNetworkInterfaceIDMaximum QemuNetworkInterfaceID = QemuNetworkInterfaceID31
 )
 
+func (id QemuNetworkInterfaceID) BootDevice() BootDevice {
+	return BootDevice(qemuPrefixApiKeyNetwork + id.String())
+}
+
 func (id QemuNetworkInterfaceID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
 func (id QemuNetworkInterfaceID) Validate() error {

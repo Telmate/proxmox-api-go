@@ -153,7 +153,7 @@ type ConfigQemu struct {
 	Architecture     *QemuCpuArchitecture  `json:"architecture,omitempty"` // only used during creation
 	Args             string                `json:"args,omitempty"`
 	Bios             string                `json:"bios,omitempty"`
-	Boot             string                `json:"boot,omitempty"`     // TODO should be an array of custom enums
+	Boot             *BootOrder            `json:"boot,omitempty"`     // Never nil when returned
 	BootDisk         string                `json:"bootdisk,omitempty"` // TODO discuss deprecation? Only returned as it's deprecated in the proxmox api
 	CPU              *QemuCPU              `json:"cpu,omitempty"`      // never nil when returned
 	CloudInit        *CloudInit            `json:"cloudinit,omitempty"`
@@ -265,9 +265,6 @@ func (config *ConfigQemu) defaults() {
 	if config == nil {
 		return
 	}
-	if config.Boot == "" {
-		config.Boot = "cdn"
-	}
 	if config.Bios == "" {
 		config.Bios = "seabios"
 	}
@@ -305,9 +302,6 @@ func (config *ConfigQemu) mapToAPI(currentConfig ConfigQemu, version Version) (p
 	}
 	if config.Bios != "" {
 		params["bios"] = config.Bios
-	}
-	if config.Boot != "" {
-		params["boot"] = config.Boot
 	}
 	if config.Hookscript != "" {
 		params["hookscript"] = config.Hookscript
@@ -412,6 +406,13 @@ func (config ConfigQemu) mapToApiCreate(version Version, resizeDisks bool) (map[
 		builder.WriteString("&" + qemuApiKeyArchitecture + "=")
 		builder.WriteString(config.Architecture.String())
 	}
+	if config.Boot != nil {
+		builder.WriteString("&" + qemuApiKeyBoot + "=")
+		if len(*config.Boot) > 0 {
+			builder.WriteString("order" + equal)
+			builder.WriteString(config.Boot.mapToApi())
+		}
+	}
 	if config.CPU != nil {
 		config.CPU.mapToApiCreate(version, bPtr)
 	}
@@ -464,6 +465,9 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 	bPtr := &builder
 	delete := strings.Builder{}
 	deletePtr := &delete
+	if config.Boot != nil {
+		config.Boot.mapToApiUpdate(*currentLegacy.Boot, bPtr)
+	}
 	if config.CPU != nil {
 		config.CPU.mapToApiUpdate(*currentLegacy.CPU, version, bPtr, deletePtr)
 	}
@@ -576,10 +580,6 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 
 	if _, isSet := params["args"]; isSet {
 		config.Args = strings.TrimSpace(params["args"].(string))
-	}
-	//boot by default from hard disk (c), CD-ROM (d), network (n).
-	if _, isSet := params["boot"]; isSet {
-		config.Boot = params["boot"].(string)
 	}
 	if _, isSet := params["bootdisk"]; isSet {
 		config.BootDisk = params["bootdisk"].(string)
@@ -1013,6 +1013,16 @@ func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err err
 	return
 }
 
+// shared
+func (config ConfigQemu) validate() error {
+	if config.Boot != nil {
+		if err := config.Boot.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (config ConfigQemu) validateCreate(version Version) error {
 	if config.CPU == nil {
 		return errors.New(ConfigQemu_Error_CpuRequired)
@@ -1041,7 +1051,7 @@ func (config ConfigQemu) validateCreate(version Version) error {
 			return err
 		}
 	}
-	return nil
+	return config.validate()
 }
 
 func (config ConfigQemu) validateUpdate(current *ConfigQemu, version Version) (err error) {
@@ -1090,7 +1100,7 @@ func (config ConfigQemu) validateUpdate(current *ConfigQemu, version Version) (e
 			return
 		}
 	}
-	return
+	return config.validate()
 }
 
 /*
@@ -1405,6 +1415,7 @@ type RawConfigQemu interface {
 	Get(vmr VmRef) (*ConfigQemu, error)
 	GetAgent() *QemuGuestAgent
 	GetArchitecture() *QemuCpuArchitecture
+	GetBoot() BootOrder
 	GetCPU() QemuCPU
 	GetCloudInit() *CloudInit
 	GetDescription() string
@@ -1448,6 +1459,7 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 	config := ConfigQemu{
 		Agent:            raw.GetAgent(),
 		Architecture:     raw.GetArchitecture(),
+		Boot:             new(raw.GetBoot()),
 		CPU:              new(raw.GetCPU()),
 		CloudInit:        raw.GetCloudInit(),
 		Description:      util.Pointer(raw.GetDescription()),
@@ -1526,6 +1538,7 @@ func (raw *rawConfigQemu) GetTags() Tags {
 
 const (
 	qemuApiKeyArchitecture      = "arch"
+	qemuApiKeyBoot              = "boot"
 	qemuApiKeyCloudInitCustom   = "cicustom"
 	qemuApiKeyCloudInitPassword = "cipassword"
 	qemuApiKeyCloudInitSshKeys  = "sshkeys"

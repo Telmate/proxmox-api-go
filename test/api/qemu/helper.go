@@ -22,6 +22,7 @@ func GetConfig(t *testing.T, ctx context.Context, c *pveSDK.Client, guestID pveS
 }
 
 func CheckConfig(t *testing.T, ctx context.Context, c *pveSDK.Client, guestID pveSDK.GuestID, expected *pveSDK.ConfigQemu) {
+	t.Helper()
 	config := GetConfig(t, ctx, c, guestID)
 	require.EqualExportedValues(t, expected, config)
 }

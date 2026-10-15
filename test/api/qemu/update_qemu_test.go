@@ -55,7 +55,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 			test: func(t *testing.T) {
 				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
 					Bios: "seabios",
-					Boot: " ",
+					Boot: new(pveSDK.BootOrder),
 					CPU: &pveSDK.QemuCPU{
 						Cores:   new(pveSDK.QemuCpuCores(1)),
 						Numa:    new(false),
@@ -110,7 +110,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 			test: func(t *testing.T) {
 				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
 					Bios: "seabios",
-					Boot: " ",
+					Boot: new(pveSDK.BootOrder),
 					CPU: &pveSDK.QemuCPU{
 						Cores:   new(pveSDK.QemuCpuCores(1)),
 						Numa:    new(false),
@@ -225,7 +225,9 @@ func Test_Qemu_Update_Max_To_Reduced(t *testing.T) {
 	c := cl.New()
 	var vmr *pveSDK.VmRef
 	setMax, expectedMax := MaximumConfig(guestID, node, guestName)
-	expectedMax.Boot = "order=ide1;ide0"
+	expectedMax.Boot = &pveSDK.BootOrder{
+		pveSDK.QemuIdeID1.BootDevice(),
+		pveSDK.QemuIdeID0.BootDevice()}
 	expectedMax.Architecture = new(pveSDK.QemuCpuArchitectureAmd64)
 	setReduced, expectedReduced := ReducedConfig(guestID, node, guestName)
 	expectedReduced.Architecture = new(pveSDK.QemuCpuArchitectureAmd64)

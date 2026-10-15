@@ -44,8 +44,10 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 				Firewall: util.Pointer(true),
 				Model:    util.Pointer(pxapi.QemuNetworkModelVirtIO),
 				MAC:      &mac}},
-		QemuIso:   "none",
-		Boot:      "order=ide2;net0",
+		QemuIso: "none",
+		Boot: &pxapi.BootOrder{
+			pxapi.QemuIdeID2.BootDevice(),
+			pxapi.QemuNetworkInterfaceID0.BootDevice()},
 		Scsihw:    "virtio-scsi-pci",
 		QemuDisks: disks,
 	}

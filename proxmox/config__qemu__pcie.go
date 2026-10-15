@@ -136,6 +136,8 @@ const (
 	QemuPciID15 QemuPciID = 15
 )
 
+func (id QemuPciID) BootDevice() BootDevice { return BootDevice(qemuPrefixApiKeyPCI + id.String()) }
+
 func (id QemuPciID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
 func (id QemuPciID) Validate() error {

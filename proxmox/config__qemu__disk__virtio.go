@@ -418,6 +418,10 @@ const (
 	QemuVirtIoIDMaximum = QemuVirtIoID15
 )
 
+func (id QemuVirtIoID) BootDevice() BootDevice {
+	return BootDevice(qemuPrefixApiKeyDiskVirtIO + id.String())
+}
+
 func (id QemuVirtIoID) String() string { return strconv.FormatUint(uint64(id), 10) }
 
 func (id QemuVirtIoID) Validate() error {
