@@ -290,8 +290,7 @@ func (config QemuNetworkInterface) Validate(current *QemuNetworkInterface) error
 //		QemuNetworkInterfaceID0
 //		...
 //		QemuNetworkInterfaceID31
-//
-// )
+//	)
 type QemuNetworkInterfaceID uint8
 
 const (

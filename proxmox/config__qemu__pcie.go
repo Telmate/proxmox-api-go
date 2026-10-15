@@ -110,8 +110,7 @@ func (config QemuPciDevices) validateUpdate(current QemuPciDevices) (err error) 
 //		QemuPciID0
 //		...
 //		QemuPciID15
-//
-// )
+//	)
 type QemuPciID uint8
 
 const (
