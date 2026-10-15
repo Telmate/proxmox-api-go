@@ -471,32 +471,6 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 		if c.Bios == "" {
 			c.Bios = "seabios"
 		}
-		if c.Boot == "" {
-			c.Boot = "cdn"
-		}
-		if c.CPU == nil {
-			c.CPU = &QemuCPU{
-				Cores:   new(QemuCpuCores(1)),
-				Numa:    new(false),
-				Sockets: new(QemuCpuSockets(1))}
-		}
-		if c.Description == nil {
-			c.Description = util.Pointer("")
-		}
-		if c.HotPlug == nil {
-			c.HotPlug = &HotPlug{
-				CPU:     new(false),
-				Disk:    new(true),
-				Memory:  new(false),
-				Network: new(true),
-				USB:     new(true)}
-		}
-		if c.Memory == nil {
-			c.Memory = &QemuMemory{}
-		}
-		if c.Protection == nil {
-			c.Protection = util.Pointer(false)
-		}
 		if c.QemuDisks == nil {
 			c.QemuDisks = QemuDevices{}
 		}
@@ -515,16 +489,7 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 		if c.Scsihw == "" {
 			c.Scsihw = "lsi"
 		}
-		if c.StartAtNodeBoot == nil {
-			c.StartAtNodeBoot = util.Pointer(false)
-		}
-		if c.Tablet == nil {
-			c.Tablet = util.Pointer(true)
-		}
-		if c.Tags == nil {
-			c.Tags = new(Tags)
-		}
-		return &c
+		return testQemuBaseConfig_get(c)
 	}
 	tests := []struct {
 		name     string

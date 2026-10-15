@@ -194,7 +194,7 @@ type qemuDisk struct {
 	Storage    string // Only set for Disk
 	VolumePath string
 	Bandwidth  QemuDiskBandwidth
-	Id         uint // Only set for Disk
+	Id         uint8 // Only set for Disk
 	Backup     bool
 	Discard    bool
 	Disk       bool // true = disk, false = passthrough
@@ -471,7 +471,7 @@ func (disk *qemuDisk) parseDisk(diskData string, linkedVmId *GuestID) {
 	index = strings.LastIndexByte(diskNameAndFormat[0], '-')
 	if index > 0 {
 		if tmpDiskId, err := strconv.Atoi(diskNameAndFormat[0][index+1:]); err == nil {
-			disk.Id = uint(tmpDiskId)
+			disk.Id = uint8(tmpDiskId)
 		}
 	}
 

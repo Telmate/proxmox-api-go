@@ -110,8 +110,7 @@ func (config QemuPciDevices) validateUpdate(current QemuPciDevices) (err error) 
 //		QemuPciID0
 //		...
 //		QemuPciID15
-//
-// )
+//	)
 type QemuPciID uint8
 
 const (
@@ -136,6 +135,8 @@ const (
 	QemuPciID14 QemuPciID = 14
 	QemuPciID15 QemuPciID = 15
 )
+
+func (id QemuPciID) BootDevice() BootDevice { return BootDevice(qemuPrefixApiKeyPCI + id.String()) }
 
 func (id QemuPciID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 

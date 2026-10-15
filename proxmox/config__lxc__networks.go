@@ -355,8 +355,7 @@ func (config LxcNetworks) Validate(current LxcNetworks, version Version) error {
 //		LxcNetworkID0
 //		...
 //		LxcNetworkID15
-//
-// )
+//	)
 type LxcNetworkID uint8
 
 const (

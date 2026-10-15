@@ -1,26 +1,27 @@
 package proxmox
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
 
 type QemuScsiDisk struct {
+	LinkedDiskId    *GuestID          `json:"linked"` // LinkedCloneId is only returned and setting it has no effect
 	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache           QemuDiskCache     `json:"cache,omitempty"`
 	Format          QemuDiskFormat    `json:"format"`
-	Id              uint              `json:"id"`     //Id is only returned and setting it has no effect
-	LinkedDiskId    *GuestID          `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
-	Serial          QemuDiskSerial    `json:"serial,omitempty"`
-	SizeInKibibytes QemuDiskSize      `json:"size"`
-	Storage         string            `json:"storage"`
-	volumePath      string
-	WorldWideName   QemuWorldWideName `json:"wwn"`
 	ImportFrom      string            `json:"import_from,omitempty"`
+	Serial          QemuDiskSerial    `json:"serial,omitempty"`
+	Storage         string            `json:"storage"`
+	WorldWideName   QemuWorldWideName `json:"wwn"`
+	volumePath      string
+	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Backup          bool              `json:"backup"`
 	Discard         bool              `json:"discard"`
 	EmulateSSD      bool              `json:"emulatessd"`
+	Id              QemuScsiID        `json:"id"` // ID is only returned and setting it has no effect
 	IOThread        bool              `json:"iothread"`
 	ReadOnly        bool              `json:"readonly"`
 	Replicate       bool              `json:"replicate"`
@@ -36,7 +37,7 @@ func (disk *QemuScsiDisk) convertDataStructure() *qemuDisk {
 		Disk:            true,
 		EmulateSSD:      disk.EmulateSSD,
 		Format:          disk.Format,
-		Id:              disk.Id,
+		Id:              uint8(disk.Id),
 		IOThread:        disk.IOThread,
 		LinkedDiskId:    disk.LinkedDiskId,
 		ReadOnly:        disk.ReadOnly,
@@ -443,7 +444,7 @@ func (QemuScsiStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuScsiS
 			EmulateSSD:      tmpDisk.EmulateSSD,
 			Format:          tmpDisk.Format,
 			IOThread:        tmpDisk.IOThread,
-			Id:              tmpDisk.Id,
+			Id:              QemuScsiID(tmpDisk.Id),
 			LinkedDiskId:    tmpDisk.LinkedDiskId,
 			ReadOnly:        tmpDisk.ReadOnly,
 			Replicate:       tmpDisk.Replicate,
@@ -520,4 +521,64 @@ func (storage QemuScsiStorage) validate() (CloudInit uint8, err error) {
 		err = storage.Passthrough.Validate()
 	}
 	return
+}
+
+// QemuScsiID
+//
+//	const (
+//		QemuScsiID0
+//		...
+//		QemuScsiID30
+//	)
+type QemuScsiID uint8
+
+const (
+	QemuScsiID_Error_Invalid string = "scsi ID must be in the range 0-30"
+
+	QemuScsiID0  QemuScsiID = 0
+	QemuScsiID1  QemuScsiID = 1
+	QemuScsiID2  QemuScsiID = 2
+	QemuScsiID3  QemuScsiID = 3
+	QemuScsiID4  QemuScsiID = 4
+	QemuScsiID5  QemuScsiID = 5
+	QemuScsiID6  QemuScsiID = 6
+	QemuScsiID7  QemuScsiID = 7
+	QemuScsiID8  QemuScsiID = 8
+	QemuScsiID9  QemuScsiID = 9
+	QemuScsiID10 QemuScsiID = 10
+	QemuScsiID11 QemuScsiID = 11
+	QemuScsiID12 QemuScsiID = 12
+	QemuScsiID13 QemuScsiID = 13
+	QemuScsiID14 QemuScsiID = 14
+	QemuScsiID15 QemuScsiID = 15
+	QemuScsiID16 QemuScsiID = 16
+	QemuScsiID17 QemuScsiID = 17
+	QemuScsiID18 QemuScsiID = 18
+	QemuScsiID19 QemuScsiID = 19
+	QemuScsiID20 QemuScsiID = 20
+	QemuScsiID21 QemuScsiID = 21
+	QemuScsiID22 QemuScsiID = 22
+	QemuScsiID23 QemuScsiID = 23
+	QemuScsiID24 QemuScsiID = 24
+	QemuScsiID25 QemuScsiID = 25
+	QemuScsiID26 QemuScsiID = 26
+	QemuScsiID27 QemuScsiID = 27
+	QemuScsiID28 QemuScsiID = 28
+	QemuScsiID29 QemuScsiID = 29
+	QemuScsiID30 QemuScsiID = 30
+
+	QemuScsiIDMaximum = QemuScsiID30
+)
+
+func (id QemuScsiID) BootDevice() BootDevice {
+	return BootDevice(qemuPrefixApiKeyDiskSCSI + id.String())
+}
+
+func (id QemuScsiID) String() string { return strconv.FormatUint(uint64(id), 10) }
+
+func (id QemuScsiID) Validate() error {
+	if id > QemuScsiIDMaximum {
+		return errors.New(QemuScsiID_Error_Invalid)
+	}
+	return nil
 }

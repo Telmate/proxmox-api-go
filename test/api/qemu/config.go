@@ -10,6 +10,7 @@ import (
 
 func ReducedConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestName) (set pveSDK.ConfigQemu, expected *pveSDK.ConfigQemu) {
 	set = pveSDK.ConfigQemu{
+		Boot: &pveSDK.BootOrder{},
 		CPU: &pveSDK.QemuCPU{
 			Affinity: &[]uint{},
 			Cores:    new(pveSDK.QemuCpuCores(1)),
@@ -71,7 +72,7 @@ func ReducedConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 	}
 	expected = &pveSDK.ConfigQemu{
 		Bios: "seabios",
-		Boot: " ",
+		Boot: new(pveSDK.BootOrder),
 		CPU: &pveSDK.QemuCPU{
 			Cores:   new(pveSDK.QemuCpuCores(1)),
 			Numa:    new(false),
@@ -111,7 +112,7 @@ func MinimumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 	}
 	expected = &pveSDK.ConfigQemu{
 		Bios: "seabios",
-		Boot: " ",
+		Boot: new(pveSDK.BootOrder),
 		CPU: &pveSDK.QemuCPU{
 			Cores:   new(pveSDK.QemuCpuCores(1)),
 			Numa:    new(false),
@@ -221,7 +222,7 @@ func MaximumConfig(id pveSDK.GuestID, node pveSDK.NodeName, name pveSDK.GuestNam
 	}
 	expected = &pveSDK.ConfigQemu{
 		Bios: "seabios",
-		Boot: " ",
+		Boot: new(pveSDK.BootOrder),
 		CPU: &pveSDK.QemuCPU{
 			Affinity: &[]uint{1, 2},
 			Cores:    new(pveSDK.QemuCpuCores(2)),

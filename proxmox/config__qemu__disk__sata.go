@@ -1,26 +1,27 @@
 package proxmox
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
 
 type QemuSataDisk struct {
+	LinkedDiskId    *GuestID          `json:"linked"` // LinkedClone is only returned and setting it has no effect
 	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache           QemuDiskCache     `json:"cache,omitempty"`
 	Format          QemuDiskFormat    `json:"format"`
-	Id              uint              `json:"id"`     //Id is only returned and setting it has no effect
-	LinkedDiskId    *GuestID          `json:"linked"` //LinkedClone is only returned and setting it has no effect
-	Serial          QemuDiskSerial    `json:"serial,omitempty"`
-	SizeInKibibytes QemuDiskSize      `json:"size"`
-	Storage         string            `json:"storage"`
-	volumePath      string
-	WorldWideName   QemuWorldWideName `json:"wwn"`
 	ImportFrom      string            `json:"import_from,omitempty"`
+	Serial          QemuDiskSerial    `json:"serial,omitempty"`
+	Storage         string            `json:"storage"`
+	WorldWideName   QemuWorldWideName `json:"wwn"`
+	volumePath      string
+	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Backup          bool              `json:"backup"`
 	Discard         bool              `json:"discard"`
 	EmulateSSD      bool              `json:"emulatessd"`
+	Id              QemuSataID        `json:"id"` // ID is only returned and setting it has no effect
 	Replicate       bool              `json:"replicate"`
 }
 
@@ -34,7 +35,7 @@ func (disk *QemuSataDisk) convertDataStructure() *qemuDisk {
 		Disk:            true,
 		EmulateSSD:      disk.EmulateSSD,
 		Format:          disk.Format,
-		Id:              disk.Id,
+		Id:              uint8(disk.Id),
 		LinkedDiskId:    disk.LinkedDiskId,
 		Replicate:       disk.Replicate,
 		Serial:          disk.Serial,
@@ -284,7 +285,7 @@ func (QemuSataStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuSataS
 			Discard:         tmpDisk.Discard,
 			EmulateSSD:      tmpDisk.EmulateSSD,
 			Format:          tmpDisk.Format,
-			Id:              tmpDisk.Id,
+			Id:              QemuSataID(tmpDisk.Id),
 			LinkedDiskId:    tmpDisk.LinkedDiskId,
 			Replicate:       tmpDisk.Replicate,
 			Serial:          tmpDisk.Serial,
@@ -358,4 +359,39 @@ func (storage QemuSataStorage) validate() (CloudInit uint8, err error) {
 		err = storage.Passthrough.Validate()
 	}
 	return
+}
+
+// QemuSataID
+//
+//	const (
+//		QemuSataID0
+//		...
+//		QemuSataID5
+//	)
+type QemuSataID uint8
+
+const (
+	QemuSataID_Error_Invalid string = "sata ID must be in the range 0-5"
+
+	QemuSataID0 QemuSataID = 0
+	QemuSataID1 QemuSataID = 1
+	QemuSataID2 QemuSataID = 2
+	QemuSataID3 QemuSataID = 3
+	QemuSataID4 QemuSataID = 4
+	QemuSataID5 QemuSataID = 5
+
+	QemuSataIDMaximum = QemuSataID5
+)
+
+func (id QemuSataID) BootDevice() BootDevice {
+	return BootDevice(qemuPrefixApiKeyDiskSata + id.String())
+}
+
+func (id QemuSataID) String() string { return strconv.FormatUint(uint64(id), 10) }
+
+func (id QemuSataID) Validate() error {
+	if id > QemuSataIDMaximum {
+		return errors.New(QemuSataID_Error_Invalid)
+	}
+	return nil
 }

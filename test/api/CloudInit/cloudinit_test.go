@@ -34,9 +34,10 @@ func Test_Cloud_Init_VM(t *testing.T) {
 
 	_, err = Test.GetClient().New().QemuGuest.Create(context.Background(), config)
 	require.NoError(t, err)
-
-	config.Boot = "order=virtio0;ide2;net0"
-
+	config.Boot = &pxapi.BootOrder{
+		pxapi.QemuVirtIoID0.BootDevice(),
+		pxapi.QemuIdeID2.BootDevice(),
+		pxapi.QemuNetworkInterfaceID0.BootDevice()}
 	config.CloudInit = &pxapi.CloudInit{
 		NetworkInterfaces: pxapi.CloudInitNetworkInterfaces{
 			pxapi.QemuNetworkInterfaceID0: pxapi.CloudInitNetworkConfig{

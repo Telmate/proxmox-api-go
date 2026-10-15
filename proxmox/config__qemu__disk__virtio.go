@@ -1,25 +1,26 @@
 package proxmox
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 )
 
 type QemuVirtIODisk struct {
+	LinkedDiskId    *GuestID          `json:"linked"` // LinkedCloneId is only returned and setting it has no effect
 	AsyncIO         QemuDiskAsyncIO   `json:"asyncio,omitempty"`
-	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
 	Cache           QemuDiskCache     `json:"cache,omitempty"`
 	Format          QemuDiskFormat    `json:"format"`
-	Id              uint              `json:"id"`     //Id is only returned and setting it has no effect
-	LinkedDiskId    *GuestID          `json:"linked"` //LinkedCloneId is only returned and setting it has no effect
-	Serial          QemuDiskSerial    `json:"serial,omitempty"`
-	SizeInKibibytes QemuDiskSize      `json:"size"`
-	Storage         string            `json:"storage"`
-	volumePath      string
-	WorldWideName   QemuWorldWideName `json:"wwn"`
 	ImportFrom      string            `json:"import_from,omitempty"`
+	Serial          QemuDiskSerial    `json:"serial,omitempty"`
+	Storage         string            `json:"storage"`
+	WorldWideName   QemuWorldWideName `json:"wwn"`
+	volumePath      string
+	Bandwidth       QemuDiskBandwidth `json:"bandwidth,omitempty"`
+	SizeInKibibytes QemuDiskSize      `json:"size"`
 	Backup          bool              `json:"backup"`
 	Discard         bool              `json:"discard"`
+	Id              QemuVirtIoID      `json:"id"` // ID is only returned and setting it has no effect
 	IOThread        bool              `json:"iothread"`
 	ReadOnly        bool              `json:"readonly"`
 	Replicate       bool              `json:"replicate"`
@@ -34,7 +35,7 @@ func (disk *QemuVirtIODisk) convertDataStructure() *qemuDisk {
 		Discard:         disk.Discard,
 		Disk:            true,
 		Format:          disk.Format,
-		Id:              disk.Id,
+		Id:              uint8(disk.Id),
 		IOThread:        disk.IOThread,
 		LinkedDiskId:    disk.LinkedDiskId,
 		ReadOnly:        disk.ReadOnly,
@@ -325,7 +326,7 @@ func (QemuVirtIOStorage) mapToStruct(param string, LinkedVmId *GuestID) *QemuVir
 			Cache:           tmpDisk.Cache,
 			Discard:         tmpDisk.Discard,
 			Format:          tmpDisk.Format,
-			Id:              tmpDisk.Id,
+			Id:              QemuVirtIoID(tmpDisk.Id),
 			IOThread:        tmpDisk.IOThread,
 			LinkedDiskId:    tmpDisk.LinkedDiskId,
 			ReadOnly:        tmpDisk.ReadOnly,
@@ -382,4 +383,50 @@ func (storage QemuVirtIOStorage) validate() (CloudInit uint8, err error) {
 		err = storage.Passthrough.Validate()
 	}
 	return
+}
+
+// Range 0-15
+// QemuVirtIoID
+//
+//	const (
+//		QemuVirtIoID0
+//		...
+//		QemuVirtIoID15
+//	)
+type QemuVirtIoID uint8
+
+const (
+	QemuVirtIoID_Error_Invalid string = "virtio ID must be in the range 0-15"
+
+	QemuVirtIoID0  QemuVirtIoID = 0
+	QemuVirtIoID1  QemuVirtIoID = 1
+	QemuVirtIoID2  QemuVirtIoID = 2
+	QemuVirtIoID3  QemuVirtIoID = 3
+	QemuVirtIoID4  QemuVirtIoID = 4
+	QemuVirtIoID5  QemuVirtIoID = 5
+	QemuVirtIoID6  QemuVirtIoID = 6
+	QemuVirtIoID7  QemuVirtIoID = 7
+	QemuVirtIoID8  QemuVirtIoID = 8
+	QemuVirtIoID9  QemuVirtIoID = 9
+	QemuVirtIoID10 QemuVirtIoID = 10
+	QemuVirtIoID11 QemuVirtIoID = 11
+	QemuVirtIoID12 QemuVirtIoID = 12
+	QemuVirtIoID13 QemuVirtIoID = 13
+	QemuVirtIoID14 QemuVirtIoID = 14
+	QemuVirtIoID15 QemuVirtIoID = 15
+
+	QemuVirtIoIDMaximum = QemuVirtIoID15
+)
+
+func (id QemuVirtIoID) BootDevice() BootDevice {
+	return BootDevice(qemuPrefixApiKeyDiskVirtIO + id.String())
+}
+
+func (id QemuVirtIoID) String() string { return strconv.FormatUint(uint64(id), 10) }
+
+func (id QemuVirtIoID) Validate() error {
+	if id > QemuVirtIoIDMaximum {
+		return errors.New(QemuVirtIoID_Error_Invalid)
+	}
+	return nil
 }

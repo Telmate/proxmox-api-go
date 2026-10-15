@@ -121,6 +121,8 @@ const (
 	QemuUsbID4 QemuUsbID = 4
 )
 
+func (id QemuUsbID) BootDevice() BootDevice { return BootDevice(qemuPrefixApiKeyUSB + id.String()) }
+
 func (id QemuUsbID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
 func (id QemuUsbID) Validate() error {

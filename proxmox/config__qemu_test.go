@@ -91,6 +91,9 @@ func (a qemuTestTypeValid) append(b qemuTestTypeValid) qemuTestTypeValid {
 }
 
 func testQemuBaseConfig_get(config ConfigQemu) *ConfigQemu {
+	if config.Boot == nil {
+		config.Boot = new(BootOrder)
+	}
 	if config.CPU == nil {
 		config.CPU = &QemuCPU{
 			Cores:   new(QemuCpuCores(1)),
@@ -5441,41 +5444,6 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		if config.Bios == "" {
 			config.Bios = ("seabios")
 		}
-		if config.Boot == "" {
-			config.Boot = "cdn"
-		}
-		if config.CPU == nil {
-			config.CPU = &QemuCPU{
-				Cores:   new(QemuCpuCores(1)),
-				Numa:    new(false),
-				Sockets: new(QemuCpuSockets(1))}
-		}
-		if config.Description == nil {
-			config.Description = util.Pointer("")
-		}
-		if config.HotPlug == nil {
-			config.HotPlug = &HotPlug{
-				CPU:     new(false),
-				Disk:    new(true),
-				Memory:  new(false),
-				Network: new(true),
-				USB:     new(true)}
-		}
-		if config.ID == nil {
-			config.ID = new(GuestID(0))
-		}
-		if config.Memory == nil {
-			config.Memory = &QemuMemory{}
-		}
-		if config.Name == nil {
-			config.Name = util.Pointer(GuestName(""))
-		}
-		if config.Node == nil {
-			config.Node = new(NodeName(""))
-		}
-		if config.Protection == nil {
-			config.Protection = util.Pointer(false)
-		}
 		if config.QemuDisks == nil {
 			config.QemuDisks = QemuDevices{}
 		}
@@ -5494,16 +5462,7 @@ func Test_ActiveRawConfigQemu_Get(t *testing.T) {
 		if config.Scsihw == "" {
 			config.Scsihw = "lsi"
 		}
-		if config.StartAtNodeBoot == nil {
-			config.StartAtNodeBoot = util.Pointer(false)
-		}
-		if config.Tablet == nil {
-			config.Tablet = util.Pointer(true)
-		}
-		if config.Tags == nil {
-			config.Tags = new(Tags)
-		}
-		return &config
+		return testQemuBaseConfig_get(config)
 	}
 	tests := []struct {
 		name    string

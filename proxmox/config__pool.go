@@ -269,23 +269,23 @@ func (config ConfigPool) mapToApiUpdate(current *rawPoolInfo, currentGuests map[
 				builder.WriteString("&delete=1")
 				if len(guestsRemove) > 0 {
 					builder.WriteString("&" + poolApiKeyGuests + "=")
-					builder.WriteString(array.CSV(guestsRemove))
+					builder.WriteString(array.ByteSV(guestsRemove, ','))
 				}
 				if len(storagesRemove) > 0 {
 					builder.WriteString("&" + poolApiKeyStorages + "=")
-					builder.WriteString(array.CSV(storagesRemove))
+					builder.WriteString(array.ByteSV(storagesRemove, ','))
 				}
 			} else if len(guestsAdd)+len(storagesAdd) > 0 {
 				if len(guestsAdd) > 0 && version.Major >= 8 { // We don't know if the guests are members of another pool
 					// state = poolUpdateStateAdded
 					builder.WriteString("&allow-move=1&" + poolApiKeyGuests + "=")
-					builder.WriteString(array.CSV(guestsAdd))
+					builder.WriteString(array.ByteSV(guestsAdd, ','))
 					guestsAddPtr = nil // we already added them
 				}
 				if len(storagesAdd) > 0 {
 					// state = poolUpdateStateAdded
 					builder.WriteString("&" + poolApiKeyStorages + "=")
-					builder.WriteString(array.CSV(storagesAdd))
+					builder.WriteString(array.ByteSV(storagesAdd, ','))
 					storagesAddPtr = nil // we already added them
 				}
 			}
@@ -805,14 +805,14 @@ func (pool PoolName) addGuestsV(ctx context.Context, c *clientAPI, guests *[]Gue
 	if guests != nil && len(*guests) > 0 {
 		builder.WriteString(move)
 		builder.WriteString(poolApiKeyGuests + "=")
-		builder.WriteString(array.CSV(*guests))
+		builder.WriteString(array.ByteSV(*guests, ','))
 	}
 	if storages != nil && len(*storages) > 0 {
 		if guests != nil && len(*guests) > 0 {
 			builder.WriteString("&")
 		}
 		builder.WriteString(poolApiKeyStorages + "=")
-		builder.WriteString(array.CSV(*storages))
+		builder.WriteString(array.ByteSV(*storages, ','))
 	}
 	return pool.put(ctx, c, util.Pointer([]byte(builder.String())))
 }
@@ -931,14 +931,14 @@ func (pool PoolName) removeMembers(ctx context.Context, c *clientAPI, guests *[]
 	builder := strings.Builder{}
 	if guests != nil && len(*guests) > 0 {
 		builder.WriteString(poolApiKeyGuests + "=")
-		builder.WriteString(array.CSV(*guests))
+		builder.WriteString(array.ByteSV(*guests, ','))
 	}
 	if storages != nil && len(*storages) > 0 {
 		if guests != nil && len(*guests) > 0 {
 			builder.WriteString("&")
 		}
 		builder.WriteString(poolApiKeyStorages + "=")
-		builder.WriteString(array.CSV(*storages))
+		builder.WriteString(array.ByteSV(*storages, ','))
 	}
 	builder.WriteString("&delete=1")
 	return pool.put(ctx, c, util.Pointer([]byte(builder.String())))

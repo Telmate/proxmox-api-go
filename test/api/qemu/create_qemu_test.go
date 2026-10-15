@@ -191,7 +191,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 					StartAtNodeBoot: util.Pointer(false),
 					Tablet:          util.Pointer(true),
 					Bios:            "seabios",
-					Boot:            " ",
+					Boot:            new(pveSDK.BootOrder),
 					Tags:            new(pveSDK.Tags),
 					Watchdog: &pveSDK.Watchdog{
 						Action: new(pveSDK.WatchdogActionNone),
@@ -251,7 +251,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 			test: func(t *testing.T) {
 				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
 					Bios: "seabios",
-					Boot: " ",
+					Boot: new(pveSDK.BootOrder),
 					CPU: &pveSDK.QemuCPU{
 						Cores:   new(pveSDK.QemuCpuCores(1)),
 						Numa:    new(false),

@@ -41,8 +41,8 @@ func Combine[T comparable](a, b []T) []T {
 	return combined
 }
 
-// CSV converts an array of fmt.Stringer to a CSV string
-func CSV[T fmt.Stringer](array []T) string {
+// ByteSV converts an array of fmt.Stringer to a string with separators
+func ByteSV[T fmt.Stringer](array []T, separator byte) string {
 	switch len(array) {
 	case 0:
 		return ""
@@ -51,10 +51,26 @@ func CSV[T fmt.Stringer](array []T) string {
 	}
 	builder := strings.Builder{}
 	for i := range array {
-		builder.WriteByte(',')
+		builder.WriteByte(separator)
 		builder.WriteString(array[i].String())
 	}
 	return builder.String()[1:]
+}
+
+// StringSV converts an array of fmt.Stringer to a string with separators
+func StringSV[T fmt.Stringer](array []T, separator string) string {
+	switch len(array) {
+	case 0:
+		return ""
+	case 1:
+		return array[0].String()
+	}
+	builder := strings.Builder{}
+	for i := range array {
+		builder.WriteString(separator)
+		builder.WriteString(array[i].String())
+	}
+	return builder.String()[len(separator):]
 }
 
 func Empty[T any]() []T { return []T{} }

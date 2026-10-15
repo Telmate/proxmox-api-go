@@ -68,7 +68,7 @@ func combineParamsAndBody(params map[string]any, body *[]byte) *[]byte {
 	return nil
 }
 
-func countSeperator(str string) int {
+func countSeparator(str string) int {
 	var count int
 	for i := range str {
 		switch str[i] {

@@ -290,8 +290,7 @@ func (config QemuNetworkInterface) Validate(current *QemuNetworkInterface) error
 //		QemuNetworkInterfaceID0
 //		...
 //		QemuNetworkInterfaceID31
-//
-// )
+//	)
 type QemuNetworkInterfaceID uint8
 
 const (
@@ -332,6 +331,10 @@ const (
 
 	QemuNetworkInterfaceIDMaximum QemuNetworkInterfaceID = QemuNetworkInterfaceID31
 )
+
+func (id QemuNetworkInterfaceID) BootDevice() BootDevice {
+	return BootDevice(qemuPrefixApiKeyNetwork + id.String())
+}
 
 func (id QemuNetworkInterfaceID) String() string { return strconv.Itoa(int(id)) } // String is for fmt.Stringer.
 
