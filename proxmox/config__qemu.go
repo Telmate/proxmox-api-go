@@ -271,9 +271,6 @@ func (config *ConfigQemu) defaults() {
 	if config.Bios == "" {
 		config.Bios = "seabios"
 	}
-	if config.QemuDisks == nil {
-		config.QemuDisks = QemuDevices{}
-	}
 	if config.QemuKVM == nil {
 		config.QemuKVM = util.Pointer(true)
 	}

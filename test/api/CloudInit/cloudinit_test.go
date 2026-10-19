@@ -24,12 +24,10 @@ func Test_Cloud_Init_VM(t *testing.T) {
 	_, err = Test.GetClient().ApplyNetwork(context.Background(), "pve")
 	require.NoError(t, err)
 
-	disk := make(map[string]interface{})
-	disk["import-from"] = "/tmp/jammy-server-cloudimg-amd64.img"
-	disk["type"] = "virtio"
-	disk["storage"] = "local"
+	config.Disks.VirtIO.Disk_0.Disk = &pxapi.QemuVirtIODisk{
+		ImportFrom: "/tmp/jammy-server-cloudimg-amd64.img",
+		Storage:    "local"}
 
-	config.QemuDisks[0] = disk
 	config.Name = util.Pointer(pxapi.GuestName("Base-Image"))
 
 	_, err = Test.GetClient().New().QemuGuest.Create(context.Background(), config)

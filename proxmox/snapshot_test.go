@@ -471,9 +471,6 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 		if c.Bios == "" {
 			c.Bios = "seabios"
 		}
-		if c.QemuDisks == nil {
-			c.QemuDisks = QemuDevices{}
-		}
 		if c.QemuKVM == nil {
 			c.QemuKVM = util.Pointer(true)
 		}

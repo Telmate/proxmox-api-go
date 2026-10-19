@@ -16,8 +16,6 @@ func _create_vmref() (ref *pxapi.VmRef) {
 
 func _create_vm_spec(network bool) pxapi.ConfigQemu {
 
-	disks := make(pxapi.QemuDevices)
-
 	mac, _ := net.ParseMAC("B6:8F:9D:7C:8F:BC")
 
 	config := pxapi.ConfigQemu{
@@ -44,12 +42,10 @@ func _create_vm_spec(network bool) pxapi.ConfigQemu {
 				Firewall: util.Pointer(true),
 				Model:    util.Pointer(pxapi.QemuNetworkModelVirtIO),
 				MAC:      &mac}},
-		QemuIso: "none",
 		Boot: &pxapi.BootOrder{
 			pxapi.QemuIdeID2.BootDevice(),
 			pxapi.QemuNetworkInterfaceID0.BootDevice()},
-		Scsihw:    "virtio-scsi-pci",
-		QemuDisks: disks,
+		Scsihw: "virtio-scsi-pci",
 	}
 
 	return config
