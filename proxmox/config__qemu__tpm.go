@@ -3,8 +3,6 @@ package proxmox
 import (
 	"errors"
 	"strings"
-
-	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 type TpmState struct {
@@ -15,28 +13,14 @@ type TpmState struct {
 
 const TmpState_Error_VersionRequired string = "version is required"
 
-func (t TpmState) mapToApi(params map[string]interface{}, currentTpm *TpmState) string {
+func (t TpmState) mapToApi(params map[string]any, currentTpm *TpmState) string {
 	if t.Delete {
-		return "tpmstate0"
+		return qemuApiKeyTPM
 	}
 	if currentTpm == nil { // create
-		params["tpmstate0"] = t.Storage + ":1,version=" + t.Version.mapToApi()
+		params[qemuApiKeyTPM] = t.Storage + ":1,version=" + t.Version.mapToApi()
 	}
 	return ""
-}
-
-func (TpmState) mapToSDK(param string) *TpmState {
-	setting := splitStringOfSettings(param)
-	splitString := strings.Split(param, ":")
-	tmp := TpmState{}
-	if len(splitString) > 1 {
-		tmp.Storage = splitString[0]
-	}
-	if itemValue, isSet := setting["version"]; isSet {
-		tmp.Version = util.Pointer(TpmVersion(itemValue))
-	}
-	return &tmp
-
 }
 
 func (t TpmState) markChanges(currentTpm TpmState, delete *strings.Builder) (disk *qemuDiskMove) {
@@ -44,11 +28,11 @@ func (t TpmState) markChanges(currentTpm TpmState, delete *strings.Builder) (dis
 		return nil
 	}
 	if t.Version != nil && t.Version.mapToApi() != string(*currentTpm.Version) {
-		delete.WriteString(comma + "tpmstate0")
+		delete.WriteString(comma + qemuApiKeyTPM)
 		return nil
 	}
 	if t.Storage != currentTpm.Storage {
-		return &qemuDiskMove{Storage: t.Storage, Id: "tpmstate0"}
+		return &qemuDiskMove{Storage: t.Storage, Id: qemuApiKeyTPM}
 	}
 	return nil
 }
@@ -90,6 +74,22 @@ func (t TpmVersion) mapToApi() string {
 func (t TpmVersion) Validate() error {
 	if t.mapToApi() == "" {
 		return errors.New(TpmVersion_Error_Invalid)
+	}
+	return nil
+}
+
+func (raw *rawConfigQemu) GetTPM() *TpmState {
+	if v, ok := raw.a[qemuApiKeyTPM]; ok {
+		setting := splitStringOfSettings(v.(string))
+		splitString := strings.Split(v.(string), ":")
+		tmp := TpmState{}
+		if len(splitString) > 1 {
+			tmp.Storage = splitString[0]
+		}
+		if v, ok := setting["version"]; ok {
+			tmp.Version = new(TpmVersion(v))
+		}
+		return &tmp
 	}
 	return nil
 }

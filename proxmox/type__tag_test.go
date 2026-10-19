@@ -37,6 +37,35 @@ func test_TagMapToSDK_data() []struct {
 			output: Tags{"aaa"}}}
 }
 
+func testData_RawConfigLXC_Tags_Get() lxcTestGetFunc {
+	return func() []lxcTestCaseGet {
+		return []lxcTestCaseGet{{
+			input:  rawConfigLXC{a: map[string]any{"tags": "test"}},
+			output: lxcGetBaseConfig(ConfigLXC{Tags: &Tags{"test"}})}}
+	}
+}
+
+func testData_RawConfigQemu_Tags_Get() qemuTestGetFunc {
+	return func() []qemuTestCaseGet {
+		return []qemuTestCaseGet{
+			{name: `bug`, // in some versions a space is returned when there are no tags.
+				input: rawConfigQemu{a: map[string]any{
+					"tags": string(" ")}},
+				output: testQemuBaseConfig_get(ConfigQemu{
+					Tags: new(Tags)})},
+			{name: `empty`,
+				input: rawConfigQemu{a: map[string]any{
+					"tags": string("")}},
+				output: testQemuBaseConfig_get(ConfigQemu{
+					Tags: new(Tags)})},
+			{name: `set`,
+				input: rawConfigQemu{a: map[string]any{
+					"tags": string("a;bb;ccc")}},
+				output: testQemuBaseConfig_get(ConfigQemu{
+					Tags: new(Tags{"a", "bb", "ccc"})})}}
+	}
+}
+
 func Benchmark_Tag_mapToSDK(b *testing.B) {
 	tests := test_TagMapToSDK_data()
 	for b.Loop() {
@@ -122,4 +151,30 @@ func testDataTagsMapToAPI() qemuTestsAPI {
 					"tags": "tag5;tag623;tag2;tag8"}}},
 				config: &ConfigQemu{Tags: new(Tags{"tag2", "tag8", "tag623", "tag5"})}}},
 	}
+}
+
+func Test_RawConfigLXC_GetTags(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigLXC_Tags_Get().Inject(t,
+		func(t *testing.T, raw RawConfigLXC, output *ConfigLXC) {
+			require.Equal(t, *output.Tags, raw.GetTags())
+		})
+}
+
+func Test_RawConfigLXC_Tags_Get(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigLXC_Tags_Get().Test(t)
+}
+
+func Test_RawConfigQemu_GetTags(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_Tags_Get().Inject(t,
+		func(t *testing.T, raw RawConfigQemu, output *ConfigQemu, _ error) {
+			require.Equal(t, *output.Tags, raw.GetTags())
+		})
+}
+
+func Test_RawConfigQemu_Tags_Get(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_Tags_Get().Test(t)
 }

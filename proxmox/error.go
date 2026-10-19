@@ -52,29 +52,6 @@ func (errorMsg) guestIsProtectedCantDelete(id GuestID) error {
 		id:  id}
 }
 
-type functionalityVersionWrapper struct {
-	err           error
-	functionality string
-	version       Version
-}
-
-func (w *functionalityVersionWrapper) Error() string {
-	return "functionality (" + w.functionality + ") not supported in version (" + w.version.String() + ")"
-}
-
-func (w *functionalityVersionWrapper) Unwrap() error { return w.err }
-
-var errNotSupportedInVersion = errors.New("")
-
-func (msg errorMsg) FunctionalityNotSupportedInVersion() error { return errNotSupportedInVersion }
-
-func functionalityNotSupportedInVersion(functionality string, version Version) error {
-	return &functionalityVersionWrapper{
-		err:           errNotSupportedInVersion,
-		functionality: functionality,
-		version:       version}
-}
-
 type ApiError struct {
 	Errors  map[string]any
 	Message string
@@ -112,3 +89,34 @@ type TaskError struct {
 func (e TaskError) Error() string {
 	return "task error: task id: " + e.TaskID + " message: " + e.Message
 }
+
+type ValidateError struct {
+	Message string
+}
+
+func (e *ValidateError) Error() string {
+	return "validation error: " + e.Message
+}
+
+type VersionError struct {
+	err           error
+	Functionality string
+	Version       Version
+}
+
+var errNotSupportedInVersion = errors.New("functionality not supported in version")
+
+func (msg errorMsg) VersionError() error { return errNotSupportedInVersion }
+
+func newVersionError(functionality string, version Version) error {
+	return &VersionError{
+		err:           errNotSupportedInVersion,
+		Functionality: functionality,
+		Version:       version}
+}
+
+func (e *VersionError) Error() string {
+	return "version error: functionality (" + e.Functionality + ") is only supported on Proxmox VE (" + e.Version.String() + ") and higher"
+}
+
+func (e *VersionError) Unwrap() error { return e.err }

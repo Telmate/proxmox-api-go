@@ -1,7 +1,6 @@
 package proxmox
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,21 +10,21 @@ func testData_RawConfigQemu_Boot_Get() qemuTestGetFunc {
 	return func() []qemuTestCaseGet {
 		return []qemuTestCaseGet{
 			{name: `empty`,
-				input:  map[string]any{"boot": " "},
+				input:  rawConfigQemu{a: map[string]any{"boot": " "}},
 				output: testQemuBaseConfig_get(ConfigQemu{})},
 			{name: `single`,
-				input: map[string]any{"boot": "order=ide1"},
+				input: rawConfigQemu{a: map[string]any{"boot": "order=ide1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Boot: &BootOrder{
 					"ide1",
 				}})},
 			{name: `double`,
-				input: map[string]any{"boot": "order=scsi3;usb1"},
+				input: rawConfigQemu{a: map[string]any{"boot": "order=scsi3;usb1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Boot: &BootOrder{
 					"scsi3",
 					"usb1",
 				}})},
 			{name: `multiple`,
-				input: map[string]any{"boot": "order=net17;sata3;hostpci1"},
+				input: rawConfigQemu{a: map[string]any{"boot": "order=net17;sata3;hostpci1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Boot: &BootOrder{
 					"net17",
 					"sata3",
@@ -39,28 +38,28 @@ func testData_ConfigQemu_BootOrder_Validate() qemuTestTypeValidateFunc {
 	return qemuTestTypeValidateFunc(func() (qemuTestTypeInvalid, qemuTestTypeValid) {
 		invalid := qemuTestTypeInvalid{
 			createUpdate: []qemuTestCaseInvalid{
-				{name: `errors.New(BootOrder_Error_Duplicate) 1`,
+				{name: `BootOrder_Error_Duplicate 1`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"sata1",
 						"sata1"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootOrder_Error_Duplicate)},
-				{name: `errors.New(BootOrder_Error_Duplicate) 2`,
+					err:     &ValidateError{Message: BootOrder_Error_Duplicate}},
+				{name: `BootOrder_Error_Duplicate 2`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"sata1",
 						"ide2",
 						"sata1"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootOrder_Error_Duplicate)},
-				{name: `errors.New(BootOrder_Error_Duplicate) 3`,
+					err:     &ValidateError{Message: BootOrder_Error_Duplicate}},
+				{name: `BootOrder_Error_Duplicate 3`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"ide2",
 						"sata1",
 						"sata1",
 						"scsi6"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootOrder_Error_Duplicate)},
-				{name: `errors.New(BootOrder_Error_Duplicate) 4`,
+					err:     &ValidateError{Message: BootOrder_Error_Duplicate}},
+				{name: `BootOrder_Error_Duplicate 4`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"ide2",
 						"sata1",
@@ -68,7 +67,7 @@ func testData_ConfigQemu_BootOrder_Validate() qemuTestTypeValidateFunc {
 						"sata1",
 						"scsi6"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootOrder_Error_Duplicate)},
+					err:     &ValidateError{Message: BootOrder_Error_Duplicate}},
 			}}
 		valid := qemuTestTypeValid{
 			createUpdate: []qemuTestCaseValid{
@@ -108,92 +107,92 @@ func testData_ConfigQemu_BootDevice_Validate() qemuTestTypeValidateFunc {
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"hostpci16"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `maximum ide4`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"ide4"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `maximum net32`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"net32"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `maximum sata6`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"sata6"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `maximum scsi31`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"scsi31"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `maximum usb5`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"usb5"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `maximum virtio16`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"virtio16"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number hostpciN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"hostpciN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number hostpciNN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"hostpciNN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number ideN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"ideN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number netN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"netN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number netNN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"netNN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number sataN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"sataN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number scsiN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"scsiN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number scsiNN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"scsiNN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number usbN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"usbN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number virtioN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"virtioN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 				{name: `no number virtioNN`,
 					input: testQemuBaseConfig_Validate(ConfigQemu{Boot: &BootOrder{
 						"virtioNN"}}),
 					current: &ConfigQemu{Boot: new(BootOrder)},
-					err:     errors.New(BootDevice_Error_Invalid)},
+					err:     &ValidateError{Message: BootDevice_Error_Invalid}},
 			}}
 		valid := qemuTestTypeValid{
 			createUpdate: []qemuTestCaseValid{
@@ -325,7 +324,6 @@ func Test_RawConfigQemu_GetBoot(t *testing.T) {
 func Test_RawConfigQemu_Boot_Get(t *testing.T) {
 	t.Parallel()
 	testData_RawConfigQemu_Boot_Get().Test(t)
-
 }
 
 func Test_ConfigQemu_BootOrder_Validate(t *testing.T) {

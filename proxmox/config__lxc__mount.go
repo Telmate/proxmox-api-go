@@ -1165,19 +1165,20 @@ type lxcMountMove struct {
 	storage string
 }
 
-func (disk lxcMountMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) (exitStatus any, err error) {
-	return client.PostWithTask(ctx, disk.mapToAPI(delete),
-		"/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/move_volume")
+func (disk lxcMountMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) error {
+	return client.api().postTask(ctx, "/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/move_volume", disk.mapToAPI(delete))
 }
 
-func (disk lxcMountMove) mapToAPI(delete bool) map[string]any {
-	params := map[string]any{
-		"volume":  disk.id,
-		"storage": disk.storage}
+func (disk lxcMountMove) mapToAPI(delete bool) *[]byte {
+	var b strings.Builder
+	b.WriteString("volume=")
+	b.WriteString(disk.id)
+	b.WriteString("&storage=")
+	b.WriteString(disk.storage)
 	if delete {
-		params["delete"] = "1"
+		b.WriteString("&delete=1")
 	}
-	return params
+	return new([]byte(b.String()))
 }
 
 type lxcMountResize struct {

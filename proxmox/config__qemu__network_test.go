@@ -12,7 +12,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 	return func() []qemuTestCaseGet {
 		return []qemuTestCaseGet{
 			{name: `all e1000`,
-				input: map[string]interface{}{"net0": "e1000=BC:24:11:E1:BB:5d,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"},
+				input: rawConfigQemu{a: map[string]any{"net0": "e1000=BC:24:11:E1:BB:5d,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
 					Bridge:    new("vmbr0"),
 					Connected: new(false),
@@ -26,7 +26,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					NativeVlan:    new(Vlan(12)),
 					TaggedVlans:   new(Vlans{34, 18, 25})}}})},
 			{name: `all virtio`,
-				input: map[string]interface{}{"net31": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"},
+				input: rawConfigQemu{a: map[string]any{"net31": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0,mtu=1395,firewall=1,link_down=1,queues=23,rate=1.53,tag=12,trunks=34;18;25"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID31: QemuNetworkInterface{
 					Bridge:        new("vmbr0"),
 					Connected:     new(false),
@@ -40,7 +40,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					NativeVlan:    new(Vlan(12)),
 					TaggedVlans:   new(Vlans{34, 18, 25})}}})},
 			{name: `Bridge`,
-				input: map[string]interface{}{"net2": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0"},
+				input: rawConfigQemu{a: map[string]any{"net2": "virtio=BC:24:11:E1:BB:5D,bridge=vmbr0"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID2: QemuNetworkInterface{
 					Bridge:      new("vmbr0"),
 					Connected:   new(true),
@@ -50,7 +50,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `Model and Mac`,
-				input: map[string]interface{}{"net3": "virtio=BC:24:11:E1:BB:5D"},
+				input: rawConfigQemu{a: map[string]any{"net3": "virtio=BC:24:11:E1:BB:5D"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID3: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -59,7 +59,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `Connected false`,
-				input: map[string]interface{}{"net4": "virtio=BC:24:11:E1:BB:5D,link_down=1"},
+				input: rawConfigQemu{a: map[string]any{"net4": "virtio=BC:24:11:E1:BB:5D,link_down=1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID4: QemuNetworkInterface{
 					Connected:   new(false),
 					Firewall:    new(false),
@@ -68,7 +68,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `Connected true`,
-				input: map[string]interface{}{"net5": "virtio=BC:24:11:E1:BB:5D,link_down=0"},
+				input: rawConfigQemu{a: map[string]any{"net5": "virtio=BC:24:11:E1:BB:5D,link_down=0"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID5: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -77,7 +77,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `Connected unset`,
-				input: map[string]interface{}{"net6": "virtio=BC:24:11:E1:BB:5D"},
+				input: rawConfigQemu{a: map[string]any{"net6": "virtio=BC:24:11:E1:BB:5D"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID6: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -86,7 +86,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `Firwall true`,
-				input: map[string]interface{}{"net7": "virtio=BC:24:11:E1:BB:5D,firewall=1"},
+				input: rawConfigQemu{a: map[string]any{"net7": "virtio=BC:24:11:E1:BB:5D,firewall=1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID7: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(true),
@@ -95,7 +95,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `Firwall false`,
-				input: map[string]interface{}{"net8": "virtio=BC:24:11:E1:BB:5D,firewall=0"},
+				input: rawConfigQemu{a: map[string]any{"net8": "virtio=BC:24:11:E1:BB:5D,firewall=0"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID8: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -104,7 +104,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `Firwall unset`,
-				input: map[string]interface{}{"net9": "virtio=BC:24:11:E1:BB:5D"},
+				input: rawConfigQemu{a: map[string]any{"net9": "virtio=BC:24:11:E1:BB:5D"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID9: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -113,7 +113,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `MTU value`,
-				input: map[string]interface{}{"net10": "virtio=BC:24:11:E1:BB:5D,mtu=1500"},
+				input: rawConfigQemu{a: map[string]any{"net10": "virtio=BC:24:11:E1:BB:5D,mtu=1500"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID10: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -123,7 +123,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `MTU inherit`,
-				input: map[string]interface{}{"net11": "virtio=BC:24:11:E1:BB:5D,mtu=1"},
+				input: rawConfigQemu{a: map[string]any{"net11": "virtio=BC:24:11:E1:BB:5D,mtu=1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID11: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -133,7 +133,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `MultiQueue disable`,
-				input: map[string]interface{}{"net12": "virtio=BC:24:11:E1:BB:5D"},
+				input: rawConfigQemu{a: map[string]any{"net12": "virtio=BC:24:11:E1:BB:5D"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID12: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -142,7 +142,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `MultiQueue enable`,
-				input: map[string]interface{}{"net0": "virtio=BC:24:11:E1:BB:5D,queues=1"},
+				input: rawConfigQemu{a: map[string]any{"net0": "virtio=BC:24:11:E1:BB:5D,queues=1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID0: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -152,7 +152,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `RateLimitKBps disable`,
-				input: map[string]interface{}{"net13": "virtio=BC:24:11:E1:BB:5D"},
+				input: rawConfigQemu{a: map[string]any{"net13": "virtio=BC:24:11:E1:BB:5D"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID13: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -161,7 +161,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:       new(QemuNetworkModelVirtIO),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `RateLimitKBps 0.001`,
-				input: map[string]interface{}{"net14": "virtio=BC:24:11:E1:BB:5D,rate=0.001"},
+				input: rawConfigQemu{a: map[string]any{"net14": "virtio=BC:24:11:E1:BB:5D,rate=0.001"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID14: QemuNetworkInterface{
 					Connected:     new(true),
 					Firewall:      new(false),
@@ -171,7 +171,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					RateLimitKBps: new(GuestNetworkRate(1)),
 					TaggedVlans:   new(Vlans{})}}})},
 			{name: `RateLimitKBps 0.01`,
-				input: map[string]interface{}{"net15": "virtio=BC:24:11:E1:BB:5D,rate=0.010"},
+				input: rawConfigQemu{a: map[string]any{"net15": "virtio=BC:24:11:E1:BB:5D,rate=0.010"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID15: QemuNetworkInterface{
 					Connected:     new(true),
 					Firewall:      new(false),
@@ -181,7 +181,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					RateLimitKBps: new(GuestNetworkRate(10)),
 					TaggedVlans:   new(Vlans{})}}})},
 			{name: `RateLimitKBps 0.1`,
-				input: map[string]interface{}{"net16": "virtio=BC:24:11:E1:BB:5D,rate=0.1"},
+				input: rawConfigQemu{a: map[string]any{"net16": "virtio=BC:24:11:E1:BB:5D,rate=0.1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID16: QemuNetworkInterface{
 					Connected:     new(true),
 					Firewall:      new(false),
@@ -191,7 +191,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					RateLimitKBps: new(GuestNetworkRate(100)),
 					TaggedVlans:   new(Vlans{})}}})},
 			{name: `RateLimitKBps 1`,
-				input: map[string]interface{}{"net17": "virtio=BC:24:11:E1:BB:5D,rate=1"},
+				input: rawConfigQemu{a: map[string]any{"net17": "virtio=BC:24:11:E1:BB:5D,rate=1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID17: QemuNetworkInterface{
 					Connected:     new(true),
 					Firewall:      new(false),
@@ -201,7 +201,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					RateLimitKBps: new(GuestNetworkRate(1000)),
 					TaggedVlans:   new(Vlans{})}}})},
 			{name: `RateLimitKBps 1.264`,
-				input: map[string]interface{}{"net18": "virtio=BC:24:11:E1:BB:5D,rate=1.264"},
+				input: rawConfigQemu{a: map[string]any{"net18": "virtio=BC:24:11:E1:BB:5D,rate=1.264"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID18: QemuNetworkInterface{
 					Connected:     new(true),
 					Firewall:      new(false),
@@ -211,7 +211,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					RateLimitKBps: new(GuestNetworkRate(1264)),
 					TaggedVlans:   new(Vlans{})}}})},
 			{name: `RateLimitKBps 15.264`,
-				input: map[string]interface{}{"net19": "virtio=BC:24:11:E1:BB:5D,rate=15.264"},
+				input: rawConfigQemu{a: map[string]any{"net19": "virtio=BC:24:11:E1:BB:5D,rate=15.264"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID19: QemuNetworkInterface{
 					Connected:     new(true),
 					Firewall:      new(false),
@@ -220,8 +220,8 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					Model:         new(QemuNetworkModelVirtIO),
 					RateLimitKBps: new(GuestNetworkRate(15264)),
 					TaggedVlans:   new(Vlans{})}}})},
-			{name: `NaitiveVlan`,
-				input: map[string]interface{}{"net20": "virtio=BC:24:11:E1:BB:5D,tag=1"},
+			{name: `NativeVlan`,
+				input: rawConfigQemu{a: map[string]any{"net20": "virtio=BC:24:11:E1:BB:5D,tag=1"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID20: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -231,7 +231,7 @@ func testData_RawConfigQemu_Networks_Get() qemuTestGetFunc {
 					NativeVlan:  new(Vlan(1)),
 					TaggedVlans: new(Vlans{})}}})},
 			{name: `TaggedVlans`,
-				input: map[string]interface{}{"net21": "virtio=BC:24:11:E1:BB:5D,trunks=1;63;21"},
+				input: rawConfigQemu{a: map[string]any{"net21": "virtio=BC:24:11:E1:BB:5D,trunks=1;63;21"}},
 				output: testQemuBaseConfig_get(ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID21: QemuNetworkInterface{
 					Connected:   new(true),
 					Firewall:    new(false),
@@ -437,7 +437,7 @@ func Test_ConfigQemu_QemuNetworkInterfaces_MapToApi(t *testing.T) {
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: QemuNetworkInterface{RateLimitKBps: new(GuestNetworkRate(539))}}},
 					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID24: networkInterface()}},
 					body:          map[string]string{"net24": "virtio%3D52%3A54%3A00%3A12%3A34%3A56%2Cbridge%3Dvmbr0%2Cfirewall%3D1%2Clink_down%3D1%2Cmtu%3D1500%2Cqueues%3D5%2Crate%3D0.539%2Ctag%3D23%2Ctrunks%3D12%3B23%3B45"}}, // "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.539,tag=23,trunks=12;23;45"
-				{name: `NaitiveVlan replace`,
+				{name: `NativeVlan replace`,
 					config:        &ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID23: QemuNetworkInterface{NativeVlan: new(Vlan(0))}}},
 					currentLegacy: ConfigQemu{Networks: QemuNetworkInterfaces{QemuNetworkInterfaceID23: networkInterface()}},
 					body:          map[string]string{"net23": "virtio%3D52%3A54%3A00%3A12%3A34%3A56%2Cbridge%3Dvmbr0%2Cfirewall%3D1%2Clink_down%3D1%2Cmtu%3D1500%2Cqueues%3D5%2Crate%3D0.045%2Ctrunks%3D12%3B23%3B45"}}, // "virtio=52:54:00:12:34:56,bridge=vmbr0,firewall=1,link_down=1,mtu=1500,queues=5,rate=0.045,trunks=12;23;45"

@@ -162,7 +162,7 @@ func (c *clientNewTest) guestStopForce(ctx context.Context, vmr *VmRef) error {
 		return err
 	}
 	if version.Major < 8 {
-		return functionalityNotSupportedInVersion("force stop", version)
+		return newVersionError("force stop", Version{Major: 9})
 	}
 	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
 		return err

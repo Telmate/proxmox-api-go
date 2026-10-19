@@ -8,6 +8,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func testData_RawConfigQemu_TPM_Get() qemuTestGetFunc {
+	return func() []qemuTestCaseGet {
+		return []qemuTestCaseGet{
+			{name: `All`,
+				input: rawConfigQemu{a: map[string]any{
+					"tpmstate0": string("local-lvm:vm-101-disk-0,size=4M,version=v2.0")}},
+				output: testQemuBaseConfig_get(ConfigQemu{TPM: &TpmState{Storage: "local-lvm", Version: new(TpmVersion("v2.0"))}})}}
+	}
+}
+
 func Test_TpmState_Validate(t *testing.T) {
 	t.Parallel()
 	type testInput struct {
@@ -64,4 +74,17 @@ func Test_TpmVersion_Validate(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
 		})
 	}
+}
+
+func Test_RawConfigQemu_GetTPM(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_TPM_Get().Inject(t,
+		func(t *testing.T, raw RawConfigQemu, output *ConfigQemu, _ error) {
+			require.Equal(t, output.TPM, raw.GetTPM())
+		})
+}
+
+func Test_RawConfigQemu_TPM_Get(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_TPM_Get().Test(t)
 }

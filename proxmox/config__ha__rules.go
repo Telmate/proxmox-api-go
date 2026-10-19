@@ -13,8 +13,6 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
-const HaRule_Error_VersionTooLow = "HA rules require Proxmox VE 9.0 or higher"
-
 func ListHaRules(ctx context.Context, c *Client) (HaRules, error) { return c.new().haListRules(ctx) }
 
 func (c *clientNewTest) haListRules(ctx context.Context) (HaRules, error) {
@@ -920,8 +918,8 @@ func haVersionCheck(ctx context.Context, c *clientNewTest) error {
 	if err != nil {
 		return err
 	}
-	if version.Encode() < version_9_0_0 {
-		return errors.New(HaRule_Error_VersionTooLow)
+	if version.Major < 9 {
+		return newVersionError("ha affinity rule", Version{Major: 9})
 	}
 	return nil
 }

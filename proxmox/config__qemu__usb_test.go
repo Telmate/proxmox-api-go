@@ -8,57 +8,59 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testData_ConfigQemu_USB_Get() []qemuTestCaseGet {
-	return []qemuTestCaseGet{
-		{name: `Device`,
-			input: map[string]any{
-				"usb0": "host=1234:5678"},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
-				QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
-					ID:   new(UsbDeviceID("1234:5678")),
-					USB3: new(false)}}}})},
-		{name: `Device usb3`,
-			input: map[string]any{
-				"usb1": "host=1234:5678,usb3=1"},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
-				QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
-					ID:   new(UsbDeviceID("1234:5678")),
-					USB3: new(true)}}}})},
-		{name: `Port`,
-			input: map[string]any{"usb2": "host=1-2"},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
-				QemuUsbID2: QemuUSB{Port: &QemuUsbPort{
-					ID:   new(UsbPortID("1-2")),
-					USB3: new(false)}}}})},
-		{name: `Port usb3`,
-			input: map[string]any{"usb3": "host=2-4,usb3=1"},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
-				QemuUsbID3: QemuUSB{Port: &QemuUsbPort{
-					ID:   new(UsbPortID("2-4")),
-					USB3: new(true)}}}})},
-		{name: `mapping`,
-			input: map[string]any{"usb4": "mapping=abcde"},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
-				QemuUsbID4: QemuUSB{Mapping: &QemuUsbMapping{
-					ID:   new(ResourceMappingUsbID("abcde")),
-					USB3: new(false)}}}})},
-		{name: `mapping usb3`,
-			input: map[string]any{"usb0": "mapping=testmapping,usb3=1"},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
-				QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
-					ID:   new(ResourceMappingUsbID("testmapping")),
-					USB3: new(true)}}}})},
-		{name: `spice`,
-			input: map[string]any{"usb1": "spice"},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
-				QemuUsbID1: QemuUSB{Spice: &QemuUsbSpice{USB3: false}}}})},
-		{name: `spice usb3`,
-			input: map[string]any{"usb2": "spice,usb3=1"},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
-				QemuUsbID2: QemuUSB{Spice: &QemuUsbSpice{USB3: true}}}})},
-		{name: `code coverage`,
-			input:  map[string]any{"usb3": ""},
-			output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{QemuUsbID3: QemuUSB{}}})}}
+func testData_RawConfigQemu_USB_Get() qemuTestGetFunc {
+	return func() []qemuTestCaseGet {
+		return []qemuTestCaseGet{
+			{name: `Device`,
+				input: rawConfigQemu{a: map[string]any{
+					"usb0": "host=1234:5678"}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
+					QemuUsbID0: QemuUSB{Device: &QemuUsbDevice{
+						ID:   new(UsbDeviceID("1234:5678")),
+						USB3: new(false)}}}})},
+			{name: `Device usb3`,
+				input: rawConfigQemu{a: map[string]any{
+					"usb1": "host=1234:5678,usb3=1"}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
+					QemuUsbID1: QemuUSB{Device: &QemuUsbDevice{
+						ID:   new(UsbDeviceID("1234:5678")),
+						USB3: new(true)}}}})},
+			{name: `Port`,
+				input: rawConfigQemu{a: map[string]any{"usb2": "host=1-2"}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
+					QemuUsbID2: QemuUSB{Port: &QemuUsbPort{
+						ID:   new(UsbPortID("1-2")),
+						USB3: new(false)}}}})},
+			{name: `Port usb3`,
+				input: rawConfigQemu{a: map[string]any{"usb3": "host=2-4,usb3=1"}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
+					QemuUsbID3: QemuUSB{Port: &QemuUsbPort{
+						ID:   new(UsbPortID("2-4")),
+						USB3: new(true)}}}})},
+			{name: `mapping`,
+				input: rawConfigQemu{a: map[string]any{"usb4": "mapping=abcde"}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
+					QemuUsbID4: QemuUSB{Mapping: &QemuUsbMapping{
+						ID:   new(ResourceMappingUsbID("abcde")),
+						USB3: new(false)}}}})},
+			{name: `mapping usb3`,
+				input: rawConfigQemu{a: map[string]any{"usb0": "mapping=testmapping,usb3=1"}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
+					QemuUsbID0: QemuUSB{Mapping: &QemuUsbMapping{
+						ID:   new(ResourceMappingUsbID("testmapping")),
+						USB3: new(true)}}}})},
+			{name: `spice`,
+				input: rawConfigQemu{a: map[string]any{"usb1": "spice"}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
+					QemuUsbID1: QemuUSB{Spice: &QemuUsbSpice{USB3: false}}}})},
+			{name: `spice usb3`,
+				input: rawConfigQemu{a: map[string]any{"usb2": "spice,usb3=1"}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{
+					QemuUsbID2: QemuUSB{Spice: &QemuUsbSpice{USB3: true}}}})},
+			{name: `code coverage`,
+				input:  rawConfigQemu{a: map[string]any{"usb3": ""}},
+				output: testQemuBaseConfig_get(ConfigQemu{USBs: QemuUSBs{QemuUsbID3: QemuUSB{}}})}}
+	}
 }
 
 func testData_ConfigQemu_USB_Validate() qemuTestTypeValidateFunc {
@@ -733,4 +735,17 @@ func Test_UsbPortID_Validate(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
 		})
 	}
+}
+
+func Test_RawConfigQemu_GetUSBs(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_USB_Get().Inject(t,
+		func(t *testing.T, raw RawConfigQemu, output *ConfigQemu, _ error) {
+			require.Equal(t, output.USBs, raw.GetUSBs())
+		})
+}
+
+func Test_RawConfigQemu_USBs_Get(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_USB_Get().Test(t)
 }

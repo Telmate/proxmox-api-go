@@ -58,7 +58,7 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 
 	attempts := 2
 	haEnabled := rawGuest.GetHaState() != nil
-	if rawGuest.GetStatus() == PowerStateStopped {
+	if rawGuest.GetState() == PowerStateStopped {
 		var deleted bool
 		deleted, err = vmr.delete_Unsafe(ctx, c.api, haEnabled)
 		if err == nil {

@@ -1,7 +1,6 @@
 package proxmox
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 
@@ -10,9 +9,7 @@ import (
 
 type BootOrder []BootDevice
 
-const (
-	BootOrder_Error_Duplicate string = "duplicate entry in boot order"
-)
+const BootOrder_Error_Duplicate string = "duplicate entry in boot order"
 
 func (config BootOrder) mapToApi() string { return array.StringSV(config, semicolon) }
 
@@ -35,7 +32,7 @@ func (config BootOrder) Validate() error {
 		}
 		for ii := range len(config) - i - 1 {
 			if config[ii+i+1] == config[i] {
-				return errors.New(BootOrder_Error_Duplicate)
+				return &ValidateError{Message: BootOrder_Error_Duplicate}
 			}
 		}
 	}
@@ -56,9 +53,7 @@ func (config BootOrder) Validate() error {
 //	func <type>.BootDevice()
 type BootDevice string
 
-const (
-	BootDevice_Error_Invalid string = "invalid boot device"
-)
+const BootDevice_Error_Invalid string = "invalid boot device"
 
 type bootDevice interface {
 	BootDevice() BootDevice
@@ -75,7 +70,7 @@ var (
 )
 
 func (boot BootDevice) Validate() error {
-	r := errors.New(BootDevice_Error_Invalid)
+	r := &ValidateError{Message: BootDevice_Error_Invalid}
 	switch len(boot) {
 	case 4: // ide, net, usb
 		v, err := strconv.ParseUint(string(boot[3]), 10, 64)

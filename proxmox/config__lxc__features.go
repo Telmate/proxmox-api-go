@@ -179,7 +179,7 @@ func (config UnprivilegedFeatures) mapToApiIntermediary(usedConfig lxcFeatures) 
 	return usedConfig
 }
 
-func (raw *rawConfigLXC) Features() *LxcFeatures { return raw.getFeatures(raw.isPrivileged()) }
+func (raw *rawConfigLXC) GetFeatures() *LxcFeatures { return raw.getFeatures(raw.isPrivileged()) }
 
 func (raw *rawConfigLXC) getFeatures(privileged bool) *LxcFeatures {
 	var features lxcFeatures

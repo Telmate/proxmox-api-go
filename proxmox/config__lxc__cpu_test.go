@@ -4,9 +4,23 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Telmate/proxmox-api-go/internal/util"
 	"github.com/stretchr/testify/require"
 )
+
+func testData_RawConfigLXC_CPU_Get() lxcTestGetFunc {
+	return func() []lxcTestCaseGet {
+		return []lxcTestCaseGet{
+			{name: `Cores`,
+				input:  rawConfigLXC{a: map[string]any{"cores": float64(1)}},
+				output: lxcGetBaseConfig(ConfigLXC{CPU: &LxcCPU{Cores: new(LxcCpuCores(1))}})},
+			{name: `Limit`,
+				input:  rawConfigLXC{a: map[string]any{"cpulimit": string("2")}},
+				output: lxcGetBaseConfig(ConfigLXC{CPU: &LxcCPU{Limit: new(LxcCpuLimit(2))}})},
+			{name: `Units`,
+				input:  rawConfigLXC{a: map[string]any{"cpuunits": float64(3)}},
+				output: lxcGetBaseConfig(ConfigLXC{CPU: &LxcCPU{Units: new(LxcCpuUnits(3))}})}}
+	}
+}
 
 func Test_LxcCPU_Validate(t *testing.T) {
 	t.Parallel()
@@ -19,17 +33,17 @@ func Test_LxcCPU_Validate(t *testing.T) {
 			input: LxcCPU{}},
 		{name: `Valid all`,
 			input: LxcCPU{
-				Cores: util.Pointer(LxcCpuCores(0)),
-				Limit: util.Pointer(LxcCpuLimit(0)),
-				Units: util.Pointer(LxcCpuUnits(0))}},
+				Cores: new(LxcCpuCores(0)),
+				Limit: new(LxcCpuLimit(0)),
+				Units: new(LxcCpuUnits(0))}},
 		{name: `Invalid Cores`,
-			input:  LxcCPU{Cores: util.Pointer(LxcCpuCores(8193))},
+			input:  LxcCPU{Cores: new(LxcCpuCores(8193))},
 			output: errors.New(LxcCpuCores_Error_Invalid)},
 		{name: `Invalid Limit`,
-			input:  LxcCPU{Limit: util.Pointer(LxcCpuLimit(8193))},
+			input:  LxcCPU{Limit: new(LxcCpuLimit(8193))},
 			output: errors.New(LxcCpuLimit_Error_Invalid)},
 		{name: `Invalid Units`,
-			input:  LxcCPU{Units: util.Pointer(LxcCpuUnits(100001))},
+			input:  LxcCPU{Units: new(LxcCpuUnits(100001))},
 			output: errors.New(LxcCpuUnits_Error_Maximum)},
 	}
 	for _, test := range tests {
@@ -123,4 +137,17 @@ func Test_LxcCpuUnits_Validate(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
 		})
 	}
+}
+
+func Test_RawConfigLXC_GetCPU(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigLXC_CPU_Get().Inject(t,
+		func(t *testing.T, raw RawConfigLXC, output *ConfigLXC) {
+			require.Equal(t, output.CPU, raw.GetCPU())
+		})
+}
+
+func Test_RawConfigLXC_CPU_Get(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigLXC_CPU_Get().Test(t)
 }

@@ -145,7 +145,7 @@ type (
 
 // ConfigQemu - Proxmox API QEMU options
 type ConfigQemu struct {
-	// Deprecated
+	// Deprecated: use Disks.Ide.Disk_2.CdRom.Iso instead.
 	Iso              *IsoFile              `json:"iso,omitempty"`  // Same as Disks.Ide.Disk_2.CdRom.Iso
 	ID               *GuestID              `json:"id,omitempty"`   // Required for creation, cannot be changed
 	Node             *NodeName             `json:"node,omitempty"` // Required for creation
@@ -160,7 +160,6 @@ type ConfigQemu struct {
 	Description      *string               `json:"description,omitempty"` // never nil when returned
 	Disks            *QemuStorages         `json:"disks,omitempty"`
 	EfiDisk          *EfiDisk              `json:"efidisk,omitempty"`
-	FullClone        *int                  `json:"fullclone,omitempty"` // Deprecated
 	HaGroup          string                `json:"hagroup,omitempty"`
 	HaState          string                `json:"hastate,omitempty"` // TODO should be custom type with enum
 	Hookscript       string                `json:"hookscript,omitempty"`
@@ -172,8 +171,6 @@ type ConfigQemu struct {
 	Networks         QemuNetworkInterfaces `json:"networks,omitempty"`
 	Pool             *PoolName             `json:"pool,omitempty"`
 	Protection       *bool                 `json:"protection,omitempty"` // never nil when returned
-	QemuDisks        QemuDevices           `json:"disk,omitempty"`       // Deprecated: use Disks *QemuStorages instead
-	QemuIso          string                `json:"qemuiso,omitempty"`    // Deprecated: use Iso *IsoFile instead
 	QemuKVM          *bool                 `json:"kvm,omitempty"`
 	QemuOs           string                `json:"ostype,omitempty"`
 	PciDevices       QemuPciDevices        `json:"pci_devices,omitempty"`
@@ -193,6 +190,12 @@ type ConfigQemu struct {
 	Tags             *Tags                 `json:"tags,omitempty"`   // Never nil when returned
 	Watchdog         *Watchdog             `json:"watchdog,omitempty"`
 	RandomnessDevice *VirtIoRNG            `json:"randomness_device,omitempty"`
+	// Deprecated: use clone function instead.
+	FullClone *int `json:"fullclone,omitempty"`
+	// Deprecated: use Disks *QemuStorages instead.
+	QemuDisks QemuDevices `json:"disk,omitempty"`
+	// Deprecated: use Iso *IsoFile instead.
+	QemuIso string `json:"qemuiso,omitempty"`
 }
 
 const (
@@ -592,9 +595,6 @@ func (config *ConfigQemu) mapToStruct(vmr *VmRef, params map[string]interface{})
 	}
 	if _, isSet := params["machine"]; isSet {
 		config.Machine = params["machine"].(string)
-	}
-	if itemValue, isSet := params["tpmstate0"]; isSet {
-		config.TPM = TpmState{}.mapToSDK(itemValue.(string))
 	}
 	if _, isSet := params["kvm"]; isSet {
 		config.QemuKVM = util.Pointer(Itob(int(params["kvm"].(float64))))
@@ -1412,13 +1412,14 @@ type configQemuUpdate struct {
 }
 
 type RawConfigQemu interface {
-	Get(vmr VmRef) (*ConfigQemu, error)
+	Get(VmRef) (*ConfigQemu, error)
 	GetAgent() *QemuGuestAgent
 	GetArchitecture() *QemuCpuArchitecture
 	GetBoot() BootOrder
 	GetCPU() QemuCPU
 	GetCloudInit() *CloudInit
 	GetDescription() string
+	GetDisks() (disks *QemuStorages, linkedID *GuestID)
 	GetEfiDisk() *EfiDisk
 	GetHotPlug() HotPlug
 	GetID() GuestID
@@ -1432,6 +1433,7 @@ type RawConfigQemu interface {
 	GetSerials() SerialInterfaces
 	GetStartAtNodeBoot() bool
 	GetStartupShutdown() *StartupAndShutdown
+	GetTPM() *TpmState
 	GetTablet() bool
 	GetTags() Tags
 	GetUSBs() QemuUSBs
@@ -1478,6 +1480,7 @@ func (raw *rawConfigQemu) get(vmr VmRef) (*ConfigQemu, error) {
 		Serials:          raw.GetSerials(),
 		StartAtNodeBoot:  util.Pointer(raw.GetStartAtNodeBoot()),
 		StartupShutdown:  raw.GetStartupShutdown(),
+		TPM:              raw.GetTPM(),
 		Tablet:           util.Pointer(raw.GetTablet()),
 		Tags:             new(raw.GetTags()),
 		USBs:             raw.GetUSBs(),
@@ -1562,6 +1565,7 @@ const (
 	qemuApiKeyName              = "name"
 	qemuApiKeyProtection        = "protection"
 	qemuApiKeyRandomnessDevice  = "rng0"
+	qemuApiKeyTPM               = "tpmstate0"
 	qemuApiKeyTablet            = "tablet"
 	qemuApiKeyTags              = "tags"
 	qemuApiKeyWatchdog          = "watchdog"

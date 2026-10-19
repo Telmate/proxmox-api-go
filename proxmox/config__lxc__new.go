@@ -72,13 +72,11 @@ func (arch LxcCpuArchitecture) String() string { return string(arch) } // String
 type OperatingSystem string
 
 type ConfigLXC struct {
-	Architecture    LxcCpuArchitecture  `json:"architecture"` // only returned
 	BootMount       *LxcBootMount       `json:"boot_mount,omitempty"`
 	CPU             *LxcCPU             `json:"cpu,omitempty"`
 	CreateOptions   *LxcCreateOptions   `json:"create,omitempty"` // only used during creation, never returned
 	DNS             *GuestDNS           `json:"dns,omitempty"`
 	Description     *string             `json:"description,omitempty"`
-	Digest          [sha1.Size]byte     `json:"digest,omitempty"` // only returned.
 	Features        *LxcFeatures        `json:"features,omitempty"`
 	ID              *GuestID            `json:"id"`               // only used during creation
 	Memory          *LxcMemory          `json:"memory,omitempty"` // Never nil when returned
@@ -86,7 +84,6 @@ type ConfigLXC struct {
 	Name            *GuestName          `json:"name,omitempty"` // Never nil when returned
 	Networks        LxcNetworks         `json:"networks,omitempty"`
 	Node            *NodeName           `json:"node,omitempty"` // only used during creation
-	OperatingSystem OperatingSystem     `json:"os"`             // only returned
 	Pool            *PoolName           `json:"pool,omitempty"`
 	Privileged      *bool               `json:"privileged,omitempty"`         // only used during creation, defaults to false ,never nil when returned
 	Protection      *bool               `json:"protection,omitempty"`         // Never nil when returned
@@ -95,7 +92,10 @@ type ConfigLXC struct {
 	State           *PowerState         `json:"state,omitempty"`
 	Swap            *LxcSwap            `json:"swap,omitempty"` // Never nil when returned
 	Tags            *Tags               `json:"tags,omitempty"` // Never nil when returned
+	Architecture    LxcCpuArchitecture  `json:"architecture"`   // only returned
+	OperatingSystem OperatingSystem     `json:"os"`             // only returned
 	rawDigest       digest              `json:"-"`
+	Digest          [sha1.Size]byte     `json:"digest,omitempty"` // only returned.
 }
 
 const (
@@ -227,7 +227,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, *[]byte, PoolName) {
 	if builder.Len() > 0 {
 		body = new(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
-	if len(params) == 0 { // Teporarily clear params
+	if len(params) == 0 { // Temporarily clear params
 		params = nil
 	}
 	return params, body, pool
@@ -239,9 +239,9 @@ func (config ConfigLXC) mapToApiShared() map[string]any {
 }
 
 func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) (map[string]any, *[]byte) {
-	var builder, deleteBuidler strings.Builder
+	var builder, deleteBuilder strings.Builder
 	builderPtr := &builder
-	deleteBuidlerPtr := &deleteBuidler
+	deleteBuilderPtr := &deleteBuilder
 	privileged := lxcDefaultPrivilege
 	if current.Privileged != nil {
 		privileged = *current.Privileged
@@ -294,7 +294,7 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) (map[string]any, *[]by
 	}
 	if len(config.Networks) > 0 {
 		if len(current.Networks) > 0 {
-			config.Networks.mapToApiUpdate(current.Networks, builderPtr, deleteBuidlerPtr)
+			config.Networks.mapToApiUpdate(current.Networks, builderPtr, deleteBuilderPtr)
 		} else {
 			config.Networks.mapToApiCreate(builderPtr)
 		}
@@ -339,12 +339,12 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) (map[string]any, *[]by
 	if delete != "" {
 		params[lxcApiKeyDelete] = strings.TrimPrefix(delete, ",")
 	}
-	if deleteBuidler.Len() > 0 {
+	if deleteBuilder.Len() > 0 {
 		if v, ok := params["delete"]; ok {
-			params["delete"] = v.(string) + deleteBuidler.String()
+			params["delete"] = v.(string) + deleteBuilder.String()
 		} else {
 			builder.WriteString("&delete=")
-			builder.WriteString(deleteBuidler.String()[1:]) // remove leading '&'
+			builder.WriteString(deleteBuilder.String()[1:]) // remove leading '&'
 		}
 	}
 	if len(params) > 0 {
@@ -354,7 +354,7 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) (map[string]any, *[]by
 	if builder.Len() > 0 {
 		body = new(bytes.NewBufferString(builder.String()[1:]).Bytes())
 	}
-	if len(params) == 0 { // Teporarily clear params
+	if len(params) == 0 { // Temporarily clear params
 		params = nil
 	}
 	return params, body
@@ -467,7 +467,7 @@ func (config ConfigLXC) update_Unsafe(
 	if len(resize) > 0 || len(move) > 0 {
 
 		for i := range move { // Move mounts
-			if _, err = move[i].move(ctx, true, vmr, c); err != nil {
+			if err = move[i].move(ctx, true, vmr, c); err != nil {
 				return err
 			}
 		}
@@ -649,9 +649,11 @@ type RawConfigLXC interface {
 	Get(*PoolName, PowerState) *ConfigLXC
 	GetArchitecture() LxcCpuArchitecture
 	GetBootMount() *LxcBootMount
+	GetCPU() *LxcCPU
 	GetDNS() *GuestDNS
 	GetDescription() *string
 	GetDigest() [sha1.Size]byte
+	GetFeatures() *LxcFeatures
 	GetID() GuestID
 	GetMemory() LxcMemory
 	GetMounts() LxcMounts
@@ -671,7 +673,7 @@ type rawConfigLXC struct {
 	a       map[string]any
 	node    NodeName
 	guestID GuestID
-	version EncodedVersion
+	version Version
 }
 
 var _ RawConfigLXC = (*rawConfigLXC)(nil)
@@ -939,19 +941,24 @@ func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConf
 
 // NewActiveRawConfigLXCFromApi returns the active configuration of the LXC guest.
 // Without pending changes.
-func NewActiveRawConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigLXC, pending bool, err error) {
-	return c.new().guestGetLxcActiveRawConfig(ctx, vmr)
+func NewActiveRawConfigLXCFromApi(ctx context.Context, vmr *VmRef, version Version, c *Client) (raw RawConfigLXC, pending bool, err error) {
+	return c.new().guestGetLxcActiveRawConfig(ctx, vmr, version)
 }
 
-func guestGetActiveRawLxcConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw RawConfigLXC, pending bool, err error) {
+func guestGetActiveRawLxcConfig(ctx context.Context, vmr *VmRef, version Version, c clientApiInterface) (raw RawConfigLXC, pending bool, err error) {
 	var tmpConfig map[string]any
 	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
 	if err != nil {
 		return nil, false, err
 	}
-	return &rawConfigLXC{a: tmpConfig}, pending, nil
+	return &rawConfigLXC{
+		a:       tmpConfig,
+		node:    vmr.node,
+		guestID: vmr.vmId,
+		version: version,
+	}, pending, nil
 }
 
-func (c *clientNewTest) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error) {
-	return guestGetActiveRawLxcConfig_Unsafe(ctx, vmr, c.api)
+func (c *clientNewTest) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef, version Version) (raw RawConfigLXC, pending bool, err error) {
+	return guestGetActiveRawLxcConfig(ctx, vmr, version, c.api)
 }

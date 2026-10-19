@@ -69,13 +69,13 @@ func testData_RawConfigLXC_Networks_Get() lxcTestGetFunc {
 			{name: `HostManaged false`,
 				input: rawConfigLXC{
 					a:       map[string]any{"net12": ""},
-					version: Version{Major: 9, Minor: 1}.Encode()},
+					version: Version{Major: 9, Minor: 1}},
 				output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 					LxcNetworkID12: baseNetwork(LxcNetwork{HostManaged: new(false)})}})},
 			{name: `HostManaged true`,
 				input: rawConfigLXC{
 					a:       map[string]any{"net12": "host-managed=1"},
-					version: Version{Major: 9, Minor: 1}.Encode()},
+					version: Version{Major: 9, Minor: 1}},
 				output: baseConfig(ConfigLXC{Networks: LxcNetworks{
 					LxcNetworkID12: baseNetwork(LxcNetwork{HostManaged: new(true)})}})},
 			{name: `IPv4 Address`,

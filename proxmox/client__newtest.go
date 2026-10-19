@@ -18,7 +18,7 @@ type ClientNewTest interface {
 	// Guest
 	guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error)
 	guestCheckVmRef(ctx context.Context, vmr *VmRef) error
-	guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error)
+	guestGetLxcActiveRawConfig(context.Context, *VmRef, Version) (raw RawConfigLXC, pending bool, err error)
 	guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error)
 	guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error)
 	guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
