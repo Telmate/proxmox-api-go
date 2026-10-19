@@ -425,7 +425,7 @@ func (raw *rawConfigLXC) GetNetworks() LxcNetworks {
 				MAC:       &mac,
 				Name:      &name,
 				mac:       macOriginal}
-			if raw.version >= version_9_1_0 {
+			if raw.version.Encode() >= version_9_1_0 {
 				var hostManaged bool = false
 				if v, isSet := settings["host-managed"]; isSet {
 					hostManaged = v == "1"

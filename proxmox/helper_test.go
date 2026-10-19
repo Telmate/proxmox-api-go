@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"iter"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 	"testing"
@@ -109,6 +110,14 @@ func parseCIDR(cidr string) (net.IP, *net.IPNet) {
 		panic(err)
 	}
 	return ip, net
+}
+
+func parseIP(ip string) netip.Addr {
+	out, err := netip.ParseAddr(ip)
+	if err != nil {
+		panic(err)
+	}
+	return out
 }
 
 type testIterInterface[T any] interface {

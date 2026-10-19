@@ -1183,3 +1183,9 @@ func Test_QemuWorldWideName_Validate(t *testing.T) {
 		})
 	}
 }
+
+func getQemuDisksInject(t *testing.T, raw RawConfigQemu, output *ConfigQemu, _ error) {
+	disks, linkedID := raw.GetDisks()
+	require.Equal(t, output.Disks, disks)
+	require.Equal(t, output.LinkedID, linkedID)
+}

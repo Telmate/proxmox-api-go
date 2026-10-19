@@ -1,6 +1,12 @@
 package proxmox
 
 // Enum
+//
+//	const (
+//		PowerStateStopped
+//		PowerStateRunning
+//	)
+//
 // TODO need custom json marshaller/unmarshaller to handle this type
 type PowerState uint8
 

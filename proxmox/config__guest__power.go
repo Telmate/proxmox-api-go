@@ -2,7 +2,6 @@ package proxmox
 
 import (
 	"context"
-	"errors"
 )
 
 func (c *guestClient) Reboot(ctx context.Context, vmr VmRef) error {
@@ -21,7 +20,7 @@ func (c *guestClient) Shutdown(ctx context.Context, vmr VmRef) error {
 	if err != nil {
 		return err
 	}
-	if raw != nil && raw.GetStatus() == PowerStateStopped {
+	if raw != nil && raw.GetState() == PowerStateStopped {
 		return nil
 	}
 	return c.ShutdownNoCheck(ctx, vmr)
@@ -36,7 +35,7 @@ func (c *guestClient) ShutdownForce(ctx context.Context, vmr VmRef) error {
 	if err != nil {
 		return err
 	}
-	if raw != nil && raw.GetStatus() == PowerStateStopped {
+	if raw != nil && raw.GetState() == PowerStateStopped {
 		return nil
 	}
 	return c.ShutdownForceNoCheck(ctx, vmr)
@@ -51,7 +50,7 @@ func (c *guestClient) Start(ctx context.Context, vmr VmRef) error {
 	if err != nil {
 		return err
 	}
-	if raw != nil && raw.GetStatus() == PowerStateRunning {
+	if raw != nil && raw.GetState() == PowerStateRunning {
 		return nil
 	}
 	return c.StartNoCheck(ctx, vmr)
@@ -66,7 +65,7 @@ func (c *guestClient) Stop(ctx context.Context, vmr VmRef, overrule bool) error 
 	if err != nil {
 		return err
 	}
-	if raw != nil && raw.GetStatus() == PowerStateStopped {
+	if raw != nil && raw.GetState() == PowerStateStopped {
 		return nil
 	}
 	if overrule {
@@ -91,13 +90,13 @@ func (c *guestClient) StopOverrule(ctx context.Context, vmr VmRef) error {
 		return err
 	}
 	if version.Major < 8 {
-		return errors.New("overrule stop is only supported on Proxmox VE 8.0 and higher")
+		return newVersionError("overrule stop", Version{Major: 9})
 	}
 	raw, err := vmr.check_unsafe(ctx, c.api)
 	if err != nil {
 		return err
 	}
-	if raw != nil && raw.GetStatus() == PowerStateStopped {
+	if raw != nil && raw.GetState() == PowerStateStopped {
 		return nil
 	}
 	return c.StopOverruleNoCheck(ctx, vmr)

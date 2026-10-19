@@ -8,7 +8,7 @@ import (
 
 type qemuTestCaseGet struct {
 	name   string
-	input  map[string]any
+	input  rawConfigQemu
 	vmr    VmRef
 	output *ConfigQemu
 	err    error
@@ -22,7 +22,7 @@ func (tests qemuTestGetFunc) Test(t *testing.T) {
 	reference := tests()
 	for i := range test {
 		t.Run(test[i].name, func(*testing.T) {
-			output, err := (&rawConfigQemu{a: test[i].input}).get(test[i].vmr)
+			output, err := (&test[i].input).get(test[i].vmr)
 			if err != nil {
 				require.Equal(t, test[i].err, err)
 			} else {
@@ -39,7 +39,7 @@ func (tests qemuTestGetFunc) Inject(t *testing.T, testFunc func(*testing.T, RawC
 	reference := tests()
 	for i := range tests() {
 		t.Run(test[i].name, func(*testing.T) {
-			testFunc(t, &rawConfigQemu{a: test[i].input}, test[i].output, test[i].err)
+			testFunc(t, &test[i].input, test[i].output, test[i].err)
 			require.Equal(t, reference[i].input, test[i].input, "mutated input")
 		})
 	}

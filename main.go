@@ -223,10 +223,10 @@ func main() {
 	case "installQemu":
 		config, err := proxmox.NewConfigQemuFromJson(GetConfig(*fConfigFile))
 		var mode string
-		if config.QemuIso != "" {
-			mode = "(ISO boot mode)"
-		} else if config.QemuPxe {
+		if config.QemuPxe {
 			mode = "(PXE boot mode)"
+		} else {
+			mode = "(ISO boot mode)"
 		}
 		failError(err)
 		if vmid > 0 {
@@ -249,7 +249,7 @@ func main() {
 
 		// ISO mode waits for the VM to reboot to exit
 		// while PXE mode just launches the VM and is done
-		if config.QemuIso != "" {
+		if !config.QemuPxe {
 			_, err := proxmox.SshForwardUsernet(ctx, vmr, c)
 			failError(err)
 			log.Println("Waiting for CDRom install shutdown (at least 5 minutes)")

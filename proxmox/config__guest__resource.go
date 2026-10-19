@@ -95,7 +95,7 @@ type GuestResource struct {
 	NetworkOut         uint          `json:"network_out"`
 	Node               NodeName      `json:"node"`
 	Pool               PoolName      `json:"pool"`
-	Status             PowerState    `json:"status"`
+	State              PowerState    `json:"status"`
 	Tags               Tags          `json:"tags"`
 	Locked             bool          `json:"locked"`
 	Template           bool          `json:"template"`
@@ -121,7 +121,7 @@ type RawGuestResource interface {
 	GetNetworkOut() uint
 	GetNode() NodeName
 	GetPool() PoolName
-	GetStatus() PowerState
+	GetState() PowerState
 	GetTags() Tags
 	GetTemplate() bool
 	GetType() GuestType
@@ -151,7 +151,7 @@ func (raw *rawGuestResource) Get() GuestResource {
 		NetworkOut:         raw.GetNetworkOut(),
 		Node:               raw.GetNode(),
 		Pool:               raw.GetPool(),
-		Status:             raw.GetStatus(),
+		State:              raw.GetState(),
 		Tags:               raw.GetTags(),
 		Template:           raw.GetTemplate(),
 		Type:               raw.GetType(),
@@ -268,7 +268,7 @@ func (raw *rawGuestResource) GetPool() PoolName {
 	return ""
 }
 
-func (raw *rawGuestResource) GetStatus() PowerState {
+func (raw *rawGuestResource) GetState() PowerState {
 	if v, isSet := raw.a["status"]; isSet {
 		return PowerState(0).parse(v.(string))
 	}

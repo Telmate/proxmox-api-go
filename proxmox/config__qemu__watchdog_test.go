@@ -159,17 +159,30 @@ func Test_Watchdog_Validate(t *testing.T) {
 	testData_ConfigQemu_Watchdog_Validate().Inject(t, validate)
 }
 
-func testData_ConfigQemu_Watchdog_Get() []qemuTestCaseGet {
-	return []qemuTestCaseGet{
-		{name: `invalid whitespace`,
-			input:  map[string]any{"watchdog": string(" ")},
-			output: testQemuBaseConfig_get(ConfigQemu{})},
-		{name: ``,
-			input: map[string]any{"watchdog": string("model=i6300esb,action=shutdown")},
-			output: testQemuBaseConfig_get(ConfigQemu{Watchdog: &Watchdog{
-				Model:  new(WatchdogModelI6300esb),
-				Action: new(WatchdogActionShutdown),
-			}}),
-		},
+func testData_RawConfigQemu_Watchdog_Get() qemuTestGetFunc {
+	return func() []qemuTestCaseGet {
+		return []qemuTestCaseGet{
+			{name: `invalid whitespace`,
+				input:  rawConfigQemu{a: map[string]any{"watchdog": string(" ")}},
+				output: testQemuBaseConfig_get(ConfigQemu{})},
+			{name: ``,
+				input: rawConfigQemu{a: map[string]any{"watchdog": string("model=i6300esb,action=shutdown")}},
+				output: testQemuBaseConfig_get(ConfigQemu{Watchdog: &Watchdog{
+					Model:  new(WatchdogModelI6300esb),
+					Action: new(WatchdogActionShutdown),
+				}})}}
 	}
+}
+
+func Test_RawConfigQemu_GetWatchdog(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_Watchdog_Get().Inject(t,
+		func(t *testing.T, raw RawConfigQemu, output *ConfigQemu, _ error) {
+			require.Equal(t, output.Watchdog, raw.GetWatchdog())
+		})
+}
+
+func Test_RawConfigQemu_Watchdog_Get(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_Watchdog_Get().Test(t)
 }

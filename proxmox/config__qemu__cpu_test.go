@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testData_ConfigQemu_CPU_Get() []qemuTestCaseGet {
+func testData_ConfigQemu_CPU_Get() qemuTestGetFunc {
 	baseCpu := func(cpu QemuCPU) *QemuCPU {
 		if cpu.Cores == nil {
 			cpu.Cores = new(QemuCpuCores(1))
@@ -20,158 +20,160 @@ func testData_ConfigQemu_CPU_Get() []qemuTestCaseGet {
 		}
 		return &cpu
 	}
-	return []qemuTestCaseGet{
-		{name: `all`,
-			input: map[string]any{
-				"cores":    float64(10),
-				"cpulimit": float64(35),
-				"cpuunits": float64(1234),
-				"numa":     float64(0),
-				"sockets":  float64(4),
-				"vcpus":    float64(40),
-				"cpu":      string("host,flags=-aes;+amd-no-ssb;-amd-ssbd;+hv-evmcs;-hv-tlbflush;+ibpb;+md-clear;-pcid;-pdpe1gb;-ssbd;+spec-ctrl;+virt-ssbd")},
-			output: testQemuBaseConfig_get(ConfigQemu{
-				CPU: baseCpu(QemuCPU{
-					Cores: new(QemuCpuCores(10)),
+	return func() []qemuTestCaseGet {
+		return []qemuTestCaseGet{
+			{name: `all`,
+				input: rawConfigQemu{a: map[string]any{
+					"cores":    float64(10),
+					"cpulimit": float64(35),
+					"cpuunits": float64(1234),
+					"numa":     float64(0),
+					"sockets":  float64(4),
+					"vcpus":    float64(40),
+					"cpu":      string("host,flags=-aes;+amd-no-ssb;-amd-ssbd;+hv-evmcs;-hv-tlbflush;+ibpb;+md-clear;-pcid;-pdpe1gb;-ssbd;+spec-ctrl;+virt-ssbd")}},
+				output: testQemuBaseConfig_get(ConfigQemu{
+					CPU: baseCpu(QemuCPU{
+						Cores: new(QemuCpuCores(10)),
+						Flags: &CpuFlags{
+							AES:        new(TriBoolFalse),
+							AmdNoSSB:   new(TriBoolTrue),
+							AmdSSBD:    new(TriBoolFalse),
+							HvEvmcs:    new(TriBoolTrue),
+							HvTlbFlush: new(TriBoolFalse),
+							Ibpb:       new(TriBoolTrue),
+							MdClear:    new(TriBoolTrue),
+							PCID:       new(TriBoolFalse),
+							Pdpe1GB:    new(TriBoolFalse),
+							SSBD:       new(TriBoolFalse),
+							SpecCtrl:   new(TriBoolTrue),
+							VirtSSBD:   new(TriBoolTrue)},
+						Limit:        new(CpuLimit(35)),
+						Numa:         new(false),
+						Sockets:      new(QemuCpuSockets(4)),
+						Type:         new(CpuType_Host),
+						Units:        new(QemuCpuUnits(1234)),
+						VirtualCores: new(CpuVirtualCores(40))})})},
+			{name: `affinity consecutive`,
+				input:  rawConfigQemu{a: map[string]any{"affinity": "2-4"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Affinity: new([]uint{2, 3, 4})})})},
+			{name: `affinity empty`,
+				input:  rawConfigQemu{a: map[string]any{"affinity": ""}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Affinity: new([]uint{})})})},
+			{name: `affinity mixed`,
+				input:  rawConfigQemu{a: map[string]any{"affinity": "2,4-6,8,10,12-15"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Affinity: new([]uint{2, 4, 5, 6, 8, 10, 12, 13, 14, 15})})})},
+			{name: `affinity singular`,
+				input:  rawConfigQemu{a: map[string]any{"affinity": "2"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Affinity: new([]uint{2})})})},
+			{name: `cores`,
+				input:  rawConfigQemu{a: map[string]any{"cores": float64(1)}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Cores: new(QemuCpuCores(1))})})},
+			{name: `cpu flag aes`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=+aes"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{AES: new(TriBoolTrue)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag amd-no-ssb`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=-amd-no-ssb"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{AmdNoSSB: new(TriBoolFalse)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag amd-ssbd`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=+amd-ssbd"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{AmdSSBD: new(TriBoolTrue)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag hv-evmcs`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=-hv-evmcs"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{HvEvmcs: new(TriBoolFalse)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag hv-tlbflush`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=+hv-tlbflush"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{HvTlbFlush: new(TriBoolTrue)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag ibpb`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=-ibpb"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{Ibpb: new(TriBoolFalse)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag md-clear`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=+md-clear"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{MdClear: new(TriBoolTrue)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag pcid`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=-pcid"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{PCID: new(TriBoolFalse)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag pdpe1gb`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=+pdpe1gb"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{Pdpe1GB: new(TriBoolTrue)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag ssbd`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=-ssbd"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{SSBD: new(TriBoolFalse)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag spec-ctrl`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=+spec-ctrl"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{SpecCtrl: new(TriBoolTrue)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flag virt-ssbd`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=-virt-ssbd"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{VirtSSBD: new(TriBoolFalse)},
+					Type:  new(CpuType(""))})})},
+			{name: `cpu flags multiple`,
+				input: rawConfigQemu{a: map[string]any{"cpu": ",flags=-aes;+amd-no-ssb;-amd-ssbd;-hv-evmcs;-hv-tlbflush;+ibpb;+md-clear;+pcid;-virt-ssbd"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
 					Flags: &CpuFlags{
 						AES:        new(TriBoolFalse),
 						AmdNoSSB:   new(TriBoolTrue),
 						AmdSSBD:    new(TriBoolFalse),
-						HvEvmcs:    new(TriBoolTrue),
+						HvEvmcs:    new(TriBoolFalse),
 						HvTlbFlush: new(TriBoolFalse),
 						Ibpb:       new(TriBoolTrue),
 						MdClear:    new(TriBoolTrue),
-						PCID:       new(TriBoolFalse),
-						Pdpe1GB:    new(TriBoolFalse),
-						SSBD:       new(TriBoolFalse),
-						SpecCtrl:   new(TriBoolTrue),
-						VirtSSBD:   new(TriBoolTrue)},
-					Limit:        new(CpuLimit(35)),
-					Numa:         new(false),
-					Sockets:      new(QemuCpuSockets(4)),
-					Type:         new(CpuType_Host),
-					Units:        new(QemuCpuUnits(1234)),
-					VirtualCores: new(CpuVirtualCores(40))})})},
-		{name: `affinity consecutive`,
-			input:  map[string]any{"affinity": "2-4"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Affinity: new([]uint{2, 3, 4})})})},
-		{name: `affinity empty`,
-			input:  map[string]any{"affinity": ""},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Affinity: new([]uint{})})})},
-		{name: `affinity mixed`,
-			input:  map[string]any{"affinity": "2,4-6,8,10,12-15"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Affinity: new([]uint{2, 4, 5, 6, 8, 10, 12, 13, 14, 15})})})},
-		{name: `affinity singular`,
-			input:  map[string]any{"affinity": "2"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Affinity: new([]uint{2})})})},
-		{name: `cores`,
-			input:  map[string]any{"cores": float64(1)},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Cores: new(QemuCpuCores(1))})})},
-		{name: `cpu flag aes`,
-			input: map[string]any{"cpu": ",flags=+aes"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{AES: new(TriBoolTrue)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag amd-no-ssb`,
-			input: map[string]any{"cpu": ",flags=-amd-no-ssb"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{AmdNoSSB: new(TriBoolFalse)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag amd-ssbd`,
-			input: map[string]any{"cpu": ",flags=+amd-ssbd"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{AmdSSBD: new(TriBoolTrue)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag hv-evmcs`,
-			input: map[string]any{"cpu": ",flags=-hv-evmcs"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{HvEvmcs: new(TriBoolFalse)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag hv-tlbflush`,
-			input: map[string]any{"cpu": ",flags=+hv-tlbflush"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{HvTlbFlush: new(TriBoolTrue)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag ibpb`,
-			input: map[string]any{"cpu": ",flags=-ibpb"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{Ibpb: new(TriBoolFalse)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag md-clear`,
-			input: map[string]any{"cpu": ",flags=+md-clear"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{MdClear: new(TriBoolTrue)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag pcid`,
-			input: map[string]any{"cpu": ",flags=-pcid"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{PCID: new(TriBoolFalse)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag pdpe1gb`,
-			input: map[string]any{"cpu": ",flags=+pdpe1gb"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{Pdpe1GB: new(TriBoolTrue)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag ssbd`,
-			input: map[string]any{"cpu": ",flags=-ssbd"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{SSBD: new(TriBoolFalse)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag spec-ctrl`,
-			input: map[string]any{"cpu": ",flags=+spec-ctrl"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{SpecCtrl: new(TriBoolTrue)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flag virt-ssbd`,
-			input: map[string]any{"cpu": ",flags=-virt-ssbd"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{VirtSSBD: new(TriBoolFalse)},
-				Type:  new(CpuType(""))})})},
-		{name: `cpu flags multiple`,
-			input: map[string]any{"cpu": ",flags=-aes;+amd-no-ssb;-amd-ssbd;-hv-evmcs;-hv-tlbflush;+ibpb;+md-clear;+pcid;-virt-ssbd"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{
-					AES:        new(TriBoolFalse),
-					AmdNoSSB:   new(TriBoolTrue),
-					AmdSSBD:    new(TriBoolFalse),
-					HvEvmcs:    new(TriBoolFalse),
-					HvTlbFlush: new(TriBoolFalse),
-					Ibpb:       new(TriBoolTrue),
-					MdClear:    new(TriBoolTrue),
-					PCID:       new(TriBoolTrue),
-					VirtSSBD:   new(TriBoolFalse)},
-				Type: new(CpuType(""))})})},
-		{name: `cpu model only, no flags`,
-			input:  map[string]any{"cpu": string(CpuType_X86_64_v2_AES)},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Type: new(CpuType("x86-64-v2-AES"))})})},
-		{name: `cpu with flags`,
-			input: map[string]any{"cpu": "x86-64-v2-AES,flags=+spec-ctrl;-md-clear"},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
-				Flags: &CpuFlags{
-					MdClear:  new(TriBoolFalse),
-					SpecCtrl: new(TriBoolTrue)},
-				Type: new(CpuType_X86_64_v2_AES)})})},
-		{name: `cpulimit float64`,
-			input:  map[string]any{"cpulimit": float64(10)},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Limit: new(CpuLimit(10))})})},
-		{name: `cpulimit string`,
-			input:  map[string]any{"cpulimit": string("25")},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Limit: new(CpuLimit(25))})})},
-		{name: `cpuunits`,
-			input:  map[string]any{"cpuunits": float64(1000)},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Units: new(QemuCpuUnits(1000))})})},
-		{name: `numa true`,
-			input:  map[string]any{"numa": float64(1)},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Numa: new(true)})})},
-		{name: `numa false`,
-			input:  map[string]any{"numa": float64(0)},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Numa: new(false)})})},
-		{name: `sockets`,
-			input:  map[string]any{"sockets": float64(1)},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Sockets: new(QemuCpuSockets(1))})})},
-		{name: `vcpus`,
-			input:  map[string]any{"vcpus": float64(1)},
-			output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{VirtualCores: new(CpuVirtualCores(1))})})}}
+						PCID:       new(TriBoolTrue),
+						VirtSSBD:   new(TriBoolFalse)},
+					Type: new(CpuType(""))})})},
+			{name: `cpu model only, no flags`,
+				input:  rawConfigQemu{a: map[string]any{"cpu": string(CpuType_X86_64_v2_AES)}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Type: new(CpuType("x86-64-v2-AES"))})})},
+			{name: `cpu with flags`,
+				input: rawConfigQemu{a: map[string]any{"cpu": "x86-64-v2-AES,flags=+spec-ctrl;-md-clear"}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{
+					Flags: &CpuFlags{
+						MdClear:  new(TriBoolFalse),
+						SpecCtrl: new(TriBoolTrue)},
+					Type: new(CpuType_X86_64_v2_AES)})})},
+			{name: `cpulimit float64`,
+				input:  rawConfigQemu{a: map[string]any{"cpulimit": float64(10)}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Limit: new(CpuLimit(10))})})},
+			{name: `cpulimit string`,
+				input:  rawConfigQemu{a: map[string]any{"cpulimit": string("25")}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Limit: new(CpuLimit(25))})})},
+			{name: `cpuunits`,
+				input:  rawConfigQemu{a: map[string]any{"cpuunits": float64(1000)}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Units: new(QemuCpuUnits(1000))})})},
+			{name: `numa true`,
+				input:  rawConfigQemu{a: map[string]any{"numa": float64(1)}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Numa: new(true)})})},
+			{name: `numa false`,
+				input:  rawConfigQemu{a: map[string]any{"numa": float64(0)}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Numa: new(false)})})},
+			{name: `sockets`,
+				input:  rawConfigQemu{a: map[string]any{"sockets": float64(1)}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{Sockets: new(QemuCpuSockets(1))})})},
+			{name: `vcpus`,
+				input:  rawConfigQemu{a: map[string]any{"vcpus": float64(1)}},
+				output: testQemuBaseConfig_get(ConfigQemu{CPU: baseCpu(QemuCPU{VirtualCores: new(CpuVirtualCores(1))})})}}
+	}
 }
 
 func testData_ConfigQemu_CPU_Validate_1() qemuTestTypeValidateFunc {
@@ -1066,4 +1068,17 @@ func Test_QemuCpuSockets_Validate(t *testing.T) {
 			require.Equal(t, test.input.Validate(), test.output, test.name)
 		})
 	}
+}
+
+func Test_RawConfigQemu_GetCPU(t *testing.T) {
+	t.Parallel()
+	testData_ConfigQemu_CPU_Get().Inject(t,
+		func(t *testing.T, raw RawConfigQemu, output *ConfigQemu, _ error) {
+			require.Equal(t, *output.CPU, raw.GetCPU())
+		})
+}
+
+func Test_RawConfigQemu_CPU_Get(t *testing.T) {
+	t.Parallel()
+	testData_ConfigQemu_CPU_Get().Test(t)
 }

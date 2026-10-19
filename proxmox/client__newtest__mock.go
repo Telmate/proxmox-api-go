@@ -7,7 +7,7 @@ type MockClient struct {
 	GuestCheckPendingChangesFunc    func(ctx context.Context, vmr *VmRef) (bool, error)
 	GuestCheckVmRefFunc             func(ctx context.Context, vmr *VmRef) error
 	GuestGetRawAgentInformationFunc func(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
-	GuestGetLxcActiveRawConfigFunc  func(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error)
+	GuestGetLxcActiveRawConfigFunc  func(context.Context, *VmRef, Version) (raw RawConfigLXC, pending bool, err error)
 	GuestGetQemuActiveRawConfigFunc func(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error)
 	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error)
 	GuestStopFunc                   func(ctx context.Context, vmr *VmRef) error
@@ -65,11 +65,11 @@ func (m *MockClient) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef
 	return m.GuestGetRawAgentInformationFunc(ctx, vmr)
 }
 
-func (m *MockClient) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef) (raw RawConfigLXC, pending bool, err error) {
+func (m *MockClient) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef, version Version) (raw RawConfigLXC, pending bool, err error) {
 	if m.GuestGetLxcActiveRawConfigFunc == nil {
 		m.panic("GuestGetLxcActiveRawConfigFunc")
 	}
-	return m.GuestGetLxcActiveRawConfigFunc(ctx, vmr)
+	return m.GuestGetLxcActiveRawConfigFunc(ctx, vmr, version)
 }
 
 func (m *MockClient) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error) {

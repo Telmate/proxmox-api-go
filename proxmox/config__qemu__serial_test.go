@@ -7,6 +7,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func testData_RawConfigQemu_Serials_Get() qemuTestGetFunc {
+	return func() []qemuTestCaseGet {
+		return []qemuTestCaseGet{
+			{name: `All`,
+				input: rawConfigQemu{a: map[string]any{
+					"serial2": "/dev/tty1",
+					"serial0": "socket",
+					"serial3": "/dev/tty3",
+					"serial1": "socket"}},
+				output: testQemuBaseConfig_get(ConfigQemu{Serials: SerialInterfaces{
+					SerialID0: SerialInterface{Socket: true},
+					SerialID1: SerialInterface{Socket: true},
+					SerialID2: SerialInterface{Path: "/dev/tty1"},
+					SerialID3: SerialInterface{Path: "/dev/tty3"}}})},
+			{name: `single path`,
+				input: rawConfigQemu{a: map[string]any{
+					"serial3": "/dev/test/tty7"}},
+				output: testQemuBaseConfig_get(ConfigQemu{Serials: SerialInterfaces{SerialID3: SerialInterface{Path: "/dev/test/tty7"}}})},
+			{name: `single socket`,
+				input: rawConfigQemu{a: map[string]any{
+					"serial2": "socket"}},
+				output: testQemuBaseConfig_get(ConfigQemu{Serials: SerialInterfaces{SerialID2: SerialInterface{Socket: true}}})}}
+	}
+}
+
 func Test_SerialID_Validate(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -116,4 +141,17 @@ func Test_SerialPath_Validate(t *testing.T) {
 			require.Equal(t, test.output, test.input.Validate())
 		})
 	}
+}
+
+func Test_RawConfigQemu_GetSerials(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_Serials_Get().Inject(t,
+		func(t *testing.T, raw RawConfigQemu, output *ConfigQemu, _ error) {
+			require.Equal(t, output.Serials, raw.GetSerials())
+		})
+}
+
+func Test_RawConfigQemu_Serials_Get(t *testing.T) {
+	t.Parallel()
+	testData_RawConfigQemu_Serials_Get().Test(t)
 }
