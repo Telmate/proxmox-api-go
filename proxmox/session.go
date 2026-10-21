@@ -216,7 +216,7 @@ func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err er
 	}
 
 	if s.Debug != nil {
-		logRequestOut(req.Clone(req.Context()), s.Debug)
+		logRequestOut(req, s.Debug)
 	}
 
 	resp, err = s.httpClient.Do(req)
@@ -230,7 +230,7 @@ func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err er
 	// The response body reader needs to be closed, but lots of places call
 	// session.do, and they might not be able to reliably close it themselves.
 	// Therefore, read the body out, close the original, then replace it with
-	// a NopCloser over the bytes, which does not need to be closed downsteam.
+	// a NopCloser over the bytes, which does not need to be closed downstream.
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, true, &errorWrap{
@@ -403,27 +403,40 @@ func (s *Session) put(
 }
 
 func logRequestOut(req *http.Request, w io.Writer) {
-	includeBody := req.ContentLength < debugLargeBodyThreshold
-	if v, ok := req.Header[headerAuthorization]; ok {
+	reqClone := req.Clone(req.Context())
+	includeBody := reqClone.ContentLength < debugLargeBodyThreshold
+	if v, ok := reqClone.Header[headerAuthorization]; ok {
 		if len(v) > 0 {
 			if strings.HasPrefix(v[0], prefixAuthorizationToken) {
-				req.Header[headerAuthorization] = []string{prefixAuthorizationToken + redacted}
+				reqClone.Header[headerAuthorization] = []string{prefixAuthorizationToken + redacted}
 			} else if strings.HasPrefix(v[0], prefixAuthorizationCookie) {
-				req.Header[headerAuthorization] = []string{prefixAuthorizationCookie + redacted}
+				reqClone.Header[headerAuthorization] = []string{prefixAuthorizationCookie + redacted}
 			} else {
-				req.Header[headerAuthorization] = []string{redacted}
+				reqClone.Header[headerAuthorization] = []string{redacted}
 			}
 		}
 	}
 	header := func() string { // to suppress the linter warnings
 		return headerCSRFPrevention
 	}
-	if _, ok := req.Header[header()]; ok {
-		req.Header[headerCSRFPrevention] = []string{redacted}
+	if _, ok := reqClone.Header[header()]; ok {
+		reqClone.Header[headerCSRFPrevention] = []string{redacted}
 	}
-	d, _ := httputil.DumpRequestOut(req, includeBody)
-	if !includeBody {
-		d = append(d, fmt.Sprintf("<request body of %d bytes not shown>\n\n", req.ContentLength)...)
+	var d []byte
+	if reqClone.Body != nil {
+		if includeBody {
+			var buf bytes.Buffer
+			buf.ReadFrom(reqClone.Body)
+			bodyClone := buf.Bytes()
+			reqClone.Body = io.NopCloser(bytes.NewReader(bodyClone))
+			d, _ = httputil.DumpRequestOut(reqClone, true)
+			req.Body = io.NopCloser(bytes.NewReader(bodyClone)) // Replace the body of the original request
+		} else {
+			d, _ = httputil.DumpRequestOut(reqClone, false)
+			d = append(d, fmt.Sprintf("<request body of %d bytes not shown>\n\n", reqClone.ContentLength)...)
+		}
+	} else {
+		d, _ = httputil.DumpRequestOut(reqClone, false)
 	}
 	w.Write(append([]byte(">>>>>>>>>> REQUEST:\n"), d...))
 }
