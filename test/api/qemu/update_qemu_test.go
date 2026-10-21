@@ -53,7 +53,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
+				CheckConfig(t, ctx, c.QemuGuest, guestID, &pveSDK.ConfigQemu{
 					Bios: "seabios",
 					Boot: new(pveSDK.BootOrder),
 					CPU: &pveSDK.QemuCPU{
@@ -107,7 +107,7 @@ func Test_Qemu_Update_Max_Transform(t *testing.T) {
 			}},
 		{name: `Check guest config after update`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
+				CheckConfig(t, ctx, c.QemuGuest, guestID, &pveSDK.ConfigQemu{
 					Bios: "seabios",
 					Boot: new(pveSDK.BootOrder),
 					CPU: &pveSDK.QemuCPU{
@@ -186,7 +186,7 @@ func Test_Qemu_Update_Reduced_To_Max(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, expectedReduced)
+				CheckConfig(t, ctx, c.QemuGuest, guestID, expectedReduced)
 			}},
 		{name: `Update guest`,
 			test: func(t *testing.T) {
@@ -195,7 +195,7 @@ func Test_Qemu_Update_Reduced_To_Max(t *testing.T) {
 			}},
 		{name: `Check guest config after update`,
 			test: func(t *testing.T) {
-				config := GetConfig(t, ctx, cl, guestID)
+				config := GetConfig(t, ctx, c.QemuGuest, guestID)
 				ClearDiskID(config)
 				require.EqualExportedValues(t, expectedMax, config)
 			}},
@@ -247,7 +247,7 @@ func Test_Qemu_Update_Max_To_Reduced(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, expectedMax)
+				CheckConfig(t, ctx, c.QemuGuest, guestID, expectedMax)
 			}},
 		{name: `Update guest`,
 			test: func(t *testing.T) {
@@ -256,7 +256,7 @@ func Test_Qemu_Update_Max_To_Reduced(t *testing.T) {
 			}},
 		{name: `Check guest config after update`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, expectedReduced)
+				CheckConfig(t, ctx, c.QemuGuest, guestID, expectedReduced)
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
@@ -301,7 +301,7 @@ func Test_Qemu_Update_Min_To_Reduced(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, expectedMin)
+				CheckConfig(t, ctx, c.QemuGuest, guestID, expectedMin)
 			}},
 		{name: `Update guest`,
 			test: func(t *testing.T) {
@@ -310,7 +310,7 @@ func Test_Qemu_Update_Min_To_Reduced(t *testing.T) {
 			}},
 		{name: `Check guest config after update`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, expectedReduced)
+				CheckConfig(t, ctx, c.QemuGuest, guestID, expectedReduced)
 			}},
 		{name: `Delete guest`,
 			test: func(t *testing.T) {
@@ -324,7 +324,7 @@ func Test_Qemu_Update_Min_To_Reduced(t *testing.T) {
 	}
 }
 
-func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
+func Test_Qemu_Update_Min_To_Max(t *testing.T) {
 	t.Parallel()
 	const node = pveSDK.NodeName(test.FirstNode)
 	const guestName = "Test-Qemu-Update-Min-To-Max"
@@ -356,7 +356,7 @@ func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, expectedMin)
+				CheckConfig(t, ctx, c.QemuGuest, guestID, expectedMin)
 			}},
 		{name: `Update guest`,
 			test: func(t *testing.T) {
@@ -365,7 +365,7 @@ func Test_Qemu_Upate_Min_To_Max(t *testing.T) {
 			}},
 		{name: `Check guest config after update`,
 			test: func(t *testing.T) {
-				config := GetConfig(t, ctx, cl, guestID)
+				config := GetConfig(t, ctx, c.QemuGuest, guestID)
 				ClearDiskID(config)
 				require.EqualExportedValues(t, expectedMax, config)
 			}},

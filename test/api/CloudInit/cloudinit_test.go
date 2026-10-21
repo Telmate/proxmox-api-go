@@ -19,9 +19,13 @@ func Test_Cloud_Init_VM(t *testing.T) {
 	// Create network
 	configNetwork := _create_network_spec()
 
-	err := configNetwork.CreateNetwork(context.Background(), Test.GetClient())
+	ctx := context.Background()
+	client := Test.GetClient()
+	c := client.New()
+
+	err := configNetwork.CreateNetwork(ctx, client)
 	require.NoError(t, err)
-	_, err = Test.GetClient().ApplyNetwork(context.Background(), "pve")
+	_, err = Test.GetClient().ApplyNetwork(ctx, "pve")
 	require.NoError(t, err)
 
 	config.Disks.VirtIO.Disk_0.Disk = &pxapi.QemuVirtIODisk{
@@ -30,7 +34,7 @@ func Test_Cloud_Init_VM(t *testing.T) {
 
 	config.Name = util.Pointer(pxapi.GuestName("Base-Image"))
 
-	_, err = Test.GetClient().New().QemuGuest.Create(context.Background(), config)
+	_, err = c.QemuGuest.Create(ctx, config)
 	require.NoError(t, err)
 	config.Boot = &pxapi.BootOrder{
 		pxapi.QemuVirtIoID0.BootDevice(),
@@ -45,7 +49,9 @@ func Test_Cloud_Init_VM(t *testing.T) {
 	err = Test.GetClient().New().QemuGuest.Update(context.Background(), *vmref, true, true, config)
 	require.NoError(t, err)
 
-	testConfig, _ := pxapi.NewConfigQemuFromApi(context.Background(), vmref, Test.GetClient())
+	raw, err := c.QemuGuest.Read(ctx, vmref)
+	require.NoError(t, err)
+	testConfig, _ := raw.Get(*vmref)
 
 	require.Equal(t, testConfig.CloudInit.NetworkInterfaces[pxapi.QemuNetworkInterfaceID0],
 		pxapi.CloudInitNetworkConfig{

@@ -1165,8 +1165,8 @@ type lxcMountMove struct {
 	storage string
 }
 
-func (disk lxcMountMove) move(ctx context.Context, delete bool, vmr *VmRef, client *Client) error {
-	return client.api().postTask(ctx, "/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/move_volume", disk.mapToAPI(delete))
+func (disk lxcMountMove) move(ctx context.Context, delete bool, ref guestRef, c *clientAPI) error {
+	return c.postTask(ctx, "/nodes/"+ref.Node.String()+"/lxc/"+ref.ID.String()+"/move_volume", disk.mapToAPI(delete))
 }
 
 func (disk lxcMountMove) mapToAPI(delete bool) *[]byte {
@@ -1188,9 +1188,8 @@ type lxcMountResize struct {
 
 // Increase the disk size to the specified amount.
 // Decrease of disk size is not permitted.
-func (disk lxcMountResize) resize(ctx context.Context, vmr *VmRef, client *Client) (exitStatus string, err error) {
-	return client.PutWithTask(ctx, map[string]any{"disk": disk.id, "size": disk.sizeInKibibytes.String()},
-		"/nodes/"+vmr.node.String()+"/lxc/"+vmr.vmId.String()+"/resize")
+func (disk lxcMountResize) resize(ctx context.Context, ref guestRef, c *clientAPI) error {
+	return c.putTask(ctx, "/nodes/"+ref.Node.String()+"/lxc/"+ref.ID.String()+"/resize", new([]byte("disk="+disk.id+"&size="+disk.sizeInKibibytes.String())))
 }
 
 func (raw *rawConfigLXC) GetBootMount() *LxcBootMount { return raw.getBootMount(raw.isPrivileged()) }

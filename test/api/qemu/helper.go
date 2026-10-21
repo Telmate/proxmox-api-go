@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func GetConfig(t *testing.T, ctx context.Context, c *pveSDK.Client, guestID pveSDK.GuestID) *pveSDK.ConfigQemu {
+func GetConfig(t *testing.T, ctx context.Context, c pveSDK.QemuGuestInterface, guestID pveSDK.GuestID) *pveSDK.ConfigQemu {
 	vmr := pveSDK.NewVmRef(pveSDK.GuestID(guestID))
-	raw, err := pveSDK.NewRawConfigQemuFromApi(ctx, vmr, c)
+	raw, err := c.Read(ctx, vmr)
 	require.NoError(t, err)
 	require.NotNil(t, raw)
 	config, err := raw.Get(*vmr)
@@ -21,7 +21,7 @@ func GetConfig(t *testing.T, ctx context.Context, c *pveSDK.Client, guestID pveS
 	return config
 }
 
-func CheckConfig(t *testing.T, ctx context.Context, c *pveSDK.Client, guestID pveSDK.GuestID, expected *pveSDK.ConfigQemu) {
+func CheckConfig(t *testing.T, ctx context.Context, c pveSDK.QemuGuestInterface, guestID pveSDK.GuestID, expected *pveSDK.ConfigQemu) {
 	t.Helper()
 	config := GetConfig(t, ctx, c, guestID)
 	require.EqualExportedValues(t, expected, config)

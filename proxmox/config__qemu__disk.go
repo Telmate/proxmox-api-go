@@ -901,9 +901,9 @@ type qemuDiskResize struct {
 
 // Increase the disk size to the specified amount in gigabytes
 // Decrease of disk size is not permitted.
-func (disk qemuDiskResize) resize(ctx context.Context, vmr *VmRef, c *clientAPI) error {
-	body := []byte("disk=" + disk.Id.String() + "&size=" + strconv.FormatInt(int64(disk.SizeInKibibytes), 10) + "K")
-	return c.putTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/resize", &body)
+func (disk qemuDiskResize) resize(ctx context.Context, ref guestRef, c *clientAPI) error {
+	body := []byte("disk=" + disk.Id.String() + "&size=" + strconv.Itoa(int(disk.SizeInKibibytes)) + "K")
+	return c.putTask(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/resize", &body)
 }
 
 type qemuDiskMove struct {
@@ -1238,9 +1238,9 @@ func MoveQemuDisk(ctx context.Context, format *QemuDiskFormat, diskId QemuDiskId
 }
 
 // increase Disks in size
-func resizeDisks(ctx context.Context, vmr *VmRef, c *clientAPI, disks []qemuDiskResize) (err error) {
+func resizeDisks(ctx context.Context, ref guestRef, c *clientAPI, disks []qemuDiskResize) (err error) {
 	for i := range disks {
-		if err = disks[i].resize(ctx, vmr, c); err != nil {
+		if err = disks[i].resize(ctx, ref, c); err != nil {
 			return
 		}
 	}
@@ -1248,13 +1248,13 @@ func resizeDisks(ctx context.Context, vmr *VmRef, c *clientAPI, disks []qemuDisk
 }
 
 // Resize newly created disks
-func resizeNewDisks(ctx context.Context, vmr *VmRef, c *clientAPI, newDisks, currentDisks *QemuStorages) (err error) {
+func resizeNewDisks(ctx context.Context, ref guestRef, c *clientAPI, newDisks, currentDisks *QemuStorages) (err error) {
 	if newDisks == nil {
 		return
 	}
 	resize := newDisks.selectInitialResize(currentDisks)
 	if len(resize) > 0 {
-		if err = resizeDisks(ctx, vmr, c, resize); err != nil {
+		if err = resizeDisks(ctx, ref, c, resize); err != nil {
 			return
 		}
 	}

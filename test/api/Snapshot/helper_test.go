@@ -14,8 +14,8 @@ func createQemu(t *testing.T, ctx context.Context, c pveSDK.ClientNew, config pv
 	require.NotNil(t, vmRef)
 }
 
-func createLxc(t *testing.T, ctx context.Context, c *pveSDK.Client, config pveSDK.ConfigLXC) {
-	vmRef, err := config.Create(ctx, c)
+func createLxc(t *testing.T, ctx context.Context, c pveSDK.LxcGuestInterface, config pveSDK.ConfigLXC) {
+	vmRef, err := c.Create(ctx, config)
 	require.NoError(t, err)
 	require.NotNil(t, vmRef)
 }

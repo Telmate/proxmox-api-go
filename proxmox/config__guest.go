@@ -31,6 +31,9 @@ type (
 		ListFeatures(context.Context, VmRef) (GuestFeatures, error)
 		ListFeaturesNoCheck(context.Context, VmRef) (GuestFeatures, error)
 
+		PendingChanges(context.Context, VmRef) (bool, error)
+		PendingChangesNoCheck(context.Context, VmRef) (bool, error)
+
 		Reboot(context.Context, VmRef) error
 		RebootNoCheck(context.Context, VmRef) error
 
@@ -42,6 +45,9 @@ type (
 
 		Start(context.Context, VmRef) error
 		StartNoCheck(context.Context, VmRef) error
+
+		Status(context.Context, VmRef) (RawGuestStatus, error)
+		StatusNoCheck(context.Context, VmRef) (RawGuestStatus, error)
 
 		// Stop will stop the guest.
 		// The overrule flag will opportunistically set the overrule-shutdown parameter if the Proxmox VE version is 8.0 or higher.
@@ -63,6 +69,19 @@ type (
 )
 
 var _ GuestInterface = (*guestClient)(nil)
+
+func (c *guestClient) PendingChanges(ctx context.Context, vmr VmRef) (bool, error) {
+	ref := vmr.toGuestRef()
+	_, err := ref.check(ctx, nil, c.api)
+	if err != nil {
+		return false, err
+	}
+	return c.PendingChangesNoCheck(ctx, ref.legacy())
+}
+
+func (c *guestClient) PendingChangesNoCheck(ctx context.Context, vmr VmRef) (bool, error) {
+	return vmr.toGuestRef().pendingChanges(ctx, c.api)
+}
 
 type GuestDNS struct {
 	NameServers  *[]netip.Addr `json:"nameservers,omitempty"`
@@ -463,20 +482,7 @@ func GuestStart(ctx context.Context, vmr *VmRef, client *Client) (err error) {
 // Deprecated: use GuestInterface.ListFeatures() instead.
 // List all features the guest has.
 func ListGuestFeatures(ctx context.Context, vmr *VmRef, client *Client) (features GuestFeatures, err error) {
-	err = client.CheckVmRef(ctx, vmr)
-	if err != nil {
-		return
-	}
-	features.Clone, err = guestHasFeature(ctx, client.api(), *vmr, GuestFeatureClone)
-	if err != nil {
-		return
-	}
-	features.Copy, err = guestHasFeature(ctx, client.api(), *vmr, GuestFeatureCopy)
-	if err != nil {
-		return
-	}
-	features.Snapshot, err = guestHasFeature(ctx, client.api(), *vmr, GuestFeatureSnapshot)
-	return
+	return client.New().Guest.ListFeatures(ctx, *vmr)
 }
 
 // Keep trying to create/clone a VM until we get a unique ID
@@ -488,8 +494,14 @@ func guestCreateLoop_Unsafe(ctx context.Context, idKey, url string, params map[s
 		if err != nil {
 			return 0, err
 		}
-		params[idKey] = int(guestID)
-		if err = ca.postTaskNoHighLevelRetry(ctx, url, combineParamsAndBody(params, body)); err != nil {
+		var sendBody *[]byte
+		if params != nil {
+			params[idKey] = guestID.String()
+			sendBody = combineParamsAndBody(params, body)
+		} else {
+			sendBody = new(append(*body, []byte("&"+idKey+"="+guestID.String())...))
+		}
+		if err = ca.postTaskNoHighLevelRetry(ctx, url, sendBody); err != nil {
 			// TODO test what happens during a LXC clone
 			//
 			// Create LXC

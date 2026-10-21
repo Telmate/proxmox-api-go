@@ -58,7 +58,7 @@ func Test_Lxc_Read_Interface_Info(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				vmr, err = set.Create(ctx, cl)
+				vmr, err = c.LxcGuest.Create(ctx, set)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},

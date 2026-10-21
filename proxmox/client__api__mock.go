@@ -9,15 +9,15 @@ type mockClientAPI struct {
 	deleteGuestFunc            func(ctx context.Context, vmr *VmRef, purge bool) error
 	deleteHaResourceFunc       func(ctx context.Context, id GuestID) error
 	deleteHaRuleFunc           func(ctx context.Context, id HaRuleID) error
-	getGuestConfigFunc         func(ctx context.Context, vmr *VmRef) (map[string]any, error)
-	getGuestPendingChangesFunc func(ctx context.Context, vmr *VmRef) ([]any, error)
+	getGuestConfigFunc         func(context.Context, guestRef) (map[string]any, error)
+	getGuestPendingChangesFunc func(context.Context, guestRef) ([]any, error)
 	getGuestQemuAgentFunc      func(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error)
 	getHaRuleFunc              func(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfigFunc          func(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfigFunc          func(ctx context.Context, userId UserID) (map[string]any, bool, error)
 	listGuestResourcesFunc     func(ctx context.Context) (*rawGuestResources, error)
 	listHaRulesFunc            func(ctx context.Context) ([]any, error)
-	updateGuestStatusFunc      func(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error
+	updateGuestStatusFunc      func(ctx context.Context, ref guestRef, setStatus string, body *[]byte) error
 	updateHaRuleFunc           func(ctx context.Context, id HaRuleID, params map[string]any) error
 }
 
@@ -55,18 +55,18 @@ func (m *mockClientAPI) deleteHaRule(ctx context.Context, id HaRuleID) error {
 	return m.deleteHaRuleFunc(ctx, id)
 }
 
-func (m *mockClientAPI) getGuestConfig(ctx context.Context, vmr *VmRef) (vmConfig map[string]any, err error) {
+func (m *mockClientAPI) getGuestConfig(ctx context.Context, ref guestRef) (vmConfig map[string]any, err error) {
 	if m.getGuestConfigFunc == nil {
 		m.panic("getGuestConfigFunc")
 	}
-	return m.getGuestConfigFunc(ctx, vmr)
+	return m.getGuestConfigFunc(ctx, ref)
 }
 
-func (m *mockClientAPI) getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error) {
+func (m *mockClientAPI) getGuestPendingChanges(ctx context.Context, ref guestRef) ([]any, error) {
 	if m.getGuestPendingChangesFunc == nil {
 		m.panic("getGuestPendingChangesFunc")
 	}
-	return m.getGuestPendingChangesFunc(ctx, vmr)
+	return m.getGuestPendingChangesFunc(ctx, ref)
 }
 
 func (m *mockClientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error) {
@@ -111,11 +111,11 @@ func (m *mockClientAPI) listHaRules(ctx context.Context) ([]any, error) {
 	return m.listHaRulesFunc(ctx)
 }
 
-func (m *mockClientAPI) updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error {
+func (m *mockClientAPI) updateGuestStatus(ctx context.Context, ref guestRef, setStatus string, body *[]byte) error {
 	if m.updateGuestStatusFunc == nil {
 		m.panic("updateGuestStatusFunc")
 	}
-	return m.updateGuestStatusFunc(ctx, vmr, setStatus, body)
+	return m.updateGuestStatusFunc(ctx, ref, setStatus, body)
 }
 
 func (m *mockClientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error {

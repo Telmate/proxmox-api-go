@@ -7,22 +7,17 @@ import (
 )
 
 func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
-	if vmr.vmId == 0 {
-		return false, errors.New(VmRef_Error_IDnotSet)
-	}
-	rawGuests, err := c.api.listGuestResources(ctx)
+	ref := vmr.toGuestRef()
+	rawGuest, err := ref.check(ctx, nil, c.api)
 	if err != nil {
+		if errors.Is(err, Error.GuestDoesNotExist()) {
+			return false, nil
+		}
 		return false, err
 	}
-	rawGuest, ok := rawGuests.selectID(vmr.vmId)
-	if !ok {
-		return false, nil
-	}
-	vmr.node = rawGuest.GetNode()
-	vmr.vmType = rawGuest.GetType()
 
 	var protection bool // Check if guest is protected
-	switch vmr.vmType {
+	switch ref.Type {
 	case GuestLxc:
 		var version Version
 		version, err = c.oldClient.Version(ctx)
@@ -30,8 +25,7 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 			return false, err
 		}
 		var raw *rawConfigLXC
-		raw, err = LxcRef{ID: vmr.vmId, Node: vmr.node}.read(ctx, c.api, version)
-		if err != nil {
+		if raw, err = readLxcConfig(ctx, ref, version, c.api); err != nil {
 			if apiErr, ok := err.(*ApiError); ok {
 				if strings.HasSuffix(apiErr.Message, " does not exist") { // "Configuration file 'nodes/pve-9l/lxc/1000.conf' does not exist"
 					return false, nil
@@ -42,7 +36,8 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 		protection = raw.GetProtection()
 	case GuestQemu:
 		var raw *rawConfigQemu
-		if raw, err = guestGetRawQemuConfig_Unsafe(ctx, &vmr, c.api); err != nil {
+		raw, err = readQemuConfig(ctx, ref, c.api)
+		if err != nil {
 			if apiErr, ok := err.(*ApiError); ok {
 				if strings.HasSuffix(apiErr.Message, " does not exist") { // "Configuration file 'nodes/pve-9l/qemu-server/1023.conf' does not exist"
 					return false, nil
@@ -53,14 +48,26 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 		protection = raw.GetProtection()
 	}
 	if protection {
-		return false, errorMsg{}.guestIsProtectedCantDelete(vmr.vmId)
+		return false, errorMsg{}.guestIsProtectedCantDelete(ref.ID)
 	}
 
 	attempts := 2
-	haEnabled := rawGuest.GetHaState() != nil
-	if rawGuest.GetState() == PowerStateStopped {
+	var haEnabled bool
+	var state PowerState
+	if rawGuest != nil {
+		haEnabled = rawGuest.GetHaState() != nil
+		state = rawGuest.GetState()
+	} else {
+		rawStatus, err := ref.status(ctx, c.api)
+		if err != nil {
+			return false, err
+		}
+		haEnabled = rawStatus.GetHaState() != nil
+		state = rawStatus.GetState()
+	}
+	if state == PowerStateStopped {
 		var deleted bool
-		deleted, err = vmr.delete_Unsafe(ctx, c.api, haEnabled)
+		deleted, err = ref.delete(ctx, haEnabled, c.api)
 		if err == nil {
 			return deleted, nil
 		}
@@ -73,7 +80,7 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 		}
 	} else {
 		if haEnabled {
-			if _, err = vmr.vmId.deleteHaResource(ctx, c.api); err != nil { // It's faster to delete HA resource first, instead of stopping via HA
+			if _, err = ref.ID.deleteHaResource(ctx, c.api); err != nil { // It's faster to delete HA resource first, instead of stopping via HA
 				return false, err
 			}
 			haEnabled = false
@@ -86,7 +93,7 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 		return false, err
 	}
 	for range attempts {
-		if err = vmr.stopOverruleOpertunistic_Unsafe(ctx, c.api, version); err != nil {
+		if err = ref.stopOverruleOpertunistic(ctx, c.api, version); err != nil {
 			apiErr, ok := err.(*ApiError)
 			if !ok {
 				return false, err
@@ -96,7 +103,7 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 			}
 		}
 		var deleted bool
-		if deleted, err = vmr.delete_Unsafe(ctx, c.api, haEnabled); err != nil {
+		if deleted, err = ref.delete(ctx, haEnabled, c.api); err != nil {
 			apiErr, ok := err.(*ApiError)
 			if !ok {
 				return false, err
@@ -112,5 +119,5 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 }
 
 func (c *guestClient) DeleteNoCheck(ctx context.Context, vmr VmRef) (bool, error) {
-	return vmr.delete_Unsafe(ctx, c.api, false)
+	return vmr.toGuestRef().delete(ctx, false, c.api)
 }

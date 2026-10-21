@@ -478,7 +478,7 @@ func (id UserID) delete(ctx context.Context, client *clientAPI) error {
 	return client.deleteRetry(ctx, "/access/users/"+id.String(), 3)
 }
 
-func (id UserID) exists(ctx context.Context, c clientApiInterface) (bool, error) {
+func (id UserID) exists(ctx context.Context, c *clientAPI) (bool, error) {
 	_, exists, err := c.getUserConfig(ctx, id)
 	if err != nil {
 		return false, err

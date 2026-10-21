@@ -47,37 +47,40 @@ type GuestFeatures struct {
 	Snapshot bool `json:"snapshot"`
 }
 
-func (c *guestClient) HasFeature(ctx context.Context, ref VmRef, feat GuestFeature) (bool, error) {
-	if _, err := ref.check_unsafe(ctx, c.api); err != nil {
+func (c *guestClient) HasFeature(ctx context.Context, vmr VmRef, feat GuestFeature) (bool, error) {
+	ref := vmr.toGuestRef()
+	if _, err := ref.check(ctx, nil, c.api); err != nil {
 		return false, err
 	}
-	return c.HasFeatureNoCheck(ctx, ref, feat)
+	return c.HasFeatureNoCheck(ctx, ref.legacy(), feat)
 }
 
 func (c *guestClient) HasFeatureNoCheck(ctx context.Context, ref VmRef, feat GuestFeature) (bool, error) {
-	return guestHasFeature(ctx, c.api, ref, feat)
+	return ref.toGuestRef().hasFeature(ctx, c.api, feat)
 }
 
-func (c *guestClient) ListFeatures(ctx context.Context, ref VmRef) (GuestFeatures, error) {
-	if _, err := ref.check_unsafe(ctx, c.api); err != nil {
+func (c *guestClient) ListFeatures(ctx context.Context, vmr VmRef) (GuestFeatures, error) {
+	ref := vmr.toGuestRef()
+	if _, err := ref.check(ctx, nil, c.api); err != nil {
 		return GuestFeatures{}, err
 	}
-	return c.ListFeaturesNoCheck(ctx, ref)
+	return c.ListFeaturesNoCheck(ctx, ref.legacy())
 }
 
-func (c *guestClient) ListFeaturesNoCheck(ctx context.Context, ref VmRef) (feats GuestFeatures, err error) {
-	if feats.Clone, err = guestHasFeature(ctx, c.api, ref, GuestFeatureClone); err != nil {
+func (c *guestClient) ListFeaturesNoCheck(ctx context.Context, vmr VmRef) (feats GuestFeatures, err error) {
+	ref := vmr.toGuestRef()
+	if feats.Clone, err = ref.hasFeature(ctx, c.api, GuestFeatureClone); err != nil {
 		return
 	}
-	if feats.Copy, err = guestHasFeature(ctx, c.api, ref, GuestFeatureCopy); err != nil {
+	if feats.Copy, err = ref.hasFeature(ctx, c.api, GuestFeatureCopy); err != nil {
 		return
 	}
-	feats.Snapshot, err = guestHasFeature(ctx, c.api, ref, GuestFeatureSnapshot)
+	feats.Snapshot, err = ref.hasFeature(ctx, c.api, GuestFeatureSnapshot)
 	return feats, err
 }
 
-func guestHasFeature(ctx context.Context, c *clientAPI, vmr VmRef, feature GuestFeature) (bool, error) {
-	params, err := c.getMap(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/feature?feature="+feature.String(), "guest", "FEATURES")
+func (ref guestRef) hasFeature(ctx context.Context, c *clientAPI, feature GuestFeature) (bool, error) {
+	params, err := c.getMap(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/feature?feature="+feature.String(), "guest", "FEATURES")
 	if err != nil {
 		return false, err
 	}

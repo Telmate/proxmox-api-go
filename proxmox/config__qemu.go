@@ -19,10 +19,27 @@ import (
 
 type (
 	QemuGuestInterface interface {
+		Clone(context.Context, VmRef, CloneQemuTarget) (*VmRef, error)
+		CloneNoCheck(context.Context, VmRef, CloneQemuTarget) (*VmRef, error)
+
+		// VmRef can be set while there was an error, to indicate a guest was created.
 		Create(context.Context, ConfigQemu) (*VmRef, error)
 		CreateNoCheck(context.Context, ConfigQemu) (*VmRef, error)
 
-		// When allowRestart is false an error is return if the update rewuires a reboot or shutdown.
+		Migrate(ctx context.Context, vmr VmRef, new NodeName, live bool) error
+		MigrateNoCheck(ctx context.Context, vmr VmRef, new NodeName, live bool) error
+
+		// Read returns the configuration of the Qemu guest.
+		// Including pending changes.
+		Read(context.Context, *VmRef) (RawConfigQemu, error)
+		ReadNoCheck(context.Context, *VmRef) (RawConfigQemu, error)
+
+		// ReadActive returns the active/running configuration of the Qemu guest.
+		// Without pending changes.
+		ReadActive(context.Context, *VmRef) (raw RawConfigQemu, pending bool, err error)
+		ReadActiveNoCheck(context.Context, *VmRef) (raw RawConfigQemu, pending bool, err error)
+
+		// When allowRestart is false an error is return if the update requires a reboot or shutdown.
 		Update(ctx context.Context, vmr VmRef, allowRestart bool, allowForceStop bool, config ConfigQemu) error
 		UpdateNoCheck(ctx context.Context, vmr VmRef, allowRestart bool, allowForceStop bool, config ConfigQemu) error
 	}
@@ -34,6 +51,21 @@ type (
 )
 
 var _ QemuGuestInterface = (*qemuGuestClient)(nil)
+
+func (c *qemuGuestClient) Clone(ctx context.Context, vmr VmRef, config CloneQemuTarget) (*VmRef, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	if _, err := ref.checkQemu(ctx, c.api); err != nil {
+		return nil, err
+	}
+	return c.CloneNoCheck(ctx, ref.legacy(), config)
+}
+
+func (c *qemuGuestClient) CloneNoCheck(ctx context.Context, vmr VmRef, config CloneQemuTarget) (*VmRef, error) {
+	return QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize().cloneQemu(ctx, config, c.oldClient, c.api)
+}
 
 func (c *qemuGuestClient) Create(ctx context.Context, config ConfigQemu) (*VmRef, error) {
 	client := c.oldClient
@@ -63,9 +95,43 @@ func (c *qemuGuestClient) CreateNoCheck(ctx context.Context, config ConfigQemu) 
 	if err != nil {
 		return nil, err
 	}
-
 	return config.create(ctx, client, c.api, version)
+}
 
+func (c *qemuGuestClient) Migrate(ctx context.Context, vmr VmRef, new NodeName, live bool) error {
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	if _, err := ref.checkQemu(ctx, c.api); err != nil {
+		return err
+	}
+	return c.MigrateNoCheck(ctx, ref.legacy(), new, live)
+}
+
+func (c *qemuGuestClient) MigrateNoCheck(ctx context.Context, vmr VmRef, new NodeName, live bool) error {
+	return QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize().migrate(ctx, c.api, new, live)
+}
+
+func (c *qemuGuestClient) Read(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
+	return c.ReadNoCheck(ctx, vmr)
+}
+
+func (c *qemuGuestClient) ReadNoCheck(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
+	// TODO change this once VmRef is fully phased out
+	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
+		return nil, err
+	}
+	return guestGetQemuConfig(ctx, vmr, c.oldClient, c.api)
+}
+
+func (c *qemuGuestClient) ReadActive(ctx context.Context, vmr *VmRef) (RawConfigQemu, bool, error) {
+	return c.ReadActiveNoCheck(ctx, vmr)
+}
+
+func (c *qemuGuestClient) ReadActiveNoCheck(ctx context.Context, vmr *VmRef) (RawConfigQemu, bool, error) {
+	// TODO change this once VmRef is fully phased out
+	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
+		return nil, false, err
+	}
+	return guestGetActiveRawQemuConfig_Unsafe(ctx, vmr, c.api)
 }
 
 func (c *qemuGuestClient) Update(
@@ -73,14 +139,13 @@ func (c *qemuGuestClient) Update(
 	allowRestart bool, allowForceStop bool,
 	config ConfigQemu,
 ) (err error) {
-	if err = config.setVmr(&vmr); err != nil {
-		return
-	}
+	vmr.vmType = GuestQemu
+	config.ID = &vmr.vmId
 
 	client := c.oldClient
 
 	var rawConfig *rawConfigQemu
-	if rawConfig, err = guestGetQemuConfig(ctx, &vmr, client); err != nil {
+	if rawConfig, err = guestGetQemuConfig(ctx, &vmr, client, c.api); err != nil {
 		return
 	}
 
@@ -104,14 +169,13 @@ func (c *qemuGuestClient) UpdateNoCheck(
 	allowRestart bool, allowForceStop bool,
 	config ConfigQemu,
 ) (err error) {
-	if err = config.setVmr(&vmr); err != nil {
-		return
-	}
+	vmr.vmType = GuestQemu
+	config.ID = &vmr.vmId
 
 	client := c.oldClient
 
 	var rawConfig *rawConfigQemu
-	if rawConfig, err = guestGetQemuConfig(ctx, &vmr, client); err != nil {
+	if rawConfig, err = guestGetQemuConfig(ctx, &vmr, client, c.api); err != nil {
 		return
 	}
 
@@ -249,14 +313,15 @@ func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientA
 		pool:   pool,
 		vmType: GuestQemu,
 	}
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
 	if len(disksToResize) > 0 {
-		if err = resizeDisks(ctx, vmr, ca, disksToResize); err != nil {
-			return nil, err
+		if err = resizeDisks(ctx, ref, ca, disksToResize); err != nil {
+			return vmr, err
 		}
 	}
 	if config.State != nil && *config.State == PowerStateRunning && len(disksToResize) > 0 {
-		if err = vmr.start_Unsafe(ctx, ca); err != nil {
-			return nil, err
+		if err = ref.start(ctx, ca); err != nil {
+			return vmr, err
 		}
 	}
 	_, err = client.UpdateVMHA(ctx, vmr, config.HaState, config.HaGroup)
@@ -680,11 +745,11 @@ func (config ConfigQemu) updateNoCheck(
 ) (rebootRequired bool, err error) {
 	// TODO add digest during update to check if the config has changed
 
-	ca := client.new().apiGet()
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
 
 	var urlBuilder strings.Builder
 	urlBuilder.WriteString("/qemu/")
-	urlBuilder.WriteString(vmr.vmId.String())
+	urlBuilder.WriteString(ref.ID.String())
 	urlBuilder.WriteString("/config")
 	urlPart := urlBuilder.String()
 	deleteBuilder := &strings.Builder{} // this is for items that should be removed before they can be created again e.g. cloud-init disks. (convert to array when needed)
@@ -694,13 +759,13 @@ func (config ConfigQemu) updateNoCheck(
 	if config.State != nil {
 		desiredState = config.State
 		var raw *rawGuestStatus
-		raw, err = vmr.getRawGuestStatus_Unsafe(ctx, client)
+		raw, err = ref.status(ctx, c)
 		if err != nil {
 			return false, err
 		}
 		tmpState := raw.GetState()
 		if *desiredState == PowerStateStopped && *desiredState != tmpState {
-			if err = vmr.shutdown_Unsafe(ctx, c); err != nil {
+			if err = ref.shutdown(ctx, c); err != nil {
 				return false, err
 			}
 		}
@@ -717,7 +782,7 @@ func (config ConfigQemu) updateNoCheck(
 					return
 				}
 			}
-			if err = resizeDisks(ctx, vmr, c, markedDisks.Resize); err != nil { // increase Disks in size
+			if err = resizeDisks(ctx, ref, c, markedDisks.Resize); err != nil { // increase Disks in size
 				return false, err
 			}
 			config.Disks.cloudInitRemove(*updateConfig.disks, deleteBuilder)
@@ -737,7 +802,7 @@ func (config ConfigQemu) updateNoCheck(
 		if updateConfig.efiDisk != nil {
 			if disk := config.EfiDisk.markChangesUnsafe(updateConfig.efiDisk); disk != nil {
 				if currentState == nil || *currentState != PowerStateStopped {
-					desiredState, err = shutdownIfRunning(ctx, c, client, vmr, desiredState, allowRestart)
+					desiredState, err = shutdownIfRunning(ctx, c, ref, desiredState, allowRestart)
 					if err != nil {
 						return false, err
 					}
@@ -758,7 +823,7 @@ func (config ConfigQemu) updateNoCheck(
 		cl := client.new().apiRaw()
 		urlBuilder = strings.Builder{}
 		urlBuilder.WriteString("/nodes/")
-		urlBuilder.WriteString(vmr.node.String())
+		urlBuilder.WriteString(ref.Node.String())
 		urlBuilder.WriteString(urlPart)
 		if err := cl.putRawRetry(ctx, urlBuilder.String(), new([]byte("delete="+itemsToDeleteBeforeUpdate)), 3); err != nil {
 			return false, fmt.Errorf("error updating VM: %v", err)
@@ -769,7 +834,7 @@ func (config ConfigQemu) updateNoCheck(
 	// Moving disks changes the disk id. we need to get the config again if any disk was moved.
 	if pending || len(markedDisks.Move) != 0 {
 		var rawConfig map[string]any
-		rawConfig, rebootRequired, err = vmr.pendingConfig(ctx, ca)
+		rawConfig, rebootRequired, err = ref.pendingConfig(ctx, c)
 		if err != nil {
 			return
 		}
@@ -778,7 +843,7 @@ func (config ConfigQemu) updateNoCheck(
 			return
 		}
 		if rebootRequired { // shutdown vm if reboot is required
-			desiredState, err = shutdownIfRunning(ctx, c, client, vmr, desiredState, allowRestart)
+			desiredState, err = shutdownIfRunning(ctx, c, ref, desiredState, allowRestart)
 			if err != nil {
 				return false, err
 			}
@@ -787,16 +852,16 @@ func (config ConfigQemu) updateNoCheck(
 	}
 
 	if config.Node != nil && currentLegacy.Node != nil && *config.Node != *currentLegacy.Node { // Migrate VM
-		if err = vmr.migrate_Unsafe(ctx, client, *config.Node, true); err != nil {
+		if err = ref.migrate(ctx, c, *config.Node, true); err != nil {
 			return
 		}
 
 		// Set node to the node the VM was migrated to
-		vmr.node = *config.Node
+		ref.Node = *config.Node
+		vmr.node = ref.Node
 
 		// After migration, we must wait for the lock to be released.
-		err = waitForMigrationLockRelease(ctx, client, vmr)
-		if err != nil {
+		if err = waitForMigrationLockRelease(ctx, client, ref); err != nil {
 			return
 		}
 	}
@@ -806,7 +871,7 @@ func (config ConfigQemu) updateNoCheck(
 	if body != nil {
 		urlBuilder = strings.Builder{}
 		urlBuilder.WriteString("/nodes/")
-		urlBuilder.WriteString(vmr.node.String())
+		urlBuilder.WriteString(ref.Node.String())
 		urlBuilder.WriteString(urlPart)
 		if err = c.putRawRetry(ctx, urlBuilder.String(), body, 3); err != nil {
 			return false, fmt.Errorf("error updating VM: %v", err)
@@ -815,13 +880,13 @@ func (config ConfigQemu) updateNoCheck(
 	}
 
 	if (currentState == nil || *currentState != PowerStateStopped) && pending { // Only check if we arent sure the guest is turned off, or it's not off.
-		rebootRequired, err = vmr.pendingChanges(ctx, ca)
+		rebootRequired, err = ref.pendingChanges(ctx, c)
 		if err != nil {
 			return
 		}
 	}
 
-	if err = resizeNewDisks(ctx, vmr, c, config.Disks, currentLegacy.Disks); err != nil {
+	if err = resizeNewDisks(ctx, ref, c, config.Disks, currentLegacy.Disks); err != nil {
 		return
 	}
 
@@ -829,30 +894,30 @@ func (config ConfigQemu) updateNoCheck(
 		if !allowRestart {
 			return true, errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)
 		}
-		if err = vmr.reboot_Unsafe(ctx, c); err != nil {
+		if err = ref.reboot(ctx, c); err != nil {
 			return true, err
 		}
 	}
 
 	if config.Pool != nil { // update pool membership
-		if err = vmr.vmId.setPool(ctx, client.new().apiRaw(), *config.Pool, currentLegacy.Pool, version); err != nil {
+		if err = ref.ID.setPool(ctx, client.new().apiRaw(), *config.Pool, currentLegacy.Pool, version); err != nil {
 			return
 		}
 	}
 
-	_, err = client.UpdateVMHA(ctx, vmr, config.HaState, config.HaGroup)
+	_, err = client.UpdateVMHA(ctx, new(ref.legacy()), config.HaState, config.HaGroup)
 
 	if desiredState != nil && *desiredState == PowerStateRunning {
 		if currentState == nil {
 			var raw *rawGuestStatus
-			raw, err = vmr.getRawGuestStatus_Unsafe(ctx, client)
+			raw, err = ref.status(ctx, c)
 			if err != nil {
 				return false, nil
 			}
 			currentState = util.Pointer(raw.GetState())
 		}
 		if *desiredState != *currentState {
-			if err = vmr.start_Unsafe(ctx, c); err != nil {
+			if err = ref.start(ctx, c); err != nil {
 				return false, err
 			}
 		}
@@ -862,8 +927,8 @@ func (config ConfigQemu) updateNoCheck(
 }
 
 // returns the desired state as the current when no state was provided, so we can revert back to it later.
-func shutdownIfRunning(ctx context.Context, c *clientAPI, client *Client, vmr *VmRef, desired *PowerState, allowRestart bool) (*PowerState, error) {
-	raw, err := vmr.getRawGuestStatus_Unsafe(ctx, client)
+func shutdownIfRunning(ctx context.Context, c *clientAPI, ref guestRef, desired *PowerState, allowRestart bool) (*PowerState, error) {
+	raw, err := ref.status(ctx, c)
 	if err != nil {
 		return nil, err
 	}
@@ -875,24 +940,11 @@ func shutdownIfRunning(ctx context.Context, c *clientAPI, client *Client, vmr *V
 		if desired == nil {
 			desired = &current
 		}
-		if err = vmr.shutdown_Unsafe(ctx, c); err != nil {
+		if err = ref.shutdown(ctx, c); err != nil {
 			return nil, err
 		}
 	}
 	return desired, nil
-}
-
-func (config *ConfigQemu) setVmr(vmr *VmRef) (err error) {
-	if config == nil {
-		return errors.New("config may not be nil")
-	}
-	if err = vmr.nilCheck(); err != nil {
-		return
-	}
-	vmr.SetVmType(GuestQemu)
-	idCopy := vmr.vmId
-	config.ID = &idCopy
-	return
 }
 
 func (config ConfigQemu) Validate(current *ConfigQemu, version Version) (err error) {
@@ -1576,6 +1628,7 @@ const (
 	qemuPrefixApiKeyUSB         = "usb"
 )
 
+// Deprecated: use QemuGuestInterface.Read() instead.
 // NewRawConfigQemuFromApi returns the configuration of the Qemu guest.
 // Including pending changes.
 func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (RawConfigQemu, error) {
@@ -1585,52 +1638,46 @@ func NewRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (R
 	if err := client.CheckVmRef(ctx, vmr); err != nil {
 		return nil, err
 	}
-	return client.new().guestGetQemuRawConfig(ctx, vmr)
+	return client.New().QemuGuest.Read(ctx, vmr)
 }
 
-func guestGetRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (*rawConfigQemu, error) {
-	rawConfig, err := c.getGuestConfig(ctx, vmr)
+func guestGetRawQemuConfig_Unsafe(ctx context.Context, ref guestRef, c *clientAPI) (*rawConfigQemu, error) {
+	rawConfig, err := c.getGuestConfig(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
-	return &rawConfigQemu{a: rawConfig, id: vmr.vmId, node: vmr.node}, nil
+	return &rawConfigQemu{a: rawConfig, id: ref.ID, node: ref.Node}, nil
 }
 
-func (c *clientNewTest) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error) {
-	return guestGetRawQemuConfig_Unsafe(ctx, vmr, c.api)
-}
-
+// Deprecated: use QemuGuestInterface.ReadActive() instead.
 // NewActiveRawConfigQemuFromApi returns the active configuration of the Qemu guest.
 // Without pending changes.
 func NewActiveRawConfigQemuFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigQemu, pending bool, err error) {
-	return c.new().guestGetQemuActiveRawConfig(ctx, vmr)
+	return c.New().QemuGuest.ReadActive(ctx, vmr)
 }
 
-func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c clientApiInterface) (raw *rawConfigQemu, pending bool, err error) {
+func guestGetActiveRawQemuConfig_Unsafe(ctx context.Context, vmr *VmRef, c *clientAPI) (raw *rawConfigQemu, pending bool, err error) {
 	var tmpConfig map[string]any
-	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
+	tmpConfig, pending, err = vmr.toGuestRef().pendingConfig(ctx, c)
 	if err != nil {
 		return nil, false, err
 	}
 	return &rawConfigQemu{a: tmpConfig, id: vmr.vmId, node: vmr.node}, pending, nil
 }
 
-func (c *clientNewTest) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error) {
-	return guestGetActiveRawQemuConfig_Unsafe(ctx, vmr, c.api)
-}
-
+// Deprecated: use QemuGuestInterface.Read() instead.
 func NewConfigQemuFromApi(ctx context.Context, vmr *VmRef, client *Client) (*ConfigQemu, error) {
-	raw, err := guestGetQemuConfig(ctx, vmr, client)
+	raw, err := guestGetQemuConfig(ctx, vmr, client, client.api())
 	if err != nil {
 		return nil, err
 	}
 	return raw.Get(*vmr)
 }
 
-func guestGetQemuConfig(ctx context.Context, vmr *VmRef, client *Client) (raw *rawConfigQemu, err error) {
+func guestGetQemuConfig(ctx context.Context, vmr *VmRef, client *Client, c *clientAPI) (raw *rawConfigQemu, err error) {
 	var vmInfo map[string]interface{}
 	for ii := 0; ii < 3; ii++ {
-		raw, err = client.new().guestGetQemuRawConfig(ctx, vmr)
+		raw, err = guestGetRawQemuConfig_Unsafe(ctx, vmr.toGuestRef(), c)
 		if err != nil {
 			return nil, err
 		}
@@ -1665,7 +1712,7 @@ func guestGetQemuConfig(ctx context.Context, vmr *VmRef, client *Client) (raw *r
 	return
 }
 
-func waitForMigrationLockRelease(ctx context.Context, client *Client, vmr *VmRef) error {
+func waitForMigrationLockRelease(ctx context.Context, client *Client, ref guestRef) error {
 	// Give a little time for the lock to potentially appear before we start polling.
 	time.Sleep(5 * time.Second)
 
@@ -1673,34 +1720,46 @@ func waitForMigrationLockRelease(ctx context.Context, client *Client, vmr *VmRef
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	targetNode := vmr.Node()
+	targetNode := ref.Node
 
 	for {
 		select {
 		case <-timeout:
-			return fmt.Errorf("timed out waiting for VM %d to unlock on node %s after migration", vmr.VmId(), targetNode)
+			return fmt.Errorf("timed out waiting for VM %d to unlock on node %s after migration", ref.ID, targetNode)
 		case <-ticker.C:
 			// We need to create a new VmRef for GetVmInfo as it updates the node info in the ref.
-			currentStatusVmr := NewVmRef(vmr.VmId())
+			currentStatusVmr := NewVmRef(ref.ID)
 			vmInfo, err := client.GetVmInfo(ctx, currentStatusVmr)
 			if err != nil {
-				log.Printf("[DEBUG] Waiting for VM %d to be available after migration, current error: %v", vmr.VmId(), err)
+				log.Printf("[DEBUG] Waiting for VM %d to be available after migration, current error: %v", ref.ID, err)
 				continue
 			}
 
 			// Check if the VM is on the target node yet.
 			if currentStatusVmr.Node() != targetNode {
-				log.Printf("[DEBUG] Waiting for VM %d to appear on node %s, currently on %s", vmr.VmId(), targetNode, currentStatusVmr.Node())
+				log.Printf("[DEBUG] Waiting for VM %d to appear on node %s, currently on %s", ref.ID, targetNode, currentStatusVmr.Node())
 				continue
 			}
 
 			// Once on the target node, check for a lock.
 			if lock, ok := vmInfo["lock"]; !ok {
-				log.Printf("[DEBUG] VM %d is on node %s and has no lock.", vmr.VmId(), targetNode)
+				log.Printf("[DEBUG] VM %d is on node %s and has no lock.", ref.ID, targetNode)
 				return nil // Success!
 			} else {
-				log.Printf("[DEBUG] Waiting for VM %d on node %s to unlock. Current lock: %v", vmr.VmId(), targetNode, lock)
+				log.Printf("[DEBUG] Waiting for VM %d on node %s to unlock. Current lock: %v", ref.ID, targetNode, lock)
 			}
 		}
 	}
+}
+
+func readQemuConfig(ctx context.Context, ref guestRef, c *clientAPI) (*rawConfigQemu, error) {
+	rawConfig, err := c.getGuestConfig(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+	return &rawConfigQemu{
+		a:    rawConfig,
+		id:   ref.ID,
+		node: ref.Node,
+	}, nil
 }
