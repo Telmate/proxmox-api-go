@@ -12,15 +12,15 @@ type clientApiInterface interface {
 	deleteGuest(ctx context.Context, vmr *VmRef, purge bool) error
 	deleteHaResource(ctx context.Context, id GuestID) error
 	deleteHaRule(ctx context.Context, id HaRuleID) error
-	getGuestConfig(ctx context.Context, vmr *VmRef) (map[string]any, error)
-	getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error)
+	getGuestConfig(context.Context, guestRef) (map[string]any, error)
+	getGuestPendingChanges(context.Context, guestRef) ([]any, error)
 	getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error)
 	getHaRule(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfig(ctx context.Context, userId UserID) (map[string]any, bool, error)
 	listGuestResources(ctx context.Context) (*rawGuestResources, error)
 	listHaRules(ctx context.Context) ([]any, error)
-	updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error
+	updateGuestStatus(ctx context.Context, ref guestRef, setStatus string, body *[]byte) error
 	updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error
 }
 
@@ -49,12 +49,12 @@ func (c *clientAPI) deleteHaRule(ctx context.Context, id HaRuleID) error {
 	return err
 }
 
-func (c *clientAPI) getGuestConfig(ctx context.Context, vmr *VmRef) (vmConfig map[string]any, err error) {
-	return c.getMap(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/config", "vm", "CONFIG")
+func (c *clientAPI) getGuestConfig(ctx context.Context, ref guestRef) (vmConfig map[string]any, err error) {
+	return c.getMap(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/config", "vm", "CONFIG")
 }
 
-func (c *clientAPI) getGuestPendingChanges(ctx context.Context, vmr *VmRef) ([]any, error) {
-	return c.getList(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/pending", "Guest", "PENDING CONFIG")
+func (c *clientAPI) getGuestPendingChanges(ctx context.Context, ref guestRef) ([]any, error) {
+	return c.getList(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/pending", "Guest", "PENDING CONFIG")
 }
 
 func (c *clientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error) {
@@ -98,6 +98,8 @@ func (c *clientAPI) getUserConfig(ctx context.Context, userID UserID) (map[strin
 	return config, false, err
 }
 
+// Lists all the guest resources in the pool.
+// This operation is extremely expensive.
 func (c *clientAPI) listGuestResources(ctx context.Context) (*rawGuestResources, error) {
 	raw, err := c.getResourceList(ctx, resourceListGuest)
 	if err != nil {
@@ -110,8 +112,8 @@ func (c *clientAPI) listHaRules(ctx context.Context) ([]any, error) {
 	return c.getList(ctx, "/cluster/ha/rules", "ha rules", "CONFIG")
 }
 
-func (c *clientAPI) updateGuestStatus(ctx context.Context, vmr *VmRef, setStatus string, body *[]byte) error {
-	return c.postTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/"+setStatus, body)
+func (c *clientAPI) updateGuestStatus(ctx context.Context, ref guestRef, setStatus string, body *[]byte) error {
+	return c.postTask(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/status/"+setStatus, body)
 }
 
 func (c *clientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[string]any) error {

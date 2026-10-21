@@ -19,10 +19,15 @@ var configCmd = &cobra.Command{
 			return
 		}
 		vmType := vmr.GetVmType()
-		var config interface{}
+		var config any
+		var raw proxmox.RawConfigQemu
 		switch vmType {
 		case proxmox.GuestQemu:
-			config, err = proxmox.NewConfigQemuFromApi(cli.Context(), vmr, c)
+			raw, err = c.New().QemuGuest.Read(cli.Context(), vmr)
+			if err != nil {
+				return err
+			}
+			config, err = raw.Get(*vmr)
 		case proxmox.GuestLxc:
 			config, err = proxmox.NewConfigLxcFromApi(cli.Context(), vmr, c)
 		}
@@ -31,8 +36,7 @@ var configCmd = &cobra.Command{
 		}
 		cli.PrintFormattedJson(guestCmd.OutOrStdout(), config)
 		return
-	},
-}
+	}}
 
 func init() {
 	guestCmd.AddCommand(configCmd)

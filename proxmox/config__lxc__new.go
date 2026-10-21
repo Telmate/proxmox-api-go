@@ -12,14 +12,33 @@ import (
 
 type (
 	LxcGuestInterface interface {
+		Clone(context.Context, VmRef, CloneLxcTarget) (*VmRef, error)
+		CloneNoCheck(context.Context, VmRef, CloneLxcTarget) (*VmRef, error)
+
+		// VmRef can be set while there was an error, to indicate a guest was created.
+		Create(context.Context, ConfigLXC) (*VmRef, error)
+		CreateNoCheck(context.Context, ConfigLXC) (*VmRef, error)
+
+		Migrate(context.Context, VmRef, NodeName) error
+		MigrateNoCheck(context.Context, VmRef, NodeName) error
+
 		// Read returns the configuration of the LXC guest.
 		// Including pending changes.
 		Read(context.Context, VmRef) (RawConfigLXC, error)
 		ReadNoCheck(context.Context, VmRef) (RawConfigLXC, error)
 
-		// Only avalible from PVE 9.1 and onwards.
+		// ReadActive returns the active/running configuration of the Lxc guest.
+		// Without pending changes.
+		ReadActive(context.Context, VmRef) (raw RawConfigLXC, pending bool, err error)
+		ReadActiveNoCheck(context.Context, VmRef) (raw RawConfigLXC, pending bool, err error)
+
+		// Only available from PVE 9.1 and onwards.
 		ReadNetworkInterfaceInfo(context.Context, VmRef) (RawLxcInfoNetworkInterfaces, error)
 		ReadNetworkInterfaceInfoNoCheck(context.Context, VmRef) (RawLxcInfoNetworkInterfaces, error)
+
+		// When allowRestart is false an error is return if the update requires a reboot or shutdown.
+		Update(ctx context.Context, vmr VmRef, allowRestart bool, config ConfigLXC) error
+		UpdateNoCheck(ctx context.Context, vmr VmRef, allowRestart bool, config ConfigLXC) error
 	}
 
 	lxcGuestClient struct {
@@ -30,11 +49,52 @@ type (
 
 var _ LxcGuestInterface = (*lxcGuestClient)(nil)
 
-func (c *lxcGuestClient) Read(ctx context.Context, vmr VmRef) (RawConfigLXC, error) {
-	if _, err := vmr.check_unsafe(ctx, c.api); err != nil {
+func (c *lxcGuestClient) Clone(ctx context.Context, vmr VmRef, config CloneLxcTarget) (*VmRef, error) {
+	if err := config.Validate(); err != nil {
 		return nil, err
 	}
-	return c.ReadNoCheck(ctx, vmr)
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	if _, err := ref.checkQemu(ctx, c.api); err != nil {
+		return nil, err
+	}
+	return c.CloneNoCheck(ctx, ref.legacy(), config)
+}
+
+func (c *lxcGuestClient) CloneNoCheck(ctx context.Context, vmr VmRef, config CloneLxcTarget) (*VmRef, error) {
+	return LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize().cloneLxc(ctx, config, c.oldClient, c.api)
+}
+
+func (c *lxcGuestClient) Create(ctx context.Context, config ConfigLXC) (*VmRef, error) {
+	version, err := c.oldClient.Version(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err = config.Validate(nil, version); err != nil {
+		return nil, err
+	}
+	return c.CreateNoCheck(ctx, config)
+}
+
+func (c *lxcGuestClient) CreateNoCheck(ctx context.Context, config ConfigLXC) (*VmRef, error) {
+	return config.create(ctx, c.oldClient, c.api)
+}
+
+func (c *lxcGuestClient) Migrate(ctx context.Context, vmr VmRef, new NodeName) error {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	ref.checkLxc(ctx, c.api)
+	return c.MigrateNoCheck(ctx, ref.legacy(), new)
+}
+
+func (c *lxcGuestClient) MigrateNoCheck(ctx context.Context, vmr VmRef, new NodeName) error {
+	return LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize().migrate(ctx, c.api, new, false)
+}
+
+func (c *lxcGuestClient) Read(ctx context.Context, vmr VmRef) (RawConfigLXC, error) {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	if _, err := ref.checkLxc(ctx, c.api); err != nil {
+		return nil, err
+	}
+	return c.ReadNoCheck(ctx, ref.legacy())
 }
 
 func (c *lxcGuestClient) ReadNoCheck(ctx context.Context, vmr VmRef) (RawConfigLXC, error) {
@@ -42,10 +102,24 @@ func (c *lxcGuestClient) ReadNoCheck(ctx context.Context, vmr VmRef) (RawConfigL
 	if err != nil {
 		return nil, err
 	}
-	return LxcRef{ID: vmr.vmId, Node: vmr.node}.read(ctx, c.api, version)
+	return readLxcConfig(ctx, LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize(), version, c.api)
 }
 
-const Error_ReadNetworkInterfaceStatus_Version = "lxc network information not avalible before PVE 9.1"
+func (c *lxcGuestClient) ReadActive(ctx context.Context, vmr VmRef) (RawConfigLXC, bool, error) {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	if _, err := ref.checkLxc(ctx, c.api); err != nil {
+		return nil, false, err
+	}
+	return c.ReadActiveNoCheck(ctx, ref.legacy())
+}
+
+func (c *lxcGuestClient) ReadActiveNoCheck(ctx context.Context, vmr VmRef) (RawConfigLXC, bool, error) {
+	version, err := c.oldClient.Version(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	return guestGetActiveRawLxcConfig(ctx, vmr.toGuestRef(), version, c.api)
+}
 
 func (c *lxcGuestClient) ReadNetworkInterfaceInfo(ctx context.Context, vmr VmRef) (RawLxcInfoNetworkInterfaces, error) {
 	version, err := c.oldClient.Version(ctx)
@@ -53,16 +127,99 @@ func (c *lxcGuestClient) ReadNetworkInterfaceInfo(ctx context.Context, vmr VmRef
 		return nil, err
 	}
 	if version.Encode() < version_9_1_0 {
-		return nil, errors.New(Error_ReadNetworkInterfaceStatus_Version)
+		return nil, newVersionError("lxc network information", Version{Major: 9, Minor: 1})
 	}
-	if _, err = vmr.check_unsafe(ctx, c.api); err != nil {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	if _, err = ref.checkLxc(ctx, c.api); err != nil {
 		return nil, err
 	}
-	return c.ReadNetworkInterfaceInfoNoCheck(ctx, vmr)
+	return c.ReadNetworkInterfaceInfoNoCheck(ctx, ref.legacy())
 }
 
 func (c *lxcGuestClient) ReadNetworkInterfaceInfoNoCheck(ctx context.Context, vmr VmRef) (RawLxcInfoNetworkInterfaces, error) {
-	return LxcRef{ID: vmr.vmId, Node: vmr.node}.readInterfaceStatus(ctx, c.api)
+	return readLxcInterfaceStatus(ctx, vmr.toGuestRef(), c.api)
+}
+
+func (c *lxcGuestClient) Update(ctx context.Context, vmr VmRef, allowRestart bool, config ConfigLXC) error {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	rawGuest, err := ref.checkLxc(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	var state PowerState
+	var pool PoolName
+	if rawGuest != nil {
+		state = rawGuest.GetState()
+		if config.Pool != nil {
+			pool = rawGuest.GetPool()
+		}
+	} else {
+		if config.Pool != nil {
+			raws, err := c.api.listGuestResources(ctx)
+			if err != nil {
+				return err
+			}
+			raw, ok := raws.selectID(ref.ID)
+			if !ok {
+				return errorMsg{}.guestDoesNotExist(ref.ID)
+			}
+			state = raw.GetState()
+			pool = raw.GetPool()
+		} else {
+			rawStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c.api)
+			if err != nil {
+				return err
+			}
+			state = rawStatus.GetState()
+		}
+	}
+	version, err := c.oldClient.Version(ctx)
+	if err != nil {
+		return err
+	}
+	raw, err := readLxcConfig(ctx, ref, version, c.api)
+	if err != nil {
+		return err
+	}
+	current := raw.get(pool)
+	if err := config.Validate(current, version); err != nil {
+		return err
+	}
+	return config.update_Unsafe(ctx, allowRestart, ref, current, state, version, c.api)
+}
+
+func (c *lxcGuestClient) UpdateNoCheck(ctx context.Context, vmr VmRef, allowRestart bool, config ConfigLXC) error {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	var state PowerState
+	var pool PoolName
+	if config.Pool != nil {
+		raws, err := c.api.listGuestResources(ctx)
+		if err != nil {
+			return err
+		}
+		raw, ok := raws.selectID(ref.ID)
+		if !ok {
+			return errorMsg{}.guestDoesNotExist(ref.ID)
+		}
+		state = raw.GetState()
+		pool = raw.GetPool()
+	} else {
+		raw, err := ref.status(ctx, c.api)
+		if err != nil {
+			return err
+		}
+		state = raw.GetState()
+	}
+	version, err := c.oldClient.Version(ctx)
+	if err != nil {
+		return err
+	}
+	var raw *rawConfigLXC
+	raw, err = readLxcConfig(ctx, ref, version, c.api)
+	if err != nil {
+		return err
+	}
+	return config.update_Unsafe(ctx, allowRestart, ref, raw.get(pool), state, version, c.api)
 }
 
 type LxcCpuArchitecture string
@@ -107,18 +264,17 @@ const (
 	ConfigLXC_Error_CreateOptionsMissing = "create options are required during creation"
 )
 
+// Deprecated: LxcGuestInterface.Create() use instead.
 func (config ConfigLXC) Create(ctx context.Context, c *Client) (*VmRef, error) {
-	version, err := c.Version(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if err = config.Validate(nil, version); err != nil {
-		return nil, err
-	}
-	return config.CreateNoCheck(ctx, c)
+	return c.New().LxcGuest.Create(ctx, config)
 }
 
+// Deprecated: LxcGuestInterface.CreateNoCheck() use instead.
 func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, error) {
+	return config.create(ctx, c, c.api())
+}
+
+func (config ConfigLXC) create(ctx context.Context, c *Client, ca *clientAPI) (*VmRef, error) {
 	params, body, pool := config.mapToApiCreate()
 
 	var err error
@@ -128,7 +284,6 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		node = *config.Node
 	}
 	url := "/nodes/" + node.String() + "/lxc"
-	ca := c.new().apiRaw()
 	if config.ID == nil {
 		id, err = guestCreateLoop_Unsafe(ctx, lxcApiKeyGuestID, url, params, body, c, ca)
 		if err != nil {
@@ -147,8 +302,9 @@ func (config ConfigLXC) CreateNoCheck(ctx context.Context, c *Client) (*VmRef, e
 		pool:   pool,
 		vmType: GuestLxc}
 	if config.State != nil && *config.State == PowerStateRunning {
-		if err := GuestStart(ctx, vmRef, c); err != nil {
-			return nil, err
+		err = LxcRef{ID: id,Node: node}.generalize().start(ctx, ca)
+		if err != nil {
+			return vmRef, err
 		}
 	}
 
@@ -360,6 +516,7 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) (map[string]any, *[]by
 	return params, body
 }
 
+// Deprecated: use LxcGuestInterface.Update() instead.
 func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
 	if err := c.checkInitialized(); err != nil {
 		return err
@@ -367,25 +524,10 @@ func (config ConfigLXC) Update(ctx context.Context, allowRestart bool, vmr *VmRe
 	if err := c.CheckVmRef(ctx, vmr); err != nil {
 		return err
 	}
-	rawStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
-	if err != nil {
-		return err
-	}
-	version, err := c.Version(ctx)
-	if err != nil {
-		return err
-	}
-	raw, err := LxcRef{ID: vmr.vmId, Node: vmr.node}.read(ctx, c.api(), version)
-	if err != nil {
-		return err
-	}
-	current := raw.get(vmr.pool)
-	if err := config.Validate(current, version); err != nil {
-		return err
-	}
-	return config.update_Unsafe(ctx, allowRestart, vmr, current, rawStatus.GetState(), version, c)
+	return c.New().LxcGuest.Update(ctx, *vmr, allowRestart, config)
 }
 
+// Deprecated: use LxcGuestInterface.UpdateNoCheck() instead.
 func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vmr *VmRef, c *Client) error {
 	if err := c.checkInitialized(); err != nil {
 		return err
@@ -393,32 +535,17 @@ func (config ConfigLXC) UpdateNoCheck(ctx context.Context, allowRestart bool, vm
 	if vmr == nil {
 		return errors.New(VmRef_Error_Nil)
 	}
-	rawStatus, err := vmr.getRawGuestStatus_Unsafe(ctx, c)
-	if err != nil {
-		return err
-	}
-	var version Version
-	if version, err = c.Version(ctx); err != nil {
-		return err
-	}
-	var raw *rawConfigLXC
-	raw, err = LxcRef{ID: vmr.vmId, Node: vmr.node}.read(ctx, c.api(), version)
-	if err != nil {
-		return err
-	}
-	return config.update_Unsafe(ctx, allowRestart, vmr, raw.get(vmr.pool), rawStatus.GetState(), version, c)
+	return c.New().LxcGuest.UpdateNoCheck(ctx, *vmr, allowRestart, config)
 }
 
 func (config ConfigLXC) update_Unsafe(
 	ctx context.Context,
 	allowRestart bool,
-	vmr *VmRef,
+	ref guestRef,
 	current *ConfigLXC,
 	currentState PowerState,
 	version Version,
-	c *Client) error {
-
-	ca := c.new().apiRaw()
+	c *clientAPI) error {
 
 	var move []lxcMountMove
 	var resize []lxcMountResize
@@ -446,7 +573,7 @@ func (config ConfigLXC) update_Unsafe(
 		if !allowRestart {
 			return errors.New("guest has to be stopped before applying changes")
 		}
-		if _, err = c.ShutdownVm(ctx, vmr); err != nil {
+		if err = ref.shutdown(ctx, c); err != nil {
 			return err
 		}
 		currentState = PowerStateStopped // We assume the guest is stopped now
@@ -457,7 +584,7 @@ func (config ConfigLXC) update_Unsafe(
 			if !allowRestart {
 				return errors.New("guest has to be stopped before moving disks")
 			}
-			if err = GuestShutdown(ctx, vmr, c, true); err != nil { // We have to stop the guest before moving disks
+			if err = ref.shutdownForce(ctx, c); err != nil { // We have to stop the guest before moving disks
 				return err
 			}
 			currentState = PowerStateStopped // We assume the guest is stopped now
@@ -467,19 +594,19 @@ func (config ConfigLXC) update_Unsafe(
 	if len(resize) > 0 || len(move) > 0 {
 
 		for i := range move { // Move mounts
-			if err = move[i].move(ctx, true, vmr, c); err != nil {
+			if err = move[i].move(ctx, true, ref, c); err != nil {
 				return err
 			}
 		}
 
 		for i := range resize { // Resize mounts
-			if _, err = resize[i].resize(ctx, vmr, c); err != nil {
+			if err = resize[i].resize(ctx, ref, c); err != nil {
 				return err
 			}
 		}
 
 		var newCurrent *rawConfigLXC
-		newCurrent, err = LxcRef{ID: vmr.vmId, Node: vmr.node}.read(ctx, ca, version) // We have to refetch part of the current config
+		newCurrent, err = readLxcConfig(ctx, ref, version, c) // We have to refetch part of the current config
 		if err != nil {
 			return err
 		}
@@ -499,17 +626,17 @@ func (config ConfigLXC) update_Unsafe(
 	if body = combineParamsAndBody(params, body); body != nil {
 		var urlBuilder strings.Builder
 		urlBuilder.WriteString("/nodes/")
-		urlBuilder.WriteString(vmr.node.String())
+		urlBuilder.WriteString(ref.Node.String())
 		urlBuilder.WriteString("/lxc/")
-		urlBuilder.WriteString(vmr.vmId.String())
+		urlBuilder.WriteString(ref.ID.String())
 		urlBuilder.WriteString("/config")
-		if err = ca.putRawRetry(ctx, urlBuilder.String(), body, 3); err != nil {
+		if err = c.putRawRetry(ctx, urlBuilder.String(), body, 3); err != nil {
 			return err
 		}
 	}
 	if currentState == PowerStateRunning || currentState == PowerStateUnknown { // If the guest is running, we have to check if it has pending changes
 		var pendingChanges bool
-		pendingChanges, err = vmr.pendingChanges(ctx, ca)
+		pendingChanges, err = ref.pendingChanges(ctx, c)
 		if err != nil {
 			return fmt.Errorf("error checking for pending changes: %w", err)
 		}
@@ -518,21 +645,21 @@ func (config ConfigLXC) update_Unsafe(
 				// TODO revert pending changes
 				return errors.New("guest has to be restarted to apply changes")
 			}
-			if err = GuestReboot(ctx, vmr, c); err != nil {
+			if err = ref.reboot(ctx, c); err != nil {
 				return fmt.Errorf("error restarting guest: %w", err)
 			}
 			currentState = PowerStateRunning // We assume the guest is running now
 		}
 	}
 	if currentState != PowerStateRunning && targetState == PowerStateRunning { // We want the guest to be running, so we start it now
-		if err = GuestStart(ctx, vmr, c); err != nil {
-			return err
+		if err != nil {
+			ref.start(ctx, c)
 		}
 	}
 	if config.Pool != nil {
-		err = vmr.vmId.setPool(ctx, c.new().apiRaw(), *config.Pool, current.Pool, version)
+		return ref.ID.setPool(ctx, c, *config.Pool, current.Pool, version)
 	}
-	return err
+	return nil
 }
 
 func (config ConfigLXC) Validate(current *ConfigLXC, version Version) (err error) {
@@ -939,26 +1066,44 @@ func NewRawConfigLXCFromAPI(ctx context.Context, vmr *VmRef, c *Client) (RawConf
 	return c.New().LxcGuest.Read(ctx, *vmr)
 }
 
+// Deprecated: LxcGuestInterface.ReadActive() instead.
 // NewActiveRawConfigLXCFromApi returns the active configuration of the LXC guest.
 // Without pending changes.
-func NewActiveRawConfigLXCFromApi(ctx context.Context, vmr *VmRef, version Version, c *Client) (raw RawConfigLXC, pending bool, err error) {
-	return c.new().guestGetLxcActiveRawConfig(ctx, vmr, version)
+func NewActiveRawConfigLXCFromApi(ctx context.Context, vmr *VmRef, c *Client) (raw RawConfigLXC, pending bool, err error) {
+	return c.New().LxcGuest.ReadActive(ctx, *vmr)
 }
 
-func guestGetActiveRawLxcConfig(ctx context.Context, vmr *VmRef, version Version, c clientApiInterface) (raw RawConfigLXC, pending bool, err error) {
+func guestGetActiveRawLxcConfig(ctx context.Context, ref guestRef, version Version, c *clientAPI) (raw RawConfigLXC, pending bool, err error) {
 	var tmpConfig map[string]any
-	tmpConfig, pending, err = vmr.pendingConfig(ctx, c)
+	tmpConfig, pending, err = ref.pendingConfig(ctx, c)
 	if err != nil {
 		return nil, false, err
 	}
 	return &rawConfigLXC{
 		a:       tmpConfig,
-		node:    vmr.node,
-		guestID: vmr.vmId,
+		node:    ref.Node,
+		guestID: ref.ID,
 		version: version,
 	}, pending, nil
 }
 
-func (c *clientNewTest) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef, version Version) (raw RawConfigLXC, pending bool, err error) {
-	return guestGetActiveRawLxcConfig(ctx, vmr, version, c.api)
+func readLxcConfig(ctx context.Context, ref guestRef, version Version, c *clientAPI) (*rawConfigLXC, error) {
+	rawConfig, err := c.getGuestConfig(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+	return &rawConfigLXC{
+		a:       rawConfig,
+		guestID: ref.ID,
+		node:    ref.Node,
+		version: version,
+	}, nil
+}
+
+func readLxcInterfaceStatus(ctx context.Context, ref guestRef, c *clientAPI) (*rawLxcInfoNetworkInterfaces, error) {
+	raw, err := c.getList(ctx, "/nodes/"+ref.Node.String()+"/lxc/"+ref.ID.String()+"/interfaces", "", "")
+	if err != nil {
+		return nil, err
+	}
+	return &rawLxcInfoNetworkInterfaces{a: raw}, nil
 }

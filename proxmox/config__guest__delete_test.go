@@ -21,7 +21,7 @@ func Test_GuestInterface_Delete(t *testing.T) {
 		err      error
 	}{
 		{name: `error no GuestID`,
-			err: errors.New(VmRef_Error_IDnotSet)},
+			err: errors.New(GuestRef_Error_IDnotSet)},
 		{name: `guest does not exists`,
 			guest: VmRef{vmId: 100},
 			requests: mockServer.RequestsGetJsonData("/cluster/resources?type=vm", []any{

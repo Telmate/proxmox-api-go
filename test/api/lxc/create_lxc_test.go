@@ -40,7 +40,7 @@ func Test_Lxc_Create_Minimal_Unprivileged(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				vmr, err = set.Create(ctx, cl)
+				vmr, err = c.LxcGuest.Create(ctx, set)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},
@@ -85,7 +85,7 @@ func Test_Lxc_Create_Minimal_Privileged(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				vmr, err = set.Create(ctx, cl)
+				vmr, err = c.LxcGuest.Create(ctx, set)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},
@@ -130,7 +130,7 @@ func Test_Lxc_Create_Minimal_Privileged_Unset(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				vmr, err = set.Create(ctx, cl)
+				vmr, err = c.LxcGuest.Create(ctx, set)
 				require.NoError(t, err)
 				require.NotNil(t, vmr)
 			}},
@@ -221,7 +221,7 @@ func Test_Lxc_Create_Client_Race(t *testing.T) {
 							errCh <- err
 							return
 						}
-						vmr, err := config.Create(ctx, cl)
+						vmr, err := c.LxcGuest.Create(ctx, config)
 						if err != nil {
 							errCh <- err
 							return

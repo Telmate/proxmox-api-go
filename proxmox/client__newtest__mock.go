@@ -4,14 +4,9 @@ import "context"
 
 type MockClient struct {
 	// Guest
-	GuestCheckPendingChangesFunc    func(ctx context.Context, vmr *VmRef) (bool, error)
 	GuestCheckVmRefFunc             func(ctx context.Context, vmr *VmRef) error
 	GuestGetRawAgentInformationFunc func(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
-	GuestGetLxcActiveRawConfigFunc  func(context.Context, *VmRef, Version) (raw RawConfigLXC, pending bool, err error)
-	GuestGetQemuActiveRawConfigFunc func(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error)
-	GuestGetQemuRawConfigFunc       func(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error)
 	GuestStopFunc                   func(ctx context.Context, vmr *VmRef) error
-	GuestStopForceFunc              func(ctx context.Context, vmr *VmRef) error
 	// HA
 	HaCreateNodeAffinityRuleFunc            func(ctx context.Context, ha HaNodeAffinityRule) error
 	HaCreateNodeAffinityRuleNoCheckFunc     func(ctx context.Context, ha HaNodeAffinityRule) error
@@ -44,13 +39,6 @@ func (m *MockClient) apiGet() clientApiInterface { panic("apiGet not implemented
 
 func (m *MockClient) apiRaw() *clientAPI { panic("apiRaw not implemented in MockClient") }
 
-func (m *MockClient) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error) {
-	if m.GuestCheckPendingChangesFunc == nil {
-		m.panic("GuestCheckPendingChangesFunc")
-	}
-	return m.GuestCheckPendingChangesFunc(ctx, vmr)
-}
-
 func (m *MockClient) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
 	if m.GuestCheckVmRefFunc == nil {
 		m.panic("GuestCheckVmRefFunc")
@@ -65,39 +53,11 @@ func (m *MockClient) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef
 	return m.GuestGetRawAgentInformationFunc(ctx, vmr)
 }
 
-func (m *MockClient) guestGetLxcActiveRawConfig(ctx context.Context, vmr *VmRef, version Version) (raw RawConfigLXC, pending bool, err error) {
-	if m.GuestGetLxcActiveRawConfigFunc == nil {
-		m.panic("GuestGetLxcActiveRawConfigFunc")
-	}
-	return m.GuestGetLxcActiveRawConfigFunc(ctx, vmr, version)
-}
-
-func (m *MockClient) guestGetQemuActiveRawConfig(ctx context.Context, vmr *VmRef) (raw *rawConfigQemu, pending bool, err error) {
-	if m.GuestGetQemuActiveRawConfigFunc == nil {
-		m.panic("GuestGetQemuActiveRawConfigFunc")
-	}
-	return m.GuestGetQemuActiveRawConfigFunc(ctx, vmr)
-}
-
-func (m *MockClient) guestGetQemuRawConfig(ctx context.Context, vmr *VmRef) (*rawConfigQemu, error) {
-	if m.GuestGetQemuRawConfigFunc == nil {
-		m.panic("GuestGetQemuRawConfigFunc")
-	}
-	return m.GuestGetQemuRawConfigFunc(ctx, vmr)
-}
-
 func (m *MockClient) guestStop(ctx context.Context, vmr *VmRef) error {
 	if m.GuestStopFunc == nil {
 		m.panic("GuestStopFunc")
 	}
 	return m.GuestStopFunc(ctx, vmr)
-}
-
-func (m *MockClient) guestStopForce(ctx context.Context, vmr *VmRef) error {
-	if m.GuestStopForceFunc == nil {
-		m.panic("GuestStopForceFunc")
-	}
-	return m.GuestStopForceFunc(ctx, vmr)
 }
 
 func (m *MockClient) haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error {

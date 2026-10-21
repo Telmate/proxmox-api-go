@@ -3,10 +3,6 @@ package proxmox
 import (
 	"context"
 	"errors"
-	"strings"
-	"time"
-
-	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
 const (
@@ -14,105 +10,35 @@ const (
 	clone_Error_NoneSet           string = "either linked or full clone must be set"
 )
 
-// Returns nil when we had enough information in the VmRef to determine the guest resource, otherwise it returns the guest resource or an error if it can't be found.
-func (vmr *VmRef) check_unsafe(ctx context.Context, c clientApiInterface) (*rawGuestResource, error) {
-	if vmr.vmId == 0 {
-		return nil, errors.New(VmRef_Error_IDnotSet)
-	}
-	if vmr.node != "" && vmr.vmType != guestUnknown {
-		return nil, nil
-	}
-	raws, err := c.listGuestResources(ctx)
-	if err != nil {
-		return nil, err
-	}
-	raw, ok := raws.selectID(vmr.vmId)
-	if !ok {
-		return nil, errorMsg{}.guestDoesNotExist(vmr.vmId)
-	}
-	vmr.node = raw.GetNode()
-	vmr.vmType = raw.GetType()
-	return raw, nil
+func (vmr VmRef) toGuestRef() guestRef {
+	return guestRef{ID: vmr.vmId, Node: vmr.node, Type: vmr.vmType}
 }
 
+// Deprecated: use LxcGuestInterface.Clone() instead.
 // CloneLxc clones a new LXC container by cloning current container
 func (vmr *VmRef) CloneLxc(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, error) {
-	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
-	}
-	err := settings.Validate()
-	if err != nil {
-		return nil, err
-	}
-	return vmr.cloneLxc_Unsafe(ctx, settings, c)
+	return c.New().LxcGuest.Clone(ctx, *vmr, settings)
 }
 
+// Deprecated: use LxcGuestInterface.CloneNoCheck() instead.
 // CloneLxcNoCheck creates a new LXC container by cloning the current container, without input validation.
 func (vmr *VmRef) CloneLxcNoCheck(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, error) {
-	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
-	}
-	return vmr.cloneLxc_Unsafe(ctx, settings, c)
+	return c.New().LxcGuest.CloneNoCheck(ctx, *vmr, settings)
 }
 
-func (vmr *VmRef) cloneLxc_Unsafe(ctx context.Context, settings CloneLxcTarget, c *Client) (*VmRef, error) {
-	id, node, pool, params := settings.mapToAPI()
-	var err error
-	ca := c.new().apiRaw()
-	url := "/nodes/" + vmr.node.String() + "/lxc/" + vmr.vmId.String() + "/clone"
-	if id == 0 {
-		id, err = guestCreateLoop_Unsafe(ctx, "newid", url, params, nil, c, ca)
-	} else {
-		_, err = c.PostWithTask(ctx, params, url)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &VmRef{
-		vmId:   id,
-		node:   node,
-		pool:   pool,
-		vmType: GuestLxc}, nil
-}
-
+// Deprecated: use QemuGuestInterface.Clone() instead.
 // CloneQemu creates a new Qemu VM by cloning the current VM.
 func (vmr *VmRef) CloneQemu(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, error) {
 	if vmr == nil {
 		return nil, errors.New(VmRef_Error_Nil)
 	}
-	err := settings.Validate()
-	if err != nil {
-		return nil, err
-	}
-	return vmr.cloneQemu_Unsafe(ctx, settings, c)
+	return c.New().QemuGuest.Clone(ctx, *vmr, settings)
 }
 
+// Deprecated: use QemuGuestInterface.CloneNoCheck() instead.
 // CloneQemuNoCheck creates a new VM by cloning the current VM, without input validation.
 func (vmr *VmRef) CloneQemuNoCheck(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, error) {
-	if vmr == nil {
-		return nil, errors.New(VmRef_Error_Nil)
-	}
-	return vmr.cloneQemu_Unsafe(ctx, settings, c)
-}
-
-func (vmr *VmRef) cloneQemu_Unsafe(ctx context.Context, settings CloneQemuTarget, c *Client) (*VmRef, error) {
-	id, node, pool, params := settings.mapToAPI()
-	var err error
-	ca := c.new().apiRaw()
-	url := "/nodes/" + vmr.node.String() + "/qemu/" + vmr.vmId.String() + "/clone"
-	if id == 0 {
-		id, err = guestCreateLoop_Unsafe(ctx, "newid", url, params, nil, c, ca)
-	} else {
-		_, err = c.PostWithTask(ctx, params, url)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &VmRef{
-		vmId:   id,
-		node:   node,
-		pool:   pool,
-		vmType: GuestQemu}, nil
+	return c.New().QemuGuest.CloneNoCheck(ctx, *vmr, settings)
 }
 
 // Deprecated: use GuestInterface.Delete() instead.
@@ -126,20 +52,8 @@ func (vmr VmRef) DeleteNoCheck(ctx context.Context, c *Client) error {
 	if err := c.checkInitialized(); err != nil {
 		return err
 	}
-	_, err := vmr.delete_Unsafe(ctx, c.new().apiRaw(), false)
+	_, err := c.New().Guest.Delete(ctx, vmr)
 	return err
-}
-
-func (vmr *VmRef) delete_Unsafe(ctx context.Context, c *clientAPI, purge bool) (bool, error) {
-	if err := c.deleteGuest(ctx, vmr, purge); err != nil {
-		if taskErr, ok := err.(*TaskError); ok {
-			if strings.HasPrefix(taskErr.Message, "Configuration file '") { // task id: UPID:pve-9l:00120E24:08C58A66:6A2F4143:qmdestroy:105:root@pam: | message: Configuration file 'nodes/pve-9l/qemu-server/105.conf' does not exist
-				return false, nil
-			}
-		}
-		return false, err
-	}
-	return true, nil
 }
 
 func (c *clientAPI) deleteGuest(ctx context.Context, vmr *VmRef, purge bool) error {
@@ -150,26 +64,14 @@ func (c *clientAPI) deleteGuest(ctx context.Context, vmr *VmRef, purge bool) err
 	return c.deleteTask(ctx, url)
 }
 
+// Deprecated: use GuestInterface.StopOverrule() instead.
 // ForceStop stops the guest immediately without a graceful shutdown and cancels any stop/shutdown operations in progress.
 // This function requires Proxmox VE 8.0 or later.
 func (vmr *VmRef) ForceStop(ctx context.Context, c *Client) error {
-	return c.new().guestStopForce(ctx, vmr)
+	return c.New().Guest.StopOverrule(ctx, *vmr)
 }
 
-func (c *clientNewTest) guestStopForce(ctx context.Context, vmr *VmRef) error {
-	version, err := c.oldClient.Version(ctx)
-	if err != nil {
-		return err
-	}
-	if version.Major < 8 {
-		return newVersionError("force stop", Version{Major: 9})
-	}
-	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
-		return err
-	}
-	return vmr.stopOverrule_Unsafe(ctx, c.apiRaw())
-}
-
+// Deprecated: use guestClient.Status() instead.
 func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestStatus, error) {
 	if err := c.checkInitialized(); err != nil {
 		return nil, err
@@ -178,17 +80,19 @@ func (vmr *VmRef) GetRawGuestStatus(ctx context.Context, c *Client) (RawGuestSta
 	if err != nil {
 		return nil, err
 	}
-	return vmr.getRawGuestStatus_Unsafe(ctx, c)
+	return c.New().Guest.Status(ctx, *vmr)
 }
 
-func (vmr *VmRef) getRawGuestStatus_Unsafe(ctx context.Context, c *Client) (*rawGuestStatus, error) {
-	raw, err := c.GetItemConfigMapStringInterface(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
+// Deprecated: use guestRef.status() instead.
+func (vmr *VmRef) getRawGuestStatus_Unsafe(ctx context.Context, c *clientAPI) (*rawGuestStatus, error) {
+	raw, err := c.getMap(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/status/current", "vm", "STATE")
 	if err != nil {
 		return nil, err
 	}
 	return &rawGuestStatus{a: raw}, nil
 }
 
+// Deprecated: use LxcGuestInterface.Migrate() and QemuGuestInterface.Migrate() instead
 func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
 	if vmr == nil {
 		return errors.New(VmRef_Error_Nil)
@@ -199,9 +103,10 @@ func (vmr *VmRef) Migrate(ctx context.Context, c *Client, newNode NodeName, Live
 	if err := newNode.Validate(); err != nil {
 		return err
 	}
-	return vmr.migrate_Unsafe(ctx, c, newNode, LiveMigrate)
+	return vmr.toGuestRef().migrate(ctx, c.api(), newNode, LiveMigrate)
 }
 
+// Deprecated: use LxcGuestInterface.MigrateCoCheck() and QemuGuestInterface.MigrateNoCheck() instead
 func (vmr *VmRef) MigrateNoCheck(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
 	if vmr == nil {
 		return errors.New(VmRef_Error_Nil)
@@ -209,74 +114,13 @@ func (vmr *VmRef) MigrateNoCheck(ctx context.Context, c *Client, newNode NodeNam
 	if err := c.checkInitialized(); err != nil {
 		return err
 	}
-	return vmr.migrate_Unsafe(ctx, c, newNode, LiveMigrate)
+	return vmr.toGuestRef().migrate(ctx, c.api(), newNode, LiveMigrate)
 }
 
-func (vmr *VmRef) migrate_Unsafe(ctx context.Context, c *Client, newNode NodeName, LiveMigrate bool) error {
-	params := map[string]interface{}{
-		"target":           newNode.String(),
-		"with-local-disks": 1,
-	}
-	if LiveMigrate {
-		params["online"] = 1
-	}
-	_, err := c.PostWithTask(ctx, params, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/migrate")
-	return err
-}
-
+// Deprecated: use GuestInterface.PendingChanges() instead.
 func (vmr *VmRef) PendingChanges(ctx context.Context, c *Client) (bool, error) {
-	return c.new().guestCheckPendingChanges(ctx, vmr)
+	return c.New().Guest.PendingChanges(ctx, *vmr)
 }
-
-func (vmr *VmRef) pendingChanges(ctx context.Context, c clientApiInterface) (bool, error) {
-	changes, err := c.getGuestPendingChanges(ctx, vmr)
-	if err != nil {
-		return false, err
-	}
-	for _, item := range changes {
-		m := item.(map[string]any)
-		// we always have the key `key`
-		if _, ok := m[pendingApiValueKey]; ok {
-			if len(m) > 2 {
-				return true, nil
-			}
-		} else if len(m) > 1 {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (c *clientNewTest) guestCheckPendingChanges(ctx context.Context, vmr *VmRef) (bool, error) {
-	return vmr.pendingChanges(ctx, c.apiGet())
-}
-
-func (vmr *VmRef) pendingConfig(ctx context.Context, c clientApiInterface) (map[string]any, bool, error) {
-	changes, err := c.getGuestPendingChanges(ctx, vmr)
-	if err != nil {
-		return nil, false, err
-	}
-	var pending bool
-	config := make(map[string]any, len(changes))
-	for _, item := range changes {
-		m := item.(map[string]any)
-		// we always have the key `key`
-		if v, ok := m[pendingApiValueKey]; ok {
-			config[m[pendingApiKeyKey].(string)] = v
-			if len(m) > 2 {
-				pending = true
-			}
-		} else if len(m) > 1 {
-			pending = true
-		}
-	}
-	return config, pending, nil
-}
-
-const (
-	pendingApiKeyKey   string = "key"
-	pendingApiValueKey string = "value"
-)
 
 // Deprecated: use GuestInterface.Stop() instead.
 func (vmr *VmRef) Stop(ctx context.Context, c *Client) error { return c.new().guestStop(ctx, vmr) }
@@ -287,321 +131,4 @@ func (c *clientNewTest) guestStop(ctx context.Context, vmr *VmRef) error {
 		return err
 	}
 	return c.oldClient.New().Guest.Stop(ctx, *vmr, false)
-}
-
-func (vmr *VmRef) reboot_Unsafe(ctx context.Context, c *clientAPI) error {
-	return c.updateGuestStatus(ctx, vmr, "reboot", nil)
-}
-
-// We should rarely need this function, use: VmRef.stopOverruleOpertunistic_Unsafe() instead.
-func (vmr *VmRef) stop_Unsafe(ctx context.Context, c *clientAPI) error {
-	return c.updateGuestStatus(ctx, vmr, "stop", nil)
-}
-
-// Doesn't see the difference between a stopped and absend guest
-func (vmr *VmRef) stopOverruleOpertunistic_Unsafe(ctx context.Context, c *clientAPI, version Version) error {
-	if version.Major >= 8 {
-		return vmr.stopOverrule_Unsafe(ctx, c)
-	}
-	return vmr.stop_Unsafe(ctx, c)
-}
-
-// We should rarely need this function, use: VmRef.stopOverruleOpertunistic_Unsafe() instead.
-func (vmr *VmRef) stopOverrule_Unsafe(ctx context.Context, c *clientAPI) error {
-	return c.updateGuestStatus(ctx, vmr, "stop", util.Pointer([]byte("overrule-shutdown=1")))
-}
-
-func (vmr *VmRef) start_Unsafe(ctx context.Context, c *clientAPI) error {
-	return c.updateGuestStatus(ctx, vmr, "start", nil)
-}
-
-func (vmr *VmRef) shutdown_Unsafe(ctx context.Context, c *clientAPI) error {
-	return c.updateGuestStatus(ctx, vmr, "shutdown", nil)
-}
-
-func (vmr *VmRef) shutdownForce_Unsafe(ctx context.Context, c *clientAPI) error {
-	return c.updateGuestStatus(ctx, vmr, "shutdown", util.Pointer([]byte(`force=1`)))
-}
-
-const (
-	cloneLxcFlagName  string = "hostname"
-	cloneQemuFlagName string = "name"
-)
-
-type CloneLxcTarget struct {
-	Full   *CloneLxcFull
-	Linked *CloneLinked
-}
-
-const (
-	CloneLxcTarget_Error_MutualExclusivity = clone_Error_MutuallyExclusive
-	CloneLxcTarget_Error_NoneSet           = clone_Error_NoneSet
-)
-
-func (target CloneLxcTarget) Validate() error {
-	if target.Full == nil && target.Linked == nil {
-		return errors.New(CloneQemuTarget_Error_NoneSet)
-	}
-	if target.Full != nil && target.Linked != nil {
-		return errors.New(CloneQemuTarget_Error_MutualExclusivity)
-	}
-	if target.Full != nil {
-		return target.Full.Validate()
-	}
-	return target.Linked.Validate()
-}
-
-func (target CloneLxcTarget) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
-	if target.Linked != nil {
-		return target.Linked.mapToAPI(cloneLxcFlagName)
-	}
-	if target.Full != nil {
-		return target.Full.mapToAPI()
-	}
-	return 0, "", "", nil
-}
-
-type CloneQemuTarget struct {
-	Full   *CloneQemuFull `json:"full,omitempty"`
-	Linked *CloneLinked   `json:"linked,omitempty"`
-}
-
-const (
-	CloneQemuTarget_Error_MutualExclusivity = clone_Error_MutuallyExclusive
-	CloneQemuTarget_Error_NoneSet           = clone_Error_NoneSet
-)
-
-func (target CloneQemuTarget) Validate() error {
-	if target.Full == nil && target.Linked == nil {
-		return errors.New(CloneQemuTarget_Error_NoneSet)
-	}
-	if target.Full != nil && target.Linked != nil {
-		return errors.New(CloneQemuTarget_Error_MutualExclusivity)
-	}
-	if target.Full != nil {
-		return target.Full.Validate()
-	}
-	return target.Linked.Validate()
-}
-
-func (target CloneQemuTarget) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
-	if target.Linked != nil {
-		return target.Linked.mapToAPI(cloneQemuFlagName)
-	}
-	if target.Full != nil {
-		return target.Full.mapToAPI()
-	}
-	return 0, "", "", nil
-}
-
-// Linked Clone in the same for both LXC and QEMU
-type CloneLinked struct {
-	Node NodeName   `json:"node"`
-	ID   *GuestID   `json:"id,omitempty"`   // Optional
-	Name *GuestName `json:"name,omitempty"` // Optional
-	Pool *PoolName  `json:"pool,omitempty"` // Optional
-}
-
-func (linked CloneLinked) Validate() (err error) {
-	if linked.ID != nil {
-		if err = linked.ID.Validate(); err != nil {
-			return
-		}
-	}
-	if linked.Name != nil {
-		if err = linked.Name.Validate(); err != nil {
-			return
-		}
-	}
-	if linked.Pool != nil {
-		if err = linked.Pool.Validate(); err != nil {
-			return
-		}
-	}
-	return linked.Node.Validate()
-}
-
-func (linked CloneLinked) mapToAPI(nameFlag string) (GuestID, NodeName, PoolName, map[string]interface{}) {
-	return cloneSettings{
-		FullClone: false,
-		ID:        linked.ID,
-		nameFlag:  nameFlag,
-		Name:      linked.Name,
-		Node:      linked.Node,
-		Pool:      linked.Pool}.mapToAPI()
-}
-
-type CloneLxcFull struct {
-	Node    NodeName   `json:"node"`
-	ID      *GuestID   `json:"id,omitempty"`      // Optional
-	Name    *GuestName `json:"name,omitempty"`    // Optional
-	Pool    *PoolName  `json:"pool,omitempty"`    // Optional
-	Storage *string    `json:"storage,omitempty"` // Optional // TODO replace one we have a type for it
-}
-
-func (full CloneLxcFull) Validate() (err error) {
-	if full.ID != nil {
-		if err = full.ID.Validate(); err != nil {
-			return
-		}
-	}
-	if full.Name != nil {
-		if err = full.Name.Validate(); err != nil {
-			return
-		}
-	}
-	if full.Pool != nil {
-		if err = full.Pool.Validate(); err != nil {
-			return
-		}
-	}
-	return full.Node.Validate()
-}
-
-func (full CloneLxcFull) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
-	return cloneSettings{
-		FullClone: true,
-		ID:        full.ID,
-		nameFlag:  cloneLxcFlagName,
-		Name:      full.Name,
-		Node:      full.Node,
-		Pool:      full.Pool,
-		Storage:   full.Storage}.mapToAPI()
-}
-
-type CloneQemuFull struct {
-	Node          NodeName        `json:"node"`
-	ID            *GuestID        `json:"id,omitempty"`      // Optional
-	Name          *GuestName      `json:"name,omitempty"`    // Optional
-	Pool          *PoolName       `json:"pool,omitempty"`    // Optional
-	Storage       *string         `json:"storage,omitempty"` // Optional // TODO replace one we have a type for it
-	StorageFormat *QemuDiskFormat `json:"format,omitempty"`  // Optional
-}
-
-func (full CloneQemuFull) Validate() (err error) {
-	if full.ID != nil {
-		if err = full.ID.Validate(); err != nil {
-			return
-		}
-	}
-	if full.Name != nil {
-		if err = full.Name.Validate(); err != nil {
-			return
-		}
-	}
-	if full.Pool != nil {
-		if err = full.Pool.Validate(); err != nil {
-			return
-		}
-	}
-	if full.StorageFormat != nil {
-		if err = full.StorageFormat.Validate(); err != nil {
-			return
-		}
-	}
-	return full.Node.Validate()
-}
-
-func (full CloneQemuFull) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
-	return cloneSettings{
-		FullClone:     true,
-		ID:            full.ID,
-		nameFlag:      cloneQemuFlagName,
-		Name:          full.Name,
-		Node:          full.Node,
-		Pool:          full.Pool,
-		Storage:       full.Storage,
-		StorageFormat: full.StorageFormat}.mapToAPI()
-}
-
-type cloneSettings struct {
-	FullClone     bool
-	ID            *GuestID
-	nameFlag      string
-	Name          *GuestName
-	Node          NodeName
-	Pool          *PoolName
-	Storage       *string // TODO replace one we have a type for it
-	StorageFormat *QemuDiskFormat
-}
-
-func (clone cloneSettings) mapToAPI() (GuestID, NodeName, PoolName, map[string]interface{}) {
-	params := map[string]interface{}{
-		"target": clone.Node.String(),
-		"full":   clone.FullClone,
-	}
-	var id GuestID
-	if clone.ID != nil {
-		id = *clone.ID
-		params["newid"] = int(id)
-	}
-	if clone.Name != nil {
-		params[clone.nameFlag] = (*clone.Name).String()
-	}
-	var pool PoolName
-	if clone.Pool != nil {
-		pool = *clone.Pool
-		params["pool"] = pool.String()
-	}
-	if clone.Storage != nil {
-		params["storage"] = *clone.Storage
-	}
-	if clone.StorageFormat != nil {
-		params["format"] = clone.StorageFormat.String()
-	}
-	return id, clone.Node, pool, params
-}
-
-// TODO add more properties to GuestStatus
-type GuestStatus struct {
-	Name   GuestName     `json:"name"`
-	State  PowerState    `json:"state"`
-	Uptime time.Duration `json:"uptime"`
-}
-
-type RawGuestStatus interface {
-	Get() GuestStatus
-	GetName() GuestName
-	GetState() PowerState
-	GetUptime() time.Duration
-}
-
-type rawGuestStatus struct {
-	a map[string]any
-}
-
-var _ RawGuestStatus = (*rawGuestStatus)(nil)
-
-func (raw *rawGuestStatus) Get() GuestStatus {
-	return GuestStatus{
-		Name:   raw.GetName(),
-		State:  raw.GetState(),
-		Uptime: raw.GetUptime()}
-}
-
-func (raw *rawGuestStatus) GetName() GuestName {
-	if v, isSet := raw.a["name"]; isSet {
-		if name, ok := v.(string); ok {
-			return GuestName(name)
-		}
-	}
-	return ""
-}
-
-func (raw *rawGuestStatus) GetState() PowerState {
-	if v, isSet := raw.a["status"]; isSet {
-		if state, ok := v.(string); ok {
-			return PowerState(0).parse(state)
-		}
-	}
-	return PowerStateUnknown
-}
-
-func (raw *rawGuestStatus) GetUptime() time.Duration {
-	if v, isSet := raw.a["uptime"]; isSet {
-		if uptime, ok := v.(float64); ok {
-			return time.Duration(uptime) * time.Second
-		}
-	}
-	return 0
 }

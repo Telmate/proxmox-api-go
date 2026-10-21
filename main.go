@@ -178,7 +178,10 @@ func main() {
 		var config interface{}
 		switch vmType {
 		case proxmox.GuestQemu:
-			config, err = proxmox.NewConfigQemuFromApi(ctx, vmr, c)
+			var raw proxmox.RawConfigQemu
+			raw, err = c.New().QemuGuest.Read(ctx, vmr)
+			failError(err)
+			config, err = raw.Get(*vmr)
 		case proxmox.GuestLxc:
 			config, err = proxmox.NewConfigLxcFromApi(ctx, vmr, c)
 		}
@@ -305,7 +308,7 @@ func main() {
 			}
 		}
 
-		vmr, err := sourceVmr.CloneQemu(ctx, *config, c)
+		vmr, err := c.New().QemuGuest.Clone(ctx, *sourceVmr, *config)
 		failError(err)
 		log.Println("Created guest with ID: " + vmr.VmId().String())
 
@@ -438,7 +441,9 @@ func main() {
 		i, err := strconv.Atoi(flag.Args()[1])
 		failError(err)
 		vmr := proxmox.NewVmRef(proxmox.GuestID(i))
-		config, err := proxmox.NewConfigQemuFromApi(ctx, vmr, c)
+		raw, err := c.New().QemuGuest.Read(ctx, vmr)
+		failError(err)
+		config, err := raw.Get(*vmr)
 		failError(err)
 		fmt.Println(config)
 		// TODO make getVmInfo in new cli

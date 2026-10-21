@@ -165,7 +165,7 @@ func Test_Qemu_Create_Max(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
+				CheckConfig(t, ctx, c.QemuGuest, guestID, &pveSDK.ConfigQemu{
 					CPU: &pveSDK.QemuCPU{
 						Cores:   new(pveSDK.QemuCpuCores(1)),
 						Numa:    new(false),
@@ -248,7 +248,7 @@ func Test_Qemu_Create_Disk_Minimal_Size(t *testing.T) {
 			}},
 		{name: `Check guest config`,
 			test: func(t *testing.T) {
-				CheckConfig(t, ctx, cl, guestID, &pveSDK.ConfigQemu{
+				CheckConfig(t, ctx, c.QemuGuest, guestID, &pveSDK.ConfigQemu{
 					Bios: "seabios",
 					Boot: new(pveSDK.BootOrder),
 					CPU: &pveSDK.QemuCPU{

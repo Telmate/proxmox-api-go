@@ -129,7 +129,7 @@ func Test_Snapshot_List_Lxc(t *testing.T) {
 			}},
 		{name: `Create guest`,
 			test: func(t *testing.T) {
-				createLxc(t, ctx, cl, set)
+				createLxc(t, ctx, c.LxcGuest, set)
 			}},
 		{name: `Create snapshot`,
 			test: func(t *testing.T) {
