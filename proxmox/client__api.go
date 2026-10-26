@@ -2,6 +2,7 @@ package proxmox
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 )
@@ -14,7 +15,6 @@ type clientApiInterface interface {
 	deleteHaRule(ctx context.Context, id HaRuleID) error
 	getGuestConfig(context.Context, guestRef) (map[string]any, error)
 	getGuestPendingChanges(context.Context, guestRef) ([]any, error)
-	getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error)
 	getHaRule(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfig(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfig(ctx context.Context, userId UserID) (map[string]any, bool, error)
@@ -36,8 +36,7 @@ type clientAPI struct {
 // Interface methods
 
 func (c *clientAPI) createHaRule(ctx context.Context, params map[string]any) error {
-	_, err := c.post(ctx, "/cluster/ha/rules", params)
-	return err
+	return c.post(ctx, "/cluster/ha/rules", new(paramsToBody(params)))
 }
 
 func (c *clientAPI) deleteHaResource(ctx context.Context, id GuestID) error {
@@ -55,20 +54,6 @@ func (c *clientAPI) getGuestConfig(ctx context.Context, ref guestRef) (vmConfig 
 
 func (c *clientAPI) getGuestPendingChanges(ctx context.Context, ref guestRef) ([]any, error) {
 	return c.getList(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/pending", "Guest", "PENDING CONFIG")
-}
-
-func (c *clientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error) {
-	guestID := vmr.vmId.String()
-	out, err := c.getMap(ctx, "/nodes/"+vmr.node.String()+"/qemu/"+guestID+"/agent/network-get-interfaces", "guest agent", "data")
-	if apiErr, ok := err.(*ApiError); ok {
-		if strings.HasPrefix(apiErr.Message, "QEMU guest agent is not running") {
-			return out, GuestAgentStateNotRunning, nil
-		}
-		if strings.HasPrefix(apiErr.Message, "VM "+guestID+" is not running") {
-			return out, GuestAgentStateVmNotRunning, nil
-		}
-	}
-	return out, GuestAgentStateUnknown, err
 }
 
 func (c *clientAPI) getHaRule(ctx context.Context, id HaRuleID) (haRule map[string]any, err error) {
@@ -123,4 +108,26 @@ func (c *clientAPI) updateHaRule(ctx context.Context, id HaRuleID, params map[st
 
 func (c clientAPI) updateUser(ctx context.Context, user UserID, body *[]byte) error {
 	return c.putRawRetry(ctx, "/access/users/"+user.String(), body, 3)
+}
+
+func (c clientAPI) getAgent(ctx context.Context, id GuestID, node NodeName, option, text, message string) (any, error) {
+	result, err := c.getMap(ctx, "/nodes/"+node.String()+"/qemu/"+id.String()+"/agent/"+option, text, message)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := result["result"]; ok {
+		return v, nil
+	}
+	return nil, errors.New(text + " " + message + " not readable")
+}
+
+func (c clientAPI) postAgent(ctx context.Context, id GuestID, node NodeName, option string, body *[]byte, text, message string) (any, error) {
+	result, err := c.postMap(ctx, "/nodes/"+node.String()+"/qemu/"+id.String()+"/agent/"+option, body, "", "")
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := result["result"]; ok {
+		return v, nil
+	}
+	return nil, errors.New(text + " " + message + " not readable")
 }

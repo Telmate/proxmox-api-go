@@ -177,6 +177,7 @@ func (c *Client) New() ClientNew {
 		LxcGuest:  &lxcGuestClient{oldClient: c, api: apiClientPtr},
 		Node:      &nodeClient{oldClient: c, api: apiClientPtr},
 		Pool:      &poolClient{oldClient: c, api: apiClientPtr},
+		QemuAgent: &qemuAgentClient{oldClient: c, api: apiClientPtr},
 		QemuGuest: &qemuGuestClient{oldClient: c, api: apiClientPtr},
 		Snapshot:  &snapshotClient{oldClient: c, api: apiClientPtr},
 		User:      &userClient{oldClient: c, api: apiClientPtr}}
@@ -1280,6 +1281,7 @@ func (c *Client) CreateVNCProxy(ctx context.Context, vmr *VmRef, params map[stri
 	return
 }
 
+// Deprecated: use QemuAgentInterface.Ping() instead.
 // QemuAgentPing - Execute ping.
 func (c *Client) QemuAgentPing(ctx context.Context, vmr *VmRef) (pingRes map[string]interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
@@ -1301,6 +1303,7 @@ func (c *Client) QemuAgentPing(ctx context.Context, vmr *VmRef) (pingRes map[str
 	return
 }
 
+// Deprecated: use QemuAgentInterface.WriteFile() instead.
 // QemuAgentFileWrite - Writes the given file via guest agent.
 func (c *Client) QemuAgentFileWrite(ctx context.Context, vmr *VmRef, params map[string]interface{}) (err error) {
 	err = c.CheckVmRef(ctx, vmr)
@@ -1313,6 +1316,7 @@ func (c *Client) QemuAgentFileWrite(ctx context.Context, vmr *VmRef, params map[
 	return
 }
 
+// Deprecated: use QemuAgentInterface.SetUserPassword() instead.
 // QemuAgentSetUserPassword - Sets the password for the given user to the given password.
 func (c *Client) QemuAgentSetUserPassword(ctx context.Context, vmr *VmRef, params map[string]interface{}) (result map[string]interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
@@ -1335,6 +1339,7 @@ func (c *Client) QemuAgentSetUserPassword(ctx context.Context, vmr *VmRef, param
 	return
 }
 
+// Deprecated: use QemuAgentInterface.Exec() instead.
 // QemuAgentExec - Executes the given command in the vm via the guest-agent and returns an object with the pid.
 func (c *Client) QemuAgentExec(ctx context.Context, vmr *VmRef, params map[string]interface{}) (result map[string]interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)
@@ -1357,6 +1362,7 @@ func (c *Client) QemuAgentExec(ctx context.Context, vmr *VmRef, params map[strin
 	return
 }
 
+// Deprecated: use QemuAgentInterface.Exec() instead.
 // GetExecStatus - Gets the status of the given pid started by the guest-agent
 func (c *Client) GetExecStatus(ctx context.Context, vmr *VmRef, pid string) (status map[string]interface{}, err error) {
 	err = c.CheckVmRef(ctx, vmr)

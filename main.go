@@ -194,8 +194,7 @@ func main() {
 		vmr = proxmox.NewVmRef(vmid)
 		err := c.CheckVmRef(ctx, vmr)
 		failError(err)
-
-		raw, state, err := vmr.GetAgentInformation(ctx, c)
+		raw, state, err := c.New().QemuAgent.NetworkInterfaces(ctx, *vmr)
 		failError(err)
 		if state == proxmox.GuestAgentStateNotRunning {
 			log.Fatal(errors.New("guest agent is not running"))

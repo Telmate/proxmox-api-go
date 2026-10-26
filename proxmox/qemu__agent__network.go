@@ -6,7 +6,41 @@ import (
 	"strings"
 )
 
+func (c *qemuAgentClient) NetworkInterfaces(ctx context.Context, vmr VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	raw, err := ref.checkQemu(ctx, c.api)
+	if err != nil {
+		return nil, GuestAgentStateUnknown, err
+	}
+	if raw != nil {
+		if raw.GetState() != PowerStateRunning {
+			return nil, GuestAgentStateVmNotRunning, nil
+		}
+	}
+	return c.NetworkInterfacesNoCheck(ctx, ref.legacy())
+}
+
+func (c *qemuAgentClient) NetworkInterfacesNoCheck(ctx context.Context, vmr VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	params, err := c.api.getAgent(ctx, ref.ID, ref.Node, "network-get-interfaces", "guest agent", "data")
+	if apiErr, ok := err.(*ApiError); ok {
+		if strings.HasPrefix(apiErr.Message, "QEMU guest agent is not running") {
+			return nil, GuestAgentStateNotRunning, nil
+		}
+		if strings.HasPrefix(apiErr.Message, "VM "+ref.ID.String()+" is not running") {
+			return nil, GuestAgentStateVmNotRunning, nil
+		}
+	}
+	return &rawAgentNetworkInterfaces{a: params.([]any)}, GuestAgentStateRunning, nil
+}
+
 // GuestAgentState is an Enum.
+//
+//	const(
+//		GuestAgentStateRunning
+//		GuestAgentStateNotRunning
+//		GuestAgentStateVmNotRunning
+//	)
 type GuestAgentState int8
 
 const (
@@ -16,26 +50,12 @@ const (
 	GuestAgentStateVmNotRunning
 )
 
+// Deprecated: use QemuAgentInterface.NetworkInterfaces() instead.
 func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client) (RawAgentNetworkInterfaces, GuestAgentState, error) {
-	return c.new().guestGetRawAgentInformation(ctx, vmr)
-}
-
-func (c *clientNewTest) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {
-	return vmr.getAgentInformation(ctx, c)
-}
-
-func (vmr *VmRef) getAgentInformation(ctx context.Context, c *clientNewTest) (*rawAgentNetworkInterfaces, GuestAgentState, error) {
-	if err := c.oldClient.CheckVmRef(ctx, vmr); err != nil {
+	if err := c.CheckVmRef(ctx, vmr); err != nil {
 		return nil, GuestAgentStateUnknown, err
 	}
-	params, state, err := c.api.getGuestQemuAgent(ctx, vmr)
-	if state == GuestAgentStateNotRunning || state == GuestAgentStateVmNotRunning {
-		return nil, state, nil
-	}
-	if err != nil {
-		return nil, GuestAgentStateUnknown, err
-	}
-	return &rawAgentNetworkInterfaces{a: params}, GuestAgentStateRunning, nil
+	return c.New().QemuAgent.NetworkInterfaces(ctx, *vmr)
 }
 
 type (
@@ -45,21 +65,17 @@ type (
 		SelectName(name string) (RawAgentNetworkInterface, bool)
 	}
 	rawAgentNetworkInterfaces struct {
-		a map[string]any
+		a []any
 	}
 )
 
 func (raw *rawAgentNetworkInterfaces) Get() []AgentNetworkInterface {
-	var interfaces []any
-	if v, isSet := raw.a[agentApiKeyResult]; isSet {
-		interfaces = v.([]any)
-	}
-	if len(interfaces) == 0 {
+	if len(raw.a) == 0 {
 		return nil
 	}
-	agentInterfaces := make([]AgentNetworkInterface, len(interfaces))
-	for i := range interfaces {
-		iFace := interfaces[i].(map[string]any)
+	agentInterfaces := make([]AgentNetworkInterface, len(raw.a))
+	for i := range raw.a {
+		iFace := raw.a[i].(map[string]any)
 		agentInterfaces[i] = AgentNetworkInterface{
 			IpAddresses: agentMapToSdkIpAddresses(iFace),
 			MacAddress:  agentMapToSdkMacAddress(iFace),
@@ -70,16 +86,12 @@ func (raw *rawAgentNetworkInterfaces) Get() []AgentNetworkInterface {
 }
 
 func (raw *rawAgentNetworkInterfaces) SelectMacAddress(address net.HardwareAddr) (RawAgentNetworkInterface, bool) {
-	var interfaces []any
-	if v, isSet := raw.a[agentApiKeyResult]; isSet {
-		interfaces = v.([]any)
-	}
-	if len(interfaces) == 0 {
+	if len(raw.a) == 0 {
 		return nil, false
 	}
 	addressString := address.String()
-	for i := range interfaces {
-		iFace := interfaces[i].(map[string]any)
+	for i := range raw.a {
+		iFace := raw.a[i].(map[string]any)
 		if v, isSet := iFace[agentApiKeyMaxAddress]; isSet {
 			if strings.EqualFold(addressString, v.(string)) {
 				return &rawAgentNetworkInterface{a: iFace}, true
@@ -90,15 +102,11 @@ func (raw *rawAgentNetworkInterfaces) SelectMacAddress(address net.HardwareAddr)
 }
 
 func (raw *rawAgentNetworkInterfaces) SelectName(name string) (RawAgentNetworkInterface, bool) {
-	var interfaces []any
-	if v, isSet := raw.a[agentApiKeyResult]; isSet {
-		interfaces = v.([]any)
-	}
-	if len(interfaces) == 0 {
+	if len(raw.a) == 0 {
 		return nil, false
 	}
-	for i := range interfaces {
-		iFace := interfaces[i].(map[string]any)
+	for i := range raw.a {
+		iFace := raw.a[i].(map[string]any)
 		if v, isSet := iFace[agentApiKeyName]; isSet {
 			if name == v.(string) {
 				return &rawAgentNetworkInterface{a: iFace}, true

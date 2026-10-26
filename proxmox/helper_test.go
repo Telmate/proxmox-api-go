@@ -144,3 +144,10 @@ func testIter[T any](t *testing.T, a testIterInterface[T], b []T) {
 		require.Equal(t, 1, count)
 	}
 }
+
+// panics if err is not nil
+func failPanic(err error) {
+	if err != nil {
+		panic(err)
+	}
+}

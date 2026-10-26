@@ -7,6 +7,7 @@ type ClientNew struct {
 	LxcGuest  LxcGuestInterface
 	Node      NodeInterface
 	Pool      PoolInterface
+	QemuAgent QemuAgentInterface
 	QemuGuest QemuGuestInterface
 	Snapshot  SnapshotInterface
 	User      UserInterface

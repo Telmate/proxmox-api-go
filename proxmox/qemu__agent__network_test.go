@@ -9,21 +9,20 @@ import (
 
 func Test_rawAgentNetworkInterfaces_SelectMacAddress(t *testing.T) {
 	t.Parallel()
-	testInput := func() map[string]any {
-		return map[string]any{
-			"result": []any{
-				map[string]any{
-					"name": string("lo")},
-				map[string]any{
-					"hardware-address": string("7a:b1:8f:2e:4d:6c"),
-					"name":             string("eth0")},
-				map[string]any{
-					"hardware-address": string("1a:2b:3c:4d:5e:6f"),
-					"name":             string("eth1")}}}
+	testInput := func() []any {
+		return []any{
+			map[string]any{
+				"name": string("lo")},
+			map[string]any{
+				"hardware-address": string("7a:b1:8f:2e:4d:6c"),
+				"name":             string("eth0")},
+			map[string]any{
+				"hardware-address": string("1a:2b:3c:4d:5e:6f"),
+				"name":             string("eth1")}}
 	}
 	tests := []struct {
 		name   string
-		input  map[string]any
+		input  []any
 		mac    net.HardwareAddr
 		output AgentNetworkInterface
 		set    bool
@@ -40,10 +39,9 @@ func Test_rawAgentNetworkInterfaces_SelectMacAddress(t *testing.T) {
 				MacAddress: parseMAC("1a:2b:3c:4d:5e:6f"),
 				Name:       "eth1"}},
 		{name: `no interfaces`,
-			input: map[string]any{
-				"result": []any{}},
-			mac: parseMAC("1a:2b:3c:4d:5e:6f"),
-			set: false},
+			input: []any{},
+			mac:   parseMAC("1a:2b:3c:4d:5e:6f"),
+			set:   false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -60,21 +58,20 @@ func Test_rawAgentNetworkInterfaces_SelectMacAddress(t *testing.T) {
 
 func Test_rawAgentNetworkInterfaces_SelectName(t *testing.T) {
 	t.Parallel()
-	testInput := func() map[string]any {
-		return map[string]any{
-			"result": []any{
-				map[string]any{
-					"name": string("lo")},
-				map[string]any{
-					"hardware-address": string("7a:b1:8f:2e:4d:6c"),
-					"name":             string("eth0")},
-				map[string]any{
-					"hardware-address": string("1a:2b:3c:4d:5e:6f"),
-					"name":             string("eth1")}}}
+	testInput := func() []any {
+		return []any{
+			map[string]any{
+				"name": string("lo")},
+			map[string]any{
+				"hardware-address": string("7a:b1:8f:2e:4d:6c"),
+				"name":             string("eth0")},
+			map[string]any{
+				"hardware-address": string("1a:2b:3c:4d:5e:6f"),
+				"name":             string("eth1")}}
 	}
 	tests := []struct {
 		name   string
-		input  map[string]any
+		input  []any
 		iName  string
 		output AgentNetworkInterface
 		set    bool
@@ -91,8 +88,7 @@ func Test_rawAgentNetworkInterfaces_SelectName(t *testing.T) {
 				MacAddress: parseMAC("1a:2b:3c:4d:5e:6f"),
 				Name:       "eth1"}},
 		{name: `no interfaces`,
-			input: map[string]any{
-				"result": []any{}},
+			input: []any{},
 			iName: "eth1",
 			set:   false},
 	}
@@ -115,50 +111,47 @@ func Test_rawAgentNetworkInterfaces_Get(t *testing.T) {
 		ip, _ = parseCIDR(cidr)
 		return
 	}
-	baseInput := func(params []any) map[string]any {
-		return map[string]any{"result": params}
-	}
 	tests := []struct {
 		name   string
-		input  map[string]any
+		input  []any
 		output []AgentNetworkInterface
 	}{
 		{name: `Empty`,
-			input:  baseInput([]any{}),
+			input:  []any{},
 			output: nil},
 		{name: `IpAddresses Empty`,
-			input: baseInput([]any{map[string]any{
-				"ip-addresses": []any{}}}),
+			input: []any{map[string]any{
+				"ip-addresses": []any{}}},
 			output: []AgentNetworkInterface{{IpAddresses: []net.IP{}}}},
 		{name: `IpAddresses Single`,
-			input: baseInput([]any{map[string]any{
+			input: []any{map[string]any{
 				"ip-addresses": []any{map[string]any{
 					"ip-address": string("127.0.0.1"),
-					"prefix":     float64(8)}}}}),
+					"prefix":     float64(8)}}}},
 			output: []AgentNetworkInterface{{IpAddresses: []net.IP{
 				parseCIDR("127.0.0.1/8")}}}},
 		{name: `IpAddresses multiple`,
-			input: baseInput([]any{map[string]any{
+			input: []any{map[string]any{
 				"ip-addresses": []any{
 					map[string]any{
 						"ip-address": string("127.0.0.1"),
 						"prefix":     float64(8)},
 					map[string]any{
 						"ip-address": string("::1"),
-						"prefix":     float64(128)}}}}),
+						"prefix":     float64(128)}}}},
 			output: []AgentNetworkInterface{{IpAddresses: []net.IP{
 				parseCIDR("127.0.0.1/8"),
 				parseCIDR("::1/128")}}}},
 		{name: `MacAddress`,
-			input: baseInput([]any{map[string]any{
-				"hardware-address": string("54:1a:12:8f:7b:ed")}}),
+			input: []any{map[string]any{
+				"hardware-address": string("54:1a:12:8f:7b:ed")}},
 			output: []AgentNetworkInterface{{MacAddress: parseMAC("54:1a:12:8f:7b:ed")}}},
 		{name: `Name`,
-			input: baseInput([]any{map[string]any{
-				"name": "test"}}),
+			input: []any{map[string]any{
+				"name": "test"}},
 			output: []AgentNetworkInterface{{Name: string("test")}}},
 		{name: `Statistics`,
-			input: baseInput([]any{map[string]any{
+			input: []any{map[string]any{
 				"statistics": map[string]any{
 					"rx-bytes":   float64(1),
 					"rx-packets": float64(2),
@@ -167,7 +160,7 @@ func Test_rawAgentNetworkInterfaces_Get(t *testing.T) {
 					"tx-bytes":   float64(5),
 					"tx-packets": float64(6),
 					"tx-errs":    float64(7),
-					"tx-dropped": float64(8)}}}),
+					"tx-dropped": float64(8)}}},
 			output: []AgentNetworkInterface{{Statistics: &AgentInterfaceStatistics{
 				RxBytes:   1,
 				RxPackets: 2,
@@ -178,32 +171,31 @@ func Test_rawAgentNetworkInterfaces_Get(t *testing.T) {
 				TxErrors:  7,
 				TxDropped: 8}}}},
 		{name: `Full true`,
-			input: baseInput(
-				[]any{
-					map[string]any{
-						"ip-addresses": []any{
-							map[string]any{"ip-address": string("127.0.0.1"), "prefix": float64(8)},
-							map[string]any{"ip-address": string("::1"), "prefix": float64(128)}},
-						"name": string("lo")},
-					map[string]any{
-						"hardware-address": string("7a:b1:8f:2e:4d:6c"),
-						"name":             string("eth0")},
-					map[string]any{
-						"hardware-address": string("1a:2b:3c:4d:5e:6f"),
-						"ip-addresses": []any{
-							map[string]any{"ip-address": string("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), "prefix": float64(64)},
-							map[string]any{"ip-address": string("192.168.0.1"), "prefix": float64(24)},
-							map[string]any{"ip-address": string("10.20.30.244"), "prefix": float64(16)}},
-						"name": string("eth1"),
-						"statistics": map[string]any{
-							"rx-bytes":   float64(8),
-							"rx-packets": float64(7),
-							"rx-errs":    float64(6),
-							"rx-dropped": float64(5),
-							"tx-bytes":   float64(4),
-							"tx-packets": float64(3),
-							"tx-errs":    float64(2),
-							"tx-dropped": float64(1)}}}),
+			input: []any{
+				map[string]any{
+					"ip-addresses": []any{
+						map[string]any{"ip-address": string("127.0.0.1"), "prefix": float64(8)},
+						map[string]any{"ip-address": string("::1"), "prefix": float64(128)}},
+					"name": string("lo")},
+				map[string]any{
+					"hardware-address": string("7a:b1:8f:2e:4d:6c"),
+					"name":             string("eth0")},
+				map[string]any{
+					"hardware-address": string("1a:2b:3c:4d:5e:6f"),
+					"ip-addresses": []any{
+						map[string]any{"ip-address": string("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), "prefix": float64(64)},
+						map[string]any{"ip-address": string("192.168.0.1"), "prefix": float64(24)},
+						map[string]any{"ip-address": string("10.20.30.244"), "prefix": float64(16)}},
+					"name": string("eth1"),
+					"statistics": map[string]any{
+						"rx-bytes":   float64(8),
+						"rx-packets": float64(7),
+						"rx-errs":    float64(6),
+						"rx-dropped": float64(5),
+						"tx-bytes":   float64(4),
+						"tx-packets": float64(3),
+						"tx-errs":    float64(2),
+						"tx-dropped": float64(1)}}},
 			output: []AgentNetworkInterface{
 				{Name: string("lo"),
 					IpAddresses: []net.IP{
