@@ -14,6 +14,7 @@ const (
 	Colon     = "%3A"
 	Comma     = "%2C"
 	Equal     = "%3D"
+	Newline   = "%0A"
 	Plus      = "%2B"
 	Semicolon = "%3B"
 	Slash     = "%2F"

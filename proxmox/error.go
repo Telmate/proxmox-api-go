@@ -94,6 +94,8 @@ type ValidateError struct {
 	Message string
 }
 
+func newValidateError(message string) error { return &ValidateError{Message: message} }
+
 func (e *ValidateError) Error() string {
 	return "validation error: " + e.Message
 }

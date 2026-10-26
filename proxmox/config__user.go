@@ -559,7 +559,7 @@ func (id UserID) Validate() error {
 	return nil
 }
 
-// May be empty or should be at least be 5 characters long.
+// May be empty or should be at least be 8 characters long.
 type UserPassword string
 
 func (password UserPassword) Validate() error {

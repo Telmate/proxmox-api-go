@@ -24,6 +24,7 @@ const (
 	colon     = body.Colon
 	comma     = body.Comma
 	equal     = body.Equal
+	newline   = body.Newline
 	plus      = body.Plus
 	semicolon = body.Semicolon
 )

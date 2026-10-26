@@ -241,7 +241,7 @@ func Test_sshKeyUrlEncode(t *testing.T) {
 	}{
 		{name: `multiple keys`,
 			input:  input,
-			output: test_data_guest.AuthorizedKey_Encoded_Output()},
+			output: test_data_guest.AuthorizedKey_Encoded_Qemu_Output()},
 		{name: `empty key`,
 			input:  []AuthorizedKey{{}},
 			output: ""},
