@@ -26,8 +26,14 @@ type (
 		Create(context.Context, ConfigQemu) (*VmRef, error)
 		CreateNoCheck(context.Context, ConfigQemu) (*VmRef, error)
 
+		Hibernate(context.Context, VmRef) error
+		HibernateNoCheck(context.Context, VmRef) error
+
 		Migrate(ctx context.Context, vmr VmRef, new NodeName, live bool) error
 		MigrateNoCheck(ctx context.Context, vmr VmRef, new NodeName, live bool) error
+
+		Pause(context.Context, VmRef) error
+		PauseNoCheck(context.Context, VmRef) error
 
 		// Read returns the configuration of the Qemu guest.
 		// Including pending changes.
@@ -38,6 +44,9 @@ type (
 		// Without pending changes.
 		ReadActive(context.Context, *VmRef) (raw RawConfigQemu, pending bool, err error)
 		ReadActiveNoCheck(context.Context, *VmRef) (raw RawConfigQemu, pending bool, err error)
+
+		Resume(context.Context, VmRef) error
+		ResumeNoCheck(context.Context, VmRef) error
 
 		// When allowRestart is false an error is return if the update requires a reboot or shutdown.
 		Update(ctx context.Context, vmr VmRef, allowRestart bool, allowForceStop bool, config ConfigQemu) error
@@ -98,6 +107,19 @@ func (c *qemuGuestClient) CreateNoCheck(ctx context.Context, config ConfigQemu) 
 	return config.create(ctx, client, c.api, version)
 }
 
+func (c *qemuGuestClient) Hibernate(ctx context.Context, vmr VmRef) error {
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	_, err := ref.checkQemu(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	return c.HibernateNoCheck(ctx, ref.legacy())
+}
+
+func (c *qemuGuestClient) HibernateNoCheck(ctx context.Context, vmr VmRef) error {
+	return QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize().qemuHibernate(ctx, c.api)
+}
+
 func (c *qemuGuestClient) Migrate(ctx context.Context, vmr VmRef, new NodeName, live bool) error {
 	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
 	if _, err := ref.checkQemu(ctx, c.api); err != nil {
@@ -108,6 +130,19 @@ func (c *qemuGuestClient) Migrate(ctx context.Context, vmr VmRef, new NodeName, 
 
 func (c *qemuGuestClient) MigrateNoCheck(ctx context.Context, vmr VmRef, new NodeName, live bool) error {
 	return QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize().migrate(ctx, c.api, new, live)
+}
+
+func (c *qemuGuestClient) Pause(ctx context.Context, vmr VmRef) error {
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	_, err := ref.checkQemu(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	return c.PauseNoCheck(ctx, ref.legacy())
+}
+
+func (c *qemuGuestClient) PauseNoCheck(ctx context.Context, vmr VmRef) error {
+	return QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize().qemuPause(ctx, c.api)
 }
 
 func (c *qemuGuestClient) Read(ctx context.Context, vmr *VmRef) (RawConfigQemu, error) {
@@ -132,6 +167,19 @@ func (c *qemuGuestClient) ReadActiveNoCheck(ctx context.Context, vmr *VmRef) (Ra
 		return nil, false, err
 	}
 	return guestGetActiveRawQemuConfig_Unsafe(ctx, vmr, c.api)
+}
+
+func (c *qemuGuestClient) Resume(ctx context.Context, vmr VmRef) error {
+	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	_, err := ref.checkQemu(ctx, c.api)
+	if err != nil {
+		return err
+	}
+	return c.ResumeNoCheck(ctx, ref.legacy())
+}
+
+func (c *qemuGuestClient) ResumeNoCheck(ctx context.Context, vmr VmRef) error {
+	return QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize().qemuResume(ctx, c.api)
 }
 
 func (c *qemuGuestClient) Update(

@@ -200,6 +200,18 @@ func (ref guestRef) stopOverruleOpertunistic(ctx context.Context, c *clientAPI, 
 	return ref.stop(ctx, c)
 }
 
+func (ref guestRef) qemuPause(ctx context.Context, c *clientAPI) error {
+	return c.updateGuestStatus(ctx, ref, "suspend", nil)
+}
+
+func (ref guestRef) qemuHibernate(ctx context.Context, c *clientAPI) error {
+	return c.updateGuestStatus(ctx, ref, "suspend", new([]byte("todisk=1")))
+}
+
+func (ref guestRef) qemuResume(ctx context.Context, c *clientAPI) error {
+	return c.updateGuestStatus(ctx, ref, "suspend", nil)
+}
+
 const (
 	pendingApiKeyKey   string = "key"
 	pendingApiValueKey string = "value"

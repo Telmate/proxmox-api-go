@@ -626,6 +626,7 @@ func (c *Client) GetTaskExitstatus(ctx context.Context, taskUpid string) (exitSt
 	return
 }
 
+// Deprecated: use the dedicated functions for setting the state.
 func (c *Client) StatusChangeVm(ctx context.Context, vmr *VmRef, params map[string]interface{}, setStatus string) (exitStatus string, err error) {
 	err = c.CheckVmRef(ctx, vmr)
 	if err != nil {
@@ -667,10 +668,12 @@ func (c *Client) RebootVm(ctx context.Context, vmr *VmRef) (exitStatus string, e
 	return c.StatusChangeVm(ctx, vmr, nil, "reboot")
 }
 
+// Deprecated: use QemuGuestInterface.Pause() instead.
 func (c *Client) PauseVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "suspend")
 }
 
+// Deprecated: use QemuGuestInterface.Hibernate() instead.
 func (c *Client) HibernateVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	params := map[string]interface{}{
 		"todisk": true,
@@ -678,6 +681,7 @@ func (c *Client) HibernateVm(ctx context.Context, vmr *VmRef) (exitStatus string
 	return c.StatusChangeVm(ctx, vmr, params, "suspend")
 }
 
+// Deprecated: use QemuGuestInterface.Resume() instead.
 func (c *Client) ResumeVm(ctx context.Context, vmr *VmRef) (exitStatus string, err error) {
 	return c.StatusChangeVm(ctx, vmr, nil, "resume")
 }
