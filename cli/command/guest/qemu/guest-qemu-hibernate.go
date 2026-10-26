@@ -10,16 +10,14 @@ var qemu_hibernateCmd = &cobra.Command{
 	Use:   "hibernate GUESTID",
 	Short: "Hibernates the specified guest",
 	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) (err error) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		vmr := proxmox.NewVmRef(cli.ValidateGuestIDset(args, "GuestID"))
-		c := cli.NewClient()
-		_, err = c.HibernateVm(cli.Context(), vmr)
-		if err == nil {
+		c := cli.NewClient().New()
+		if err := c.QemuGuest.Hibernate(cli.Context(), *vmr); err == nil {
 			cli.PrintGuestStatus(qemuCmd.OutOrStdout(), vmr.VmId(), "suspended to disk")
 		}
-		return
-	},
-}
+		return nil
+	}}
 
 func init() {
 	qemuCmd.AddCommand(qemu_hibernateCmd)

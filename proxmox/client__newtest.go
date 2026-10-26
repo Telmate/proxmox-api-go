@@ -17,7 +17,6 @@ type ClientNewTest interface {
 
 	// Guest
 	guestCheckVmRef(ctx context.Context, vmr *VmRef) error
-	guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
 	guestStop(ctx context.Context, vmr *VmRef) error
 	// HA
 	haCreateNodeAffinityRule(ctx context.Context, ha HaNodeAffinityRule) error

@@ -499,34 +499,34 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						OsTemplate: &LxcTemplate{
 							Storage: "local",
 							File:    "test-template"},
-						UserPassword:  util.Pointer("myPassword!"),
+						UserPassword:  new(PamPassword("myPassword!")),
 						PublicSSHkeys: publicKeys()}},
-					output: map[string]any{
-						"ostemplate":      string("local:vztmpl/test-template"),
-						"password":        string("myPassword!"),
-						"ssh-public-keys": string(test_data_guest.AuthorizedKey_Trimmed_Output())}},
+					body: map[string]string{
+						"ostemplate":      "local%3Avztmpl%2Ftest-template", // "local:vztmpl/test-template"
+						"password":        "myPassword!",
+						"ssh-public-keys": test_data_guest.AuthorizedKey_Encoded_Lxc_Output()}},
 				{name: `OsTemplate`,
 					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
 						OsTemplate: &LxcTemplate{
 							Storage: "local",
 							File:    "test-template"}}},
-					output: map[string]any{
-						"ostemplate": string("local:vztmpl/test-template")}},
+					body: map[string]string{
+						"ostemplate": "local%3Avztmpl%2Ftest-template"}}, // "local:vztmpl/test-template"
 				{name: `UserPassword`,
 					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
-						UserPassword: util.Pointer("myPassword!")}},
-					output: map[string]any{
-						"password": string("myPassword!")}},
+						UserPassword: new(PamPassword("myPassword!"))}},
+					body: map[string]string{
+						"password": "myPassword!"}},
 				{name: `UserPassword empty`,
 					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
-						UserPassword: util.Pointer("")}},
-					output: map[string]any{
-						"password": string("")}},
+						UserPassword: new(PamPassword(""))}},
+					body: map[string]string{
+						"password": ""}},
 				{name: `PublicSSHkeys`,
 					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
 						PublicSSHkeys: publicKeys()}},
-					output: map[string]any{
-						"ssh-public-keys": string(test_data_guest.AuthorizedKey_Trimmed_Output())}},
+					body: map[string]string{
+						"ssh-public-keys": test_data_guest.AuthorizedKey_Encoded_Lxc_Output()}},
 				{name: `PublicSSHkeys empty`,
 					config: ConfigLXC{CreateOptions: &LxcCreateOptions{
 						PublicSSHkeys: []AuthorizedKey{}}}}},
@@ -536,7 +536,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 						OsTemplate: &LxcTemplate{
 							Storage: "local",
 							File:    "test-template"},
-						UserPassword:  util.Pointer("myPassword!"),
+						UserPassword:  new(PamPassword("myPassword!")),
 						PublicSSHkeys: publicKeys()}},
 					omitDefaults: lxcDefaultsAll}}},
 		{category: `Description`,
@@ -1591,13 +1591,13 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 			create: []lxcTestCaseAPI{
 				{name: `set`,
 					config: ConfigLXC{Tags: &Tags{"test", "aaa"}},
-					body:   map[string]string{"tags": "test,aaa"}},
+					body:   map[string]string{"tags": "test%2Caaa"}}, // "test,aaa"
 				{name: `do nothing`,
 					config: ConfigLXC{Tags: &Tags{}}}},
 			update: []lxcTestCaseAPI{
 				{name: `create`,
 					config:       ConfigLXC{Tags: &Tags{"test", "aaa"}},
-					body:         map[string]string{"tags": "test,aaa"},
+					body:         map[string]string{"tags": "test%2Caaa"}, // "test,aaa"
 					omitDefaults: lxcDefaultsAll},
 				{name: `empty`,
 					config:        ConfigLXC{Tags: &Tags{}},
@@ -1611,7 +1611,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 				{name: `set`,
 					config:        ConfigLXC{Tags: &Tags{"test", "aaa"}},
 					currentConfig: ConfigLXC{Tags: &Tags{"text", "aaa"}},
-					body:          map[string]string{"tags": "aaa,test"},
+					body:          map[string]string{"tags": "aaa%2Ctest"}, // "test,aaa"
 					omitDefaults:  lxcDefaultsAll},
 				{name: `different order, do nothing`,
 					config:        ConfigLXC{Tags: &Tags{"bbb", "aaa", "ccc"}},
@@ -1633,7 +1633,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					}
 				}
 				require.Equal(t, subTest.output, tmpParams, name)
-				testParamsEqual(t, clone, tmpBody, name+" Body")
+				testParamsEqualRaw(t, clone, tmpBody, name+" Body")
 				require.Equal(t, subTest.pool, pool, name)
 			})
 		}
@@ -1651,7 +1651,7 @@ func Test_ConfigLXC_mapToAPI(t *testing.T) {
 					}
 				}
 				require.Equal(t, clone, tmpParams, name)
-				testParamsEqual(t, subTest.body, tmpBody, name+" Body")
+				testParamsEqualRaw(t, subTest.body, tmpBody, name+" Body")
 			})
 		}
 	}
@@ -1817,7 +1817,7 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 								OsTemplate: &LxcTemplate{
 									Storage: "local",
 									File:    "test-template"},
-								UserPassword:  util.Pointer("myPassword!"),
+								UserPassword:  new(PamPassword("myPassword!")),
 								PublicSSHkeys: publicKeys()}}},
 					{name: `UserPassword`,
 						input: ConfigLXC{
@@ -1828,7 +1828,7 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 								OsTemplate: &LxcTemplate{
 									Storage: "local",
 									File:    "test-template"},
-								UserPassword: util.Pointer("")}}},
+								UserPassword: new(PamPassword("12345"))}}},
 					{name: `PublicSSHkeys`,
 						input: ConfigLXC{
 							BootMount: &LxcBootMount{
@@ -1868,7 +1868,19 @@ func Test_ConfigLXC_Validate(t *testing.T) {
 								Storage:         util.Pointer("local-lvm")},
 							CreateOptions: &LxcCreateOptions{
 								OsTemplate: &LxcTemplate{Storage: "local"}}},
-						err: errors.New(LxcTemplate_Error_FileMissing)}}}},
+						err: errors.New(LxcTemplate_Error_FileMissing)},
+					{name: `error PamPassword_Error_Invalid`,
+						input: ConfigLXC{
+							BootMount: &LxcBootMount{
+								SizeInKibibytes: new(LxcMountSize(131072)),
+								Storage:         new("local-lvm")},
+							CreateOptions: &LxcCreateOptions{
+								OsTemplate: &LxcTemplate{
+									Storage: "local",
+									File:    "test-template"},
+								UserPassword: new(PamPassword("1234"))}},
+						err: newValidateError(PamPassword_Error_Invalid)},
+				}}},
 		{category: `Features`,
 			valid: testType{
 				create: []test{

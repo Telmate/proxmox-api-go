@@ -25,6 +25,7 @@ func Test_escape(t *testing.T) {
 	t.Parallel()
 	tests := map[encoding]map[byte]string{
 		encodePathSegment: {
+			'\n':        Newline,
 			' ':         "%20",
 			'!':         "%21",
 			'"':         "%22",
@@ -60,6 +61,7 @@ func Test_escape(t *testing.T) {
 			singleQuote: "%27",
 		},
 		encodePveApiToken: {
+			'\n':        Newline,
 			' ':         "%20",
 			'!':         "!",
 			'"':         "%22",
@@ -95,6 +97,7 @@ func Test_escape(t *testing.T) {
 			singleQuote: "'",
 		},
 		encodePveQemuSshKey: {
+			'\n':        Newline,
 			' ':         "%20",
 			'!':         "%21",
 			'"':         "%22",
@@ -113,7 +116,7 @@ func Test_escape(t *testing.T) {
 			':':         Colon,
 			';':         Semicolon,
 			'<':         "%3C",
-			'=':         "%3D",
+			'=':         Equal,
 			'>':         "%3E",
 			'?':         "%3F",
 			'@':         "%40",
@@ -139,6 +142,8 @@ func Test_escape(t *testing.T) {
 				runName = name + "space"
 			case '/':
 				runName = name + "slash"
+			case '\n':
+				runName = name + "newline"
 			default:
 				runName = name + string(input)
 			}

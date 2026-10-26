@@ -11,7 +11,6 @@ type mockClientAPI struct {
 	deleteHaRuleFunc           func(ctx context.Context, id HaRuleID) error
 	getGuestConfigFunc         func(context.Context, guestRef) (map[string]any, error)
 	getGuestPendingChangesFunc func(context.Context, guestRef) ([]any, error)
-	getGuestQemuAgentFunc      func(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error)
 	getHaRuleFunc              func(ctx context.Context, id HaRuleID) (map[string]any, error)
 	getPoolConfigFunc          func(ctx context.Context, pool PoolName) (map[string]any, error)
 	getUserConfigFunc          func(ctx context.Context, userId UserID) (map[string]any, bool, error)
@@ -67,13 +66,6 @@ func (m *mockClientAPI) getGuestPendingChanges(ctx context.Context, ref guestRef
 		m.panic("getGuestPendingChangesFunc")
 	}
 	return m.getGuestPendingChangesFunc(ctx, ref)
-}
-
-func (m *mockClientAPI) getGuestQemuAgent(ctx context.Context, vmr *VmRef) (map[string]any, GuestAgentState, error) {
-	if m.getGuestQemuAgentFunc == nil {
-		m.panic("getGuestQemuAgentFunc")
-	}
-	return m.getGuestQemuAgentFunc(ctx, vmr)
 }
 
 func (m *mockClientAPI) getHaRule(ctx context.Context, id HaRuleID) (haRule map[string]any, err error) {

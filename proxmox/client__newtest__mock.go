@@ -4,9 +4,8 @@ import "context"
 
 type MockClient struct {
 	// Guest
-	GuestCheckVmRefFunc             func(ctx context.Context, vmr *VmRef) error
-	GuestGetRawAgentInformationFunc func(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error)
-	GuestStopFunc                   func(ctx context.Context, vmr *VmRef) error
+	GuestCheckVmRefFunc func(ctx context.Context, vmr *VmRef) error
+	GuestStopFunc       func(ctx context.Context, vmr *VmRef) error
 	// HA
 	HaCreateNodeAffinityRuleFunc            func(ctx context.Context, ha HaNodeAffinityRule) error
 	HaCreateNodeAffinityRuleNoCheckFunc     func(ctx context.Context, ha HaNodeAffinityRule) error
@@ -44,13 +43,6 @@ func (m *MockClient) guestCheckVmRef(ctx context.Context, vmr *VmRef) error {
 		m.panic("GuestCheckVmRefFunc")
 	}
 	return m.GuestCheckVmRefFunc(ctx, vmr)
-}
-
-func (m *MockClient) guestGetRawAgentInformation(ctx context.Context, vmr *VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {
-	if m.GuestGetRawAgentInformationFunc == nil {
-		m.panic("GuestGetRawAgentInformationFunc")
-	}
-	return m.GuestGetRawAgentInformationFunc(ctx, vmr)
 }
 
 func (m *MockClient) guestStop(ctx context.Context, vmr *VmRef) error {

@@ -90,73 +90,45 @@ func (c *clientAPI) deleteTaskNoHighLevelRetry(ctx context.Context, url string) 
 
 // Same as (c *Client) GetItemConfigMapStringInterface()
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[string]any, error) {
-	data, err := c.getRootMap(ctx, url, text, message)
-	if err != nil {
+	var data map[string]any
+	if err := c.getJsonRetry(ctx, url, &data, RequestRetryCount); err != nil {
 		return nil, err
 	}
-	return data["data"].(map[string]any), err
+	if v, ok := data["data"]; ok {
+		return v.(map[string]any), nil
+	}
+	return nil, errors.New(text + " " + message + " not readable")
 }
 
 func (c *clientAPI) getList(ctx context.Context, url, text, message string) ([]any, error) {
-	list, err := c.getRootList(ctx, url, text, message)
-	if err != nil {
-		return nil, err
-	}
-	data, ok := list["data"].([]any)
-	if !ok {
-		return nil, fmt.Errorf("failed to cast response to list, resp: %v", list)
-	}
-	return data, nil
-}
-
-// Same as (c *Client) GetItemConfig()
-func (c *clientAPI) getRootMap(ctx context.Context, url, text, message string) (map[string]any, error) {
-	var config map[string]any
-	if err := c.getJsonRetry(ctx, url, &config, 3); err != nil {
-		return nil, err
-	}
-	if config["data"] == nil {
-		return nil, errors.New(text + " " + message + " not readable")
-	}
-	return config, nil
-}
-
-func (c *clientAPI) getRootList(ctx context.Context, url, text, message string) (map[string]any, error) {
 	var data map[string]any
-	if err := c.getJsonRetry(ctx, url, &data, 3); err != nil {
+	if err := c.getJsonRetry(ctx, url, &data, RequestRetryCount); err != nil {
 		return nil, err
 	}
-	if data["data"] == nil {
-		return nil, errors.New(text + " " + message + " not readable")
+	if v, ok := data["data"]; ok {
+		if vv, ok := v.([]any); ok {
+			return vv, nil
+		}
+		return nil, fmt.Errorf("failed to cast response to list, resp: %v", v)
 	}
-	return data, nil
+	return nil, errors.New(text + " " + message + " not readable")
 }
 
 // Makes a POST request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
-func (c *clientAPI) post(ctx context.Context, url string, params map[string]any) (retry bool, err error) {
-	requestBody := paramsToBody(params)
-	_, retry, err = c.session.post(ctx, url, nil, nil, &requestBody)
-	return
+func (c *clientAPI) post(ctx context.Context, url string, body *[]byte) error {
+	return c.postRawRetry(ctx, url, body, RequestRetryCount)
 }
 
 func (c *clientAPI) postMap(ctx context.Context, url string, body *[]byte, text, message string) (map[string]any, error) {
-	data, err := c.postRootMap(ctx, url, body, text, message)
+	data, err := c.postJsonRetry(ctx, url, body, RequestRetryCount)
 	if err != nil {
 		return nil, err
 	}
-	return data["data"].(map[string]any), err
-}
-
-func (c *clientAPI) postRootMap(ctx context.Context, url string, body *[]byte, text, message string) (map[string]any, error) {
-	config, err := c.postJsonRetry(ctx, url, body, 3)
-	if err != nil {
-		return nil, err
+	if v, ok := data["data"]; ok {
+		return v.(map[string]any), nil
 	}
-	if config["data"] == nil {
-		return nil, errors.New(text + " " + message + " not readable")
-	}
-	return config, nil
+	return nil, errors.New(text + " " + message + " not readable")
 }
 
 func (c *clientAPI) postRawRetry(ctx context.Context, url string, body *[]byte, tries int) (err error) {

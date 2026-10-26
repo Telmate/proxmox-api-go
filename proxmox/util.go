@@ -24,6 +24,7 @@ const (
 	colon     = body.Colon
 	comma     = body.Comma
 	equal     = body.Equal
+	newline   = body.Newline
 	plus      = body.Plus
 	semicolon = body.Semicolon
 )
@@ -348,12 +349,4 @@ func splitStringOfSettings(settings string) map[string]string {
 func uninitializedArray[T any]() []T {
 	var x []T
 	return x
-}
-
-// To be used during testing
-// panics if err is not nil
-func failPanic(err error) {
-	if err != nil {
-		panic(err)
-	}
 }

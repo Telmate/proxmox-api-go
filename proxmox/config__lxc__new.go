@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/body"
 )
 
 type (
@@ -302,7 +304,7 @@ func (config ConfigLXC) create(ctx context.Context, c *Client, ca *clientAPI) (*
 		pool:   pool,
 		vmType: GuestLxc}
 	if config.State != nil && *config.State == PowerStateRunning {
-		err = LxcRef{ID: id,Node: node}.generalize().start(ctx, ca)
+		err = LxcRef{ID: id, Node: node}.generalize().start(ctx, ca)
 		if err != nil {
 			return vmRef, err
 		}
@@ -331,7 +333,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, *[]byte, PoolName) {
 		config.CPU.mapToApiCreate(params)
 	}
 	if config.CreateOptions != nil {
-		config.CreateOptions.mapToAPI(params)
+		config.CreateOptions.mapToAPI(builderPtr)
 	}
 	if config.Description != nil && *config.Description != "" {
 		params[lxcApiKeyDescription] = *config.Description
@@ -970,7 +972,7 @@ const (
 // These settings are only available during creation and can not be changed afterwards, or returned by the API
 type LxcCreateOptions struct {
 	OsTemplate    *LxcTemplate    `json:"os_template,omitempty"`
-	UserPassword  *string         `json:"password,omitempty"`
+	UserPassword  *PamPassword    `json:"password,omitempty"`
 	PublicSSHkeys []AuthorizedKey `json:"sshkeys,omitempty"`
 }
 
@@ -978,26 +980,27 @@ const (
 	LxcCreateOptions_Error_TemplateMissing = "os template is required during creation"
 )
 
-func (config LxcCreateOptions) mapToAPI(params map[string]any) {
+func (config LxcCreateOptions) mapToAPI(b *strings.Builder) {
 	if config.OsTemplate != nil {
-		params[lxcApiKeyOsTemplate] = config.OsTemplate.String()
+		b.WriteString("&" + lxcApiKeyOsTemplate + "=")
+		b.WriteString(body.Escape(config.OsTemplate.String()))
 	}
 	if config.UserPassword != nil {
-		params[lxcApiKeyPassword] = *config.UserPassword
+		b.WriteString("&" + lxcApiKeyPassword + "=")
+		b.WriteString(body.Escape(config.UserPassword.String()))
 	}
 	if len(config.PublicSSHkeys) != 0 {
-		builder := strings.Builder{}
+		b.WriteString("&" + lxcApiKeySSHPublicKeys + "=")
 		first := true
 		for i := range config.PublicSSHkeys {
 			if v := config.PublicSSHkeys[i].String(); v != "" {
 				if !first {
-					builder.WriteString("\n")
+					b.WriteString(newline)
 				}
 				first = false
-				builder.WriteString(v)
+				b.WriteString(body.Escape(v))
 			}
 		}
-		params[lxcApiKeySSHPublicKeys] = builder.String()
 	}
 }
 
@@ -1007,6 +1010,9 @@ func (config LxcCreateOptions) Validate() error {
 	}
 	if err := config.OsTemplate.Validate(); err != nil {
 		return err
+	}
+	if config.UserPassword != nil {
+		return config.UserPassword.Validate()
 	}
 	return nil
 }
