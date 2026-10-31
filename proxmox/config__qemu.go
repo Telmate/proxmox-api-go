@@ -886,9 +886,19 @@ func (config ConfigQemu) updateNoCheck(
 		if err != nil {
 			return
 		}
-		currentLegacy, err = (&rawConfigQemu{a: rawConfig, id: vmr.vmId, node: vmr.node}).get(*vmr)
+		raw := &rawConfigQemu{a: rawConfig, id: vmr.vmId, node: vmr.node}
+		currentLegacy, err = raw.get(*vmr)
 		if err != nil {
 			return
+		}
+		// Moving a disk can change its volume path (e.g. "100/vm-100-disk-0.qcow2" on directory storage becomes "vm-100-disk-0" on LVM).
+		// mapToApiUpdate() builds the disk values from updateConfig, so it has to be based on the refreshed config as well.
+		updateConfig.raw = raw
+		if updateConfig.disks != nil {
+			updateConfig.disks, _ = raw.GetDisks()
+		}
+		if updateConfig.efiDisk != nil {
+			updateConfig.efiDisk = raw.GetEfiDisk()
 		}
 		if rebootRequired { // shutdown vm if reboot is required
 			desiredState, err = shutdownIfRunning(ctx, c, ref, desiredState, allowRestart)

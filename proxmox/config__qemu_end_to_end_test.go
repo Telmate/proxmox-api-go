@@ -213,6 +213,39 @@ func Test_QemuGuestInterface_Update(t *testing.T) {
 					"storage": "local-lvm"}, []byte(`{"data":"`+UPID("pve", "qmmovedisk", GuestID(100))+`"}`)),
 				mockServer.RequestsGetJson("/nodes/pve/tasks/"+mockServer.Path(UPID("pve", "qmmovedisk", GuestID(100)))+"/status",
 					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}))},
+		{name: `move disk to storage with different volume path layout`,
+			config: ConfigQemu{
+				Disks: &QemuStorages{
+					Scsi: &QemuScsiDisks{
+						Disk_0: &QemuScsiStorage{
+							Disk: &QemuScsiDisk{
+								Backup:          true,
+								Discard:         true,
+								Format:          QemuDiskFormat_Raw,
+								SizeInKibibytes: 10 * gibibyte,
+								Storage:         "local-lvm"}}}}},
+			vmr: VmRef{node: "pve", vmId: 100},
+			requests: mockServer.Append(
+				mockServer.RequestsGetJson("/nodes/pve/qemu/100/config", map[string]any{"data": map[string]any{
+					"scsi0": "local-dir:100/vm-100-disk-0.qcow2,size=10G"}}),
+				mockServer.RequestsGetJson("/cluster/resources?type=vm", map[string]any{"data": []any{
+					map[string]any{"vmid": 100, "node": "pve", "type": "qemu"}}}),
+				mockServer.RequestsGetJson("/cluster/ha/resources/100", map[string]any{"data": map[string]any{}}), // TODO we don't need this info here
+				mockServer.RequestsGetJson("/version", map[string]any{"data": map[string]any{"version": "8.0.1"}}),
+				mockServer.RequestsPostResponse("/nodes/pve/qemu/100/move_disk", map[string]any{
+					"delete":  "1",
+					"disk":    "scsi0",
+					"format":  "raw",
+					"storage": "local-lvm"}, []byte(`{"data":"`+UPID("pve", "qmmovedisk", GuestID(100))+`"}`)),
+				mockServer.RequestsGetJson("/nodes/pve/tasks/"+mockServer.Path(UPID("pve", "qmmovedisk", GuestID(100)))+"/status",
+					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
+				// after the move the volume path changed from "100/vm-100-disk-0.qcow2" to "vm-100-disk-0"
+				mockServer.RequestsGetJsonData("/nodes/pve/qemu/100/pending", []map[string]any{
+					{"key": string("scsi0"), "value": string("local-lvm:vm-100-disk-0,size=10G")}}),
+				mockServer.RequestsPut("/nodes/pve/qemu/100/config", map[string]any{
+					"scsi0": "local-lvm:vm-100-disk-0,discard=on,replicate=0"}),
+				mockServer.RequestsGetJsonData("/nodes/pve/qemu/100/pending", []map[string]any{
+					{"key": string("scsi0"), "value": string("local-lvm:vm-100-disk-0,discard=on,replicate=0,size=10G")}}))},
 		{name: `errors.New(ConfigQemu_Error_UnableToUpdateWithoutReboot)`,
 			config: ConfigQemu{EfiDisk: &EfiDisk{Delete: true}},
 			vmr:    VmRef{node: "pve", vmId: 100},
