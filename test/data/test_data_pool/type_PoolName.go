@@ -3,7 +3,8 @@ package test_data_pool
 import "strings"
 
 func PoolName_Error_Characters() []string {
-	return strings.Split("`~!@#$%^&*()=+{}[]|\\;:'\"<,>.?/", "")
+	// '/' is legal now (nested pools like Hardware/Test), so it must not be listed here.
+	return strings.Split("`~!@#$%^&*()=+{}[]|\\;:'\"<,>.?", "")
 }
 
 // 1024 valid charaters
@@ -30,5 +31,10 @@ func PoolName_Legals() []string {
 		PoolName_Legal(),
 		PoolName_Max_Legal(),
 	}
+	// Nested pool ids (slash-separated), e.g. "Hardware/Test".
+	legalStrings = append(legalStrings,
+		"Test/Hardware",
+		"Hardware/Test/VMs",
+	)
 	return append(legalRunes, legalStrings[:]...)
 }
