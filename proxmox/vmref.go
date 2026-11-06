@@ -330,15 +330,47 @@ func (vmr *VmRef) stop_Unsafe(ctx context.Context, c clientApiInterface) error {
 	return c.updateGuestStatus(ctx, vmr, "stop", nil)
 }
 
+func (vmr *VmRef) vncwebsocketConnect(c *Client, ticket *ProxyTicket) (wc *websocket.Conn, err error) {
+	path := fmt.Sprintf("/nodes/%s/qemu/%s/vncwebsocket?port=%d&vncticket=%s",
+		vmr.Node().String(), vmr.vmId.String(), ticket.Port, url.QueryEscape(ticket.Ticket))
+
+	if strings.HasPrefix(path, "/") {
+		path = strings.Replace(c.ApiUrl, "https://", "wss://", 1) + path
+	}
+
+	transport := c.session.getHttpTransport()
+	dialer := &websocket.Dialer{
+		//Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 5 * time.Second,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+		//ReadBufferSize:  1024 * 10,
+		//WriteBufferSize: 1024 * 1024 * 4,
+	}
+
+	if nil != transport {
+		if nil != transport.TLSClientConfig {
+			dialer.TLSClientConfig = transport.TLSClientConfig
+		}
+		if nil != transport.Proxy {
+			dialer.Proxy = transport.Proxy
+		}
+
+	}
+
+	headers := c.session.BuildHeaders(nil)
+	wc, _, err = dialer.Dial(path, headers)
+
+	return
+}
+
 func (vmr *VmRef) TermProxyWebsocketServeHTTP(c *Client, w http.ResponseWriter, r *http.Request, responseHeader http.Header) (err error) {
 
 	ticket, err := c.CreateTermProxy(context.Background(), vmr, map[string]interface{}{})
 	if nil != err {
 		return err
 	}
-
-	path := fmt.Sprintf("/nodes/%s/qemu/%s/vncwebsocket?port=%d&vncticket=%s",
-		vmr.Node().String(), vmr.vmId.String(), ticket.Port, url.QueryEscape(ticket.Ticket))
 
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -352,22 +384,7 @@ func (vmr *VmRef) TermProxyWebsocketServeHTTP(c *Client, w http.ResponseWriter, 
 		return
 	}
 
-	if strings.HasPrefix(path, "/") {
-		path = strings.Replace(c.ApiUrl, "https://", "wss://", 1) + path
-	}
-
-	dialer := &websocket.Dialer{
-		Proxy:            http.ProxyFromEnvironment,
-		HandshakeTimeout: 5 * time.Second,
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-		ReadBufferSize:  1024 * 10,
-		WriteBufferSize: 1024 * 1024 * 4,
-	}
-
-	headers := c.session.BuildHeaders(nil)
-	pveVncConn, _, err := dialer.Dial(path, headers)
+	pveVncConn, err := vmr.vncwebsocketConnect(c, ticket)
 
 	if err != nil {
 		err = fmt.Errorf("connect to pve err: %+v", err)
@@ -375,19 +392,17 @@ func (vmr *VmRef) TermProxyWebsocketServeHTTP(c *Client, w http.ResponseWriter, 
 		return
 	}
 
+	/*authMsg := fmt.Sprintf("%s:%s", utilStr.BeforeFirst(ticket.User, "!"), ticket.Ticket)
+	fmt.Println(authMsg)
+	if err = pveVncConn.WriteMessage(websocket.TextMessage, []byte(authMsg)); err != nil {
+		err = fmt.Errorf("write pve auth password message err: %+v", err)
+		return
+	}*/
+
 	defer func() {
 		_ = pveVncConn.Close()
 		_ = websocketServe.Close()
 	}()
-
-	//authMsg := ticket.User + ":" + ticket.Password+ "\n"
-	/*authMsg :=  "root:ogsFPGsTCj8Br0TI\n"
-
-		err = pveVncConn.WriteMessage(websocket.TextMessage, []byte(authMsg))
-	fmt.Println("pveVncConn write err:",err)
-		if err != nil {
-			return
-		}*/
 
 	go func() {
 		for {
@@ -423,9 +438,6 @@ func (vmr *VmRef) VNCProxyWebsocketServeHTTP(c *Client, w http.ResponseWriter, r
 		return err
 	}
 
-	path := fmt.Sprintf("/nodes/%s/qemu/%s/vncwebsocket?port=%d&vncticket=%s",
-		vmr.Node().String(), vmr.vmId.String(), ticket.Port, url.QueryEscape(ticket.Ticket))
-
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true
@@ -437,29 +449,7 @@ func (vmr *VmRef) VNCProxyWebsocketServeHTTP(c *Client, w http.ResponseWriter, r
 		return
 	}
 
-	if strings.HasPrefix(path, "/") {
-		path = strings.Replace(c.ApiUrl, "https://", "wss://", 1) + path
-	}
-
-	var tlsConfig *tls.Config
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-		//DisableKeepAlives: true,
-	}
-	if transport != nil {
-		tlsConfig = transport.TLSClientConfig
-	}
-
-	dialer := &websocket.Dialer{
-		Proxy:            http.ProxyFromEnvironment,
-		HandshakeTimeout: 30 * time.Second,
-		TLSClientConfig:  tlsConfig,
-	}
-
-	headers := c.session.BuildHeaders(nil)
-	pveVncConn, _, err := dialer.Dial(path, headers)
+	pveVncConn, err := vmr.vncwebsocketConnect(c, ticket)
 
 	if err != nil {
 		err = fmt.Errorf("connect to pve err: %+v", err)

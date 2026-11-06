@@ -181,6 +181,21 @@ func responseJSONData(resp *http.Response, v interface{}) (err error) {
 	return json.Unmarshal(body, &v) // assume passed in type fully supports response
 }
 
+func (s *Session) getHttpTransport() (tr *http.Transport) {
+
+	tr, ok := s.httpClient.Transport.(*http.Transport)
+	if ok {
+		return tr
+	}
+	tr = &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+		//DisableKeepAlives: true,
+	}
+	return
+}
+
 func (s *Session) setAPIToken(token ApiTokenID, secret ApiTokenSecret) {
 	s.AuthToken = token.String() + "=" + secret.String()
 }
@@ -243,7 +258,6 @@ func (s *Session) BuildHeaders(headers map[string]string) (sessionHeaders http.H
 			sessionHeaders.Set(k, v)
 		}
 	}
-
 	return
 }
 func (s *Session) NewRequest(ctx context.Context, method, url string, headers *http.Header, body io.Reader) (req *http.Request, err error) {
