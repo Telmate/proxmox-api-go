@@ -334,6 +334,7 @@ func (config ConfigQemu) create(ctx context.Context, client *Client, ca *clientA
 	var pool PoolName
 	if config.Pool != nil && *config.Pool != "" {
 		params["pool"] = *config.Pool
+		pool = *config.Pool
 	}
 	var id GuestID
 	var node NodeName

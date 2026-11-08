@@ -41,7 +41,7 @@ func (ref *guestRef) check(ctx context.Context, kind *GuestType, c *clientAPI) (
 	var exists bool
 	raw, exists = raws.selectID(ref.ID)
 	if !exists {
-		return nil, errorMsg{}.guestDoesNotExist(ref.ID)
+		return nil, newExistenceError(ResourceTypeGuest)
 	}
 	tmpType := raw.GetType()
 	if kind != nil && tmpType != *kind {

@@ -34,14 +34,9 @@ func (c *clientAPI) getResourceList(ctx context.Context, resourceType string) ([
 
 // Makes a DELETE request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
-func (c *clientAPI) delete(ctx context.Context, url string) (retry bool, err error) {
-	_, retry, err = c.session.delete(ctx, url, nil, nil)
-	return
-}
-
-func (c *clientAPI) deleteRetry(ctx context.Context, url string, tries int) (err error) {
+func (c *clientAPI) delete(ctx context.Context, url string) (err error) {
 	var retry bool
-	for i := range time.Duration(tries) {
+	for i := range time.Duration(RequestRetryCount) {
 		_, retry, err = c.session.delete(ctx, url, nil, nil)
 		if err == nil {
 			return nil
@@ -116,8 +111,19 @@ func (c *clientAPI) getList(ctx context.Context, url, text, message string) ([]a
 
 // Makes a POST request without waiting on proxmox for the task to complete.
 // It returns the HTTP error as 'err'.
-func (c *clientAPI) post(ctx context.Context, url string, body *[]byte) error {
-	return c.postRawRetry(ctx, url, body, RequestRetryCount)
+func (c *clientAPI) post(ctx context.Context, url string, body *[]byte) (err error) {
+	var retry bool
+	for i := range time.Duration(RequestRetryCount) {
+		_, retry, err = c.session.post(ctx, url, nil, nil, body)
+		if err == nil {
+			return
+		}
+		if !retry {
+			return
+		}
+		time.Sleep((i + 1) * c.timeUnit)
+	}
+	return
 }
 
 func (c *clientAPI) postMap(ctx context.Context, url string, body *[]byte, text, message string) (map[string]any, error) {
@@ -129,21 +135,6 @@ func (c *clientAPI) postMap(ctx context.Context, url string, body *[]byte, text,
 		return v.(map[string]any), nil
 	}
 	return nil, errors.New(text + " " + message + " not readable")
-}
-
-func (c *clientAPI) postRawRetry(ctx context.Context, url string, body *[]byte, tries int) (err error) {
-	var retry bool
-	for i := range time.Duration(tries) {
-		_, retry, err = c.session.post(ctx, url, nil, nil, body)
-		if err == nil {
-			return
-		}
-		if !retry {
-			return
-		}
-		time.Sleep((i + 1) * c.timeUnit)
-	}
-	return
 }
 
 func (c *clientAPI) postJsonRetry(ctx context.Context, url string, body *[]byte, tries int) (response map[string]any, err error) {

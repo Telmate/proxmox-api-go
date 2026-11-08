@@ -178,7 +178,7 @@ func (config ConfigUser) CreateUser(ctx context.Context, client *Client) error {
 }
 
 func (config ConfigUser) create(ctx context.Context, c *clientAPI) error {
-	if err := c.postRawRetry(ctx, "/access/users", config.mapToApiCreate(), 3); err != nil {
+	if err := c.post(ctx, "/access/users", config.mapToApiCreate()); err != nil {
 		return errors.New("error creating User: " + err.Error())
 	}
 	if config.Password != nil {
@@ -475,7 +475,7 @@ func (id UserID) addGroups(ctx context.Context, groups *[]GroupName, c *clientAP
 }
 
 func (id UserID) delete(ctx context.Context, client *clientAPI) error {
-	return client.deleteRetry(ctx, "/access/users/"+id.String(), 3)
+	return client.delete(ctx, "/access/users/"+id.String())
 }
 
 func (id UserID) exists(ctx context.Context, c *clientAPI) (bool, error) {

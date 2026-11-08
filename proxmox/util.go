@@ -322,13 +322,23 @@ func isIPv6(address string) bool {
 	return strings.Count(address, ":") > 2
 }
 
-func splitStringOfOptions(options string) map[string]struct{} {
-	tmpOptions := strings.Split(options, ";")
-	optionMap := make(map[string]struct{}, len(tmpOptions))
-	for i := range tmpOptions {
-		optionMap[tmpOptions[i]] = struct{}{}
+func splitString(options string, separator byte) map[string]struct{} {
+	begin := 0
+	end := strings.IndexByte(options, separator)
+	optionMap := map[string]struct{}{}
+	if end <= 0 {
+		optionMap[options] = struct{}{}
+		return optionMap
 	}
-	return optionMap
+	for {
+		optionMap[options[begin:begin+end]] = struct{}{}
+		begin += end + 1
+		end = strings.IndexByte(options[begin:], separator)
+		if end <= 0 {
+			optionMap[options[begin:]] = struct{}{}
+			return optionMap
+		}
+	}
 }
 
 func splitStringOfSettings(settings string) map[string]string {

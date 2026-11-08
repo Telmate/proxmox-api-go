@@ -6,10 +6,6 @@ import (
 )
 
 const (
-	PermissionErrorPrefix string = "permission error:" // Check if an error starts with this to see if it's a permission error.
-)
-
-const (
 	key_Privileges_DatastoreAllocate         string = "Datastore.Allocate"
 	key_Privileges_DatastoreAllocateSpace    string = "Datastore.AllocateSpace"
 	key_Privileges_DatastoreAllocateTemplate string = "Datastore.AllocateTemplate"
@@ -96,7 +92,7 @@ func (p Permission) check(permissions map[permissionPath]privileges) error {
 }
 
 func (p Permission) error() error {
-	return errors.New(PermissionErrorPrefix + " the following privileges (" + p.Privileges.String() + ") are missing from path (" + string(p.Category.path().append(p.Item)) + ")")
+	return errors.New("permission error: the following privileges (" + p.Privileges.String() + ") are missing from path (" + string(p.Category.path().append(p.Item)) + ")")
 }
 
 func (p Permission) Validate() error {
@@ -259,120 +255,236 @@ type Privileges struct {
 	VMSnapshotRollback        bool `json:"VM.Snapshot.Rollback,omitempty"`
 }
 
+func (p *Privileges) parse(raw string) {
+	v := splitString(raw, ' ') // Not fully sure its space delimited
+	if _, ok := v[key_Privileges_DatastoreAllocate]; ok {
+		p.DatastoreAllocate = true
+	}
+	if _, ok := v[key_Privileges_DatastoreAllocateSpace]; ok {
+		p.DatastoreAllocateSpace = true
+	}
+	if _, ok := v[key_Privileges_DatastoreAllocateTemplate]; ok {
+		p.DatastoreAllocateTemplate = true
+	}
+	if _, ok := v[key_Privileges_DatastoreAudit]; ok {
+		p.DatastoreAudit = true
+	}
+	if _, ok := v[key_Privileges_GroupAllocate]; ok {
+		p.GroupAllocate = true
+	}
+	if _, ok := v[key_Privileges_PermissionsModify]; ok {
+		p.PermissionsModify = true
+	}
+	if _, ok := v[key_Privileges_PoolAllocate]; ok {
+		p.PoolAllocate = true
+	}
+	if _, ok := v[key_Privileges_PoolAudit]; ok {
+		p.PoolAudit = true
+	}
+	if _, ok := v[key_Privileges_RealmAllocate]; ok {
+		p.RealmAllocate = true
+	}
+	if _, ok := v[key_Privileges_RealmAllocateUser]; ok {
+		p.RealmAllocateUser = true
+	}
+	if _, ok := v[key_Privileges_SDNAllocate]; ok {
+		p.SDNAllocate = true
+	}
+	if _, ok := v[key_Privileges_SDNAudit]; ok {
+		p.SDNAudit = true
+	}
+	if _, ok := v[key_Privileges_SysAudit]; ok {
+		p.SysAudit = true
+	}
+	if _, ok := v[key_Privileges_SysConsole]; ok {
+		p.SysConsole = true
+	}
+	if _, ok := v[key_Privileges_SysIncoming]; ok {
+		p.SysIncoming = true
+	}
+	if _, ok := v[key_Privileges_SysModify]; ok {
+		p.SysModify = true
+	}
+	if _, ok := v[key_Privileges_SysPowerMgmt]; ok {
+		p.SysPowerMgmt = true
+	}
+	if _, ok := v[key_Privileges_SysSyslog]; ok {
+		p.SysSyslog = true
+	}
+	if _, ok := v[key_Privileges_UserModify]; ok {
+		p.UserModify = true
+	}
+	if _, ok := v[key_Privileges_VMAllocate]; ok {
+		p.VMAllocate = true
+	}
+	if _, ok := v[key_Privileges_VMAudit]; ok {
+		p.VMAudit = true
+	}
+	if _, ok := v[key_Privileges_VMBackup]; ok {
+		p.VMBackup = true
+	}
+	if _, ok := v[key_Privileges_VMClone]; ok {
+		p.VMClone = true
+	}
+	if _, ok := v[key_Privileges_VMConfigCDROM]; ok {
+		p.VMConfigCDROM = true
+	}
+	if _, ok := v[key_Privileges_VMConfigCPU]; ok {
+		p.VMConfigCPU = true
+	}
+	if _, ok := v[key_Privileges_VMConfigCloudinit]; ok {
+		p.VMConfigCloudinit = true
+	}
+	if _, ok := v[key_Privileges_VMConfigDisk]; ok {
+		p.VMConfigDisk = true
+	}
+	if _, ok := v[key_Privileges_VMConfigHWType]; ok {
+		p.VMConfigHWType = true
+	}
+	if _, ok := v[key_Privileges_VMConfigMemory]; ok {
+		p.VMConfigMemory = true
+	}
+	if _, ok := v[key_Privileges_VMConfigNetwork]; ok {
+		p.VMConfigNetwork = true
+	}
+	if _, ok := v[key_Privileges_VMConfigOptions]; ok {
+		p.VMConfigOptions = true
+	}
+	if _, ok := v[key_Privileges_VMConsole]; ok {
+		p.VMConsole = true
+	}
+	if _, ok := v[key_Privileges_VMMigrate]; ok {
+		p.VMMigrate = true
+	}
+	if _, ok := v[key_Privileges_VMMonitor]; ok {
+		p.VMMonitor = true
+	}
+	if _, ok := v[key_Privileges_VMPowerMgmt]; ok {
+		p.VMPowerMgmt = true
+	}
+	if _, ok := v[key_Privileges_VMSnapshot]; ok {
+		p.VMSnapshot = true
+	}
+	if _, ok := v[key_Privileges_VMSnapshotRollback]; ok {
+		p.VMSnapshotRollback = true
+	}
+}
+
 func (p Privileges) String() (privileges string) { // String is for fmt.Stringer.
+	var b strings.Builder
 	if p.DatastoreAllocate {
-		privileges += key_Privileges_DatastoreAllocate + ", "
+		b.WriteString(key_Privileges_DatastoreAllocate + ", ")
 	}
 	if p.DatastoreAllocateSpace {
-		privileges += key_Privileges_DatastoreAllocateSpace + ", "
+		b.WriteString(key_Privileges_DatastoreAllocateSpace + ", ")
 	}
 	if p.DatastoreAllocateTemplate {
-		privileges += key_Privileges_DatastoreAllocateTemplate + ", "
+		b.WriteString(key_Privileges_DatastoreAllocateTemplate + ", ")
 	}
 	if p.DatastoreAudit {
-		privileges += key_Privileges_DatastoreAudit + ", "
+		b.WriteString(key_Privileges_DatastoreAudit + ", ")
 	}
 	if p.GroupAllocate {
-		privileges += key_Privileges_GroupAllocate + ", "
+		b.WriteString(key_Privileges_GroupAllocate + ", ")
 	}
 	if p.PermissionsModify {
-		privileges += key_Privileges_PermissionsModify + ", "
+		b.WriteString(key_Privileges_PermissionsModify + ", ")
 	}
 	if p.PoolAllocate {
-		privileges += key_Privileges_PoolAllocate + ", "
+		b.WriteString(key_Privileges_PoolAllocate + ", ")
 	}
 	if p.PoolAudit {
-		privileges += key_Privileges_PoolAudit + ", "
+		b.WriteString(key_Privileges_PoolAudit + ", ")
 	}
 	if p.RealmAllocate {
-		privileges += key_Privileges_RealmAllocate + ", "
+		b.WriteString(key_Privileges_RealmAllocate + ", ")
 	}
 	if p.RealmAllocateUser {
-		privileges += key_Privileges_RealmAllocateUser + ", "
+		b.WriteString(key_Privileges_RealmAllocateUser + ", ")
 	}
 	if p.SDNAllocate {
-		privileges += key_Privileges_SDNAllocate + ", "
+		b.WriteString(key_Privileges_SDNAllocate + ", ")
 	}
 	if p.SDNAudit {
-		privileges += key_Privileges_SDNAudit + ", "
+		b.WriteString(key_Privileges_SDNAudit + ", ")
 	}
 	if p.SysAudit {
-		privileges += key_Privileges_SysAudit + ", "
+		b.WriteString(key_Privileges_SysAudit + ", ")
 	}
 	if p.SysConsole {
-		privileges += key_Privileges_SysConsole + ", "
+		b.WriteString(key_Privileges_SysConsole + ", ")
 	}
 	if p.SysIncoming {
-		privileges += key_Privileges_SysIncoming + ", "
+		b.WriteString(key_Privileges_SysIncoming + ", ")
 	}
 	if p.SysModify {
-		privileges += key_Privileges_SysModify + ", "
+		b.WriteString(key_Privileges_SysModify + ", ")
 	}
 	if p.SysPowerMgmt {
-		privileges += key_Privileges_SysPowerMgmt + ", "
+		b.WriteString(key_Privileges_SysPowerMgmt + ", ")
 	}
 	if p.SysSyslog {
-		privileges += key_Privileges_SysSyslog + ", "
+		b.WriteString(key_Privileges_SysSyslog + ", ")
 	}
 	if p.UserModify {
-		privileges += key_Privileges_UserModify + ", "
+		b.WriteString(key_Privileges_UserModify + ", ")
 	}
 	if p.VMAllocate {
-		privileges += key_Privileges_VMAllocate + ", "
+		b.WriteString(key_Privileges_VMAllocate + ", ")
 	}
 	if p.VMAudit {
-		privileges += key_Privileges_VMAudit + ", "
+		b.WriteString(key_Privileges_VMAudit + ", ")
 	}
 	if p.VMBackup {
-		privileges += key_Privileges_VMBackup + ", "
+		b.WriteString(key_Privileges_VMBackup + ", ")
 	}
 	if p.VMClone {
-		privileges += key_Privileges_VMClone + ", "
+		b.WriteString(key_Privileges_VMClone + ", ")
 	}
 	if p.VMConfigCDROM {
-		privileges += key_Privileges_VMConfigCDROM + ", "
+		b.WriteString(key_Privileges_VMConfigCDROM + ", ")
 	}
 	if p.VMConfigCPU {
-		privileges += key_Privileges_VMConfigCPU + ", "
+		b.WriteString(key_Privileges_VMConfigCPU + ", ")
 	}
 	if p.VMConfigCloudinit {
-		privileges += key_Privileges_VMConfigCloudinit + ", "
+		b.WriteString(key_Privileges_VMConfigCloudinit + ", ")
 	}
 	if p.VMConfigDisk {
-		privileges += key_Privileges_VMConfigDisk + ", "
+		b.WriteString(key_Privileges_VMConfigDisk + ", ")
 	}
 	if p.VMConfigHWType {
-		privileges += key_Privileges_VMConfigHWType + ", "
+		b.WriteString(key_Privileges_VMConfigHWType + ", ")
 	}
 	if p.VMConfigMemory {
-		privileges += key_Privileges_VMConfigMemory + ", "
+		b.WriteString(key_Privileges_VMConfigMemory + ", ")
 	}
 	if p.VMConfigNetwork {
-		privileges += key_Privileges_VMConfigNetwork + ", "
+		b.WriteString(key_Privileges_VMConfigNetwork + ", ")
 	}
 	if p.VMConfigOptions {
-		privileges += key_Privileges_VMConfigOptions + ", "
+		b.WriteString(key_Privileges_VMConfigOptions + ", ")
 	}
 	if p.VMConsole {
-		privileges += key_Privileges_VMConsole + ", "
+		b.WriteString(key_Privileges_VMConsole + ", ")
 	}
 	if p.VMMigrate {
-		privileges += key_Privileges_VMMigrate + ", "
+		b.WriteString(key_Privileges_VMMigrate + ", ")
 	}
 	if p.VMMonitor {
-		privileges += key_Privileges_VMMonitor + ", "
+		b.WriteString(key_Privileges_VMMonitor + ", ")
 	}
 	if p.VMPowerMgmt {
-		privileges += key_Privileges_VMPowerMgmt + ", "
+		b.WriteString(key_Privileges_VMPowerMgmt + ", ")
 	}
 	if p.VMSnapshot {
-		privileges += key_Privileges_VMSnapshot + ", "
+		b.WriteString(key_Privileges_VMSnapshot + ", ")
 	}
 	if p.VMSnapshotRollback {
-		privileges += key_Privileges_VMSnapshotRollback + ", "
+		b.WriteString(key_Privileges_VMSnapshotRollback + ", ")
 	}
-	if privileges != "" {
-		privileges = privileges[:len(privileges)-2]
+	if b.Len() > 0 {
+		return b.String()[:b.Len()-2]
 	}
 	return
 }

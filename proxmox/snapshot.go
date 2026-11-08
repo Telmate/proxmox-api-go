@@ -607,9 +607,9 @@ func (snap SnapshotName) readConfig(ctx context.Context, c *clientAPI, vmr VmRef
 func (snap SnapshotName) rollback(ctx context.Context, c *clientAPI, vmr VmRef, start bool) error {
 	var body *[]byte
 	if start {
-		body = util.Pointer([]byte("start=1"))
+		body = new([]byte("start=1"))
 	}
-	return c.postRawRetry(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback", body, 3)
+	return c.post(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback", body)
 }
 
 // Deprecated: use SnapshotInterface.Rollback() instead

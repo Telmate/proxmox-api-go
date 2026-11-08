@@ -174,30 +174,82 @@ func Test_floatToTrimmedString(t *testing.T) {
 	}
 }
 
-func Benchmark_splitStringOfSettings(b *testing.B) {
-	input := "mode=fast,debug=true,threads=8,logFile=/var/log/app.log,timeout=30,retries=5,featureX=enabled"
+func testData_splitString() []struct {
+	Input  string
+	Output map[string]struct{}
+} {
+	return []struct {
+		Input  string
+		Output map[string]struct{}
+	}{
+		{Input: "discard",
+			Output: map[string]struct{}{
+				"discard": {}}},
+		{Input: "discard;lazytime;noatime;nodev;noexec;nosuid",
+			Output: map[string]struct{}{
+				"discard":  {},
+				"lazytime": {},
+				"noatime":  {},
+				"nodev":    {},
+				"noexec":   {},
+				"nosuid":   {}}}}
+}
+
+func Benchmark_splitString(b *testing.B) {
+	testData := testData_splitString()
 	for b.Loop() {
-		_ = splitStringOfSettings(input)
+		for i := range testData {
+			_ = splitString(testData[i].Input, ';')
+		}
 	}
 }
 
-func Test_splitStringOfSettings(t *testing.T) {
+func Test_splitString(t *testing.T) {
 	t.Parallel()
-	testData := []struct {
+	testData := testData_splitString()
+	for _, e := range testData {
+		require.Equal(t, e.Output, splitString(e.Input, ';'))
+	}
+}
+
+func testData_splitStringOfSettings() []struct {
+	Input  string
+	Output map[string]string
+} {
+	return []struct {
 		Input  string
 		Output map[string]string
 	}{
-		{
-			Input: "setting=a,thing=b,randomString,doubleTest=value=equals,object=test",
+		{Input: "setting=a,thing=b,randomString,doubleTest=value=equals,object=test",
 			Output: map[string]string{
 				"setting":      "a",
 				"thing":        "b",
 				"randomString": "",
 				"doubleTest":   "value=equals",
-				"object":       "test",
-			},
-		},
+				"object":       "test"}},
+		{Input: "mode=fast,debug=true,threads=8,logFile=/var/log/app.log,timeout=30,retries=5,featureX=enabled",
+			Output: map[string]string{
+				"mode":     "fast",
+				"debug":    "true",
+				"threads":  "8",
+				"logFile":  "/var/log/app.log",
+				"timeout":  "30",
+				"retries":  "5",
+				"featureX": "enabled"}}}
+}
+
+func Benchmark_splitStringOfSettings(b *testing.B) {
+	testData := testData_splitStringOfSettings()
+	for b.Loop() {
+		for i := range testData {
+			_ = splitStringOfSettings(testData[i].Input)
+		}
 	}
+}
+
+func Test_splitStringOfSettings(t *testing.T) {
+	t.Parallel()
+	testData := testData_splitStringOfSettings()
 	for _, e := range testData {
 		require.Equal(t, e.Output, splitStringOfSettings(e.Input))
 	}

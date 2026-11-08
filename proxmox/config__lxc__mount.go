@@ -1031,7 +1031,7 @@ func (options *LxcMountOptions) mapToSDK(params string) {
 		NoDevice: &noDevice,
 		NoExec:   &noExec,
 		NoSuid:   &noSuid}
-	tmpOptions := splitStringOfOptions(params)
+	tmpOptions := splitString(params, ';')
 	if _, isSet := tmpOptions["discard"]; isSet {
 		discard = true
 	}
@@ -1233,7 +1233,7 @@ func (raw *rawConfigLXC) getBootMount(privileged bool) *LxcBootMount {
 		config.ACL = util.Pointer(TriBoolNone)
 	}
 	if v, isSet := settings["mountoptions"]; isSet {
-		options := splitStringOfOptions(v)
+		options := splitString(v, ';')
 		var discard, lazyTime, noATime, noSuid bool
 		mountOptions := LxcBootMountOptions{
 			Discard:  &discard,

@@ -209,7 +209,7 @@ func (t *task) cancel() (err error) {
 	t.cancelTask.Do(func() {
 		ctx, cancel := context.WithTimeout(t.ctx, 5*time.Second)
 		defer cancel()
-		err = t.client.deleteRetry(ctx, "/nodes/"+t.node+"/tasks/"+t.id, 3)
+		err = t.client.delete(ctx, "/nodes/"+t.node+"/tasks/"+t.id)
 		if err != nil {
 			t.setError(err)
 			return

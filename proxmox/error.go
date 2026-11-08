@@ -32,16 +32,6 @@ func (w *errorWrap) Unwrap() error { return w.err }
 
 type errorContext interface{ errorContext() string }
 
-var errGuestDoesNotExist = errors.New("guest does not exist")
-
-func (msg errorMsg) GuestDoesNotExist() error { return errGuestDoesNotExist }
-
-func (errorMsg) guestDoesNotExist(id GuestID) error {
-	return &errorWrapper[GuestID]{
-		err: Error.GuestDoesNotExist(),
-		id:  id}
-}
-
 var errGuestIsProtectedCantDelete = errors.New("cannot delete guest because it is protected")
 
 func (msg errorMsg) GuestIsProtectedCantDelete() error { return errGuestIsProtectedCantDelete }
@@ -122,3 +112,48 @@ func (e *VersionError) Error() string {
 }
 
 func (e *VersionError) Unwrap() error { return e.err }
+
+type ExistenceError struct {
+	err      error
+	Resource ResourceType
+}
+
+var errResourceDoesNotExist = errors.New("resource does not exist")
+
+func (msg errorMsg) ResourceDoesNotExist() error { return errResourceDoesNotExist }
+
+func newExistenceError(resource ResourceType) error {
+	return &ExistenceError{
+		err:      errResourceDoesNotExist,
+		Resource: resource,
+	}
+}
+
+func (e *ExistenceError) Error() string {
+	return "resource of type " + e.Resource.String() + " does not exist"
+}
+
+func (e *ExistenceError) Unwrap() error { return e.err }
+
+// ResourceType is an enum.
+//
+//	const (
+//		ResourceTypePool
+//		ResourceTypeGuest
+//	)
+type ResourceType int8
+
+const (
+	ResourceTypePool ResourceType = iota + 1
+	ResourceTypeGuest
+)
+
+func (r ResourceType) String() string {
+	switch r {
+	case ResourceTypePool:
+		return "pool"
+	case ResourceTypeGuest:
+		return "guest"
+	}
+	return ""
+}
