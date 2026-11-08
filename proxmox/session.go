@@ -250,14 +250,16 @@ func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err er
 			var bodyObj map[string]any
 			err = json.Unmarshal(respBody, &bodyObj)
 			if err == nil {
-				apiErr := ApiError{
-					Code: resp.Status[0:3],
-				}
-				if v, ok := bodyObj["errors"]; ok {
-					apiErr.Errors = v.(map[string]any)
-				}
+				var apiErr ApiError
 				if v, ok := bodyObj["message"]; ok {
 					apiErr.Message = strings.TrimRight(v.(string), "\n")
+				}
+				if err = newPermissionError(apiErr.Message); err != nil {
+					return resp, false, err
+				}
+				apiErr.Code = resp.Status[0:3]
+				if v, ok := bodyObj["errors"]; ok {
+					apiErr.Errors = v.(map[string]any)
 				}
 				return resp, false, &apiErr
 			}

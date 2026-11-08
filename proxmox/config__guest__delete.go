@@ -10,7 +10,7 @@ func (c *guestClient) Delete(ctx context.Context, vmr VmRef) (bool, error) {
 	ref := vmr.toGuestRef()
 	rawGuest, err := ref.check(ctx, nil, c.api)
 	if err != nil {
-		if errors.Is(err, Error.GuestDoesNotExist()) {
+		if _, ok := err.(*ExistenceError); ok {
 			return false, nil
 		}
 		return false, err

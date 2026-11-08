@@ -393,9 +393,9 @@ func Test_poolClient_Delete(t *testing.T) {
 				mockServer.RequestsErrorHandled(path, mockServer.GET, mockServer.HTTPerror{
 					Code:    400,
 					Message: `{"message":"pool 'test_pool' does not exist\n"}`})),
-			err: &ApiError{
-				Code:    "400",
-				Message: `pool 'test_pool' does not exist`}},
+			err: &ExistenceError{
+				Resource: ResourceTypePool,
+				err:      errResourceDoesNotExist}},
 		{name: `Validate error`,
 			err: errors.New("PoolName cannot be empty")},
 		{name: `500 internal server error`,
@@ -487,9 +487,18 @@ func Test_poolClient_Read(t *testing.T) {
 			requests: mockServer.RequestsErrorHandled(path, mockServer.GET, mockServer.HTTPerror{
 				Code:    400,
 				Message: `{"message":"pool 'test_pool' does not exist\n"}`}),
-			err: &ApiError{
-				Code:    "400",
-				Message: `pool 'test_pool' does not exist`}},
+			err: &ExistenceError{
+				err:      errResourceDoesNotExist,
+				Resource: ResourceTypePool}},
+		{name: `Permission error`,
+			pool: "test_pool",
+			requests: mockServer.RequestsErrorHandled(path, mockServer.GET, mockServer.HTTPerror{
+				Code:    403,
+				Message: `{"message":"Permission check failed (/pool/Test_Pool_Exists_No_Permission, Pool.Audit)\n"}`}),
+			err: &PermissionError{
+				Privileges: &Privileges{PoolAudit: true},
+				Path:       new("/pool/Test_Pool_Exists_No_Permission"),
+				err:        errPermission}},
 		{name: `500 internal server error`,
 			pool:     "test_pool",
 			requests: mockServer.RequestsError(path, mockServer.GET, 500, 3),
@@ -773,9 +782,9 @@ func Test_poolClient_Update(t *testing.T) {
 			requests: mockServer.RequestsErrorHandled("/pools/test_pool", mockServer.GET, mockServer.HTTPerror{
 				Code:    400,
 				Message: `{"message":"pool 'test_pool' does not exist\n"}`}),
-			err: &ApiError{
-				Code:    "400",
-				Message: `pool 'test_pool' does not exist`}},
+			err: &ExistenceError{
+				err:      errResourceDoesNotExist,
+				Resource: ResourceTypePool}},
 		{name: `500 internal server error while reading`,
 			pool: ConfigPool{
 				Name:   "test_pool",

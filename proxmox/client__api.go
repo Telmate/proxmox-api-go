@@ -40,12 +40,11 @@ func (c *clientAPI) createHaRule(ctx context.Context, params map[string]any) err
 }
 
 func (c *clientAPI) deleteHaResource(ctx context.Context, id GuestID) error {
-	return c.deleteRetry(ctx, "/cluster/ha/resources/"+id.String(), 3)
+	return c.delete(ctx, "/cluster/ha/resources/"+id.String())
 }
 
 func (c *clientAPI) deleteHaRule(ctx context.Context, id HaRuleID) error {
-	_, err := c.delete(ctx, "/cluster/ha/rules/"+id.String())
-	return err
+	return c.delete(ctx, "/cluster/ha/rules/"+id.String())
 }
 
 func (c *clientAPI) getGuestConfig(ctx context.Context, ref guestRef) (vmConfig map[string]any, err error) {

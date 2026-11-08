@@ -207,7 +207,7 @@ func (config ConfigGroup) Create(ctx context.Context, client *Client) error {
 }
 
 func (config ConfigGroup) create(ctx context.Context, c *clientAPI) error {
-	if err := c.postRawRetry(ctx, "/access/groups", config.mapToApiCreate(), 3); err != nil {
+	if err := c.post(ctx, "/access/groups", config.mapToApiCreate()); err != nil {
 		return err
 	}
 	if config.Members != nil {
@@ -446,7 +446,7 @@ func (group GroupName) Delete(ctx context.Context, client *Client) error {
 }
 
 func (group GroupName) delete(ctx context.Context, c *clientAPI) (bool, error) {
-	if err := c.deleteRetry(ctx, "/access/groups/"+group.String(), 3); err != nil {
+	if err := c.delete(ctx, "/access/groups/"+group.String()); err != nil {
 		if apiErr, ok := err.(*ApiError); ok {
 			if strings.HasPrefix(apiErr.Message, "delete group failed: group '"+group.String()+"' does not exist") {
 				return false, nil

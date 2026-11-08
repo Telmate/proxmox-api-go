@@ -127,12 +127,12 @@ func (c *poolClient) Read(ctx context.Context, pool PoolName) (RawPoolInfo, erro
 }
 
 func (c *poolClient) ReadNoCheck(ctx context.Context, pool PoolName) (RawPoolInfo, error) {
-	raw, errExists, err := pool.read(ctx, c.api)
+	raw, exists, err := pool.read(ctx, c.api)
 	if err != nil {
 		return nil, err
 	}
-	if errExists != nil {
-		return nil, errExists
+	if !exists {
+		return nil, newExistenceError(ResourceTypePool)
 	}
 	return raw, nil
 }
@@ -163,11 +163,11 @@ func (c *poolClient) Set(ctx context.Context, config ConfigPool) error {
 }
 
 func (c *poolClient) SetNoCheck(ctx context.Context, config ConfigPool) error {
-	raw, errExists, err := config.Name.read(ctx, c.api)
+	raw, exists, err := config.Name.read(ctx, c.api)
 	if err != nil {
 		return err
 	}
-	if errExists != nil { // Create
+	if !exists { // Create
 		return config.create(ctx, c.api, c.oldClient)
 	}
 	return config.update(ctx, c.api, c.oldClient, raw)
@@ -184,13 +184,13 @@ func (c *poolClient) UpdateNoCheck(ctx context.Context, config ConfigPool) error
 	var current *rawPoolInfo
 	if config.Guests != nil || config.Storages != nil {
 		var err error
-		var errExists error
-		current, errExists, err = config.Name.read(ctx, c.api)
+		var exists bool
+		current, exists, err = config.Name.read(ctx, c.api)
 		if err != nil {
 			return err
 		}
-		if errExists != nil {
-			return errExists
+		if !exists {
+			return newExistenceError(ResourceTypePool)
 		}
 	}
 	return config.update(ctx, c.api, c.oldClient, current)
@@ -322,7 +322,7 @@ func (config ConfigPool) mapToApi(current *ConfigPool) map[string]any {
 }
 
 func (config ConfigPool) create(ctx context.Context, c *clientAPI, oldClient *Client) error {
-	if err := c.postRawRetry(ctx, "/pools", config.mapToApiCreate(), 3); err != nil {
+	if err := c.post(ctx, "/pools", config.mapToApiCreate()); err != nil {
 		return err
 	}
 	if config.Guests != nil || config.Storages != nil {
@@ -829,7 +829,7 @@ func (pool PoolName) AddGuestsNoCheck(ctx context.Context, c *Client, guestIDs [
 
 func (pool PoolName) delete(ctx context.Context, c *clientAPI) (bool, error) {
 	url := "/pools/" + pool.String()
-	if err := c.deleteRetry(ctx, url, 3); err != nil {
+	if err := c.delete(ctx, url); err != nil {
 		if apiErr, ok := err.(*ApiError); ok {
 			const prefix = "delete pool failed: pool '"
 			const prefixLen = len(prefix)
@@ -838,7 +838,7 @@ func (pool PoolName) delete(ctx context.Context, c *clientAPI) (bool, error) {
 					if err = pool.empty(ctx, c); err != nil {
 						return false, err
 					}
-					if err = c.deleteRetry(ctx, url, 3); err != nil {
+					if err = c.delete(ctx, url); err != nil {
 						return false, err
 					}
 					return true, nil
@@ -866,12 +866,12 @@ func (pool PoolName) DeleteNoCheck(ctx context.Context, c *Client) error {
 }
 
 func (pool PoolName) empty(ctx context.Context, c *clientAPI) error {
-	raw, errExists, err := pool.read(ctx, c)
+	raw, exists, err := pool.read(ctx, c)
 	if err != nil {
 		return err
 	}
-	if errExists != nil {
-		return errExists
+	if !exists {
+		return newExistenceError(ResourceTypePool)
 	}
 	guests, storages := raw.getMembers().arrays()
 	return pool.removeMembers(ctx, c, guests, storages)
@@ -882,7 +882,7 @@ func (pool PoolName) exists(ctx context.Context, c *clientAPI) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return exists == nil, nil
+	return exists, nil
 }
 
 // Deprecated: use PoolInterface.Exists() instead.
@@ -910,18 +910,18 @@ func (pool PoolName) put(ctx context.Context, c *clientAPI, body *[]byte) error 
 }
 
 // errExists is non-nil if the pool does not exist.
-func (pool PoolName) read(ctx context.Context, c *clientAPI) (r *rawPoolInfo, errExists error, err error) {
+func (pool PoolName) read(ctx context.Context, c *clientAPI) (r *rawPoolInfo, exists bool, err error) {
 	var raw map[string]any
 	raw, err = c.getMap(ctx, "/pools/"+pool.String(), "pool", "CONFIG")
 	if err != nil {
 		if apiErr, ok := err.(*ApiError); ok { // check for not found
 			if strings.HasPrefix(apiErr.Message, "pool '"+pool.String()+"' does not exist") {
-				return nil, err, nil
+				return nil, false, nil
 			}
 		}
-		return nil, nil, err
+		return nil, false, err
 	}
-	return &rawPoolInfo{a: raw}, nil, nil
+	return &rawPoolInfo{a: raw}, true, nil
 }
 
 func (pool PoolName) removeMembers(ctx context.Context, c *clientAPI, guests *[]GuestID, storages *[]StorageName) error {

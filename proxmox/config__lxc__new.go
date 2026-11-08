@@ -163,7 +163,7 @@ func (c *lxcGuestClient) Update(ctx context.Context, vmr VmRef, allowRestart boo
 			}
 			raw, ok := raws.selectID(ref.ID)
 			if !ok {
-				return errorMsg{}.guestDoesNotExist(ref.ID)
+				return newExistenceError(ResourceTypeGuest)
 			}
 			state = raw.GetState()
 			pool = raw.GetPool()
@@ -201,7 +201,7 @@ func (c *lxcGuestClient) UpdateNoCheck(ctx context.Context, vmr VmRef, allowRest
 		}
 		raw, ok := raws.selectID(ref.ID)
 		if !ok {
-			return errorMsg{}.guestDoesNotExist(ref.ID)
+			return newExistenceError(ResourceTypeGuest)
 		}
 		state = raw.GetState()
 		pool = raw.GetPool()

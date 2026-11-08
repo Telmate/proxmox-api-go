@@ -297,7 +297,7 @@ type ApiTokenID struct {
 }
 
 func (id ApiTokenID) delete(ctx context.Context, c *clientAPI) (bool, error) {
-	err := c.deleteRetry(ctx, "/access/users/"+id.User.String()+"/token/"+id.TokenName.String(), 3)
+	err := c.delete(ctx, "/access/users/"+id.User.String()+"/token/"+id.TokenName.String())
 	if apiErr, ok := err.(*ApiError); ok {
 		if strings.HasPrefix(apiErr.Message, "no such token ") {
 			return false, nil

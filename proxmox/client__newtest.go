@@ -63,7 +63,7 @@ func (c *clientNewTest) guestCheckVmRef_Unsafe(ctx context.Context, vmr *VmRef) 
 		}
 		rawGuest, ok := raw.selectID(vmr.vmId)
 		if !ok {
-			return errorMsg{}.guestDoesNotExist(vmr.vmId)
+			return newExistenceError(ResourceTypeGuest)
 		}
 		vmr.node = rawGuest.GetNode()
 		vmr.vmType = rawGuest.GetType()
