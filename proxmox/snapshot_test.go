@@ -66,7 +66,7 @@ func Test_snapshotClient_CreateLxc(t *testing.T) {
 					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
 			)},
 		{name: `Validate error`,
-			err: errors.New(SnapshotName_Error_MinLength)},
+			err: &ValidateError{Message: SnapshotName_Error_MinLength}},
 		{name: `Error Listing VMs`,
 			guest:        VmRef{vmId: 100},
 			snapshotName: SnapshotName("mySnap"),
@@ -144,7 +144,7 @@ func Test_snapshotClient_CreateQemu(t *testing.T) {
 					map[string]any{"data": map[string]any{"exitstatus": string("OK")}}),
 			)},
 		{name: `Validate error`,
-			err: errors.New(SnapshotName_Error_MinLength)},
+			err: &ValidateError{Message: SnapshotName_Error_MinLength}},
 		{name: `Error Listing VMs`,
 			guest:        VmRef{vmId: 100},
 			snapshotName: SnapshotName("mySnap"),
@@ -214,7 +214,7 @@ func Test_snapshotClient_Delete(t *testing.T) {
 					map[string]any{"data": map[string]any{"exitstatus": string(`snapshot 'snap1' does not exist`)}}),
 			)},
 		{name: `Validate error`,
-			err: errors.New(SnapshotName_Error_MinLength)},
+			err: &ValidateError{Message: SnapshotName_Error_MinLength}},
 		{name: `Error Listing VMs`,
 			guest:        VmRef{vmId: 100},
 			snapshotName: SnapshotName("mySnap"),
@@ -439,7 +439,7 @@ func Test_snapshotClient_ReadLxc(t *testing.T) {
 				}))},
 		{name: `Validate error`,
 			snapName: SnapshotName(""),
-			err:      errors.New(SnapshotName_Error_MinLength)},
+			err:      &ValidateError{Message: SnapshotName_Error_MinLength}},
 		{name: `Error during getting VmRef`,
 			guest:    VmRef{vmId: 200},
 			snapName: SnapshotName("snap1"),
@@ -529,7 +529,7 @@ func Test_snapshotClient_ReadQemu(t *testing.T) {
 				}))},
 		{name: `Validate error`,
 			snapName: SnapshotName(""),
-			err:      errors.New(SnapshotName_Error_MinLength)},
+			err:      &ValidateError{Message: SnapshotName_Error_MinLength}},
 		{name: `Error during getting VmRef`,
 			guest:    VmRef{vmId: 200},
 			snapName: SnapshotName("snap1"),
@@ -589,7 +589,7 @@ func Test_snapshotClient_Rollback(t *testing.T) {
 			)},
 		{name: `Validate error`,
 			snapName: SnapshotName(""),
-			err:      errors.New(SnapshotName_Error_MinLength)},
+			err:      &ValidateError{Message: SnapshotName_Error_MinLength}},
 		{name: `Error during getting VmRef`,
 			guest:    VmRef{vmId: 200},
 			snapName: SnapshotName("snap1"),
@@ -648,7 +648,7 @@ func Test_snapshotClient_Update(t *testing.T) {
 			)},
 		{name: `Validate error`,
 			snapName: SnapshotName(""),
-			err:      errors.New(SnapshotName_Error_MinLength)},
+			err:      &ValidateError{Message: SnapshotName_Error_MinLength}},
 		{name: `Error during getting VmRef`,
 			guest:    VmRef{vmId: 200},
 			snapName: SnapshotName("snap1"),
@@ -707,35 +707,34 @@ func Test_RawSnapshots_AsArray(t *testing.T) {
 	}{
 		{name: `missing name, should never happen`,
 			input: rawSnapshots{
-				a: []any{map[string]any{
-					"description": "You are here!",
-				}}},
+				a: []responseSnapshotInfo{
+					{Description: "You are here!"}}},
 			output: []SnapshotInfo{{Description: "You are here!"}}},
 		{name: `only current snapshot`,
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{
-						"name":        "current",
-						"description": "You are here!"}}},
+				a: []responseSnapshotInfo{
+					{
+						Name:        "current",
+						Description: "You are here!"}}},
 			output: []SnapshotInfo{
 				{Name: "current", Description: "You are here!"}}},
 		{name: `multiple snapshots`,
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{
-						"name":        "snap1",
-						"snaptime":    float64(1700000000),
-						"description": "First snapshot",
-						"vmstate":     float64(1)},
-					map[string]any{
-						"name":     "snap2",
-						"snaptime": float64(1700000100),
-						"parent":   "snap1",
-						"vmstate":  float64(0)},
-					map[string]any{
-						"name":        "current",
-						"description": "You are here!",
-						"parent":      "snap2"}}},
+				a: []responseSnapshotInfo{
+					{
+						Name:        "snap1",
+						Time:        new(int64(1700000000)),
+						Description: "First snapshot",
+						State:       new(int8(1))},
+					{
+						Name:   "snap2",
+						Time:   new(int64(1700000100)),
+						Parent: new("snap1"),
+						State:  new(int8(0))},
+					{
+						Name:        "current",
+						Description: "You are here!",
+						Parent:      new("snap2")}}},
 			output: []SnapshotInfo{
 				{Name: "snap1",
 					Time:        util.Pointer(time.Unix(1700000000, 0)),
@@ -767,33 +766,33 @@ func Test_RawSnapshots_Iter(t *testing.T) {
 		output []SnapshotName
 	}{
 		{name: `Empty`,
-			input:  rawSnapshots{a: []any{}},
+			input:  rawSnapshots{a: []responseSnapshotInfo{}},
 			output: nil},
 		{name: `One snapshot`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
 			}},
 			output: []SnapshotName{"snap1"}},
 		{name: `Multiple snapshots`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
-				map[string]any{"name": "snap2"},
-				map[string]any{"name": "snap3"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
+				{Name: "snap2"},
+				{Name: "snap3"},
 			}},
 			output: []SnapshotName{"snap1", "snap2", "snap3"}},
 		{name: `Snapshots with full data`,
-			input: rawSnapshots{a: []any{
-				map[string]any{
-					"name":        "snapshot1",
-					"description": "First snapshot",
-					"snaptime":    float64(1609459200),
-					"vmstate":     float64(1),
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{
+					Name:        "snapshot1",
+					Description: "First snapshot",
+					Time:        new(int64(1609459200)),
+					State:       new(int8(1)),
 				},
-				map[string]any{
-					"name":        "snapshot2",
-					"description": "Second snapshot",
-					"snaptime":    float64(1609545600),
-					"parent":      "snapshot1",
+				{
+					Name:        "snapshot2",
+					Description: "Second snapshot",
+					Time:        new(int64(1609545600)),
+					Parent:      new("snapshot1"),
 				},
 			}},
 			output: []SnapshotName{"snapshot1", "snapshot2"}},
@@ -809,10 +808,10 @@ func Test_RawSnapshots_Iter(t *testing.T) {
 	}
 	// Test early termination
 	t.Run("Early termination", func(*testing.T) {
-		input := rawSnapshots{a: []any{
-			map[string]any{"name": "snap1"},
-			map[string]any{"name": "snap2"},
-			map[string]any{"name": "snap3"},
+		input := rawSnapshots{a: []responseSnapshotInfo{
+			{Name: "snap1"},
+			{Name: "snap2"},
+			{Name: "snap3"},
 		}}
 		count := 0
 		for range RawSnapshots(&input).Iter() {
@@ -833,32 +832,32 @@ func Test_RawSnapshots_Len(t *testing.T) {
 		output int
 	}{
 		{name: `Empty`,
-			input:  rawSnapshots{a: []any{}},
+			input:  rawSnapshots{a: []responseSnapshotInfo{}},
 			output: 0},
 		{name: `One snapshot`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
 			}},
 			output: 1},
 		{name: `Multiple snapshots`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
-				map[string]any{"name": "snap2"},
-				map[string]any{"name": "snap3"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
+				{Name: "snap2"},
+				{Name: "snap3"},
 			}},
 			output: 3},
 		{name: `Many snapshots`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
-				map[string]any{"name": "snap2"},
-				map[string]any{"name": "snap3"},
-				map[string]any{"name": "snap4"},
-				map[string]any{"name": "snap5"},
-				map[string]any{"name": "snap6"},
-				map[string]any{"name": "snap7"},
-				map[string]any{"name": "snap8"},
-				map[string]any{"name": "snap9"},
-				map[string]any{"name": "snap10"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
+				{Name: "snap2"},
+				{Name: "snap3"},
+				{Name: "snap4"},
+				{Name: "snap5"},
+				{Name: "snap6"},
+				{Name: "snap7"},
+				{Name: "snap8"},
+				{Name: "snap9"},
+				{Name: "snap10"},
 			}},
 			output: 10},
 	}
@@ -879,170 +878,170 @@ func Test_RawSnapshots_SelectSnapshot(t *testing.T) {
 		output   RawSnapshotInfo
 	}{
 		{name: `Empty list`,
-			input:    rawSnapshots{a: []any{}},
+			input:    rawSnapshots{a: []responseSnapshotInfo{}},
 			snapshot: SnapshotName("snap1")},
 		{name: `Single snapshot - found`,
-			input: rawSnapshots{a: []any{
-				map[string]any{
-					"name":        "snap1",
-					"description": "First snapshot",
-					"snaptime":    float64(1700000000)},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{
+					Name:        "snap1",
+					Description: "First snapshot",
+					Time:        new(int64(1700000000))},
 			}},
 			snapshot: SnapshotName("snap1"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":        "snap1",
-				"description": "First snapshot",
-				"snaptime":    float64(1700000000)}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:        "snap1",
+				Description: "First snapshot",
+				Time:        new(int64(1700000000))}}},
 		{name: `Single snapshot - not found`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
 			}},
 			snapshot: SnapshotName("snap2")},
 		{name: `Multiple snapshots - found first`,
-			input: rawSnapshots{a: []any{
-				map[string]any{
-					"name":        "snap1",
-					"description": "First snapshot",
-					"snaptime":    float64(1700000000)},
-				map[string]any{"name": "snap2"},
-				map[string]any{"name": "snap3"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{
+					Name:        "snap1",
+					Description: "First snapshot",
+					Time:        new(int64(1700000000))},
+				{Name: "snap2"},
+				{Name: "snap3"},
 			}},
 			snapshot: SnapshotName("snap1"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":        "snap1",
-				"description": "First snapshot",
-				"snaptime":    float64(1700000000)}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:        "snap1",
+				Description: "First snapshot",
+				Time:        new(int64(1700000000))}}},
 		{name: `Multiple snapshots - found middle`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
-				map[string]any{
-					"name":        "snap2",
-					"description": "Middle snapshot",
-					"snaptime":    float64(1700000100),
-					"vmstate":     float64(1)},
-				map[string]any{"name": "snap3"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
+				{
+					Name:        "snap2",
+					Description: "Middle snapshot",
+					Time:        new(int64(1700000100)),
+					State:       new(int8(1))},
+				{Name: "snap3"},
 			}},
 			snapshot: SnapshotName("snap2"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":        "snap2",
-				"description": "Middle snapshot",
-				"snaptime":    float64(1700000100),
-				"vmstate":     float64(1)}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:        "snap2",
+				Description: "Middle snapshot",
+				Time:        new(int64(1700000100)),
+				State:       new(int8(1))}}},
 		{name: `Multiple snapshots - found last`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
-				map[string]any{"name": "snap2"},
-				map[string]any{
-					"name":        "snap3",
-					"description": "Last snapshot",
-					"snaptime":    float64(1700000200),
-					"parent":      "snap2"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
+				{Name: "snap2"},
+				{
+					Name:        "snap3",
+					Description: "Last snapshot",
+					Time:        new(int64(1700000200)),
+					Parent:      new("snap2")},
 			}},
 			snapshot: SnapshotName("snap3"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":        "snap3",
-				"description": "Last snapshot",
-				"snaptime":    float64(1700000200),
-				"parent":      "snap2"}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:        "snap3",
+				Description: "Last snapshot",
+				Time:        new(int64(1700000200)),
+				Parent:      new("snap2")}}},
 		{name: `Multiple snapshots - not found`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
-				map[string]any{"name": "snap2"},
-				map[string]any{"name": "snap3"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
+				{Name: "snap2"},
+				{Name: "snap3"},
 			}},
 			snapshot: SnapshotName("snap4")},
 		{name: `Current snapshot`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
-				map[string]any{
-					"name":        "current",
-					"description": "You are here!",
-					"parent":      "snap1"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
+				{
+					Name:        "current",
+					Description: "You are here!",
+					Parent:      new("snap1")},
 			}},
 			snapshot: SnapshotName("current"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":        "current",
-				"description": "You are here!",
-				"parent":      "snap1"}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:        "current",
+				Description: "You are here!",
+				Parent:      new("snap1")}}},
 		{name: `Snapshot with all fields`,
-			input: rawSnapshots{a: []any{
-				map[string]any{
-					"name":        "full-snap",
-					"description": "Complete snapshot" + body.Symbols,
-					"snaptime":    float64(1700000300),
-					"vmstate":     float64(1),
-					"parent":      "previous-snap"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{
+					Name:        "full-snap",
+					Description: "Complete snapshot" + body.Symbols,
+					Time:        new(int64(1700000300)),
+					State:       new(int8(1)),
+					Parent:      new("previous-snap")},
 			}},
 			snapshot: SnapshotName("full-snap"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":        "full-snap",
-				"description": "Complete snapshot" + body.Symbols,
-				"snaptime":    float64(1700000300),
-				"vmstate":     float64(1),
-				"parent":      "previous-snap"}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:        "full-snap",
+				Description: "Complete snapshot" + body.Symbols,
+				Time:        new(int64(1700000300)),
+				State:       new(int8(1)),
+				Parent:      new("previous-snap")}}},
 		{name: `Many snapshots - found`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "snap1"},
-				map[string]any{"name": "snap2"},
-				map[string]any{"name": "snap3"},
-				map[string]any{"name": "snap4"},
-				map[string]any{"name": "snap5"},
-				map[string]any{
-					"name":        "target-snap",
-					"description": "Target snapshot",
-					"snaptime":    float64(1700001000)},
-				map[string]any{"name": "snap7"},
-				map[string]any{"name": "snap8"},
-				map[string]any{"name": "snap9"},
-				map[string]any{"name": "snap10"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "snap1"},
+				{Name: "snap2"},
+				{Name: "snap3"},
+				{Name: "snap4"},
+				{Name: "snap5"},
+				{
+					Name:        "target-snap",
+					Description: "Target snapshot",
+					Time:        new(int64(1700001000))},
+				{Name: "snap7"},
+				{Name: "snap8"},
+				{Name: "snap9"},
+				{Name: "snap10"},
 			}},
 			snapshot: SnapshotName("target-snap"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":        "target-snap",
-				"description": "Target snapshot",
-				"snaptime":    float64(1700001000)}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:        "target-snap",
+				Description: "Target snapshot",
+				Time:        new(int64(1700001000))}}},
 		{name: `Snapshot with vmstate 0`,
-			input: rawSnapshots{a: []any{
-				map[string]any{
-					"name":     "no-vmstate",
-					"vmstate":  float64(0),
-					"snaptime": float64(1700000400)},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{
+					Name:  "no-vmstate",
+					State: new(int8(0)),
+					Time:  new(int64(1700000400))},
 			}},
 			snapshot: SnapshotName("no-vmstate"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":     "no-vmstate",
-				"vmstate":  float64(0),
-				"snaptime": float64(1700000400)}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:  "no-vmstate",
+				State: new(int8(0)),
+				Time:  new(int64(1700000400))}}},
 		{name: `Snapshot with special characters in name`,
-			input: rawSnapshots{a: []any{
-				map[string]any{
-					"name":        "Test_Case-123_456_789_0",
-					"description": "Special chars in name"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{
+					Name:        "Test_Case-123_456_789_0",
+					Description: "Special chars in name"},
 			}},
 			snapshot: SnapshotName("Test_Case-123_456_789_0"),
 			exists:   true,
-			output: &rawSnapshotInfo{a: map[string]any{
-				"name":        "Test_Case-123_456_789_0",
-				"description": "Special chars in name"}}},
+			output: &rawSnapshotInfo{a: &responseSnapshotInfo{
+				Name:        "Test_Case-123_456_789_0",
+				Description: "Special chars in name"}}},
 		{name: `Case sensitive - exact match`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "MySnap"},
-				map[string]any{"name": "mysnap"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "MySnap"},
+				{Name: "mysnap"},
 			}},
 			snapshot: SnapshotName("MySnap"),
 			exists:   true,
-			output:   &rawSnapshotInfo{a: map[string]any{"name": "MySnap"}}},
+			output:   &rawSnapshotInfo{a: &responseSnapshotInfo{Name: "MySnap"}}},
 		{name: `Case sensitive - no match`,
-			input: rawSnapshots{a: []any{
-				map[string]any{"name": "MySnap"},
+			input: rawSnapshots{a: []responseSnapshotInfo{
+				{Name: "MySnap"},
 			}},
 			snapshot: SnapshotName("mysnap")},
 	}
@@ -1284,8 +1283,8 @@ func test_RawSnapshotTree_Current_and_Root_data() []struct {
 	}{
 		{name: "Single current snapshot",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "current", "description": "You are here!"}}},
+				a: []responseSnapshotInfo{
+					{Name: "current", Description: "You are here!"}}},
 			current: &Snapshot{Name: "current", Description: "You are here!"},
 			root: []*Snapshot{
 				util.Pointer(Snapshot{
@@ -1294,38 +1293,38 @@ func test_RawSnapshotTree_Current_and_Root_data() []struct {
 				})}},
 		{name: "single chain of 5 snapshots",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "a", "snaptime": float64(1700000100), "parent": "root1", "description": "This is snap2"},
-					map[string]any{"name": "b", "snaptime": float64(1700000200), "parent": "a"},
-					map[string]any{"name": "c", "snaptime": float64(1700000300), "parent": "b"},
-					map[string]any{"name": "current", "parent": "c", "description": "You are here!"},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "a", Time: new(int64(1700000100)), Parent: new("root1"), Description: "This is snap2"},
+					{Name: "b", Time: new(int64(1700000200)), Parent: new("a")},
+					{Name: "c", Time: new(int64(1700000300)), Parent: new("b")},
+					{Name: "current", Parent: new("c"), Description: "You are here!"},
 				}},
 			root:    root([]string{"root1"}, single_chain_of_5_snapshots()),
 			current: current(single_chain_of_5_snapshots())},
 		{name: "single chain of 25 snapshots",
 			input: rawSnapshots{
-				a: func() []any {
-					snaps := []any{
-						map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+				a: func() []responseSnapshotInfo {
+					snaps := []responseSnapshotInfo{
+						{Name: "root1", Time: new(int64(1700000000))},
 					}
 					for i := 1; i <= 23; i++ {
 						snapName := fmt.Sprintf("snap%d", i)
-						snaps = append(snaps, map[string]any{
-							"name":     snapName,
-							"snaptime": float64(1700000000 + i*100),
-							"parent": func() string {
+						snaps = append(snaps, responseSnapshotInfo{
+							Name: snapName,
+							Time: new(int64(1700000000 + i*100)),
+							Parent: func() *string {
 								if i == 1 {
-									return "root1"
+									return new("root1")
 								}
-								return fmt.Sprintf("snap%d", i-1)
+								return new(fmt.Sprintf("snap%d", i-1))
 							}(),
 						})
 					}
-					snaps = append(snaps, map[string]any{
-						"name":        "current",
-						"parent":      "snap23",
-						"description": "You are here!",
+					snaps = append(snaps, responseSnapshotInfo{
+						Name:        "current",
+						Parent:      new("snap23"),
+						Description: "You are here!",
 					})
 					return snaps
 				}(),
@@ -1334,22 +1333,22 @@ func test_RawSnapshotTree_Current_and_Root_data() []struct {
 			current: current(single_chain_of_25_snapshots())},
 		{name: "wide 25 snapshots",
 			input: rawSnapshots{
-				a: func() []any {
-					snaps := []any{
-						map[string]any{"name": "root1", "snaptime": float64(1700000000)},
+				a: func() []responseSnapshotInfo {
+					snaps := []responseSnapshotInfo{
+						{Name: "root1", Time: new(int64(1700000000))},
 					}
 					for i := 1; i <= 3; i++ {
 						snapName := fmt.Sprintf("snap%d", i)
-						snaps = append(snaps, map[string]any{
-							"name":     snapName,
-							"snaptime": float64(1700000000 + i*100),
-							"parent":   "root1",
+						snaps = append(snaps, responseSnapshotInfo{
+							Name:   snapName,
+							Time:   new(int64(1700000000 + i*100)),
+							Parent: new("root1"),
 						})
 					}
-					return append(snaps, map[string]any{
-						"name":        "current",
-						"parent":      "root1",
-						"description": "You are here!",
+					return append(snaps, responseSnapshotInfo{
+						Name:        "current",
+						Parent:      new("root1"),
+						Description: "You are here!",
 					})
 				}(),
 			},
@@ -1357,56 +1356,56 @@ func test_RawSnapshotTree_Current_and_Root_data() []struct {
 			current: current(wide_25_snapshots())},
 		{name: "Multiple root snapshots trees",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "1aaba", "snaptime": float64(1700000500), "parent": "1aab"},
-					map[string]any{"name": "1aa", "snaptime": float64(1700000200), "parent": "1a"},
-					map[string]any{"name": "1aab", "snaptime": float64(1700000400), "parent": "1aa"},
-					map[string]any{"name": "1aaa", "snaptime": float64(1700000300), "parent": "1aa"},
-					map[string]any{"name": "1bb", "snaptime": float64(1700001300), "parent": "1b"},
-					map[string]any{"name": "1aac", "snaptime": float64(1700000600), "parent": "1aa"},
-					map[string]any{"name": "1ac", "snaptime": float64(1700000900), "parent": "1a"},
-					map[string]any{"name": "1ab", "snaptime": float64(1700000700), "parent": "1a", "vmstate": float64(1)},
-					map[string]any{"name": "1aba", "snaptime": float64(1700000800), "parent": "1ab"},
-					map[string]any{"name": "1bba", "snaptime": float64(1700001400), "parent": "1bb"},
-					map[string]any{"name": "1ba", "snaptime": float64(1700001100), "parent": "1b"},
-					map[string]any{"name": "1bab", "snaptime": float64(1700001200), "parent": "1ba"},
-					map[string]any{"name": "root3", "snaptime": float64(1700003000)},
-					map[string]any{"name": "1bc", "snaptime": float64(1700001500), "parent": "1b"},
-					map[string]any{"name": "1b", "snaptime": float64(1700001000), "parent": "root1"},
-					map[string]any{"name": "1a", "snaptime": float64(1700000100), "parent": "root1"},
-					map[string]any{"name": "1c", "snaptime": float64(1700001600), "parent": "root1"},
-					map[string]any{"name": "current", "parent": "1aac", "description": "You are here!"},
-					map[string]any{"name": "root2", "snaptime": float64(1700002000), "vmstate": float64(1)},
-					map[string]any{"name": "2a", "snaptime": float64(1700002100), "parent": "root2"},
-					map[string]any{"name": "2aa", "snaptime": float64(1700002200), "parent": "2a"},
-					map[string]any{"name": "2c", "snaptime": float64(1700002300), "parent": "root2"},
-					map[string]any{"name": "3a", "snaptime": float64(1700003100), "parent": "root3"},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "1aaba", Time: new(int64(1700000500)), Parent: new("1aab")},
+					{Name: "1aa", Time: new(int64(1700000200)), Parent: new("1a")},
+					{Name: "1aab", Time: new(int64(1700000400)), Parent: new("1aa")},
+					{Name: "1aaa", Time: new(int64(1700000300)), Parent: new("1aa")},
+					{Name: "1bb", Time: new(int64(1700001300)), Parent: new("1b")},
+					{Name: "1aac", Time: new(int64(1700000600)), Parent: new("1aa")},
+					{Name: "1ac", Time: new(int64(1700000900)), Parent: new("1a")},
+					{Name: "1ab", Time: new(int64(1700000700)), Parent: new("1a"), State: new(int8(1))},
+					{Name: "1aba", Time: new(int64(1700000800)), Parent: new("1ab")},
+					{Name: "1bba", Time: new(int64(1700001400)), Parent: new("1bb")},
+					{Name: "1ba", Time: new(int64(1700001100)), Parent: new("1b")},
+					{Name: "1bab", Time: new(int64(1700001200)), Parent: new("1ba")},
+					{Name: "root3", Time: new(int64(1700003000))},
+					{Name: "1bc", Time: new(int64(1700001500)), Parent: new("1b")},
+					{Name: "1b", Time: new(int64(1700001000)), Parent: new("root1")},
+					{Name: "1a", Time: new(int64(1700000100)), Parent: new("root1")},
+					{Name: "1c", Time: new(int64(1700001600)), Parent: new("root1")},
+					{Name: "current", Parent: new("1aac"), Description: "You are here!"},
+					{Name: "root2", Time: new(int64(1700002000)), State: new(int8(1))},
+					{Name: "2a", Time: new(int64(1700002100)), Parent: new("root2")},
+					{Name: "2aa", Time: new(int64(1700002200)), Parent: new("2a")},
+					{Name: "2c", Time: new(int64(1700002300)), Parent: new("root2")},
+					{Name: "3a", Time: new(int64(1700003100)), Parent: new("root3")},
 				}},
 			root:    root([]string{"root1", "root2", "root3"}, multiple_root_snapshots_trees()),
 			current: current(multiple_root_snapshots_trees())},
 		{name: `Edgecase roots with same snaptime`,
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "current", "description": "You are here!"},
-					map[string]any{"name": "root2", "snaptime": float64(1700000000)},
-					map[string]any{"name": "root222", "snaptime": float64(1700000000)},
-					map[string]any{"name": "rOot222", "snaptime": float64(1700000000)},
-					map[string]any{"name": "rOOt2", "snaptime": float64(1700000000)},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "current", Description: "You are here!"},
+					{Name: "root2", Time: new(int64(1700000000))},
+					{Name: "root222", Time: new(int64(1700000000))},
+					{Name: "rOot222", Time: new(int64(1700000000))},
+					{Name: "rOOt2", Time: new(int64(1700000000))},
 				}},
 			root:    root([]string{"rOOt2", "rOot222", "root1", "root2", "root222", "current"}, roots_with_same_time()),
 			current: current(roots_with_same_time())},
 		{name: `Edgecase children with same snaptime`,
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "sNAp2", "parent": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "current", "parent": "root1", "description": "You are here!"},
-					map[string]any{"name": "sNap222", "parent": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "snap1", "parent": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "snap222", "parent": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "snap2", "parent": "root1", "snaptime": float64(1700000000)},
+				a: []responseSnapshotInfo{
+					{Name: "sNAp2", Parent: new("root1"), Time: new(int64(1700000000))},
+					{Name: "current", Parent: new("root1"), Description: "You are here!"},
+					{Name: "sNap222", Parent: new("root1"), Time: new(int64(1700000000))},
+					{Name: "snap1", Parent: new("root1"), Time: new(int64(1700000000))},
+					{Name: "snap222", Parent: new("root1"), Time: new(int64(1700000000))},
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "snap2", Parent: new("root1"), Time: new(int64(1700000000))},
 				}},
 			root:    root([]string{"root1"}, children_with_same_time()),
 			current: current(children_with_same_time())},
@@ -1471,60 +1470,60 @@ func Test_RawSnapshotTree_Walk(t *testing.T) {
 	}{
 		{name: "Single current snapshot",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "current", "description": "You are here!"}}},
+				a: []responseSnapshotInfo{
+					{Name: "current", Description: "You are here!"}}},
 			expectedOrder: []SnapshotName{"current"}},
 		{name: "Single chain of 5 snapshots",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "a", "snaptime": float64(1700000100), "parent": "root1"},
-					map[string]any{"name": "b", "snaptime": float64(1700000200), "parent": "a"},
-					map[string]any{"name": "c", "snaptime": float64(1700000300), "parent": "b"},
-					map[string]any{"name": "current", "parent": "c", "description": "You are here!"},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "a", Time: new(int64(1700000100)), Parent: new("root1")},
+					{Name: "b", Time: new(int64(1700000200)), Parent: new("a")},
+					{Name: "c", Time: new(int64(1700000300)), Parent: new("b")},
+					{Name: "current", Parent: new("c"), Description: "You are here!"},
 				}},
 			expectedOrder:   []SnapshotName{"root1", "a", "b", "c", "current"},
 			stopAt:          "b",
 			expectedStopped: []SnapshotName{"root1", "a", "b"}},
 		{name: "Wide tree with multiple children",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "snap1", "snaptime": float64(1700000100), "parent": "root1"},
-					map[string]any{"name": "snap2", "snaptime": float64(1700000200), "parent": "root1"},
-					map[string]any{"name": "snap3", "snaptime": float64(1700000300), "parent": "root1"},
-					map[string]any{"name": "current", "parent": "root1", "description": "You are here!"},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "snap1", Time: new(int64(1700000100)), Parent: new("root1")},
+					{Name: "snap2", Time: new(int64(1700000200)), Parent: new("root1")},
+					{Name: "snap3", Time: new(int64(1700000300)), Parent: new("root1")},
+					{Name: "current", Parent: new("root1"), Description: "You are here!"},
 				}},
 			expectedOrder:   []SnapshotName{"root1", "snap1", "snap2", "snap3", "current"},
 			stopAt:          "snap2",
 			expectedStopped: []SnapshotName{"root1", "snap1", "snap2"}},
 		{name: "Multiple root snapshots trees",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "1a", "snaptime": float64(1700000100), "parent": "root1"},
-					map[string]any{"name": "1aa", "snaptime": float64(1700000200), "parent": "1a"},
-					map[string]any{"name": "1aaa", "snaptime": float64(1700000300), "parent": "1aa"},
-					map[string]any{"name": "1aab", "snaptime": float64(1700000400), "parent": "1aa"},
-					map[string]any{"name": "1aaba", "snaptime": float64(1700000500), "parent": "1aab"},
-					map[string]any{"name": "1aac", "snaptime": float64(1700000600), "parent": "1aa"},
-					map[string]any{"name": "1ab", "snaptime": float64(1700000700), "parent": "1a"},
-					map[string]any{"name": "1aba", "snaptime": float64(1700000800), "parent": "1ab"},
-					map[string]any{"name": "1ac", "snaptime": float64(1700000900), "parent": "1a"},
-					map[string]any{"name": "1b", "snaptime": float64(1700001000), "parent": "root1"},
-					map[string]any{"name": "1ba", "snaptime": float64(1700001100), "parent": "1b"},
-					map[string]any{"name": "1bab", "snaptime": float64(1700001200), "parent": "1ba"},
-					map[string]any{"name": "1bb", "snaptime": float64(1700001300), "parent": "1b"},
-					map[string]any{"name": "1bba", "snaptime": float64(1700001400), "parent": "1bb"},
-					map[string]any{"name": "1bc", "snaptime": float64(1700001500), "parent": "1b"},
-					map[string]any{"name": "1c", "snaptime": float64(1700001600), "parent": "root1"},
-					map[string]any{"name": "root2", "snaptime": float64(1700002000)},
-					map[string]any{"name": "2a", "snaptime": float64(1700002100), "parent": "root2"},
-					map[string]any{"name": "2aa", "snaptime": float64(1700002200), "parent": "2a"},
-					map[string]any{"name": "2c", "snaptime": float64(1700002300), "parent": "root2"},
-					map[string]any{"name": "root3", "snaptime": float64(1700003000)},
-					map[string]any{"name": "3a", "snaptime": float64(1700003100), "parent": "root3"},
-					map[string]any{"name": "current", "parent": "1aac", "description": "You are here!"},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "1a", Time: new(int64(1700000100)), Parent: new("root1")},
+					{Name: "1aa", Time: new(int64(1700000200)), Parent: new("1a")},
+					{Name: "1aaa", Time: new(int64(1700000300)), Parent: new("1aa")},
+					{Name: "1aab", Time: new(int64(1700000400)), Parent: new("1aa")},
+					{Name: "1aaba", Time: new(int64(1700000500)), Parent: new("1aab")},
+					{Name: "1aac", Time: new(int64(1700000600)), Parent: new("1aa")},
+					{Name: "1ab", Time: new(int64(1700000700)), Parent: new("1a")},
+					{Name: "1aba", Time: new(int64(1700000800)), Parent: new("1ab")},
+					{Name: "1ac", Time: new(int64(1700000900)), Parent: new("1a")},
+					{Name: "1b", Time: new(int64(1700001000)), Parent: new("root1")},
+					{Name: "1ba", Time: new(int64(1700001100)), Parent: new("1b")},
+					{Name: "1bab", Time: new(int64(1700001200)), Parent: new("1ba")},
+					{Name: "1bb", Time: new(int64(1700001300)), Parent: new("1b")},
+					{Name: "1bba", Time: new(int64(1700001400)), Parent: new("1bb")},
+					{Name: "1bc", Time: new(int64(1700001500)), Parent: new("1b")},
+					{Name: "1c", Time: new(int64(1700001600)), Parent: new("root1")},
+					{Name: "root2", Time: new(int64(1700002000))},
+					{Name: "2a", Time: new(int64(1700002100)), Parent: new("root2")},
+					{Name: "2aa", Time: new(int64(1700002200)), Parent: new("2a")},
+					{Name: "2c", Time: new(int64(1700002300)), Parent: new("root2")},
+					{Name: "root3", Time: new(int64(1700003000))},
+					{Name: "3a", Time: new(int64(1700003100)), Parent: new("root3")},
+					{Name: "current", Parent: new("1aac"), Description: "You are here!"},
 				}},
 			expectedOrder: []SnapshotName{
 				// First root tree (depth-first, oldest to newest children)
@@ -1538,32 +1537,32 @@ func Test_RawSnapshotTree_Walk(t *testing.T) {
 				"root1", "1a", "1aa", "1aaa", "1aab", "1aaba", "1aac", "current", "1ab"}},
 		{name: "Stop at first snapshot",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "a", "snaptime": float64(1700000100), "parent": "root1"},
-					map[string]any{"name": "b", "snaptime": float64(1700000200), "parent": "a"},
-					map[string]any{"name": "current", "description": "You are here!", "parent": "a"},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "a", Time: new(int64(1700000100)), Parent: new("root1")},
+					{Name: "b", Time: new(int64(1700000200)), Parent: new("a")},
+					{Name: "current", Description: "You are here!", Parent: new("a")},
 				}},
 			expectedOrder:   []SnapshotName{"root1", "a", "b", "current"},
 			stopAt:          "root1",
 			expectedStopped: []SnapshotName{"root1"}},
 		{name: "Children with same snaptime ordered by name",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "snap1", "parent": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "snap2", "parent": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "sNAp2", "parent": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "current", "parent": "root1", "description": "You are here!"},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "snap1", Parent: new("root1"), Time: new(int64(1700000000))},
+					{Name: "snap2", Parent: new("root1"), Time: new(int64(1700000000))},
+					{Name: "sNAp2", Parent: new("root1"), Time: new(int64(1700000000))},
+					{Name: "current", Parent: new("root1"), Description: "You are here!"},
 				}},
 			expectedOrder: []SnapshotName{"root1", "sNAp2", "snap1", "snap2", "current"}},
 		{name: "Multiple roots with same snaptime ordered by name",
 			input: rawSnapshots{
-				a: []any{
-					map[string]any{"name": "root1", "snaptime": float64(1700000000)},
-					map[string]any{"name": "root2", "snaptime": float64(1700000000)},
-					map[string]any{"name": "rOOt2", "snaptime": float64(1700000000)},
-					map[string]any{"name": "current", "description": "You are here!"},
+				a: []responseSnapshotInfo{
+					{Name: "root1", Time: new(int64(1700000000))},
+					{Name: "root2", Time: new(int64(1700000000))},
+					{Name: "rOOt2", Time: new(int64(1700000000))},
+					{Name: "current", Description: "You are here!"},
 				}},
 			expectedOrder: []SnapshotName{"rOOt2", "root1", "root2", "current"}},
 	}
@@ -1609,19 +1608,19 @@ func Test_SnapshotName_Validate(t *testing.T) {
 		// Invalid
 		{name: "Invalid SnapshotName_Error_MinLength",
 			input: []string{"", test_data_snapshot.SnapshotName_Min_Illegal()},
-			err:   errors.New(SnapshotName_Error_MinLength),
+			err:   &ValidateError{Message: SnapshotName_Error_MinLength},
 		},
 		{name: "Invalid SnapshotName_Error_MaxLength",
 			input: []string{test_data_snapshot.SnapshotName_Max_Illegal()},
-			err:   errors.New(SnapshotName_Error_MaxLength),
+			err:   &ValidateError{Message: SnapshotName_Error_MaxLength},
 		},
 		{name: "Invalid SnapshotName_Error_StartNoLetter",
 			input: test_data_snapshot.SnapshotName_Start_Illegal(),
-			err:   errors.New(SnapshotName_Error_StartNoLetter),
+			err:   &ValidateError{Message: SnapshotName_Error_StartNoLetter},
 		},
 		{name: "Invalid SnapshotName_Error_StartNoLetter",
 			input: test_data_snapshot.SnapshotName_Character_Illegal(),
-			err:   errors.New(SnapshotName_Error_IllegalCharacters),
+			err:   &ValidateError{Message: SnapshotName_Error_IllegalCharacters},
 		},
 	}
 	for _, test := range tests {

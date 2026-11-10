@@ -2,7 +2,6 @@ package proxmox
 
 import (
 	"context"
-	"errors"
 	"iter"
 	"regexp"
 	"slices"
@@ -12,6 +11,7 @@ import (
 	"unicode"
 
 	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 type (
@@ -259,7 +259,8 @@ type (
 		Tree() RawSnapshotTree
 	}
 	rawSnapshots struct {
-		a []any
+		_ noCopy.True
+		a []responseSnapshotInfo
 	}
 )
 
@@ -268,7 +269,7 @@ var _ RawSnapshots = (*rawSnapshots)(nil)
 func (r *rawSnapshots) AsArray() []RawSnapshotInfo {
 	snapshots := make([]RawSnapshotInfo, len(r.a))
 	for i := range r.a {
-		snapshots[i] = &rawSnapshotInfo{a: r.a[i].(map[string]any)}
+		snapshots[i] = &rawSnapshotInfo{a: &r.a[i]}
 	}
 	return snapshots
 }
@@ -276,8 +277,8 @@ func (r *rawSnapshots) AsArray() []RawSnapshotInfo {
 func (r *rawSnapshots) AsMap() map[SnapshotName]RawSnapshotInfo {
 	snapshots := make(map[SnapshotName]RawSnapshotInfo, len(r.a))
 	for i := range r.a {
-		snapshotObj := &rawSnapshotInfo{a: r.a[i].(map[string]any)}
-		name := SnapshotName(r.a[i].(map[string]any)[snapshotListApiKeyName].(string))
+		snapshotObj := &rawSnapshotInfo{a: &r.a[i]}
+		name := SnapshotName(r.a[i].Name)
 		snapshotObj.name = &name
 		snapshots[name] = snapshotObj
 	}
@@ -287,7 +288,7 @@ func (r *rawSnapshots) AsMap() map[SnapshotName]RawSnapshotInfo {
 func (r *rawSnapshots) Iter() iter.Seq[RawSnapshotInfo] {
 	return func(yield func(RawSnapshotInfo) bool) {
 		for i := range r.a {
-			if !yield(&rawSnapshotInfo{a: r.a[i].(map[string]any)}) {
+			if !yield(&rawSnapshotInfo{a: &r.a[i]}) {
 				return
 			}
 		}
@@ -298,9 +299,8 @@ func (r *rawSnapshots) Len() int { return len(r.a) }
 
 func (r *rawSnapshots) SelectSnapshot(name SnapshotName) (RawSnapshotInfo, bool) {
 	for i := range r.a {
-		params := r.a[i].(map[string]any)
-		if params[snapshotListApiKeyName] == name.String() {
-			return &rawSnapshotInfo{a: params}, true
+		if r.a[i].Name == name.String() {
+			return &rawSnapshotInfo{a: &r.a[i]}, true
 		}
 	}
 	return nil, false
@@ -313,30 +313,24 @@ func (r *rawSnapshots) Tree() RawSnapshotTree {
 	var rootSnapshots [](*Snapshot)
 
 	for i := range r.a { // First pass: populate snapshot information
-		params := r.a[i].(map[string]any)
 		var snapshotObj Snapshot
 		snapshotCapsule := snapshot{snapshot: &snapshotObj}
 
-		if v, isSet := params[snapshotListApiKeyName]; isSet {
-			snapshotObj.Name = SnapshotName(v.(string))
-		}
-		if v, isSet := params[snapshotListApiKeyDescription]; isSet {
-			snapshotObj.Description = v.(string)
-		}
-		if v, isSet := params[snapshotListApiKeyTime]; isSet {
-			snapshotObj.Time = new(time.Unix(int64(v.(float64)), 0))
+		snapshotObj.Name = SnapshotName(r.a[i].Name)
+		snapshotObj.Description = r.a[i].Description
+		if r.a[i].Time != nil {
+			snapshotObj.Time = new(time.Unix(*r.a[i].Time, 0))
 		} else {
 			snapshotObj.Time = new(time.Unix(maxTime, 0)) // Set to max time to indicate current snapshot
 		}
-		if v, isSet := params[snapshotListApiKeyVmState]; isSet {
-			snapshotObj.VmState = new(int(v.(float64)) == 1)
+		if r.a[i].State != nil {
+			snapshotObj.VmState = new(*r.a[i].State == 1)
 		}
-		if v, isSet := params[snapshotListApiKeyParent]; isSet {
-			snapshotCapsule.parent = SnapshotName(v.(string))
-		} else { // No parent, we are a root snapshot
+		if r.a[i].Parent != nil {
+			snapshotCapsule.parent = SnapshotName(*r.a[i].Parent)
+		} else {
 			rootSnapshots = append(rootSnapshots, &snapshotObj)
 		}
-
 		snapshots[snapshotObj.Name] = snapshotCapsule
 	}
 
@@ -397,8 +391,17 @@ type (
 		GetParent() *SnapshotName
 	}
 	rawSnapshotInfo struct {
-		a    map[string]any
-		name *SnapshotName // Set by AsMap()
+		_    noCopy.True
+		a    *responseSnapshotInfo // Never Nil
+		name *SnapshotName         // Set by AsMap()
+	}
+	responseSnapshotInfo struct {
+		_           noCopy.True
+		Name        string  `json:"name"`
+		Time        *int64  `json:"snaptime,omitempty"`
+		Description string  `json:"description"`
+		State       *int8   `json:"vmstate,omitempty"`
+		Parent      *string `json:"parent,omitempty"`
 	}
 )
 
@@ -417,36 +420,28 @@ func (r *rawSnapshotInfo) GetName() SnapshotName {
 	if r.name != nil {
 		return *r.name
 	}
-	if v, isSet := r.a[snapshotListApiKeyName]; isSet {
-		return SnapshotName(v.(string))
-	}
-	return ""
+	return SnapshotName(r.a.Name)
 }
 
 func (r *rawSnapshotInfo) GetTime() *time.Time {
-	if v, isSet := r.a[snapshotListApiKeyTime]; isSet {
-		return new(time.Unix(int64(v.(float64)), 0))
+	if r.a.Time != nil {
+		return new(time.Unix(*r.a.Time, 0))
 	}
 	return nil
 }
 
-func (r *rawSnapshotInfo) GetDescription() string {
-	if v, isSet := r.a[snapshotListApiKeyDescription]; isSet {
-		return strings.TrimSpace(v.(string))
-	}
-	return ""
-}
+func (r *rawSnapshotInfo) GetDescription() string { return strings.TrimSpace(r.a.Description) }
 
 func (r *rawSnapshotInfo) GetVmState() *bool {
-	if v, isSet := r.a[snapshotListApiKeyVmState]; isSet {
-		return new(int(v.(float64)) == 1)
+	if r.a.State != nil {
+		return new(*r.a.State == 1)
 	}
 	return nil
 }
 
 func (r *rawSnapshotInfo) GetParent() *SnapshotName {
-	if v, isSet := r.a[snapshotListApiKeyParent]; isSet {
-		return new(SnapshotName(v.(string)))
+	if r.a.Parent != nil {
+		return new(SnapshotName(*r.a.Parent))
 	}
 	return nil
 }
@@ -469,8 +464,8 @@ type (
 		Walk(fn func(s *Snapshot) bool)
 	}
 	rawSnapshotTree struct {
-		root    []*Snapshot
 		current *Snapshot
+		root    []*Snapshot
 	}
 )
 
@@ -606,6 +601,7 @@ func (snap SnapshotName) DeleteNoCheck(ctx context.Context, c *Client, vmr *VmRe
 }
 
 func (snap SnapshotName) readConfig(ctx context.Context, c *clientAPI, ref guestRef) (map[string]any, error) {
+
 	return c.getMap(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot/"+snap.String()+"/config", "Guest", "SNAPSHOT")
 }
 
@@ -635,7 +631,7 @@ func (snap SnapshotName) RollbackNoCheck(ctx context.Context, c *Client, vmr *Vm
 func (snap SnapshotName) String() string { return string(snap) } // for fmt.Stringer
 
 func (snap SnapshotName) update(ctx context.Context, c *clientAPI, ref guestRef, description string) error {
-	return c.putRawRetry(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot/"+string(snap)+"/config", new([]byte(snapshotApiKeyDescription+"="+body.Escape(description))), 3)
+	return c.putRawRetry(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot/"+string(snap)+"/config", new([]byte(snapshotApiKeyDescription+"="+body.Escape(description))), RequestRetryCount)
 }
 
 // Deprecated: use SnapshotInterface.Update() instead
@@ -655,25 +651,25 @@ var snapshotNameRegex = regexp.MustCompile(`^([a-zA-Z])([a-z]|[A-Z]|[0-9]|_|-){2
 func (name SnapshotName) Validate() error {
 	if !snapshotNameRegex.Match([]byte(name)) {
 		if len(name) < 3 {
-			return errors.New(SnapshotName_Error_MinLength)
+			return newValidateError(SnapshotName_Error_MinLength)
 		}
 		if len(name) > 40 {
-			return errors.New(SnapshotName_Error_MaxLength)
+			return newValidateError(SnapshotName_Error_MaxLength)
 		}
 		if !unicode.IsLetter(rune(name[0])) {
-			return errors.New(SnapshotName_Error_StartNoLetter)
+			return newValidateError(SnapshotName_Error_StartNoLetter)
 		}
-		return errors.New(SnapshotName_Error_IllegalCharacters)
+		return newValidateError(SnapshotName_Error_IllegalCharacters)
 	}
 	return nil
 }
 
 func snapshotList(ctx context.Context, c *clientAPI, ref guestRef) (*rawSnapshots, error) {
-	raw, err := c.getList(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot", "Guest", "SNAPSHOTS")
-	if err != nil {
+	var data responseData[[]responseSnapshotInfo]
+	if err := c.getData(ctx, &data, "guest snapshots", "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot"); err != nil {
 		return nil, err
 	}
-	return &rawSnapshots{a: raw}, nil
+	return &rawSnapshots{a: *data.Data}, nil
 }
 
 const (
