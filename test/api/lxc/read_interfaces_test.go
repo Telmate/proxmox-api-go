@@ -24,7 +24,7 @@ func Test_Lxc_Read_Interface_Info(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
-	set, expected := MinimumConfig(guest, node, storage, new(true), name)
+	set, expected := MinimumConfig(guest, node, storage, new(true), name, nil)
 
 	mac := "28:4D:C2:C8:7B:8A"
 	networkName := pveSDK.LxcNetworkName("eth0")

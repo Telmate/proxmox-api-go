@@ -269,7 +269,7 @@ func (c *Client) GetJsonRetryable(ctx context.Context, url string, data *map[str
 	var err error
 	var retry bool
 	for ii := 0; ii < tries; ii++ {
-		_, retry, err = c.session.getJSON(ctx, url, nil, nil, data)
+		_, retry, err = c.session.getJSON(ctx, url, nil, nil, data, "")
 		if err == nil {
 			return nil
 		}
@@ -495,7 +495,7 @@ func (c *Client) GetVmSpiceProxy(ctx context.Context, vmr *VmRef) (vmSpiceProxy 
 	}
 	var data map[string]interface{}
 	url := fmt.Sprintf("/nodes/%s/%s/%d/spiceproxy", vmr.node, vmr.vmType, vmr.vmId)
-	_, _, err = c.session.postJSON(ctx, url, nil, nil, nil, &data)
+	_, _, err = c.session.postJSON(ctx, url, nil, nil, nil, &data, "")
 	if err != nil {
 		return nil, err
 	}
@@ -617,7 +617,7 @@ func (c *Client) GetTaskExitstatus(ctx context.Context, taskUpid string) (exitSt
 	node := rxTaskNode.FindStringSubmatch(taskUpid)[1]
 	url := fmt.Sprintf("/nodes/%s/tasks/%s/status", node, taskUpid)
 	var data map[string]interface{}
-	_, _, err = c.session.getJSON(ctx, url, nil, nil, &data)
+	_, _, err = c.session.getJSON(ctx, url, nil, nil, &data, "")
 	if err == nil {
 		exitStatus = data["data"].(map[string]interface{})["exitstatus"]
 	}
@@ -719,9 +719,9 @@ func (c *Client) DeleteVmParams(ctx context.Context, vmr *VmRef, params map[stri
 	url := fmt.Sprintf("/nodes/%s/%s/%d", vmr.node, vmr.vmType, vmr.vmId)
 	var taskResponse map[string]interface{}
 	if len(values) != 0 {
-		_, _, err = c.session.requestJSON(ctx, "DELETE", url, &values, nil, nil, &taskResponse)
+		_, _, err = c.session.requestJSON(ctx, "DELETE", url, &values, nil, nil, &taskResponse, "")
 	} else {
-		_, _, err = c.session.requestJSON(ctx, "DELETE", url, nil, nil, nil, &taskResponse)
+		_, _, err = c.session.requestJSON(ctx, "DELETE", url, nil, nil, nil, &taskResponse, "")
 	}
 	if err != nil {
 		return

@@ -26,7 +26,7 @@ func Test_Lxc_Create_Minimal_Unprivileged(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
-	set, expected := MinimumConfig(guest, node, storage, new(false), name)
+	set, expected := MinimumConfig(guest, node, storage, new(false), name, nil)
 	var vmr *pveSDK.VmRef
 	tests := []struct {
 		name string
@@ -71,7 +71,7 @@ func Test_Lxc_Create_Minimal_Privileged(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
-	set, expected := MinimumConfig(guest, node, storage, new(true), name)
+	set, expected := MinimumConfig(guest, node, storage, new(true), name, nil)
 	var vmr *pveSDK.VmRef
 	tests := []struct {
 		name string
@@ -116,7 +116,7 @@ func Test_Lxc_Create_Minimal_Privileged_Unset(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
-	set, expected := MinimumConfig(guest, node, storage, nil, name)
+	set, expected := MinimumConfig(guest, node, storage, nil, name, nil)
 	var vmr *pveSDK.VmRef
 	tests := []struct {
 		name string

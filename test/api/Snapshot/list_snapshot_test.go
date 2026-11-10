@@ -114,7 +114,7 @@ func Test_Snapshot_List_Lxc(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, cl.Login(ctx, test.UserID, test.Password, ""))
 	c := cl.New()
-	set, _ := lxc.MinimumConfig(guest, node, storage, new(false), name)
+	set, _ := lxc.MinimumConfig(guest, node, storage, new(false), name, nil)
 	var currentTime time.Time
 	currentTimePtr := &currentTime
 	tests := []struct {

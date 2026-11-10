@@ -16,6 +16,8 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+
+	coder "github.com/coder/websocket"
 )
 
 const debugLargeBodyThreshold = 5 * 1024 * 1024
@@ -30,13 +32,19 @@ const (
 const redacted = "<<<REDACTED>>>"
 
 type Session struct {
+	Debug      io.Writer
+	Headers    http.Header
 	httpClient *http.Client
+	wss        sessionWss
 	ApiUrl     string
 	AuthTicket string
-	CsrfToken  string
 	AuthToken  string // Combination of user, realm, token ID and UUID
-	Headers    http.Header
-	Debug      io.Writer
+	CsrfToken  string
+}
+
+type sessionWss struct {
+	tls *tls.Config
+	url string
 }
 
 func NewSession(apiUrl string, hclient *http.Client, proxyString string, tls *tls.Config) (session *Session, err error) {
@@ -72,6 +80,9 @@ func NewSession(apiUrl string, hclient *http.Client, proxyString string, tls *tl
 		AuthTicket: "",
 		CsrfToken:  "",
 		Headers:    http.Header{},
+		wss: sessionWss{
+			url: strings.Replace(apiUrl, "http", "ws", 1),
+			tls: tls},
 	}
 	return session, nil
 }
@@ -197,16 +208,20 @@ func (s *Session) NewRequest(ctx context.Context, method, url string, headers *h
 	if err != nil {
 		return nil, err
 	}
-	if headers != nil {
-		req.Header = *headers
+	s.authHeaders(headers, &req.Header)
+	return
+}
+
+func (s *Session) authHeaders(baseHeaders, endHeaders *http.Header) {
+	if baseHeaders != nil {
+		*endHeaders = *baseHeaders
 	}
 	if s.AuthToken != "" {
-		req.Header[headerAuthorization] = []string{prefixAuthorizationToken + s.AuthToken}
+		(*endHeaders)[headerAuthorization] = []string{prefixAuthorizationToken + s.AuthToken}
 	} else if s.AuthTicket != "" {
-		req.Header[headerAuthorization] = []string{prefixAuthorizationCookie + s.AuthTicket}
-		req.Header[headerCSRFPrevention] = []string{s.CsrfToken}
+		(*endHeaders)[headerAuthorization] = []string{prefixAuthorizationCookie + s.AuthTicket}
+		(*endHeaders)[headerCSRFPrevention] = []string{s.CsrfToken}
 	}
-	return
 }
 
 func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err error) {
@@ -309,7 +324,8 @@ func (s *Session) requestJSON(
 	params *url.Values,
 	headers *http.Header,
 	body *[]byte,
-	responseContainer interface{},
+	responseContainer any,
+	errorMSG string,
 ) (resp *http.Response, retry bool, err error) {
 	// if headers == nil {
 	// 	headers = &http.Header{}
@@ -331,7 +347,7 @@ func (s *Session) requestJSON(
 		return resp, true, fmt.Errorf("error reading response body")
 	}
 	if err = json.Unmarshal(rbody, &responseContainer); err != nil {
-		return resp, true, err
+		return resp, false, newResponseDecodeError(errorMSG, err)
 	}
 
 	return resp, false, nil
@@ -360,9 +376,10 @@ func (s *Session) getJSON(
 	url string,
 	params *url.Values,
 	headers *http.Header,
-	responseContainer interface{},
+	responseContainer any,
+	errorMSG string,
 ) (resp *http.Response, retry bool, err error) {
-	return s.requestJSON(ctx, "GET", url, params, headers, nil, responseContainer)
+	return s.requestJSON(ctx, "GET", url, params, headers, nil, responseContainer, errorMSG)
 }
 
 func (s *Session) post(
@@ -385,9 +402,10 @@ func (s *Session) postJSON(
 	params *url.Values,
 	headers *http.Header,
 	body *[]byte,
-	responseContainer interface{},
+	responseContainer any,
+	errorMSG string,
 ) (resp *http.Response, retry bool, err error) {
-	return s.requestJSON(ctx, "POST", url, params, headers, body, responseContainer)
+	return s.requestJSON(ctx, "POST", url, params, headers, body, responseContainer, errorMSG)
 }
 
 func (s *Session) put(
@@ -402,6 +420,36 @@ func (s *Session) put(
 		headers.Add("Content-Type", "application/x-www-form-urlencoded")
 	}
 	return s.request(ctx, "PUT", url, params, headers, body)
+}
+
+func (s *Session) webSocket(
+	ctx context.Context,
+	path string,
+	user string,
+	ticket string,
+) (*coder.Conn, error) {
+	opts := &coder.DialOptions{
+		Subprotocols: []string{"binary"},
+		HTTPClient:   s.httpClient,
+		HTTPHeader:   http.Header{},
+	}
+	s.authHeaders(&http.Header{}, &opts.HTTPHeader)
+
+	conn, _, err := coder.Dial(ctx, s.wss.url+path, opts)
+	if err != nil {
+		return nil, err
+	}
+	if err = conn.Write(ctx, coder.MessageBinary, []byte(user+":"+ticket+"\n")); err != nil {
+		return nil, err
+	}
+	_, response, err := conn.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if string(response) != "OK" {
+		return nil, errors.New("unable to establish websocket")
+	}
+	return conn, nil
 }
 
 func logRequestOut(req *http.Request, w io.Writer) {

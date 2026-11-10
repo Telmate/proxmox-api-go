@@ -135,6 +135,31 @@ func (e *ExistenceError) Error() string {
 
 func (e *ExistenceError) Unwrap() error { return e.err }
 
+// Getting this error means there is something wrong with the library.
+type ResponseDecodeError struct {
+	nested  error
+	message string
+}
+
+func newResponseDecodeError(message string, err error) error {
+	return &ResponseDecodeError{
+		message: message,
+		nested:  err}
+}
+
+func (e *ResponseDecodeError) Error() string {
+	var b strings.Builder
+	b.WriteString("error decoding: (")
+	b.WriteString(e.message)
+	b.WriteByte(')')
+	if e.nested != nil {
+		b.WriteByte(' ')
+		b.WriteString(e.nested.Error())
+	}
+	return b.String()
+}
+func (e *ResponseDecodeError) Unwrap() error { return e.nested }
+
 // ResourceType is an enum.
 //
 //	const (

@@ -17,6 +17,9 @@ type (
 		Clone(context.Context, VmRef, CloneLxcTarget) (*VmRef, error)
 		CloneNoCheck(context.Context, VmRef, CloneLxcTarget) (*VmRef, error)
 
+		ConsoleXTerminal(context.Context, VmRef) (TerminalSession, error)
+		ConsoleXTerminalNoCheck(context.Context, VmRef) (TerminalSession, error)
+
 		// VmRef can be set while there was an error, to indicate a guest was created.
 		Create(context.Context, ConfigLXC) (*VmRef, error)
 		CreateNoCheck(context.Context, ConfigLXC) (*VmRef, error)
@@ -55,8 +58,8 @@ func (c *lxcGuestClient) Clone(ctx context.Context, vmr VmRef, config CloneLxcTa
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
-	ref := QemuRef{ID: vmr.vmId, Node: vmr.node}.generalize()
-	if _, err := ref.checkQemu(ctx, c.api); err != nil {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	if _, err := ref.checkLxc(ctx, c.api); err != nil {
 		return nil, err
 	}
 	return c.CloneNoCheck(ctx, ref.legacy(), config)
@@ -64,6 +67,29 @@ func (c *lxcGuestClient) Clone(ctx context.Context, vmr VmRef, config CloneLxcTa
 
 func (c *lxcGuestClient) CloneNoCheck(ctx context.Context, vmr VmRef, config CloneLxcTarget) (*VmRef, error) {
 	return LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize().cloneLxc(ctx, config, c.oldClient, c.api)
+}
+
+func (c *lxcGuestClient) ConsoleXTerminal(ctx context.Context, vmr VmRef) (TerminalSession, error) {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	raw, err := ref.checkLxc(ctx, c.api)
+	if err != nil {
+		return nil, err
+	}
+	if raw != nil {
+		if raw.GetState() != PowerStateRunning {
+			return nil, errors.New("can't connect terminal, guest not running")
+		}
+	}
+	return c.ConsoleXTerminalNoCheck(ctx, ref.legacy())
+}
+
+func (c *lxcGuestClient) ConsoleXTerminalNoCheck(ctx context.Context, vmr VmRef) (TerminalSession, error) {
+	ref := LxcRef{ID: vmr.vmId, Node: vmr.node}.generalize()
+	raw, err := c.api.termProxy(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+	return newTerminalSession(ctx, c.api, raw, ref.Node.String(), ref.Type.String(), ref.ID.String())
 }
 
 func (c *lxcGuestClient) Create(ctx context.Context, config ConfigLXC) (*VmRef, error) {
@@ -377,7 +403,7 @@ func (config ConfigLXC) mapToApiCreate() (map[string]any, *[]byte, PoolName) {
 	}
 	if config.Tags != nil {
 		if v := config.Tags.mapToApiCreate(); v != "" {
-			builder.WriteString("&" + qemuApiKeyTags + "=")
+			builder.WriteString("&" + guestApiKeyTags + "=")
 			builder.WriteString(v)
 		}
 	}
@@ -484,12 +510,12 @@ func (config ConfigLXC) mapToApiUpdate(current ConfigLXC) (map[string]any, *[]by
 	if config.Tags != nil {
 		if current.Tags != nil {
 			if v, ok := config.Tags.mapToApiUpdate(*current.Tags); ok {
-				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString("&" + guestApiKeyTags + "=")
 				builder.WriteString(v)
 			}
 		} else {
 			if v := config.Tags.mapToApiCreate(); v != "" {
-				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString("&" + guestApiKeyTags + "=")
 				builder.WriteString(v)
 			}
 		}
