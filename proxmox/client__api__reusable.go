@@ -83,7 +83,7 @@ func (c *clientAPI) deleteTaskNoHighLevelRetry(ctx context.Context, url string) 
 	return c.checkTask(ctx, response)
 }
 
-func (c *clientAPI) getData(ctx context.Context, data any, url, message string) error {
+func (c *clientAPI) getData(ctx context.Context, data any, message, url string) error {
 	return c.getJsonRetry(ctx, url, data, message, RequestRetryCount)
 }
 
@@ -91,7 +91,7 @@ func (c *clientAPI) getData(ctx context.Context, data any, url, message string) 
 // Phase out in favour of clientAPI.getData()
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[string]any, error) {
 	var data map[string]any
-	if err := c.getData(ctx, &data, url, text+" "+message); err != nil {
+	if err := c.getData(ctx, &data, text+" "+message, url); err != nil {
 		return nil, err
 	}
 	if v, ok := data["data"]; ok {
@@ -103,7 +103,7 @@ func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[
 // Phase out in favour of clientAPI.getData()
 func (c *clientAPI) getList(ctx context.Context, url, text, message string) ([]any, error) {
 	var data map[string]any
-	if err := c.getData(ctx, &data, url, text+" "+message); err != nil {
+	if err := c.getData(ctx, &data, text+" "+message, url); err != nil {
 		return nil, err
 	}
 	if v, ok := data["data"]; ok {
