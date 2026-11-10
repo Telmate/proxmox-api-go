@@ -397,11 +397,11 @@ type (
 	}
 	responseSnapshotInfo struct {
 		_           noCopy.True
-		Name        string  `json:"name"`
+		Parent      *string `json:"parent,omitempty"`
+		State       *int8   `json:"vmstate,omitempty"`
 		Time        *int64  `json:"snaptime,omitempty"`
 		Description string  `json:"description"`
-		State       *int8   `json:"vmstate,omitempty"`
-		Parent      *string `json:"parent,omitempty"`
+		Name        string  `json:"name"`
 	}
 )
 
