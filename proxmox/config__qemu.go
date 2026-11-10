@@ -554,7 +554,7 @@ func (config ConfigQemu) mapToApiCreate(version Version, resizeDisks bool) (map[
 	}
 	if config.Tags != nil {
 		if v := config.Tags.mapToApiCreateLower(); v != "" {
-			builder.WriteString("&" + qemuApiKeyTags + "=")
+			builder.WriteString("&" + guestApiKeyTags + "=")
 			builder.WriteString(v)
 		}
 	}
@@ -625,12 +625,12 @@ func (config ConfigQemu) mapToApiUpdate(currentLegacy *ConfigQemu, current confi
 	if config.Tags != nil {
 		if cur := current.raw.GetTags(); len(cur) != 0 {
 			if v, ok := config.Tags.mapToApiUpdate(cur); ok {
-				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString("&" + guestApiKeyTags + "=")
 				builder.WriteString(v)
 			}
 		} else {
 			if v := config.Tags.mapToApiCreate(); v != "" {
-				builder.WriteString("&" + qemuApiKeyTags + "=")
+				builder.WriteString("&" + guestApiKeyTags + "=")
 				builder.WriteString(v)
 			}
 		}
@@ -1641,7 +1641,7 @@ func (raw *rawConfigQemu) GetTablet() bool {
 
 func (raw *rawConfigQemu) GetTags() Tags {
 	var t Tags
-	if v, isSet := raw.a[qemuApiKeyTags]; isSet {
+	if v, isSet := raw.a[guestApiKeyTags]; isSet {
 		t.mapToSDK(v.(string))
 	}
 	return t
@@ -1675,7 +1675,6 @@ const (
 	qemuApiKeyRandomnessDevice  = "rng0"
 	qemuApiKeyTPM               = "tpmstate0"
 	qemuApiKeyTablet            = "tablet"
-	qemuApiKeyTags              = "tags"
 	qemuApiKeyWatchdog          = "watchdog"
 	qemuPrefixApiKeyDiskIde     = "ide"
 	qemuPrefixApiKeyDiskSCSI    = "scsi"

@@ -7,7 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	atomicError "github.com/Telmate/proxmox-api-go/internal/atomicerror"
+	"github.com/Telmate/proxmox-api-go/internal/generic"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/notify"
 )
 
@@ -65,47 +66,39 @@ type demoTask interface {
 var _ demoTask = (*task)(nil)
 
 type task struct {
-	id            string
-	node          string
-	operationType string
+	_         noCopy.True
+	ctx       context.Context // Inherited from the original api call.
+	client    *clientAPI
+	closingCh *notify.Channel // This channel is open by default and closed when the task ends.
 
 	// status points to the latest immutable status snapshot.
 	// The writer replaces the pointer, it never modifies an existing map.
-	status      *map[string]any
-	statusMutex sync.Mutex
-	user        UserID
-	client      *clientAPI
-
-	pollingInterval time.Duration
-
-	// ctx is the context that is inherited from the original api call.
-	ctx context.Context
+	status *map[string]any
 
 	// logCache logCache
-
-	// This channel is open by default and closed when the task ends.
-	closingCh *notify.Channel
-
 	// While statusCh is open, the status has not been fetched yet.
 	// We use this to block reads until we have some data.
-	statusCh *notify.Channel
-
-	// err is the error that is stored when an error occurs in the status loop.
-	err atomicError.AtomicError
-
+	statusCh        *notify.Channel
+	user            UserID
+	node            string
+	operationType   string
+	upID            string
+	err             generic.Once[error] // error that is stored when an error occurs in the status loop.
+	pollingInterval time.Duration
+	cancelTask      sync.Once
+	statusMutex     sync.Mutex
 	// fetchLog   sync.Once
-	cancelTask sync.Once
 }
 
 func (t *task) Cancel() error {
-	if t.id == "" {
+	if t.upID == "" {
 		return nil
 	}
 	return t.cancel()
 }
 
 func (t *task) Ended() bool {
-	if t.id == "" {
+	if t.upID == "" {
 		return true
 	}
 	select {
@@ -119,7 +112,7 @@ func (t *task) Ended() bool {
 func (t *task) Error() error { return t.err.Load() }
 
 func (t *task) EndTime() (time.Time, bool) {
-	if t.id == "" {
+	if t.upID == "" {
 		return time.Time{}, false
 	}
 	<-t.statusCh.Done()
@@ -133,7 +126,7 @@ func (t *task) EndTime() (time.Time, bool) {
 }
 
 func (t *task) ExitStatus() string {
-	if t.id == "" {
+	if t.upID == "" {
 		return ""
 	}
 	<-t.statusCh.Done()
@@ -146,14 +139,14 @@ func (t *task) ExitStatus() string {
 	return ""
 }
 
-func (t *task) ID() string { return t.id }
+func (t *task) ID() string { return t.upID }
 
 func (t *task) Node() string { return t.node }
 
 func (t *task) OperationType() string { return t.operationType }
 
 func (t *task) ProcessID() uint {
-	if t.id == "" {
+	if t.upID == "" {
 		return 0
 	}
 	<-t.statusCh.Done()
@@ -167,7 +160,7 @@ func (t *task) ProcessID() uint {
 }
 
 func (t *task) StartTime() time.Time {
-	if t.id == "" {
+	if t.upID == "" {
 		return time.Time{}
 	}
 	<-t.statusCh.Done()
@@ -181,7 +174,7 @@ func (t *task) StartTime() time.Time {
 }
 
 func (t *task) Status() string {
-	if t.id == "" {
+	if t.upID == "" {
 		return ""
 	}
 	<-t.statusCh.Done()
@@ -197,7 +190,7 @@ func (t *task) Status() string {
 func (t *task) User() UserID { return t.user }
 
 func (t *task) WaitForCompletion() (err error) {
-	if t.id == "" { // if we didn't get a task ID, the function that instantiated the task should be changed to not return a task.
+	if t.upID == "" { // if we didn't get a task ID, the function that instantiated the task should be changed to not return a task.
 		return nil
 	}
 	<-t.closingCh.Done() // Block until the task has ended.
@@ -205,19 +198,14 @@ func (t *task) WaitForCompletion() (err error) {
 }
 
 // Cancels the task and closes the control channel.
-func (t *task) cancel() (err error) {
+func (t *task) cancel() error {
 	t.cancelTask.Do(func() {
 		ctx, cancel := context.WithTimeout(t.ctx, 5*time.Second)
-		defer cancel()
-		err = t.client.delete(ctx, "/nodes/"+t.node+"/tasks/"+t.id)
-		if err != nil {
-			t.setError(err)
-			return
-		}
-		t.closingCh.Close()
-		t.statusCh.Close()
+		err := taskCancel(ctx, t.client, t.node, t.upID)
+		cancel()
+		t.close(err)
 	})
-	return
+	return t.err.Load()
 }
 
 func newTask(ctx context.Context, c *clientAPI, upID string, pollingInterval time.Duration) *task {
@@ -236,9 +224,9 @@ func newTask(ctx context.Context, c *clientAPI, upID string, pollingInterval tim
 		var gotFirstStatus bool
 		for {
 			var data map[string]any
-			data, err = t.client.getMap(t.ctx, "/nodes/"+t.node+"/tasks/"+t.id+"/status", "", "")
+			data, err = t.client.getMap(t.ctx, "/nodes/"+t.node+"/tasks/"+t.upID+"/status", "", "")
 			if err != nil {
-				t.setError(err)
+				t.close(err)
 				return
 			}
 			t.statusMutex.Lock()
@@ -251,8 +239,8 @@ func newTask(ctx context.Context, c *clientAPI, upID string, pollingInterval tim
 			if v, isSet := data[taskApiKeyExitStatus]; isSet { // we don't need to lock as we are the only writer, and map is safe from concurrent reads
 				exitStatus := v.(string)
 				if exitStatus != taskSuccess && !strings.HasPrefix(exitStatus, taskWarning) {
-					t.setError(&TaskError{
-						TaskID:  t.id,
+					t.close(&TaskError{
+						TaskID:  t.upID,
 						Message: exitStatus})
 					return
 				}
@@ -271,8 +259,8 @@ func newTask(ctx context.Context, c *clientAPI, upID string, pollingInterval tim
 
 // Set the error and close the control channel.
 // Also closes the status and log channels to prevent blocking when users try to get data from the task.
-func (t *task) setError(err error) {
-	t.err.Store(err)
+func (t *task) close(err error) {
+	t.err.Set(err)
 	// Close the channel to stop the goroutines.
 	t.closingCh.Close()
 	t.statusCh.Close()
@@ -281,7 +269,7 @@ func (t *task) setError(err error) {
 // UPID:pve-test:002860A9:051E01C1:67536165:qmmove:102:root@pam:
 // parse the UPID string and map it to the task struct.
 func (t *task) mapToSDK_Unsafe(upID string) {
-	t.id = upID
+	t.upID = upID
 	indexA := strings.Index(upID[5:], ":") + 5
 	t.node = upID[5:indexA]
 	indexB := strings.Index(upID[indexA+28:], ":") + indexA + 28
@@ -293,7 +281,12 @@ func (t *task) mapToSDK_Unsafe(upID string) {
 	t.user = user
 }
 
+func taskCancel(ctx context.Context, c *clientAPI, node, upID string) error {
+	return c.delete(ctx, "/nodes/"+node+"/tasks/"+upID)
+}
+
 type logCache struct {
+	_ noCopy.True
 	// Essentially a linked list
 	Chunks *logChunk
 

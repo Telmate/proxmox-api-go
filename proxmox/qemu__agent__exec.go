@@ -7,8 +7,9 @@ import (
 	"sync"
 	"time"
 
-	atomicError "github.com/Telmate/proxmox-api-go/internal/atomicerror"
 	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/generic"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/notify"
 )
 
@@ -34,11 +35,14 @@ func (c *qemuAgentClient) ExecNoCheck(ctx context.Context, vmr VmRef, commands [
 	if b.Len() > 0 {
 		reqBody = []byte(b.String()[1:])
 	}
-	rawID, err := c.api.postMap(ctx, "/nodes/"+vmr.node.String()+"/qemu/"+vmr.vmId.String()+"/agent/exec", &reqBody, "", "")
-	if err != nil {
+	type tmp struct {
+		Pid int `json:"pid"`
+	}
+	var data responseData[tmp]
+	if err := c.api.postData(ctx, &data, &reqBody, "agent exec", "/nodes/"+vmr.node.String()+"/qemu/"+vmr.vmId.String()+"/agent/exec"); err != nil {
 		return nil, err
 	}
-	return newExecPoller(ctx, c.api, vmr.vmId, vmr.node, int(rawID["pid"].(float64)), 200*time.Millisecond), nil
+	return newExecPoller(ctx, c.api, vmr.vmId, vmr.node, data.Data.Pid, 200*time.Millisecond), nil
 }
 
 type ExecStatus interface {
@@ -144,6 +148,7 @@ func newExecPoller(ctx context.Context, c *clientAPI, id GuestID, node NodeName,
 }
 
 type exec struct {
+	_                 noCopy.True
 	closingCh         *notify.Channel // This channel is closed when the task ends.
 	statusCh          *notify.Channel // This closes once we got api data
 	cacheErrData      string
@@ -153,7 +158,7 @@ type exec struct {
 	lastOutputData    string
 	node              string
 	pID               string
-	err               atomicError.AtomicError
+	err               generic.Once[error]
 	cacheExitCode     uint
 	lastExitCode      uint
 	pollingInterval   time.Duration
@@ -191,7 +196,7 @@ func (x *exec) Get() (CommandStatus, CommandStatus, uint) {
 // Set the error and close the control channel.
 // Also closes the status and log channels to prevent blocking when users try to get data from the task.
 func (x *exec) setError(err error) {
-	x.err.Store(err)
+	x.err.Set(err)
 	// Close the channel to stop the goroutines.
 	x.closingCh.Close()
 	x.statusCh.Close()

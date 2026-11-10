@@ -83,21 +83,27 @@ func (c *clientAPI) deleteTaskNoHighLevelRetry(ctx context.Context, url string) 
 	return c.checkTask(ctx, response)
 }
 
+func (c *clientAPI) getData(ctx context.Context, data any, url, message string) error {
+	return c.getJsonRetry(ctx, url, data, message, RequestRetryCount)
+}
+
 // Same as (c *Client) GetItemConfigMapStringInterface()
+// Phase out in favour of clientAPI.getData()
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[string]any, error) {
 	var data map[string]any
-	if err := c.getJsonRetry(ctx, url, &data, RequestRetryCount); err != nil {
+	if err := c.getData(ctx, &data, url, text+" "+message); err != nil {
 		return nil, err
 	}
 	if v, ok := data["data"]; ok {
 		return v.(map[string]any), nil
 	}
-	return nil, errors.New(text + " " + message + " not readable")
+	return nil, newResponseDecodeError(text+" "+message, nil)
 }
 
+// Phase out in favour of clientAPI.getData()
 func (c *clientAPI) getList(ctx context.Context, url, text, message string) ([]any, error) {
 	var data map[string]any
-	if err := c.getJsonRetry(ctx, url, &data, RequestRetryCount); err != nil {
+	if err := c.getData(ctx, &data, url, text+" "+message); err != nil {
 		return nil, err
 	}
 	if v, ok := data["data"]; ok {
@@ -106,7 +112,7 @@ func (c *clientAPI) getList(ctx context.Context, url, text, message string) ([]a
 		}
 		return nil, fmt.Errorf("failed to cast response to list, resp: %v", v)
 	}
-	return nil, errors.New(text + " " + message + " not readable")
+	return nil, newResponseDecodeError(text+" "+message, nil)
 }
 
 // Makes a POST request without waiting on proxmox for the task to complete.
@@ -126,21 +132,26 @@ func (c *clientAPI) post(ctx context.Context, url string, body *[]byte) (err err
 	return
 }
 
+func (c *clientAPI) postData(ctx context.Context, data any, body *[]byte, message, url string) error {
+	return c.postJsonRetry(ctx, url, body, data, message, RequestRetryCount)
+}
+
+// Phase out in favour of clientAPI.postData()
 func (c *clientAPI) postMap(ctx context.Context, url string, body *[]byte, text, message string) (map[string]any, error) {
-	data, err := c.postJsonRetry(ctx, url, body, RequestRetryCount)
-	if err != nil {
+	var data map[string]any
+	if err := c.postData(ctx, &data, body, message, url); err != nil {
 		return nil, err
 	}
 	if v, ok := data["data"]; ok {
 		return v.(map[string]any), nil
 	}
-	return nil, errors.New(text + " " + message + " not readable")
+	return nil, newResponseDecodeError(text+" "+message, nil)
 }
 
-func (c *clientAPI) postJsonRetry(ctx context.Context, url string, body *[]byte, tries int) (response map[string]any, err error) {
+func (c *clientAPI) postJsonRetry(ctx context.Context, url string, body *[]byte, data any, errorPrefix string, tries int) (err error) {
 	var retry bool
 	for i := range time.Duration(tries) {
-		_, retry, err = c.session.postJSON(ctx, url, nil, nil, body, &response)
+		_, retry, err = c.session.postJSON(ctx, url, nil, nil, body, data, errorPrefix)
 		if err == nil {
 			return
 		}
@@ -292,7 +303,7 @@ func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (boo
 	url := "/nodes/" + node + "/tasks/" + taskUpID + "/status"
 	for i := range time.Duration(RequestRetryCount) {
 		var retry bool
-		_, retry, err = c.session.getJSON(ctx, url, nil, nil, dataPtr)
+		_, retry, err = c.session.getJSON(ctx, url, nil, nil, dataPtr, "task status")
 		if err == nil || !retry {
 			break
 		}
@@ -325,11 +336,11 @@ func (c *clientAPI) getTaskExitStatus(ctx context.Context, taskUpID string) (boo
 		TaskID:  taskUpID}
 }
 
-func (c *clientAPI) getJsonRetry(ctx context.Context, url string, data *map[string]any, tries int) error {
+func (c *clientAPI) getJsonRetry(ctx context.Context, url string, data any, errorMSG string, tries int) error {
 	var err error
 	var retry bool
 	for i := range time.Duration(tries) {
-		_, retry, err = c.session.getJSON(ctx, url, nil, nil, data)
+		_, retry, err = c.session.getJSON(ctx, url, nil, nil, data, errorMSG)
 		if err == nil {
 			return nil
 		}

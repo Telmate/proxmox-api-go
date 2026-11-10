@@ -115,3 +115,5 @@ func (t Tag) Validate() error {
 	}
 	return nil
 }
+
+const guestApiKeyTags = "tags"

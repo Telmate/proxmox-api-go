@@ -130,3 +130,11 @@ func (c clientAPI) postAgent(ctx context.Context, id GuestID, node NodeName, opt
 	}
 	return nil, errors.New(text + " " + message + " not readable")
 }
+
+func (c *clientAPI) termProxy(ctx context.Context, ref guestRef) (*term, error) {
+	var data responseData[term]
+	if err := c.postData(ctx, &data, nil, "terminal proxy", "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/termproxy"); err != nil {
+		return nil, err
+	}
+	return data.Data, nil
+}
