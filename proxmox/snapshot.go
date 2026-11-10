@@ -2,7 +2,6 @@ package proxmox
 
 import (
 	"context"
-	"errors"
 	"iter"
 	"regexp"
 	"slices"
@@ -12,7 +11,7 @@ import (
 	"unicode"
 
 	"github.com/Telmate/proxmox-api-go/internal/body"
-	"github.com/Telmate/proxmox-api-go/internal/util"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 type (
@@ -62,133 +61,139 @@ type (
 
 var _ SnapshotInterface = (*snapshotClient)(nil)
 
-func (c *snapshotClient) CreateLxc(ctx context.Context, guest VmRef, name SnapshotName, description string) error {
+func (c *snapshotClient) CreateLxc(ctx context.Context, vmr VmRef, name SnapshotName, description string) error {
 	if err := name.Validate(); err != nil {
 		return err
 	}
-	return c.CreateLxcNoCheck(ctx, guest, name, description)
+	ref := LxcRef{Node: vmr.node, ID: vmr.vmId}.generalize()
+	if _, err := ref.checkLxc(ctx, c.api); err != nil {
+		return err
+	}
+	return c.CreateLxcNoCheck(ctx, ref.legacy(), name, description)
 }
 
-func (c *snapshotClient) CreateLxcNoCheck(ctx context.Context, ref VmRef, name SnapshotName, description string) error {
-	if ref.node == "" {
-		if _, err := c.oldClient.GetVmInfo(ctx, &ref); err != nil {
-			return err
-		}
-	}
-	ref.vmType = GuestLxc
+func (c *snapshotClient) CreateLxcNoCheck(ctx context.Context, vmr VmRef, name SnapshotName, description string) error {
+	ref := LxcRef{Node: vmr.node, ID: vmr.vmId}.generalize()
 	return name.create(ctx, c.api, ref, description, false)
 }
 
-func (c *snapshotClient) CreateQemu(ctx context.Context, ref VmRef, name SnapshotName, description string, vmState bool) error {
+func (c *snapshotClient) CreateQemu(ctx context.Context, vmr VmRef, name SnapshotName, description string, vmState bool) error {
 	if err := name.Validate(); err != nil {
 		return err
 	}
-	return c.CreateQemuNoCheck(ctx, ref, name, description, vmState)
+	ref := QemuRef{Node: vmr.node, ID: vmr.vmId}.generalize()
+	if _, err := ref.checkQemu(ctx, c.api); err != nil {
+		return err
+	}
+	return c.CreateQemuNoCheck(ctx, ref.legacy(), name, description, vmState)
 }
 
-func (c *snapshotClient) CreateQemuNoCheck(ctx context.Context, ref VmRef, name SnapshotName, description string, vmState bool) error {
-	if ref.node == "" {
-		if _, err := c.oldClient.GetVmInfo(ctx, &ref); err != nil {
-			return err
-		}
-	}
-	ref.vmType = GuestQemu
+func (c *snapshotClient) CreateQemuNoCheck(ctx context.Context, vmr VmRef, name SnapshotName, description string, vmState bool) error {
+	ref := QemuRef{Node: vmr.node, ID: vmr.vmId}.generalize()
 	return name.create(ctx, c.api, ref, description, vmState)
 }
 
-func (c *snapshotClient) Delete(ctx context.Context, ref VmRef, name SnapshotName) (bool, error) {
+func (c *snapshotClient) Delete(ctx context.Context, vmr VmRef, name SnapshotName) (bool, error) {
 	if err := name.Validate(); err != nil {
 		return false, err
 	}
-	return c.DeleteNoCheck(ctx, ref, name)
-}
-
-func (c *snapshotClient) DeleteNoCheck(ctx context.Context, ref VmRef, name SnapshotName) (bool, error) {
-	if err := c.oldClient.CheckVmRef(ctx, &ref); err != nil {
+	ref := guestRef{Node: vmr.node, ID: vmr.vmId, Type: vmr.vmType}
+	if _, err := ref.check(ctx, nil, c.api); err != nil {
 		return false, err
 	}
+	return c.DeleteNoCheck(ctx, ref.legacy(), name)
+}
+
+func (c *snapshotClient) DeleteNoCheck(ctx context.Context, vmr VmRef, name SnapshotName) (bool, error) {
+	ref := guestRef{Node: vmr.node, ID: vmr.vmId, Type: vmr.vmType}
 	return name.delete(ctx, c.api, ref)
 }
 
-func (c *snapshotClient) List(ctx context.Context, ref VmRef) (RawSnapshots, error) {
-	return c.ListNoCheck(ctx, ref)
-}
-
-func (c *snapshotClient) ListNoCheck(ctx context.Context, ref VmRef) (RawSnapshots, error) {
-	if err := c.oldClient.CheckVmRef(ctx, &ref); err != nil {
+func (c *snapshotClient) List(ctx context.Context, vmr VmRef) (RawSnapshots, error) {
+	ref := guestRef{Node: vmr.node, ID: vmr.vmId, Type: vmr.vmType}
+	if _, err := ref.check(ctx, nil, c.api); err != nil {
 		return nil, err
 	}
+	return c.ListNoCheck(ctx, ref.legacy())
+}
+
+func (c *snapshotClient) ListNoCheck(ctx context.Context, vmr VmRef) (RawSnapshots, error) {
+	ref := guestRef{Node: vmr.node, ID: vmr.vmId, Type: vmr.vmType}
 	return snapshotList(ctx, c.api, ref)
 }
 
-func (c *snapshotClient) ReadLxc(ctx context.Context, ref VmRef, name SnapshotName) (RawConfigLXC, error) {
+func (c *snapshotClient) ReadLxc(ctx context.Context, vmr VmRef, name SnapshotName) (RawConfigLXC, error) {
 	if err := name.Validate(); err != nil {
 		return nil, err
 	}
-	return c.ReadLxcNoCheck(ctx, ref, name)
+	ref := LxcRef{Node: vmr.node, ID: vmr.vmId}.generalize()
+	if _, err := ref.checkLxc(ctx, c.api); err != nil {
+		return nil, err
+	}
+	return c.ReadLxcNoCheck(ctx, ref.legacy(), name)
 }
 
-func (c *snapshotClient) ReadLxcNoCheck(ctx context.Context, guest VmRef, name SnapshotName) (RawConfigLXC, error) {
-	if guest.node == "" {
-		if _, err := c.oldClient.GetVmInfo(ctx, &guest); err != nil {
-			return nil, err
-		}
-	}
-	params, err := name.readConfig(ctx, c.api, guest)
+func (c *snapshotClient) ReadLxcNoCheck(ctx context.Context, vmr VmRef, name SnapshotName) (RawConfigLXC, error) {
+	ref := LxcRef{Node: vmr.node, ID: vmr.vmId}.generalize()
+	params, err := name.readConfig(ctx, c.api, ref)
 	if err != nil {
 		return nil, err
 	}
 	return &rawConfigLXC{
 		a:       params,
-		guestID: guest.vmId,
-		node:    guest.node}, nil
+		guestID: ref.ID,
+		node:    ref.Node}, nil
 }
 
-func (c *snapshotClient) ReadQemu(ctx context.Context, guest VmRef, name SnapshotName) (RawConfigQemu, error) {
+func (c *snapshotClient) ReadQemu(ctx context.Context, vmr VmRef, name SnapshotName) (RawConfigQemu, error) {
 	if err := name.Validate(); err != nil {
 		return nil, err
 	}
-	return c.ReadQemuNoCheck(ctx, guest, name)
+	ref := QemuRef{Node: vmr.node, ID: vmr.vmId}.generalize()
+	if _, err := ref.checkQemu(ctx, c.api); err != nil {
+		return nil, err
+	}
+	return c.ReadQemuNoCheck(ctx, ref.legacy(), name)
 }
 
-func (c *snapshotClient) ReadQemuNoCheck(ctx context.Context, guest VmRef, name SnapshotName) (RawConfigQemu, error) {
-	if guest.node == "" {
-		if _, err := c.oldClient.GetVmInfo(ctx, &guest); err != nil {
-			return nil, err
-		}
-	}
-	params, err := name.readConfig(ctx, c.api, guest)
+func (c *snapshotClient) ReadQemuNoCheck(ctx context.Context, vmr VmRef, name SnapshotName) (RawConfigQemu, error) {
+	ref := QemuRef{Node: vmr.node, ID: vmr.vmId}.generalize()
+	params, err := name.readConfig(ctx, c.api, ref)
 	if err != nil {
 		return nil, err
 	}
-	return &rawConfigQemu{a: params, id: guest.vmId, node: guest.node}, nil
+	return &rawConfigQemu{a: params, id: ref.ID, node: ref.Node}, nil
 }
 
-func (c *snapshotClient) Rollback(ctx context.Context, guest VmRef, name SnapshotName, start bool) error {
+func (c *snapshotClient) Rollback(ctx context.Context, vmr VmRef, name SnapshotName, start bool) error {
 	if err := name.Validate(); err != nil {
 		return err
 	}
-	return c.RollbackNoCheck(ctx, guest, name, start)
-}
-
-func (c *snapshotClient) RollbackNoCheck(ctx context.Context, ref VmRef, name SnapshotName, start bool) error {
-	if err := c.oldClient.CheckVmRef(ctx, &ref); err != nil {
+	ref := guestRef{Node: vmr.node, ID: vmr.vmId, Type: vmr.vmType}
+	if _, err := ref.check(ctx, nil, c.api); err != nil {
 		return err
 	}
+	return c.RollbackNoCheck(ctx, ref.legacy(), name, start)
+}
+
+func (c *snapshotClient) RollbackNoCheck(ctx context.Context, vmr VmRef, name SnapshotName, start bool) error {
+	ref := guestRef{Node: vmr.node, ID: vmr.vmId, Type: vmr.vmType}
 	return name.rollback(ctx, c.api, ref, start)
 }
 
-func (c *snapshotClient) Update(ctx context.Context, ref VmRef, name SnapshotName, description string) error {
+func (c *snapshotClient) Update(ctx context.Context, vmr VmRef, name SnapshotName, description string) error {
 	if err := name.Validate(); err != nil {
 		return err
 	}
-	return c.UpdateNoCheck(ctx, ref, name, description)
-}
-
-func (c *snapshotClient) UpdateNoCheck(ctx context.Context, ref VmRef, name SnapshotName, description string) error {
-	if err := c.oldClient.CheckVmRef(ctx, &ref); err != nil {
+	ref := guestRef{Node: vmr.node, ID: vmr.vmId, Type: vmr.vmType}
+	if _, err := ref.check(ctx, nil, c.api); err != nil {
 		return err
 	}
+	return c.UpdateNoCheck(ctx, ref.legacy(), name, description)
+}
+
+func (c *snapshotClient) UpdateNoCheck(ctx context.Context, vmr VmRef, name SnapshotName, description string) error {
+	ref := guestRef{Node: vmr.node, ID: vmr.vmId, Type: vmr.vmType}
 	return name.update(ctx, c.api, ref, description)
 }
 
@@ -254,7 +259,8 @@ type (
 		Tree() RawSnapshotTree
 	}
 	rawSnapshots struct {
-		a []any
+		_ noCopy.True
+		a []responseSnapshotInfo
 	}
 )
 
@@ -263,7 +269,7 @@ var _ RawSnapshots = (*rawSnapshots)(nil)
 func (r *rawSnapshots) AsArray() []RawSnapshotInfo {
 	snapshots := make([]RawSnapshotInfo, len(r.a))
 	for i := range r.a {
-		snapshots[i] = &rawSnapshotInfo{a: r.a[i].(map[string]any)}
+		snapshots[i] = &rawSnapshotInfo{a: &r.a[i]}
 	}
 	return snapshots
 }
@@ -271,8 +277,8 @@ func (r *rawSnapshots) AsArray() []RawSnapshotInfo {
 func (r *rawSnapshots) AsMap() map[SnapshotName]RawSnapshotInfo {
 	snapshots := make(map[SnapshotName]RawSnapshotInfo, len(r.a))
 	for i := range r.a {
-		snapshotObj := &rawSnapshotInfo{a: r.a[i].(map[string]any)}
-		name := SnapshotName(r.a[i].(map[string]any)[snapshotListApiKeyName].(string))
+		snapshotObj := &rawSnapshotInfo{a: &r.a[i]}
+		name := SnapshotName(r.a[i].Name)
 		snapshotObj.name = &name
 		snapshots[name] = snapshotObj
 	}
@@ -282,7 +288,7 @@ func (r *rawSnapshots) AsMap() map[SnapshotName]RawSnapshotInfo {
 func (r *rawSnapshots) Iter() iter.Seq[RawSnapshotInfo] {
 	return func(yield func(RawSnapshotInfo) bool) {
 		for i := range r.a {
-			if !yield(&rawSnapshotInfo{a: r.a[i].(map[string]any)}) {
+			if !yield(&rawSnapshotInfo{a: &r.a[i]}) {
 				return
 			}
 		}
@@ -293,9 +299,8 @@ func (r *rawSnapshots) Len() int { return len(r.a) }
 
 func (r *rawSnapshots) SelectSnapshot(name SnapshotName) (RawSnapshotInfo, bool) {
 	for i := range r.a {
-		params := r.a[i].(map[string]any)
-		if params[snapshotListApiKeyName] == name.String() {
-			return &rawSnapshotInfo{a: params}, true
+		if r.a[i].Name == name.String() {
+			return &rawSnapshotInfo{a: &r.a[i]}, true
 		}
 	}
 	return nil, false
@@ -308,30 +313,24 @@ func (r *rawSnapshots) Tree() RawSnapshotTree {
 	var rootSnapshots [](*Snapshot)
 
 	for i := range r.a { // First pass: populate snapshot information
-		params := r.a[i].(map[string]any)
 		var snapshotObj Snapshot
 		snapshotCapsule := snapshot{snapshot: &snapshotObj}
 
-		if v, isSet := params[snapshotListApiKeyName]; isSet {
-			snapshotObj.Name = SnapshotName(v.(string))
-		}
-		if v, isSet := params[snapshotListApiKeyDescription]; isSet {
-			snapshotObj.Description = v.(string)
-		}
-		if v, isSet := params[snapshotListApiKeyTime]; isSet {
-			snapshotObj.Time = util.Pointer(time.Unix(int64(v.(float64)), 0))
+		snapshotObj.Name = SnapshotName(r.a[i].Name)
+		snapshotObj.Description = r.a[i].Description
+		if r.a[i].Time != nil {
+			snapshotObj.Time = new(time.Unix(*r.a[i].Time, 0))
 		} else {
-			snapshotObj.Time = util.Pointer(time.Unix(maxTime, 0)) // Set to max time to indicate current snapshot
+			snapshotObj.Time = new(time.Unix(maxTime, 0)) // Set to max time to indicate current snapshot
 		}
-		if v, isSet := params[snapshotListApiKeyVmState]; isSet {
-			snapshotObj.VmState = util.Pointer(int(v.(float64)) == 1)
+		if r.a[i].State != nil {
+			snapshotObj.VmState = new(*r.a[i].State == 1)
 		}
-		if v, isSet := params[snapshotListApiKeyParent]; isSet {
-			snapshotCapsule.parent = SnapshotName(v.(string))
-		} else { // No parent, we are a root snapshot
+		if r.a[i].Parent != nil {
+			snapshotCapsule.parent = SnapshotName(*r.a[i].Parent)
+		} else {
 			rootSnapshots = append(rootSnapshots, &snapshotObj)
 		}
-
 		snapshots[snapshotObj.Name] = snapshotCapsule
 	}
 
@@ -392,8 +391,17 @@ type (
 		GetParent() *SnapshotName
 	}
 	rawSnapshotInfo struct {
-		a    map[string]any
-		name *SnapshotName // Set by AsMap()
+		_    noCopy.True
+		a    *responseSnapshotInfo // Never Nil
+		name *SnapshotName         // Set by AsMap()
+	}
+	responseSnapshotInfo struct {
+		_           noCopy.True
+		Parent      *string `json:"parent,omitempty"`
+		State       *int8   `json:"vmstate,omitempty"`
+		Time        *int64  `json:"snaptime,omitempty"`
+		Description string  `json:"description"`
+		Name        string  `json:"name"`
 	}
 )
 
@@ -412,36 +420,28 @@ func (r *rawSnapshotInfo) GetName() SnapshotName {
 	if r.name != nil {
 		return *r.name
 	}
-	if v, isSet := r.a[snapshotListApiKeyName]; isSet {
-		return SnapshotName(v.(string))
-	}
-	return ""
+	return SnapshotName(r.a.Name)
 }
 
 func (r *rawSnapshotInfo) GetTime() *time.Time {
-	if v, isSet := r.a[snapshotListApiKeyTime]; isSet {
-		return util.Pointer(time.Unix(int64(v.(float64)), 0))
+	if r.a.Time != nil {
+		return new(time.Unix(*r.a.Time, 0))
 	}
 	return nil
 }
 
-func (r *rawSnapshotInfo) GetDescription() string {
-	if v, isSet := r.a[snapshotListApiKeyDescription]; isSet {
-		return strings.TrimSpace(v.(string))
-	}
-	return ""
-}
+func (r *rawSnapshotInfo) GetDescription() string { return strings.TrimSpace(r.a.Description) }
 
 func (r *rawSnapshotInfo) GetVmState() *bool {
-	if v, isSet := r.a[snapshotListApiKeyVmState]; isSet {
-		return util.Pointer(int(v.(float64)) == 1)
+	if r.a.State != nil {
+		return new(*r.a.State == 1)
 	}
 	return nil
 }
 
 func (r *rawSnapshotInfo) GetParent() *SnapshotName {
-	if v, isSet := r.a[snapshotListApiKeyParent]; isSet {
-		return util.Pointer(SnapshotName(v.(string)))
+	if r.a.Parent != nil {
+		return new(SnapshotName(*r.a.Parent))
 	}
 	return nil
 }
@@ -464,8 +464,8 @@ type (
 		Walk(fn func(s *Snapshot) bool)
 	}
 	rawSnapshotTree struct {
-		root    []*Snapshot
 		current *Snapshot
+		root    []*Snapshot
 	}
 )
 
@@ -554,7 +554,7 @@ const (
 	SnapshotName_Error_StartNoLetter     string = "SnapshotName must start with a letter"
 )
 
-func (snap SnapshotName) create(ctx context.Context, c *clientAPI, vmr VmRef, description string, vmState bool) error {
+func (snap SnapshotName) create(ctx context.Context, c *clientAPI, ref guestRef, description string, vmState bool) error {
 	builder := strings.Builder{}
 	builder.WriteString(snapshotApiKeyName + "=")
 	builder.WriteString(snap.String())
@@ -565,11 +565,11 @@ func (snap SnapshotName) create(ctx context.Context, c *clientAPI, vmr VmRef, de
 	if vmState {
 		builder.WriteString("&" + snapshotApiKeyVmState + "=1")
 	}
-	return c.postTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot", util.Pointer([]byte(builder.String())))
+	return c.postTask(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot", new([]byte(builder.String())))
 }
 
-func (snap SnapshotName) delete(ctx context.Context, c *clientAPI, vmr VmRef) (bool, error) {
-	if err := c.deleteTask(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot/"+snap.String()); err != nil {
+func (snap SnapshotName) delete(ctx context.Context, c *clientAPI, ref guestRef) (bool, error) {
+	if err := c.deleteTask(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot/"+snap.String()); err != nil {
 		if taskErr, ok := err.(*TaskError); ok {
 			if strings.HasPrefix(taskErr.Message, `snapshot '`+snap.String()+`' does not exist`) {
 				return false, nil
@@ -600,16 +600,17 @@ func (snap SnapshotName) DeleteNoCheck(ctx context.Context, c *Client, vmr *VmRe
 	return
 }
 
-func (snap SnapshotName) readConfig(ctx context.Context, c *clientAPI, vmr VmRef) (map[string]any, error) {
-	return c.getMap(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot/"+snap.String()+"/config", "Guest", "SNAPSHOT")
+func (snap SnapshotName) readConfig(ctx context.Context, c *clientAPI, ref guestRef) (map[string]any, error) {
+
+	return c.getMap(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot/"+snap.String()+"/config", "Guest", "SNAPSHOT")
 }
 
-func (snap SnapshotName) rollback(ctx context.Context, c *clientAPI, vmr VmRef, start bool) error {
+func (snap SnapshotName) rollback(ctx context.Context, c *clientAPI, ref guestRef, start bool) error {
 	var body *[]byte
 	if start {
 		body = new([]byte("start=1"))
 	}
-	return c.post(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+strconv.FormatInt(int64(vmr.vmId), 10)+"/snapshot/"+string(snap)+"/rollback", body)
+	return c.post(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+strconv.FormatInt(int64(ref.ID), 10)+"/snapshot/"+string(snap)+"/rollback", body)
 }
 
 // Deprecated: use SnapshotInterface.Rollback() instead
@@ -629,8 +630,8 @@ func (snap SnapshotName) RollbackNoCheck(ctx context.Context, c *Client, vmr *Vm
 
 func (snap SnapshotName) String() string { return string(snap) } // for fmt.Stringer
 
-func (snap SnapshotName) update(ctx context.Context, c *clientAPI, vmr VmRef, description string) error {
-	return c.putRawRetry(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot/"+string(snap)+"/config", util.Pointer([]byte(snapshotApiKeyDescription+"="+body.Escape(description))), 3)
+func (snap SnapshotName) update(ctx context.Context, c *clientAPI, ref guestRef, description string) error {
+	return c.putRawRetry(ctx, "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot/"+string(snap)+"/config", new([]byte(snapshotApiKeyDescription+"="+body.Escape(description))), RequestRetryCount)
 }
 
 // Deprecated: use SnapshotInterface.Update() instead
@@ -650,35 +651,29 @@ var snapshotNameRegex = regexp.MustCompile(`^([a-zA-Z])([a-z]|[A-Z]|[0-9]|_|-){2
 func (name SnapshotName) Validate() error {
 	if !snapshotNameRegex.Match([]byte(name)) {
 		if len(name) < 3 {
-			return errors.New(SnapshotName_Error_MinLength)
+			return newValidateError(SnapshotName_Error_MinLength)
 		}
 		if len(name) > 40 {
-			return errors.New(SnapshotName_Error_MaxLength)
+			return newValidateError(SnapshotName_Error_MaxLength)
 		}
 		if !unicode.IsLetter(rune(name[0])) {
-			return errors.New(SnapshotName_Error_StartNoLetter)
+			return newValidateError(SnapshotName_Error_StartNoLetter)
 		}
-		return errors.New(SnapshotName_Error_IllegalCharacters)
+		return newValidateError(SnapshotName_Error_IllegalCharacters)
 	}
 	return nil
 }
 
-func snapshotList(ctx context.Context, c *clientAPI, vmr VmRef) (*rawSnapshots, error) {
-	raw, err := c.getList(ctx, "/nodes/"+vmr.node.String()+"/"+vmr.vmType.String()+"/"+vmr.vmId.String()+"/snapshot", "Guest", "SNAPSHOTS")
-	if err != nil {
+func snapshotList(ctx context.Context, c *clientAPI, ref guestRef) (*rawSnapshots, error) {
+	var data responseData[[]responseSnapshotInfo]
+	if err := c.getData(ctx, &data, "guest snapshots", "/nodes/"+ref.Node.String()+"/"+ref.Type.String()+"/"+ref.ID.String()+"/snapshot"); err != nil {
 		return nil, err
 	}
-	return &rawSnapshots{a: raw}, nil
+	return &rawSnapshots{a: *data.Data}, nil
 }
 
 const (
-	snapshotApiKeyName        string = "snapname"
-	snapshotApiKeyDescription string = "description"
-	snapshotApiKeyVmState     string = "vmstate"
-
-	snapshotListApiKeyName        string = "name"
-	snapshotListApiKeyDescription string = "description"
-	snapshotListApiKeyParent      string = "parent"
-	snapshotListApiKeyTime        string = "snaptime"
-	snapshotListApiKeyVmState     string = "vmstate"
+	snapshotApiKeyName        = "snapname"
+	snapshotApiKeyDescription = "description"
+	snapshotApiKeyVmState     = "vmstate"
 )

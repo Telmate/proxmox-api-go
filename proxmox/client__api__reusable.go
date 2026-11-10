@@ -2,11 +2,9 @@ package proxmox
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"strings"
 	"time"
 )
@@ -67,11 +65,11 @@ func (c *clientAPI) deleteTask(ctx context.Context, url string) error {
 }
 
 func (c *clientAPI) deleteTaskNoHighLevelRetry(ctx context.Context, url string) error {
-	var response *http.Response
+	var data responseDataOptional[string]
 	var retry bool
 	var err error
 	for i := range time.Duration(RequestRetryCount) {
-		response, retry, err = c.session.delete(ctx, url, nil, nil)
+		_, retry, err = c.session.deleteJSON(ctx, url, nil, nil, &data, "")
 		if err == nil || !retry {
 			break
 		}
@@ -80,10 +78,10 @@ func (c *clientAPI) deleteTaskNoHighLevelRetry(ctx context.Context, url string) 
 	if err != nil {
 		return err
 	}
-	return c.checkTask(ctx, response)
+	return c.checkTask(ctx, data)
 }
 
-func (c *clientAPI) getData(ctx context.Context, data any, url, message string) error {
+func (c *clientAPI) getData(ctx context.Context, data any, message, url string) error {
 	return c.getJsonRetry(ctx, url, data, message, RequestRetryCount)
 }
 
@@ -91,7 +89,7 @@ func (c *clientAPI) getData(ctx context.Context, data any, url, message string) 
 // Phase out in favour of clientAPI.getData()
 func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[string]any, error) {
 	var data map[string]any
-	if err := c.getData(ctx, &data, url, text+" "+message); err != nil {
+	if err := c.getData(ctx, &data, text+" "+message, url); err != nil {
 		return nil, err
 	}
 	if v, ok := data["data"]; ok {
@@ -103,7 +101,7 @@ func (c *clientAPI) getMap(ctx context.Context, url, text, message string) (map[
 // Phase out in favour of clientAPI.getData()
 func (c *clientAPI) getList(ctx context.Context, url, text, message string) ([]any, error) {
 	var data map[string]any
-	if err := c.getData(ctx, &data, url, text+" "+message); err != nil {
+	if err := c.getData(ctx, &data, text+" "+message, url); err != nil {
 		return nil, err
 	}
 	if v, ok := data["data"]; ok {
@@ -179,11 +177,11 @@ func (c *clientAPI) postTask(ctx context.Context, url string, body *[]byte) erro
 }
 
 func (c *clientAPI) postTaskNoHighLevelRetry(ctx context.Context, url string, body *[]byte) error {
-	var response *http.Response
+	var data responseDataOptional[string]
 	var retry bool
 	var err error
 	for i := range time.Duration(RequestRetryCount) {
-		response, retry, err = c.session.post(ctx, url, nil, nil, body)
+		_, retry, err = c.session.postJSON(ctx, url, nil, nil, body, &data, "")
 		if err == nil || !retry {
 			break
 		}
@@ -192,7 +190,7 @@ func (c *clientAPI) postTaskNoHighLevelRetry(ctx context.Context, url string, bo
 	if err != nil {
 		return err
 	}
-	return c.checkTask(ctx, response)
+	return c.checkTask(ctx, data)
 }
 
 // Makes a PUT request without waiting on proxmox for the task to complete.
@@ -234,11 +232,11 @@ func (c *clientAPI) putTask(ctx context.Context, url string, body *[]byte) error
 }
 
 func (c *clientAPI) putTaskNoHighLevelRetry(ctx context.Context, url string, body *[]byte) error {
-	var response *http.Response
+	var data responseDataOptional[string]
 	var retry bool
 	var err error
 	for i := range time.Duration(RequestRetryCount) {
-		response, retry, err = c.session.put(ctx, url, nil, nil, body)
+		_, retry, err = c.session.putJSON(ctx, url, nil, nil, body, &data, "")
 		if err == nil || !retry {
 			break
 		}
@@ -247,31 +245,23 @@ func (c *clientAPI) putTaskNoHighLevelRetry(ctx context.Context, url string, bod
 	if err != nil {
 		return err
 	}
-	return c.checkTask(ctx, response)
+	return c.checkTask(ctx, data)
 }
 
 // checkTask polls the API to check if the Proxmox task has been completed.
 // It returns the body of the HTTP response and any HTTP error occurred during the request.
-func (c *clientAPI) checkTask(ctx context.Context, resp *http.Response) error {
-	taskResponse, err := responseJSON(resp)
-	if err != nil {
-		return err
-	}
-	if v, ok := taskResponse["errors"]; ok {
-		errMsg, _ := json.MarshalIndent(v, "", "  ")
-		return errors.New(string(errMsg))
-	}
-	upID, ok := taskResponse["data"]
-	if !ok { // when we try to get a response for a task that doesn't produce a task.
+func (c *clientAPI) checkTask(ctx context.Context, data responseDataOptional[string]) error {
+	// Not sure if this is a real failure state.
+	if data.Data == nil { // when we try to get a response for a task that doesn't produce a task.
 		if c.featureFlags.PanicOnInvalidTask {
 			panic("We got a response from the API that doesn't contain a task ID. This is unexpected and should be investigated.")
 		}
 		return nil
 	}
 	if c.featureFlags.AsyncTask {
-		return newTask(ctx, c, upID.(string), TaskStatusCheckInterval*time.Second).WaitForCompletion()
+		return newTask(ctx, c, *data.Data, TaskStatusCheckInterval*time.Second).WaitForCompletion()
 	}
-	return c.waitForCompletion(ctx, upID.(string))
+	return c.waitForCompletion(ctx, *data.Data)
 }
 
 // waitForCompletion - poll the API for task completion

@@ -3,9 +3,12 @@ package proxmox
 import (
 	"encoding/json"
 	"errors"
+
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 type responseData[T any] struct {
+	_    noCopy.True
 	Data *T `json:"data"` // Throws error when missing
 }
 
@@ -22,4 +25,15 @@ func (item *responseData[T]) UnmarshalJSON(data []byte) error {
 	}
 	item.Data = required.Data
 	return nil
+}
+
+type responseDataOptional[T any] struct {
+	_    noCopy.True
+	Data *T `json:"data,omitempty"`
+}
+
+type responseError struct {
+	_       noCopy.True
+	Error   *map[string]any `json:"error,omitempty"`
+	Message *string         `json:"message,omitempty"`
 }

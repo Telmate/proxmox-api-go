@@ -262,19 +262,19 @@ func (s *Session) do(req *http.Request) (resp *http.Response, retry bool, err er
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		if len(respBody) > 1 { // we need at least {} to be valid JSON, sometimes a single `\n` is returned.
-			var bodyObj map[string]any
+			var bodyObj responseError
 			err = json.Unmarshal(respBody, &bodyObj)
 			if err == nil {
 				var apiErr ApiError
-				if v, ok := bodyObj["message"]; ok {
-					apiErr.Message = strings.TrimRight(v.(string), "\n")
+				if bodyObj.Message != nil {
+					apiErr.Message = strings.TrimRight(*bodyObj.Message, "\n")
 				}
 				if err = newPermissionError(apiErr.Message); err != nil {
 					return resp, false, err
 				}
 				apiErr.Code = resp.Status[0:3]
-				if v, ok := bodyObj["errors"]; ok {
-					apiErr.Errors = v.(map[string]any)
+				if bodyObj.Error != nil {
+					apiErr.Errors = *bodyObj.Error
 				}
 				return resp, false, &apiErr
 			}
@@ -362,6 +362,17 @@ func (s *Session) delete(
 	return s.request(ctx, "DELETE", url, params, headers, nil)
 }
 
+func (s *Session) deleteJSON(
+	ctx context.Context,
+	url string,
+	params *url.Values,
+	headers *http.Header,
+	responseContainer any,
+	errorMSG string,
+) (resp *http.Response, retry bool, err error) {
+	return s.requestJSON(ctx, "DELETE", url, params, headers, nil, responseContainer, errorMSG)
+}
+
 func (s *Session) get(
 	ctx context.Context,
 	url string,
@@ -420,6 +431,22 @@ func (s *Session) put(
 		headers.Add("Content-Type", "application/x-www-form-urlencoded")
 	}
 	return s.request(ctx, "PUT", url, params, headers, body)
+}
+
+func (s *Session) putJSON(
+	ctx context.Context,
+	url string,
+	params *url.Values,
+	headers *http.Header,
+	body *[]byte,
+	responseContainer any,
+	errorMSG string,
+) (resp *http.Response, retry bool, err error) {
+	if headers == nil {
+		headers = &http.Header{}
+		headers.Add("Content-Type", "application/x-www-form-urlencoded")
+	}
+	return s.requestJSON(ctx, "PUT", url, params, headers, body, responseContainer, errorMSG)
 }
 
 func (s *Session) webSocket(
