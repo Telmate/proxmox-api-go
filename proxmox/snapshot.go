@@ -673,13 +673,7 @@ func snapshotList(ctx context.Context, c *clientAPI, ref guestRef) (*rawSnapshot
 }
 
 const (
-	snapshotApiKeyName        string = "snapname"
-	snapshotApiKeyDescription string = "description"
-	snapshotApiKeyVmState     string = "vmstate"
-
-	snapshotListApiKeyName        string = "name"
-	snapshotListApiKeyDescription string = "description"
-	snapshotListApiKeyParent      string = "parent"
-	snapshotListApiKeyTime        string = "snaptime"
-	snapshotListApiKeyVmState     string = "vmstate"
+	snapshotApiKeyName        = "snapname"
+	snapshotApiKeyDescription = "description"
+	snapshotApiKeyVmState     = "vmstate"
 )
