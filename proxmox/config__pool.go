@@ -745,7 +745,7 @@ func (raw *rawPoolStorage) GetName() StorageName {
 type PoolName string
 
 const (
-	PoolName_Error_Characters        string = "PoolName may only contain the following characters: a-z, A-Z, 0-9, hyphen (-), and underscore (_)"
+	PoolName_Error_Characters        string = "PoolName may only contain the following characters: a-z, A-Z, 0-9, hyphen (-), underscore (_), and slash (/) for nested pools"
 	PoolName_Error_Empty             string = "PoolName cannot be empty"
 	PoolName_Error_Length            string = "PoolName may not be longer than 1024 characters" // proxmox does not seem to have a max length, so we artificially cap it at 1024
 	PoolName_Error_NotExists         string = "Pool doesn't exist"
@@ -753,7 +753,9 @@ const (
 	PoolName_Error_NoGuestsSpecified string = "no guests specified"
 )
 
-var regex_PoolName = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
+// From PVE 8.1 on, pools can be created in sub-pools (nested pool ids),
+// e.g. "Hardware/Test".
+var regex_PoolName = regexp.MustCompile(`^([a-zA-Z0-9_-]+/)*[a-zA-Z0-9_-]+$`)
 
 func (pool PoolName) addGuests(
 	ctx context.Context, c *clientAPI, oldClient *Client,
