@@ -4,4 +4,5 @@ package noCopy
 
 type True struct{}
 
-func (*True) Lock() {}
+func (*True) Lock()   {}
+func (*True) Unlock() {}
