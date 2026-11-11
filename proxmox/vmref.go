@@ -392,12 +392,12 @@ func (vmr *VmRef) TermProxyWebsocketServeHTTP(c *Client, w http.ResponseWriter, 
 		return
 	}
 
-	/*authMsg := fmt.Sprintf("%s:%s", utilStr.BeforeFirst(ticket.User, "!"), ticket.Ticket)
-	fmt.Println(authMsg)
-	if err = pveVncConn.WriteMessage(websocket.TextMessage, []byte(authMsg)); err != nil {
+	authMsg := fmt.Sprintf("%s:%s\n", ticket.User, ticket.Ticket)
+	err = pveVncConn.WriteMessage(websocket.TextMessage, []byte(authMsg))
+	if nil != err {
 		err = fmt.Errorf("write pve auth password message err: %+v", err)
 		return
-	}*/
+	}
 
 	defer func() {
 		_ = pveVncConn.Close()
