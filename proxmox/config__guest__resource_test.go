@@ -406,9 +406,9 @@ func Test_RawGuestResources_Iter(t *testing.T) {
 				result = append(result, guest)
 			}
 			require.Equal(t, len(tests[i].output), len(result))
-			for i := range result {
-				guest := result[i].Get()
-				expected := tests[i].output[i].Get()
+			for ii := range result {
+				guest := result[ii].Get()
+				expected := tests[i].output[ii].Get()
 				require.Equal(t, expected, guest)
 			}
 			// Test early termination (break after first item)
