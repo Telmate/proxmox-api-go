@@ -3,6 +3,8 @@ package proxmox
 import (
 	"iter"
 	"time"
+
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 type NodeInfo struct {
@@ -47,7 +49,10 @@ type RawNodesInfo interface {
 
 var _ RawNodesInfo = (*rawNodesInfo)(nil)
 
-type rawNodesInfo struct{ a []any }
+type rawNodesInfo struct {
+	_ noCopy.True
+	a []any
+}
 
 func (r *rawNodesInfo) AsArray() []RawNodeInfo {
 	raws := make([]RawNodeInfo, len(r.a))
@@ -99,6 +104,7 @@ type RawNodeInfo interface {
 var _ RawNodeInfo = (*rawNodeInfo)(nil)
 
 type rawNodeInfo struct {
+	_    noCopy.True
 	a    map[string]any
 	node *NodeName // Not always set.
 }

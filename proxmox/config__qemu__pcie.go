@@ -353,17 +353,17 @@ func (config QemuPci) validateUpdate(current QemuPci) error {
 // TODO add [,legacy-igd=<1|0>]
 // TODO add [,romfile=<string>]
 type qemuPci struct {
-	deviceID    PciDeviceID // [,device-id=<hex id>]
-	enum        qemuPciEnum
-	mappingID   ResourceMappingPciID // [,mapping=<mapping-id>]
+	deviceID    PciDeviceID          // [,device-id=<hex id>]
 	mDev        PciMediatedDevice    // [,mdev=<string>]
+	mappingID   ResourceMappingPciID // [,mapping=<mapping-id>]
 	rawID       PciID                // [[host=]<HOSTPCIID[;HOSTPCIID2...]>]
 	subDeviceID PciSubDeviceID       // [,sub-device-id=<hex id>]
 	subVendorID PciSubVendorID       // [,sub-vendor-id=<hex id>]
 	vendorID    PciVendorID          // [,vendor-id=<hex id>]
-	pCIe        bool                 // [,pcie=<1|0>] // only in key when true
-	primaryGPU  bool                 // [,x-vga=<1|0>] // only in key when true
-	romBar      bool                 // [,rombar=<1|0>] // only in key when false
+	enum        qemuPciEnum
+	pCIe        bool // [,pcie=<1|0>] // only in key when true
+	primaryGPU  bool // [,x-vga=<1|0>] // only in key when true
+	romBar      bool // [,rombar=<1|0>] // only in key when false
 }
 
 const (

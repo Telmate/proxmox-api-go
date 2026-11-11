@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/parse"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
@@ -157,6 +158,7 @@ type RawHaNodeAffinityRule interface {
 }
 
 type rawHaNodeAffinityRule struct {
+	_ noCopy.True
 	a map[string]any
 }
 
@@ -435,8 +437,11 @@ type RawHaResourceAffinityRule interface {
 }
 
 type rawHaResourceAffinityRule struct {
+	_ noCopy.True
 	a map[string]any
 }
+
+var _ RawHaResourceAffinityRule = (&rawHaResourceAffinityRule{})
 
 func (r *rawHaResourceAffinityRule) Get() HaResourceAffinityRule {
 	return HaResourceAffinityRule{

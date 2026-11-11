@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 type (
@@ -34,6 +35,7 @@ type (
 	}
 
 	qemuAgentClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}

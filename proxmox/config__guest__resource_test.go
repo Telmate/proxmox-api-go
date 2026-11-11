@@ -361,14 +361,14 @@ func Test_RawGuestResources_Get(t *testing.T) {
 					Uptime:             0,
 				}}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			rawGuests := test.input.AsArray()
+	for i := range tests {
+		t.Run(tests[i].name, func(*testing.T) {
+			rawGuests := tests[i].input.AsArray()
 			guests := make([]GuestResource, len(rawGuests))
 			for i := range rawGuests {
 				guests[i] = rawGuests[i].Get()
 			}
-			require.Equal(t, test.output, guests, test.name)
+			require.Equal(t, tests[i].output, guests, tests[i].name)
 		})
 	}
 }
@@ -398,23 +398,23 @@ func Test_RawGuestResources_Iter(t *testing.T) {
 				&rawGuestResource{a: map[string]any{"vmid": float64(200)}},
 				&rawGuestResource{a: map[string]any{"vmid": float64(300)}}}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
 			// Test iterating over all items
 			var result []RawGuestResource
-			for guest := range RawGuestResources(&test.input).Iter() {
+			for guest := range RawGuestResources(&tests[i].input).Iter() {
 				result = append(result, guest)
 			}
-			require.Equal(t, len(test.output), len(result))
+			require.Equal(t, len(tests[i].output), len(result))
 			for i := range result {
 				guest := result[i].Get()
-				expected := test.output[i].Get()
+				expected := tests[i].output[i].Get()
 				require.Equal(t, expected, guest)
 			}
 			// Test early termination (break after first item)
-			if len(test.output) > 0 {
+			if len(tests[i].output) > 0 {
 				count := 0
-				for range RawGuestResources(&test.input).Iter() {
+				for range RawGuestResources(&tests[i].input).Iter() {
 					count++
 					break
 				}
@@ -445,9 +445,9 @@ func Test_RawGuestResources_Len(t *testing.T) {
 				map[string]any{"vmid": float64(300)}}},
 			output: 3},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, RawGuestResources(&test.input).Len())
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			require.Equal(t, tests[i].output, RawGuestResources(&tests[i].input).Len())
 		})
 	}
 }
@@ -479,11 +479,11 @@ func Test_RawGuestResources_selectID(t *testing.T) {
 			input: 500,
 			data:  rawGuestResources{a: []any{}}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			raw, isSet := test.data.selectID(test.input)
-			require.Equal(t, test.isSet, isSet)
-			require.Equal(t, test.output, raw)
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			raw, isSet := tests[i].data.selectID(tests[i].input)
+			require.Equal(t, tests[i].isSet, isSet)
+			require.Equal(t, tests[i].output, raw)
 		})
 	}
 }

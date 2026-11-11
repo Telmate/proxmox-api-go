@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 type (
@@ -47,6 +48,7 @@ type (
 	}
 
 	lxcGuestClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}
@@ -825,6 +827,7 @@ type RawConfigLXC interface {
 }
 
 type rawConfigLXC struct {
+	_       noCopy.True
 	a       map[string]any
 	node    NodeName
 	guestID GuestID

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 type (
@@ -21,6 +23,7 @@ type (
 	}
 
 	nodeClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}

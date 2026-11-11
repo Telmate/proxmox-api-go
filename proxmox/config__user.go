@@ -14,6 +14,7 @@ import (
 
 	"github.com/Telmate/proxmox-api-go/internal/array"
 	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -68,8 +69,8 @@ type ConfigUser struct {
 }
 
 type UserInfo struct {
-	Config ConfigUser
 	Tokens *[]ApiTokenConfig
+	Config ConfigUser
 }
 
 var _ UserInterface = (*userClient)(nil)
@@ -571,38 +572,37 @@ func (password UserPassword) Validate() error {
 
 func (password UserPassword) String() string { return string(password) } // String is for fmt.Stringer.
 
-type (
-	RawConfigUser interface {
-		Get() *ConfigUser
-		GetComment() string
-		GetEmail() string
-		GetEnable() bool
-		GetExpire() uint
-		GetFirstName() string
-		GetGroups() *[]GroupName
-		GetKeys() *string
-		GetLastName() string
-		GetUser() UserID
-	}
+type RawConfigUser interface {
+	Get() *ConfigUser
+	GetComment() string
+	GetEmail() string
+	GetEnable() bool
+	GetExpire() uint
+	GetFirstName() string
+	GetGroups() *[]GroupName
+	GetKeys() *string
+	GetLastName() string
+	GetUser() UserID
+}
 
-	rawConfigUser struct {
-		a    map[string]any
-		user *UserID
-	}
-)
+type rawConfigUser struct {
+	_    noCopy.True
+	a    map[string]any
+	user *UserID
+}
 
 var _ RawConfigUser = (*rawConfigUser)(nil)
 
 func (r *rawConfigUser) Get() *ConfigUser {
 	return &ConfigUser{
-		Comment:   util.Pointer(r.GetComment()),
-		Email:     util.Pointer(r.GetEmail()),
-		Enable:    util.Pointer(r.GetEnable()),
-		Expire:    util.Pointer(r.GetExpire()),
-		FirstName: util.Pointer(r.GetFirstName()),
+		Comment:   new(r.GetComment()),
+		Email:     new(r.GetEmail()),
+		Enable:    new(r.GetEnable()),
+		Expire:    new(r.GetExpire()),
+		FirstName: new(r.GetFirstName()),
 		Groups:    r.GetGroups(),
 		Keys:      r.GetKeys(),
-		LastName:  util.Pointer(r.GetLastName()),
+		LastName:  new(r.GetLastName()),
 		User:      r.GetUser()}
 }
 
