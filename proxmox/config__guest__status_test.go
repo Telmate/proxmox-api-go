@@ -43,9 +43,9 @@ func Test_RawGuestStatus_Get(t *testing.T) {
 			input:  rawGuestStatus{},
 			output: GuestStatus{}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, RawGuestStatus(&test.input).Get(), test.name)
+	for i := range tests {
+		t.Run(tests[i].name, func(*testing.T) {
+			require.Equal(t, tests[i].output, RawGuestStatus(&tests[i].input).Get(), tests[i].name)
 		})
 	}
 }

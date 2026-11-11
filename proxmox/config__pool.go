@@ -10,6 +10,7 @@ import (
 	"github.com/Telmate/proxmox-api-go/internal/array"
 	"github.com/Telmate/proxmox-api-go/internal/body"
 	"github.com/Telmate/proxmox-api-go/internal/mapUtil"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -47,6 +48,7 @@ type (
 	}
 
 	poolClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}
@@ -440,15 +442,17 @@ func (raw *rawConfigPool) GetName() PoolName {
 	return ""
 }
 
-type (
-	RawPools interface {
-		AsArray() []RawConfigPool
-		AsMap() map[PoolName]RawConfigPool
-		Iter() iter.Seq[RawConfigPool]
-		Len() int
-	}
-	rawPools struct{ a []any }
-)
+type RawPools interface {
+	AsArray() []RawConfigPool
+	AsMap() map[PoolName]RawConfigPool
+	Iter() iter.Seq[RawConfigPool]
+	Len() int
+}
+
+type rawPools struct {
+	_ noCopy.True
+	a []any
+}
 
 var _ RawPools = (*rawPools)(nil)
 
@@ -485,17 +489,17 @@ func (raw *rawPools) Iter() iter.Seq[RawConfigPool] {
 
 func (raw *rawPools) Len() int { return len(raw.a) }
 
-type (
-	RawPoolInfo interface {
-		Get() PoolInfo
-		GetName() PoolName
-		GetComment() string
-		GetMembers() RawPoolMembers
-	}
-	rawPoolInfo struct {
-		a map[string]any
-	}
-)
+type RawPoolInfo interface {
+	Get() PoolInfo
+	GetName() PoolName
+	GetComment() string
+	GetMembers() RawPoolMembers
+}
+
+type rawPoolInfo struct {
+	_ noCopy.True
+	a map[string]any
+}
 
 var _ RawPoolInfo = (*rawPoolInfo)(nil)
 

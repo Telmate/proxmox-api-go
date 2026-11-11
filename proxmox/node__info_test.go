@@ -49,9 +49,9 @@ func Test_RawNodeInfo_Get(t *testing.T) {
 			input:  rawNodeInfo{a: map[string]any{"uptime": float64(1628483)}},
 			output: NodeInfo{Uptime: time.Duration(1628483) * time.Second}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, RawNodeInfo(&test.input).Get())
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			require.Equal(t, tests[i].output, RawNodeInfo(&tests[i].input).Get())
 		})
 	}
 }
@@ -109,36 +109,40 @@ func testData_RawNodesInfo() []struct {
 
 func Test_RawNodesInfo_AsArray(t *testing.T) {
 	t.Parallel()
-	for _, test := range testData_RawNodesInfo() {
-		t.Run(test.Name, func(t *testing.T) {
-			require.Equal(t, test.Array, RawNodesInfo(&test.Input).AsArray())
+	tests := testData_RawNodesInfo()
+	for i := range tests {
+		t.Run(tests[i].Name, func(t *testing.T) {
+			require.Equal(t, tests[i].Array, RawNodesInfo(&tests[i].Input).AsArray())
 		})
 	}
 }
 
 func Test_RawNodesInfo_AsMap(t *testing.T) {
 	t.Parallel()
-	for _, test := range testData_RawNodesInfo() {
-		t.Run(test.Name, func(t *testing.T) {
-			require.Equal(t, test.Map, RawNodesInfo(&test.Input).AsMap())
+	tests := testData_RawNodesInfo()
+	for i := range tests {
+		t.Run(tests[i].Name, func(t *testing.T) {
+			require.Equal(t, tests[i].Map, RawNodesInfo(&tests[i].Input).AsMap())
 		})
 	}
 }
 
 func Test_RawNodesInfo_Iter(t *testing.T) {
 	t.Parallel()
-	for _, test := range testData_RawNodesInfo() {
-		t.Run(test.Name, func(t *testing.T) {
-			testIter(t, RawNodesInfo(&test.Input), test.Array)
+	tests := testData_RawNodesInfo()
+	for i := range tests {
+		t.Run(tests[i].Name, func(t *testing.T) {
+			testIter(t, RawNodesInfo(&tests[i].Input), tests[i].Array)
 		})
 	}
 }
 
 func Test_RawNodesInfo_Len(t *testing.T) {
 	t.Parallel()
-	for _, test := range testData_RawNodesInfo() {
-		t.Run(test.Name, func(t *testing.T) {
-			require.Equal(t, test.Len, RawNodesInfo(&test.Input).Len())
+	tests := testData_RawNodesInfo()
+	for i := range tests {
+		t.Run(tests[i].Name, func(t *testing.T) {
+			require.Equal(t, tests[i].Len, RawNodesInfo(&tests[i].Input).Len())
 		})
 	}
 }

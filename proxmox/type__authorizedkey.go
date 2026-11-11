@@ -13,9 +13,9 @@ import (
 )
 
 type AuthorizedKey struct {
-	Options   []string
 	PublicKey ssh.PublicKey
 	Comment   string
+	Options   []string
 }
 
 const (

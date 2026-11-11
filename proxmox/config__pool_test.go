@@ -1268,36 +1268,40 @@ func testData_RawPools() []struct {
 
 func Test_RawPools_AsArray(t *testing.T) {
 	t.Parallel()
-	for _, test := range testData_RawPools() {
-		t.Run(test.Name, func(t *testing.T) {
-			require.Equal(t, test.Array, RawPools(&test.Input).AsArray())
+	tests := testData_RawPools()
+	for i := range tests {
+		t.Run(tests[i].Name, func(t *testing.T) {
+			require.Equal(t, tests[i].Array, RawPools(&tests[i].Input).AsArray())
 		})
 	}
 }
 
 func Test_RawPools_AsMap(t *testing.T) {
 	t.Parallel()
-	for _, test := range testData_RawPools() {
-		t.Run(test.Name, func(t *testing.T) {
-			require.Equal(t, test.Map, RawPools(&test.Input).AsMap())
+	tests := testData_RawPools()
+	for i := range tests {
+		t.Run(tests[i].Name, func(t *testing.T) {
+			require.Equal(t, tests[i].Map, RawPools(&tests[i].Input).AsMap())
 		})
 	}
 }
 
 func Test_RawPools_Iter(t *testing.T) {
 	t.Parallel()
-	for _, test := range testData_RawPools() {
-		t.Run(test.Name, func(t *testing.T) {
-			testIter(t, RawPools(&test.Input), test.Array)
+	tests := testData_RawPools()
+	for i := range tests {
+		t.Run(tests[i].Name, func(t *testing.T) {
+			testIter(t, RawPools(&tests[i].Input), tests[i].Array)
 		})
 	}
 }
 
 func Test_RawPools_Len(t *testing.T) {
 	t.Parallel()
-	for _, test := range testData_RawPools() {
-		t.Run(test.Name, func(t *testing.T) {
-			require.Equal(t, test.Len, RawPools(&test.Input).Len())
+	tests := testData_RawPools()
+	for i := range tests {
+		t.Run(tests[i].Name, func(t *testing.T) {
+			require.Equal(t, tests[i].Len, RawPools(&tests[i].Input).Len())
 		})
 	}
 }
@@ -1351,9 +1355,9 @@ func Test_RawPoolInfo_Get(t *testing.T) {
 				Name:    "empty-comment",
 				Members: RawPoolMembers(&rawPoolMembers{a: []any{}})}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.output, RawPoolInfo(&test.input).Get())
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			require.Equal(t, tests[i].output, RawPoolInfo(&tests[i].input).Get())
 		})
 	}
 }
@@ -1910,11 +1914,12 @@ func test_guestsToAddAndRemoveFromPools_data() []struct {
 
 func Test_guestsToAddAndRemoveFromPools(t *testing.T) {
 	t.Parallel()
-	for _, test := range test_guestsToAddAndRemoveFromPools_data() {
-		t.Run(test.name, func(t *testing.T) {
-			add, remove := guestsToAddAndRemoveFromPools(&test.guests, test.guestsToAdd, test.pool)
-			require.ElementsMatch(t, test.add, add)
-			require.Equal(t, test.remove, remove)
+	tests := test_guestsToAddAndRemoveFromPools_data()
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			add, remove := guestsToAddAndRemoveFromPools(&tests[i].guests, tests[i].guestsToAdd, tests[i].pool)
+			require.ElementsMatch(t, tests[i].add, add)
+			require.Equal(t, tests[i].remove, remove)
 		})
 	}
 }
@@ -1922,8 +1927,8 @@ func Test_guestsToAddAndRemoveFromPools(t *testing.T) {
 func Benchmark_guestsToAddAndRemoveFromPools(b *testing.B) {
 	tests := test_guestsToAddAndRemoveFromPools_data()
 	for b.Loop() {
-		for _, test := range tests {
-			guestsToAddAndRemoveFromPools(&test.guests, test.guestsToAdd, test.pool)
+		for i := range tests {
+			guestsToAddAndRemoveFromPools(&tests[i].guests, tests[i].guestsToAdd, tests[i].pool)
 		}
 	}
 }

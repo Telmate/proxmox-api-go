@@ -4,6 +4,8 @@ import (
 	"context"
 	"net"
 	"strings"
+
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 func (c *qemuAgentClient) NetworkInterfaces(ctx context.Context, vmr VmRef) (RawAgentNetworkInterfaces, GuestAgentState, error) {
@@ -58,16 +60,18 @@ func (vmr *VmRef) GetAgentInformation(ctx context.Context, c *Client) (RawAgentN
 	return c.New().QemuAgent.NetworkInterfaces(ctx, *vmr)
 }
 
-type (
-	RawAgentNetworkInterfaces interface {
-		Get() []AgentNetworkInterface
-		SelectMacAddress(address net.HardwareAddr) (RawAgentNetworkInterface, bool)
-		SelectName(name string) (RawAgentNetworkInterface, bool)
-	}
-	rawAgentNetworkInterfaces struct {
-		a []any
-	}
-)
+type RawAgentNetworkInterfaces interface {
+	Get() []AgentNetworkInterface
+	SelectMacAddress(address net.HardwareAddr) (RawAgentNetworkInterface, bool)
+	SelectName(name string) (RawAgentNetworkInterface, bool)
+}
+
+type rawAgentNetworkInterfaces struct {
+	_ noCopy.True
+	a []any
+}
+
+var _ RawAgentNetworkInterfaces = (*rawAgentNetworkInterfaces)(nil)
 
 func (raw *rawAgentNetworkInterfaces) Get() []AgentNetworkInterface {
 	if len(raw.a) == 0 {
@@ -116,18 +120,20 @@ func (raw *rawAgentNetworkInterfaces) SelectName(name string) (RawAgentNetworkIn
 	return nil, false
 }
 
-type (
-	RawAgentNetworkInterface interface {
-		Get() AgentNetworkInterface
-		GetIpAddresses() []net.IP
-		GetMacAddress() net.HardwareAddr
-		GetName() string
-		GetStatistics() *AgentInterfaceStatistics
-	}
-	rawAgentNetworkInterface struct {
-		a map[string]any
-	}
-)
+type RawAgentNetworkInterface interface {
+	Get() AgentNetworkInterface
+	GetIpAddresses() []net.IP
+	GetMacAddress() net.HardwareAddr
+	GetName() string
+	GetStatistics() *AgentInterfaceStatistics
+}
+
+type rawAgentNetworkInterface struct {
+	_ noCopy.True
+	a map[string]any
+}
+
+var _ RawAgentNetworkInterface = (*rawAgentNetworkInterface)(nil)
 
 func (raw *rawAgentNetworkInterface) Get() AgentNetworkInterface {
 	return AgentNetworkInterface{

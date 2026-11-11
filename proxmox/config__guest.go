@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -63,6 +64,7 @@ type (
 	}
 
 	guestClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -35,6 +36,7 @@ type (
 		UpdateNoCheck(context.Context, UserID, ApiTokenConfig) error
 	}
 	apiTokenClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}

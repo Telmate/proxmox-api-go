@@ -54,6 +54,7 @@ type (
 	}
 
 	snapshotClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}
@@ -241,28 +242,27 @@ func (config ConfigSnapshot) Validate() error {
 	return config.Name.Validate()
 }
 
-type (
-	RawSnapshots interface {
-		AsArray() []RawSnapshotInfo
-		AsMap() map[SnapshotName]RawSnapshotInfo
-		Iter() iter.Seq[RawSnapshotInfo]
-		Len() int
-		SelectSnapshot(SnapshotName) (RawSnapshotInfo, bool)
+type RawSnapshots interface {
+	AsArray() []RawSnapshotInfo
+	AsMap() map[SnapshotName]RawSnapshotInfo
+	Iter() iter.Seq[RawSnapshotInfo]
+	Len() int
+	SelectSnapshot(SnapshotName) (RawSnapshotInfo, bool)
 
-		// Tree builds a tree structure of snapshots.
-		//
-		// This operation is quite expensive, prefer using AsArray() or AsMap() when possible.
-		//
-		// Each call to Tree returns a new RawSnapshotTree and rebuilds the snapshot hierarchy.
-		//
-		// The tree and its nodes must not be modified, doing so results in undefined behavior.
-		Tree() RawSnapshotTree
-	}
-	rawSnapshots struct {
-		_ noCopy.True
-		a []responseSnapshotInfo
-	}
-)
+	// Tree builds a tree structure of snapshots.
+	//
+	// This operation is quite expensive, prefer using AsArray() or AsMap() when possible.
+	//
+	// Each call to Tree returns a new RawSnapshotTree and rebuilds the snapshot hierarchy.
+	//
+	// The tree and its nodes must not be modified, doing so results in undefined behavior.
+	Tree() RawSnapshotTree
+}
+
+type rawSnapshots struct {
+	_ noCopy.True
+	a []responseSnapshotInfo
+}
 
 var _ RawSnapshots = (*rawSnapshots)(nil)
 
@@ -381,29 +381,29 @@ func snapshotSortTime(a, b *Snapshot) int {
 	return 1
 }
 
-type (
-	RawSnapshotInfo interface {
-		Get() SnapshotInfo
-		GetName() SnapshotName
-		GetTime() *time.Time
-		GetDescription() string
-		GetVmState() *bool
-		GetParent() *SnapshotName
-	}
-	rawSnapshotInfo struct {
-		_    noCopy.True
-		a    *responseSnapshotInfo // Never Nil
-		name *SnapshotName         // Set by AsMap()
-	}
-	responseSnapshotInfo struct {
-		_           noCopy.True
-		Parent      *string `json:"parent,omitempty"`
-		State       *int8   `json:"vmstate,omitempty"`
-		Time        *int64  `json:"snaptime,omitempty"`
-		Description string  `json:"description"`
-		Name        string  `json:"name"`
-	}
-)
+type RawSnapshotInfo interface {
+	Get() SnapshotInfo
+	GetName() SnapshotName
+	GetTime() *time.Time
+	GetDescription() string
+	GetVmState() *bool
+	GetParent() *SnapshotName
+}
+
+type rawSnapshotInfo struct {
+	_    noCopy.True
+	a    *responseSnapshotInfo // Never Nil
+	name *SnapshotName         // Set by AsMap()
+}
+
+type responseSnapshotInfo struct {
+	_           noCopy.True
+	Parent      *string `json:"parent,omitempty"`
+	State       *int8   `json:"vmstate,omitempty"`
+	Time        *int64  `json:"snaptime,omitempty"`
+	Description string  `json:"description"`
+	Name        string  `json:"name"`
+}
 
 var _ RawSnapshotInfo = (*rawSnapshotInfo)(nil)
 

@@ -28,7 +28,7 @@ func (tests qemuTestGetFunc) Test(t *testing.T) {
 			} else {
 				require.Equal(t, test[i].output, output)
 			}
-			require.Equal(t, reference[i].input, test[i].input, "mutated input")
+			require.Equal(t, &reference[i].input, &test[i].input, "mutated input")
 		})
 	}
 }
@@ -40,7 +40,7 @@ func (tests qemuTestGetFunc) Inject(t *testing.T, testFunc func(*testing.T, RawC
 	for i := range tests() {
 		t.Run(test[i].name, func(*testing.T) {
 			testFunc(t, &test[i].input, test[i].output, test[i].err)
-			require.Equal(t, reference[i].input, test[i].input, "mutated input")
+			require.Equal(t, &reference[i].input, &test[i].input, "mutated input")
 		})
 	}
 }

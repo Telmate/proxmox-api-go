@@ -78,7 +78,7 @@ func (c *clientAPI) deleteTaskNoHighLevelRetry(ctx context.Context, url string) 
 	if err != nil {
 		return err
 	}
-	return c.checkTask(ctx, data)
+	return c.checkTask(ctx, &data)
 }
 
 func (c *clientAPI) getData(ctx context.Context, data any, message, url string) error {
@@ -190,7 +190,7 @@ func (c *clientAPI) postTaskNoHighLevelRetry(ctx context.Context, url string, bo
 	if err != nil {
 		return err
 	}
-	return c.checkTask(ctx, data)
+	return c.checkTask(ctx, &data)
 }
 
 // Makes a PUT request without waiting on proxmox for the task to complete.
@@ -245,12 +245,12 @@ func (c *clientAPI) putTaskNoHighLevelRetry(ctx context.Context, url string, bod
 	if err != nil {
 		return err
 	}
-	return c.checkTask(ctx, data)
+	return c.checkTask(ctx, &data)
 }
 
 // checkTask polls the API to check if the Proxmox task has been completed.
 // It returns the body of the HTTP response and any HTTP error occurred during the request.
-func (c *clientAPI) checkTask(ctx context.Context, data responseDataOptional[string]) error {
+func (c *clientAPI) checkTask(ctx context.Context, data *responseDataOptional[string]) error {
 	// Not sure if this is a real failure state.
 	if data.Data == nil { // when we try to get a response for a task that doesn't produce a task.
 		if c.featureFlags.PanicOnInvalidTask {

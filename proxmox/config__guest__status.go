@@ -3,6 +3,8 @@ package proxmox
 import (
 	"context"
 	"time"
+
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 func (c *guestClient) Status(ctx context.Context, vmr VmRef) (RawGuestStatus, error) {
@@ -35,6 +37,7 @@ type RawGuestStatus interface {
 }
 
 type rawGuestStatus struct {
+	_ noCopy.True
 	a map[string]any
 }
 

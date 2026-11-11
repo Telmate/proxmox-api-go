@@ -4,6 +4,8 @@ import (
 	"context"
 	"iter"
 	"time"
+
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 )
 
 func (c *guestClient) List(ctx context.Context) (RawGuestResources, error) { return c.ListNoCheck(ctx) }
@@ -27,7 +29,10 @@ type RawGuestResources interface {
 
 var _ RawGuestResources = (*rawGuestResources)(nil)
 
-type rawGuestResources struct{ a []any }
+type rawGuestResources struct {
+	_ noCopy.True
+	a []any
+}
 
 func (r *rawGuestResources) AsArray() []RawGuestResource {
 	new := make([]RawGuestResource, len(r.a))
@@ -80,27 +85,27 @@ func (r *rawGuestResources) selectID(id GuestID) (*rawGuestResource, bool) {
 }
 
 type GuestResource struct {
+	HaState            *string       `json:"hastate"` // TODO custom type?
+	Name               GuestName     `json:"name"`
+	Node               NodeName      `json:"node"`
+	Pool               PoolName      `json:"pool"`
+	Tags               Tags          `json:"tags"`
 	CpuCores           uint          `json:"cpu_cores"`
 	CpuUsage           float64       `json:"cpu_usage"`
 	DiskReadTotal      uint          `json:"disk_read"`
 	DiskSizeInBytes    uint          `json:"disk_size"`
 	DiskUsedInBytes    uint          `json:"disk_used"`
 	DiskWriteTotal     uint          `json:"disk_write"`
-	HaState            *string       `json:"hastate"` // TODO custom type?
-	ID                 GuestID       `json:"id"`
 	MemoryTotalInBytes uint          `json:"memory_total"`
 	MemoryUsedInBytes  uint          `json:"memory_used"`
-	Name               GuestName     `json:"name"`
 	NetworkIn          uint          `json:"network_in"`
 	NetworkOut         uint          `json:"network_out"`
-	Node               NodeName      `json:"node"`
-	Pool               PoolName      `json:"pool"`
-	State              PowerState    `json:"status"`
-	Tags               Tags          `json:"tags"`
+	Uptime             time.Duration `json:"uptime"`
+	ID                 GuestID       `json:"id"`
 	Locked             bool          `json:"locked"`
+	State              PowerState    `json:"status"`
 	Template           bool          `json:"template"`
 	Type               GuestType     `json:"type"`
-	Uptime             time.Duration `json:"uptime"`
 }
 
 type RawGuestResource interface {
@@ -130,7 +135,10 @@ type RawGuestResource interface {
 
 var _ RawGuestResource = (*rawGuestResource)(nil)
 
-type rawGuestResource struct{ a map[string]any }
+type rawGuestResource struct {
+	_ noCopy.True
+	a map[string]any
+}
 
 // https://pve.proxmox.com/pve-docs/api-viewer/#/cluster/resources
 func (raw *rawGuestResource) Get() GuestResource {

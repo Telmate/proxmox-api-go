@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -54,6 +55,7 @@ type (
 	}
 
 	qemuGuestClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}
@@ -1551,6 +1553,7 @@ type RawConfigQemu interface {
 var _ RawConfigQemu = (*rawConfigQemu)(nil)
 
 type rawConfigQemu struct {
+	_    noCopy.True
 	a    map[string]any
 	node NodeName
 	id   GuestID

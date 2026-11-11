@@ -747,11 +747,11 @@ func Test_RawSnapshots_AsArray(t *testing.T) {
 					Description: "You are here!",
 					Parent:      util.Pointer(SnapshotName("snap2"))}}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			array := RawSnapshots(&test.input).AsArray()
+	for i := range tests {
+		t.Run(tests[i].name, func(*testing.T) {
+			array := RawSnapshots(&tests[i].input).AsArray()
 			require.NotNil(t, array)
-			for i, snap := range test.output {
+			for i, snap := range tests[i].output {
 				require.Equal(t, snap, array[i].Get())
 			}
 		})
@@ -797,13 +797,13 @@ func Test_RawSnapshots_Iter(t *testing.T) {
 			}},
 			output: []SnapshotName{"snapshot1", "snapshot2"}},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
+	for i := range tests {
+		t.Run(tests[i].name, func(*testing.T) {
 			var names []SnapshotName
-			for info := range RawSnapshots(&test.input).Iter() {
+			for info := range RawSnapshots(&(tests[i]).input).Iter() {
 				names = append(names, info.GetName())
 			}
-			require.Equal(t, test.output, names)
+			require.Equal(t, tests[i].output, names)
 		})
 	}
 	// Test early termination
@@ -861,9 +861,9 @@ func Test_RawSnapshots_Len(t *testing.T) {
 			}},
 			output: 10},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, RawSnapshots(&test.input).Len())
+	for i := range tests {
+		t.Run(tests[i].name, func(*testing.T) {
+			require.Equal(t, tests[i].output, RawSnapshots(&tests[i].input).Len())
 		})
 	}
 }
@@ -1045,11 +1045,11 @@ func Test_RawSnapshots_SelectSnapshot(t *testing.T) {
 			}},
 			snapshot: SnapshotName("mysnap")},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			output, exists := RawSnapshots(&test.input).SelectSnapshot(test.snapshot)
-			require.Equal(t, test.exists, exists)
-			require.Equal(t, test.output, output)
+	for i := range tests {
+		t.Run(tests[i].name, func(*testing.T) {
+			output, exists := RawSnapshots(&tests[i].input).SelectSnapshot(tests[i].snapshot)
+			require.Equal(t, tests[i].exists, exists)
+			require.Equal(t, tests[i].output, output)
 		})
 	}
 }
@@ -1415,12 +1415,12 @@ func test_RawSnapshotTree_Current_and_Root_data() []struct {
 func Test_RawSnapshotTree_Current_and_Root(t *testing.T) {
 	t.Parallel()
 	tests := test_RawSnapshotTree_Current_and_Root_data()
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			tree := RawSnapshots(&test.input).Tree()
+	for i := range tests {
+		t.Run(tests[i].name, func(*testing.T) {
+			tree := RawSnapshots(&tests[i].input).Tree()
 			require.NotNil(t, tree)
-			require.Equal(t, test.current, tree.Current())
-			require.Equal(t, test.root, tree.Root())
+			require.Equal(t, tests[i].current, tree.Current())
+			require.Equal(t, tests[i].root, tree.Root())
 		})
 	}
 }
@@ -1429,8 +1429,8 @@ func Benchmark_RawSnapshotTree_Current_and_Root(b *testing.B) {
 	tests := test_RawSnapshotTree_Current_and_Root_data()
 	var result RawSnapshotTree
 	for b.Loop() {
-		for _, test := range tests {
-			result = RawSnapshots(&test.input).Tree()
+		for i := range tests {
+			result = RawSnapshots(&tests[i].input).Tree()
 		}
 	}
 	if result == nil {
@@ -1567,19 +1567,19 @@ func Test_RawSnapshotTree_Walk(t *testing.T) {
 			expectedOrder: []SnapshotName{"rOOt2", "root1", "root2", "current"}},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			tree := RawSnapshots(&test.input).Tree()
+	for i := range tests {
+		t.Run(tests[i].name, func(t *testing.T) {
+			tree := RawSnapshots(&tests[i].input).Tree()
 			require.NotNil(t, tree)
 
 			// Test full walk
 			names := collect(tree)
-			require.Equal(t, test.expectedOrder, names, "Walk should visit snapshots in depth-first order, oldest to newest")
+			require.Equal(t, tests[i].expectedOrder, names, "Walk should visit snapshots in depth-first order, oldest to newest")
 
 			// Test early termination if stopAt is specified
-			if test.stopAt != "" {
-				stoppedNames := collectUntil(tree, test.stopAt)
-				require.Equal(t, test.expectedStopped, stoppedNames, "Walk should stop early when function returns false")
+			if tests[i].stopAt != "" {
+				stoppedNames := collectUntil(tree, tests[i].stopAt)
+				require.Equal(t, tests[i].expectedStopped, stoppedNames, "Walk should stop early when function returns false")
 			}
 		})
 	}

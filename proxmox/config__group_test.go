@@ -942,9 +942,9 @@ func Test_RawGroupConfig_Get(t *testing.T) {
 					{Name: "user2", Realm: "pve"},
 					{Name: "user3", Realm: "ldap"}}})},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(*testing.T) {
-			require.Equal(t, test.output, (&test.input).Get())
+	for i := range tests {
+		t.Run(tests[i].name, func(*testing.T) {
+			require.Equal(t, tests[i].output, (&tests[i].input).Get())
 		})
 	}
 }

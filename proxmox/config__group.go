@@ -9,6 +9,7 @@ import (
 
 	"github.com/Telmate/proxmox-api-go/internal/array"
 	"github.com/Telmate/proxmox-api-go/internal/body"
+	"github.com/Telmate/proxmox-api-go/internal/noCopy"
 	"github.com/Telmate/proxmox-api-go/internal/util"
 )
 
@@ -44,6 +45,7 @@ type (
 	}
 
 	groupClient struct {
+		_         noCopy.True
 		api       *clientAPI
 		oldClient *Client
 	}
@@ -335,26 +337,26 @@ func (raw *rawGroups) Iter() iter.Seq[RawGroupConfig] {
 
 func (r *rawGroups) Len() int { return len(r.a) }
 
-type (
-	RawGroupConfig interface {
-		Get() ConfigGroup
-		GetName() GroupName
-		GetComment() string
-		GetMembers() []UserID
-	}
-	rawGroupConfig struct {
-		a     map[string]any
-		group *GroupName // Not always set.
-	}
-)
+type RawGroupConfig interface {
+	Get() ConfigGroup
+	GetName() GroupName
+	GetComment() string
+	GetMembers() []UserID
+}
+
+type rawGroupConfig struct {
+	_     noCopy.True
+	a     map[string]any
+	group *GroupName // Not always set.
+}
 
 var _ RawGroupConfig = (*rawGroupConfig)(nil)
 
 func (r *rawGroupConfig) Get() ConfigGroup {
 	return ConfigGroup{
 		Name:    r.GetName(),
-		Comment: util.Pointer(r.GetComment()),
-		Members: util.Pointer(r.GetMembers())}
+		Comment: new(r.GetComment()),
+		Members: new(r.GetMembers())}
 }
 
 func (r *rawGroupConfig) GetName() GroupName {
